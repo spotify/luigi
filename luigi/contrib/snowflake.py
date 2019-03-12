@@ -44,6 +44,16 @@ class _SettingsMixins():
         """
         return luigi.configuration.get_config().get(self.configuration_section, 'warehouse', default=None)
 
+    @property
+    def role(self):
+        """
+        Fetch the role configuration from the luigi configuration file under:
+
+        [snowflake]
+        role=value
+        """
+        return luigi.configuration.get_config().get(self.configuration_section, 'role', default=None)
+
 
 class _CredentialsMixin(redshift._CredentialsMixin):
     def _credentials(self):
@@ -79,7 +89,7 @@ class SnowflakeTarget(postgres.PostgresTarget):
 
     use_db_timestamps = False
 
-    def __init__(self, host, database, warehouse, user, password, table, update_id):
+    def __init__(self, host, database, warehouse, user, password, role, table, update_id):
         """
         Args:
             host (str): Snowflake server address.
@@ -87,6 +97,7 @@ class SnowflakeTarget(postgres.PostgresTarget):
             database (str): Database name
             user (str): Database user
             password (str): Password for specified user
+            role (str): Snowflake user's role name.
             update_id (str): An identifier for this data set
         """
         self.host = host
@@ -94,6 +105,7 @@ class SnowflakeTarget(postgres.PostgresTarget):
         self.warehouse = warehouse
         self.user = user
         self.password = password
+        self.role = role
         self.table = table
         self.update_id = update_id
 
@@ -108,10 +120,15 @@ class SnowflakeTarget(postgres.PostgresTarget):
 
         cursor = connection.cursor()
 
-        # Snowflake requires you set the warehouse and database prior of making
-        # a query.
-        cursor.execute("USE WAREHOUSE {warehouse}".format(warehouse=self.warehouse))
-        cursor.execute("USE DATABASE {database}".format(database=self.database))
+        # Default database, warehouse and role can be set directly at the user
+        # level in the Snowflake configurations. Unless specified, we assume
+        # that the defaults have been set.
+        if self.role:
+            cursor.execute("USE ROLE {role}".format(role=self.role))
+        if self.warehouse:
+            cursor.execute("USE WAREHOUSE {warehouse}".format(warehouse=self.warehouse))
+        if self.database:
+            cursor.execute("USE DATABASE {database}".format(database=self.database))
 
         return connection
 
@@ -323,6 +340,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
             database=self.database,
             user=self.user,
             password=self.password,
+            role=self.role,
             table=self.table,
             update_id=self.update_id)
 
