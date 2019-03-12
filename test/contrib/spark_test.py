@@ -26,7 +26,10 @@ from luigi.mock import MockTarget
 from helpers import with_config, temporary_unloaded_module
 from luigi.contrib.external_program import ExternalProgramRunError
 from luigi.contrib.spark import SparkSubmitTask, PySparkTask
-from mock import patch, call, MagicMock
+from mock import mock, patch, call, MagicMock
+from functools import partial
+from multiprocessing import Value
+from subprocess import Popen
 
 from nose.plugins.attrib import attr
 
@@ -47,7 +50,6 @@ def setup_run_process(proc):
 
 
 class TestSparkSubmitTask(SparkSubmitTask):
-    deploy_mode = "client"
     name = "AppName"
     entry_class = "org.test.MyClass"
     jars = ["jars/my.jar"]
@@ -99,7 +101,7 @@ class TestPySparkTask(PySparkTask):
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
-    @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path'}})
+    @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path', 'deploy-mode': 'client'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
         setup_run_process(proc)
@@ -186,6 +188,40 @@ class SparkSubmitTaskTest(unittest.TestCase):
         except KeyboardInterrupt:
             pass
         proc.return_value.kill.check_called()
+
+    @with_config({'spark': {'deploy-mode': 'client'}})
+    def test_tracking_url_is_found_in_stderr_client_mode(self):
+        test_val = Value('i', 0)
+
+        def fake_set_tracking_url(val, url):
+            if url == "http://10.66.76.155:4040":
+                val.value += 1
+
+        def Popen_wrap(args, **kwargs):
+            return Popen('>&2 echo "INFO SparkUI: Bound SparkUI to 0.0.0.0, and started at http://10.66.76.155:4040"', shell=True, **kwargs)
+
+        task = TestSparkSubmitTask()
+        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+            with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+                task.run()
+                self.assertEqual(test_val.value, 1)
+
+    @with_config({'spark': {'deploy-mode': 'cluster'}})
+    def test_tracking_url_is_found_in_stderr_cluster_mode(self):
+        test_val = Value('i', 0)
+
+        def fake_set_tracking_url(val, url):
+            if url == "https://127.0.0.1:4040":
+                val.value += 1
+
+        def Popen_wrap(args, **kwargs):
+            return Popen('>&2 echo "tracking URL: https://127.0.0.1:4040"', shell=True, **kwargs)
+
+        task = TestSparkSubmitTask()
+        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+            with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+                task.run()
+                self.assertEqual(test_val.value, 1)
 
 
 @attr('apache')

@@ -54,7 +54,7 @@ class SparkSubmitTask(ExternalProgramTask):
     # Only log stderr if spark fails (since stderr is normally quite verbose)
     always_log_stderr = False
     # Spark applications write its logs into stderr
-    track_url_in_stderr = True
+    stream_for_searching_tracking_url = 'stderr'
 
     def run(self):
         if self.deploy_mode == "cluster":
