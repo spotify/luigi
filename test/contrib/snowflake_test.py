@@ -25,6 +25,18 @@ class DummyTarget(luigi.contrib.snowflake.SnowflakeTarget):
     pass
 
 
+class DummyQueryTask(luigi.contrib.snowflake.SnowflakeQuery):
+    host = 'dummy_host'
+    database = 'dummy_database'
+    user = 'dummy_user'
+    password = 'dummy_password'
+    table = luigi.Parameter(default='dummy_table')
+
+    @property
+    def query(self):
+        return "SELECT 1 FROM table_1; SELECT 2 FROM table_2;"
+
+
 class DummyS3CopyToTableBase(luigi.contrib.snowflake.S3CopyToTable):
     host = 'dummy_host'
     database = 'dummy_database'
@@ -387,3 +399,17 @@ class TestSnowflakeTarget(unittest.TestCase):
                      inserted TIMESTAMP);"""
 
         assert mock_cursor.execute.call_args_list[3][0][0] == sql
+
+
+@attr('contrib')
+class TestSnowflakeQuery(unittest.TestCase):
+    @mock.patch("luigi.contrib.snowflake.SnowflakeTarget")
+    def test_execute_both_queries(self, mock_snowflake_target):
+        task = DummyQueryTask()
+        task.run()
+
+        mock_connect = (mock_snowflake_target.return_value
+                                             .connect
+                                             .return_value)
+
+        mock_connect.execute_string.assert_called_with("SELECT 1 FROM table_1; SELECT 2 FROM table_2;", return_cursors=False)
