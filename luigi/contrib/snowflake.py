@@ -360,7 +360,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
             schema = self.table.split('.')[0]
             query = ("select 1 as schema_exists "
                      "from information_schema.schemata "
-                     "where lower(schema_name) = lower({schema}) limit 1").format(schema=schema)
+                     "where lower(schema_name) = lower('{schema}') limit 1").format(schema=schema)
         else:
             return True
 
@@ -388,11 +388,11 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
             schema, table = self.table.split('.')
             query = ("select 1 as table_exists "
                      "from information_schema.tables "
-                     "where lower(table_schema) = lower({schema}) and lower(table_name) = lower({table}) limit 1").format(schema=schema, table=table)
+                     "where lower(table_schema) = lower('{schema}') and lower(table_name) = lower('{table}') limit 1").format(schema=schema, table=table)
         else:
             query = ("select 1 as table_exists "
                      "from information_schema.tables "
-                     "where lower(table_name) = lower({{table}) limit 1").format(table=table)
+                     "where lower(table_name) = lower('{table}') limit 1").format(table=table)
         cursor = connection.cursor()
         try:
             cursor.execute(query)
