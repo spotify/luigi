@@ -179,6 +179,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `BaseTIS <https://www.basetis.com/>`_
 * `Hopper <https://www.hopper.com/>`_
 * `VOYAGE GROUP/Zucks <https://zucks.co.jp/en/>`_
+* `Textpert <https://www.textpert.ai/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 

@@ -21,6 +21,7 @@ import gzip
 import os
 import random
 import shutil
+import sys
 from helpers import unittest
 import mock
 
@@ -64,6 +65,18 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(t.exists(), os.path.exists(self.path))
         p.close()
         self.assertEqual(t.exists(), os.path.exists(self.path))
+
+    @unittest.skipIf(tuple(sys.version_info) < (3, 4), 'only for Python>=3.4')
+    def test_pathlib(self):
+        """Test work with pathlib.Path"""
+        import pathlib
+        path = pathlib.Path(self.path)
+        self.assertFalse(path.exists())
+        target = LocalTarget(path)
+        self.assertFalse(target.exists())
+        with path.open('w') as stream:
+            stream.write('test me')
+        self.assertTrue(target.exists())
 
     def test_gzip_with_module(self):
         t = LocalTarget(self.path, luigi.format.Gzip)

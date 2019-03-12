@@ -127,6 +127,13 @@ section and the parameters available within it.
 These parameters control core Luigi behavior, such as error e-mails and
 interactions between the worker and scheduler.
 
+autoload-range
+  .. versionadded:: 2.8.4
+
+  If false, prevents range tasks from autoloading. They can still be loaded
+  using ``--module luigi.tools.range``. Defaults to true. Setting this to true
+  explicitly disables the deprecation warning.
+
 default-scheduler-host
   Hostname of the machine running the scheduler. Defaults to localhost.
 
@@ -293,10 +300,8 @@ timeout
 
   Number of seconds after which to kill a task which has been running
   for too long. This provides a default value for all tasks, which can
-  be overridden by setting the worker-timeout property in any task. This
-  only works when using multiple workers, as the timeout is implemented
-  by killing worker subprocesses. Default value is 0, meaning no
-  timeout.
+  be overridden by setting the worker-timeout property in any task.
+  Default value is 0, meaning no timeout.
 
 wait_interval
   Number of seconds for the worker to wait before asking the scheduler
@@ -307,6 +312,12 @@ wait_jitter
   Size of jitter to add to the worker wait interval such that the multiple
   workers do not ask the scheduler for another job at the same time.
   Default: 5.0
+
+max_keep_alive_idle_duration
+  .. versionadded:: 2.8.4
+
+  Maximum duration to keep worker alive while in idle state.
+  Default: 0 (Indefinitely)
 
 max_reschedules
   Maximum number of times to reschedule a failed task.
