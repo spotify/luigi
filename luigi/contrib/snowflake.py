@@ -304,7 +304,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         self.post_copy(cursor)
 
         # update marker table
-        output.touch(connection)
+        output.touch()
         connection.commit()
 
         # commit and clean up
