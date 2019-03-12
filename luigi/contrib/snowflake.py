@@ -2,9 +2,11 @@ import abc
 import logging
 
 import luigi
-from luigi.contrib import rdbms
-from luigi.contrib import redshift
+
+from enum import Enum
+from luigi import six
 from luigi.contrib import postgres
+from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
@@ -19,6 +21,36 @@ try:
 except ImportError:
     logger.warning("Loading snowflake module without snowflake-connector-python installed. "
                    "Will crash at runtime if snowflake functionality is used.")
+
+
+class SnowflakeSupportedAuth(Enum):
+    default = 0
+    aws_key_auth = 0
+    # next value = 1
+
+    @classmethod
+    def get(cls, which):
+        if which == cls.aws_key_auth:
+            return AwsKeyAuth()
+        else:
+            raise ValueError("SnowflakeSupportedAuth value ' {0} ' isn't supported", which)
+
+
+@six.add_metaclass(abc.ABCMeta)
+class SnowflakeAuth(object):
+    """Abstractable SnowflakeAuth base class that can be replace by tool
+    specific implementation."""
+    @property
+    def configuration_section(self):
+        """
+        Override to change the configuration section used
+        to obtain default credentials.
+        """
+        return 'snowflake'
+
+    @abc.abstractmethod
+    def credentials(self, task):
+        pass
 
 
 class _SettingsMixins(object):
@@ -55,12 +87,10 @@ class _SettingsMixins(object):
         return luigi.configuration.get_config().get(self.configuration_section, 'role', default=None)
 
 
-class _CredentialsMixin(redshift._CredentialsMixin):
-    def _credentials(self):
+class AwsKeyAuth(SnowflakeAuth):
+    def credentials(self):
         """
-        Return a credential string for the provided task.
-
-        This currently only support key-based credentials.
+        Return an AWS credential string for the provided task.
 
         If no valid credentials are set, raise a NotImplementedError.
         """
@@ -74,6 +104,20 @@ class _CredentialsMixin(redshift._CredentialsMixin):
                                       "in a configuration file, environment variables or by "
                                       "being overridden in the task: "
                                       "'aws_access_key_id' AND 'aws_secret_access_key'")
+
+    @property
+    def aws_access_key_id(self):
+        """
+        Override to return the key id.
+        """
+        return luigi.configuration.get_config().get(self.configuration_section, 'aws_access_key_id')
+
+    @property
+    def aws_secret_access_key(self):
+        """
+        Override to return the secret access key.
+        """
+        return luigi.configuration.get_config().get(self.configuration_section, 'aws_secret_access_key')
 
 
 class SnowflakeTarget(postgres.PostgresTarget):
@@ -192,7 +236,7 @@ class SnowflakeTarget(postgres.PostgresTarget):
         connection.close()
 
 
-class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
+class S3CopyToTable(rdbms.CopyToTable, _SettingsMixins):
     """
     Template task for inserting a data set into Snowflake from s3.
 
@@ -204,11 +248,9 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         * `table`,
         * `columns`,
         * `s3_load_path`.
-
-    You can also override the attributes provided by the CredentialsMixin if
-    they are not supplied by your configuration or environment variables.
     """
     configuration_section = 'snowflake'
+    snowflake_copy_auth = luigi.EnumParameter(enum=SnowflakeSupportedAuth, default=SnowflakeSupportedAuth.default)
 
     @abc.abstractmethod
     def s3_load_path(self):
@@ -325,10 +367,13 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         query = ("""COPY INTO {table} from {source} CREDENTIALS=({creds}) {options};""".format(
             table=self.table,
             source=f,
-            creds=self._credentials(),
+            creds=self.credentials(),
             options=self.copy_options)
         )
         cursor.execute(query)
+
+    def credentials(self):
+        return SnowflakeSupportedAuth.get(self.snowflake_copy_auth).credentials()
 
     def output(self):
         """
