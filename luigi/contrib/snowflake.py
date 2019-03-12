@@ -425,3 +425,54 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         logger.info('Executing post copy queries')
         for query in self.queries:
             cursor.execute(query)
+
+
+class SnowflakeQuery(rdbms.Query, _SettingsMixins):
+    """
+    Template task for making queries to Snowflake.
+
+    Subclass and override the required attributes:
+        * `host`,
+        * `database`,
+        * `user`,
+        * `password`,
+        * `table`,
+
+    Note:
+        This uses execute_string which is not safe for SQL injections
+        https://docs.snowflake.net/manuals/user-guide/python-connector-api.html#execute_string
+
+    Usage:
+        Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
+        Optionally one can override the `autocommit` attribute to put the connection for the query in autocommit mode.
+        Override the `run` method if your use case requires some action with the query result.
+        Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
+        To customize the query signature as recorded in the database marker table, override the `update_id` property.
+    """
+    def run(self):
+        connection = self.output().connect()
+        connection.autocommit = self.autocommit
+
+        logger.info('Executing query from task: {name}'.format(name=self.__class__.__name__))
+        connection.execute_string(self.query, return_cursors=False)
+
+        # Update marker table
+        self.output().touch()
+
+        # commit and close connection
+        connection.commit()
+        connection.close()
+
+    def output(self):
+            """
+            Returns a SnowflakeTarget representing the executed query.
+            """
+            return SnowflakeTarget(
+                host=self.host,
+                warehouse=self.warehouse,
+                database=self.database,
+                user=self.user,
+                password=self.password,
+                role=self.role,
+                table=self.table,
+                update_id=self.update_id)
