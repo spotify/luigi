@@ -21,7 +21,7 @@ except ImportError:
                    "Will crash at runtime if snowflake functionality is used.")
 
 
-class _SettingsMixins():
+class _SettingsMixins(object):
     """
     Generic mixins that defines how to fetch the database and warehouse
     configuration for a given snowflake integration.
@@ -392,7 +392,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin, _SettingsMixins):
         else:
             query = ("select 1 as table_exists "
                      "from information_schema.tables "
-                     "where lower(table_name) = lower('{table}') limit 1").format(table=table)
+                     "where lower(table_name) = lower('{table}') limit 1").format(table=self.table)
         cursor = connection.cursor()
         try:
             cursor.execute(query)

@@ -66,11 +66,13 @@ class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
 
     @with_config({"snowflake": {"aws_access_key_id": "config_key",
                                 "aws_secret_access_key": "config_secret",
-                                "warehouse": "config_warehouse"}})
+                                "warehouse": "config_warehouse",
+                                "role": "config_role"}})
     def test_from_config(self):
         self.assertEqual(self.aws_access_key_id, "config_key")
         self.assertEqual(self.aws_secret_access_key, "config_secret")
         self.assertEqual(self.warehouse, "config_warehouse")
+        self.assertEqual(self.role, "config_role")
 
 
 @attr('snowflake', 'contrib')
@@ -120,7 +122,8 @@ class TestS3CopyToTable(unittest.TestCase):
                                                  update_id=task.task_id,
                                                  user=task.user,
                                                  table=task.table,
-                                                 password=task.password)
+                                                 password=task.password,
+                                                 role=task.role)
 
         # Check if the `S3CopyToTable.s3_load_path` class attribute was
         # successfully referenced in the `S3CopyToTable.run` method, which is
@@ -216,6 +219,7 @@ class TestS3CopyToTable(unittest.TestCase):
             user=task.user,
             table=task.table,
             password=task.password,
+            role=task.role,
         )
 
         # To get the proper intendation in the multiline `COPY` statement the
@@ -251,6 +255,7 @@ class TestS3CopyToTable(unittest.TestCase):
             user=task.user,
             table=task.table,
             password=task.password,
+            role=task.role,
         )
 
         # To get the proper intendation in the multiline `COPY` statement the
@@ -285,6 +290,7 @@ class TestS3CopyToTable(unittest.TestCase):
             user=task.user,
             table=task.table,
             password=task.password,
+            role=task.role,
         )
 
         mock_cursor.execute.assert_called_with("COPY INTO {table} from {source} CREDENTIALS=({creds}) {options};".format(
@@ -327,7 +333,17 @@ class TestSnowflakeTarget(unittest.TestCase):
                        'user': 'dummy_user',
                        'password': 'dummy_password',
                        'table': 'dummy_table',
-                       'update_id': 'dummy_update_id'}
+                       'update_id': 'dummy_update_id',
+                       'role': 'dummy_role'}
+
+    @mock.patch("snowflake.connector")
+    def test_target_execute_role(self, mock_snowflake):
+        target = DummyTarget(**self.target_settings)
+        target.connect()
+
+        mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
+
+        assert mock_cursor.execute.call_args_list[0][0][0].startswith("USE ROLE %s" % target.role)
 
     @mock.patch("snowflake.connector")
     def test_target_execute_warehouse(self, mock_snowflake):
@@ -336,7 +352,7 @@ class TestSnowflakeTarget(unittest.TestCase):
 
         mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
 
-        assert mock_cursor.execute.call_args_list[0][0][0].startswith("USE WAREHOUSE %s" % target.warehouse)
+        assert mock_cursor.execute.call_args_list[1][0][0].startswith("USE WAREHOUSE %s" % target.warehouse)
 
     @mock.patch("snowflake.connector")
     def test_target_execute_database(self, mock_snowflake):
@@ -345,7 +361,7 @@ class TestSnowflakeTarget(unittest.TestCase):
 
         mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
 
-        assert mock_cursor.execute.call_args_list[1][0][0].startswith("USE DATABASE %s" % target.database)
+        assert mock_cursor.execute.call_args_list[2][0][0].startswith("USE DATABASE %s" % target.database)
 
     @mock.patch("snowflake.connector")
     def test_target_exists(self, mock_snowflake):
@@ -356,7 +372,7 @@ class TestSnowflakeTarget(unittest.TestCase):
 
         mock_cursor = (mock_snowflake.connect.return_value.cursor.return_value)
 
-        assert mock_cursor.execute.call_args_list[2][0][0] == "SELECT 1 FROM table_updates WHERE update_id = %s LIMIT 1"
+        assert mock_cursor.execute.call_args_list[3][0][0] == "SELECT 1 FROM table_updates WHERE update_id = '%s' LIMIT 1" % target.update_id
 
     @mock.patch("snowflake.connector")
     def test_target_create_marker_table(self, mock_snowflake):
@@ -370,4 +386,4 @@ class TestSnowflakeTarget(unittest.TestCase):
                      target_table TEXT,
                      inserted TIMESTAMP);"""
 
-        assert mock_cursor.execute.call_args_list[2][0][0] == sql
+        assert mock_cursor.execute.call_args_list[3][0][0] == sql
