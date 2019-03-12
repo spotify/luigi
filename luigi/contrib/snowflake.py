@@ -464,15 +464,15 @@ class SnowflakeQuery(rdbms.Query, _SettingsMixins):
         connection.close()
 
     def output(self):
-            """
-            Returns a SnowflakeTarget representing the executed query.
-            """
-            return SnowflakeTarget(
-                host=self.host,
-                warehouse=self.warehouse,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                role=self.role,
-                table=self.table,
-                update_id=self.update_id)
+        """
+        Returns a SnowflakeTarget representing the executed query.
+        """
+        return SnowflakeTarget(
+            host=self.host,
+            warehouse=self.warehouse,
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            role=self.role,
+            table=self.table,
+            update_id=self.update_id)
