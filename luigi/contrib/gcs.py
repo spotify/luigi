@@ -193,6 +193,11 @@ class GCSClient(luigi.target.FileSystem):
         return response
 
     def exists(self, path):
+        if '*' in path:
+            for _ in self.list_wildcard(path):
+                return True
+            return False
+
         bucket, obj = self._path_to_bucket_and_key(path)
         if self._obj_exists(bucket, obj):
             return True
