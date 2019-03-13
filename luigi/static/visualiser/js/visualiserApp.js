@@ -719,20 +719,19 @@ function visualiserApp(luigi) {
                         if (taskIdMap[task.inputQueue[i]] !== undefined) {
                             if (task.status === "DONE") {
                                 var durations = getDurations(tasks, task.inputQueue);
-                                var duration = durations[task.inputQueue[i]]
-                                var oneDayInMilliseconds = 24 * 60 * 60 * 1000
+                                var duration = durations[task.inputQueue[i]];
+                                var oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+                                var durationLabel;
                                 if (duration.getTime() < oneDayInMilliseconds) {
-                                    // Label task duration in stripped ISO format (hh:mm:ss:f)
-                                    g.setEdge(task.inputQueue[i], task.taskId, {
-                                        label: duration.toISOString().substr(11, 12),
-                                        width: 40
-                                    });
+                                    // Label task duration in stripped ISO format (hh:mm:ss.f)
+                                    durationLabel = duration.toISOString().substr(11, 12);
                                 } else {
-                                    g.setEdge(task.inputQueue[i], task.taskId, {
-                                        label: "> 24h",
-                                        width: 40
-                                    });
+                                    durationLabel = "> 24h";
                                 }
+                                g.setEdge(task.inputQueue[i], task.taskId, {
+                                    label: durationLabel,
+                                    width: 40
+                                });
                             } else {
                                 g.setEdge(task.inputQueue[i], task.taskId, {
                                     width: 40
