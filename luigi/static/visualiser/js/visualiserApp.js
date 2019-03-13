@@ -631,19 +631,19 @@ function visualiserApp(luigi) {
         }
     }
 
-    function getFinishTime(tasks, listId){
-        var times = {};
+    function getDurations(tasks, listId){
+        var durations = {};
         for (var i = 0; i < listId.length; i++) {
             for (var j = 0; j < tasks.length; j++) {
                 if (listId[i] === tasks[j].taskId) {
-                    var finishTime = new Date(tasks[j].time_running*1000);
-                    var startTime = new Date(tasks[j].start_time*1000);
-                    var durationTime = new Date((finishTime - startTime)*1000).getSeconds();
-                    times[listId[i]] = durationTime;
+                    // The duration of the task from when it started running to when it finished.
+                    var finishTime = new Date(tasks[j].last_updated*1000);
+                    var startTime = new Date(tasks[j].time_running*1000);
+                    durations[listId[i]] = new Date(finishTime - startTime);
                 }
             }
         }
-        return times;
+        return durations;
     }
 
     function getParam(tasks, id){
@@ -718,9 +718,18 @@ function visualiserApp(luigi) {
                         // Destination node may not be in tasks if this is an inverted graph
                         if (taskIdMap[task.inputQueue[i]] !== undefined) {
                             if (task.status === "DONE") {
-                                var durationTime = getFinishTime(tasks, task.inputQueue);
+                                var durations = getDurations(tasks, task.inputQueue);
+                                var duration = durations[task.inputQueue[i]];
+                                var oneDayInMilliseconds = 24 * 60 * 60 * 1000;
+                                var durationLabel;
+                                if (duration.getTime() < oneDayInMilliseconds) {
+                                    // Label task duration in stripped ISO format (hh:mm:ss.f)
+                                    durationLabel = duration.toISOString().substr(11, 12);
+                                } else {
+                                    durationLabel = "> 24h";
+                                }
                                 g.setEdge(task.inputQueue[i], task.taskId, {
-                                    label: durationTime[task.inputQueue[i]] + " secs",
+                                    label: durationLabel,
                                     width: 40
                                 });
                             } else {
