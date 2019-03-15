@@ -86,6 +86,11 @@ class GCSClientTest(_GCSBaseTestCase):
         self.assertTrue(self.client.exists(bucket_url('exists_test')))
         self.assertFalse(self.client.isdir(bucket_url('exists_test')))
 
+    def test_exists_wildcard(self):
+        self.client.put_string('hello', bucket_url('exists_test'))
+        self.assertTrue(self.client.exists(bucket_url('exists_*')))
+        self.assertFalse(self.client.exists(bucket_url('does_not_exist_*')))
+
     def test_mkdir(self):
         self.client.mkdir(bucket_url('exists_dir_test'))
         self.assertTrue(self.client.exists(bucket_url('exists_dir_test')))
