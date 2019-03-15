@@ -23,6 +23,7 @@ import re
 import locale
 import tempfile
 import warnings
+import sys
 
 from luigi import six
 
@@ -94,6 +95,12 @@ class InputPipeProcessWrapper(object):
         """
         http://www.chiark.greenend.org.uk/ucgi/~cjwatson/blosxom/2009-07-02-python-sigpipe.html
         """
+
+        # Windows doesn't support preexec_fn or close_fds arguments.
+        if sys.platform == 'win32':
+            return subprocess.Popen(command,
+                                    stdin=self._input_pipe,
+                                    stdout=subprocess.PIPE)
 
         def subprocess_setup():
             # Python installs a SIGPIPE handler by default. This is usually not what
