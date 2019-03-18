@@ -32,11 +32,10 @@ logger = logging.getLogger('luigi-interface')
 @six.add_metaclass(abc.ABCMeta)
 class DataflowParams(object):
     """
-    Defines the naming conventions for Dataflow params specified in:
-        https://cloud.google.com/dataflow/docs/guides/specifying-exec-params
-
-    For example, the Java api expects param names in lower camel case, whereas
+    Defines the naming conventions for Dataflow execution params.
+    For example, the Java API expects param names in lower camel case, whereas
     the Python implementation expects snake case.
+
     """
     @abstractproperty
     def runner(self):
@@ -116,6 +115,7 @@ class _CmdLineRunner(object):
     Executes a given command line class in a subprocess, logging its output.
     If more complex monitoring/logging is desired, user can implement their
     own launcher class and set it in BeamDataflowJobTask.cmd_line_runner.
+
     """
     @staticmethod
     def run(cmd, task=None):
@@ -147,6 +147,9 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
     Luigi wrapper for a Dataflow job. Must be overridden for each Beam SDK
     with that SDK's dataflow_executable().
 
+    For more documentation, see:
+        https://cloud.google.com/dataflow/docs/guides/specifying-exec-params
+
     The following required Dataflow properties must be set:
 
     project                 # GCP project ID
@@ -168,12 +171,12 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
                               Default: Determined by Dataflow service
     disk_size_gb            # Remote worker disk size. Minimum value is 30GB
                               Default: set to 0 to use GCP project default
-    worker_machine_type     # Machine type to create Dataflow worker VMs. If unset,
-                              the Dataflow service will choose a reasonable default
+    worker_machine_type     # Machine type to create Dataflow worker VMs
                               Default: Determined by Dataflow service
-    job_name                # Custom job name, must be unique across project's active jobs
-    worker_disk_type        # Specify SSD for local disk or defaults to hard disk
-                              as a full URL of disk type resource
+    job_name                # Custom job name, must be unique across project's
+                              active jobs
+    worker_disk_type        # Specify SSD for local disk or defaults to hard
+                              disk as a full URL of disk type resource
                               Default: Determined by Dataflow service.
     service_account         # Service account of Dataflow VMs/workers
                               Default: active GCE service account
@@ -181,25 +184,14 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
                               Default: us-central1
     zone                    # Availability zone for launching workers instances
                               Default: an available zone in the specified region
-    staging_location        # Cloud Storage bucket for Dataflow to stage binary files
+    staging_location        # Cloud Storage bucket for Dataflow to stage binary
+                              files
                               Default: the value of temp_location
-    gcp_temp_location       # Cloud Storage path for Dataflow to stage temporary files
+    gcp_temp_location       # Cloud Storage path for Dataflow to stage temporary
+                              files
                               Default: the value of temp_location
-    labels = {}             # Custom GCP labels attached to the Dataflow job
-
-    For more documentation, see:
-    https://cloud.google.com/dataflow/docs/guides/specifying-exec-params
-
-    :Example:
-    class AwesomeJob(BeamDataflowJobTask):
-        project = 'some-project'
-        temp_location = 'gs://some-project/user/bob/tmp'
-        max_num_workers = 20
-        region = 'europe-west1'
-        service_account = 'some-account@scio-playground.iam.gserviceaccount.com'
-        gcp_labels = {'user': 'bob'}
-        def output(self):
-                    ...
+    labels                  # Custom GCP labels attached to the Dataflow job
+                              Default: nothing
     """
 
     project = None
@@ -228,62 +220,62 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
     def __init(self):
         if not isinstance(self.dataflow_params, DataflowParams):
             raise ValueError("dataflow_params must be of type DataflowParams")
-        else:
-            self.dataflow_params = self.dataflow_params
 
     @abstractmethod
     def dataflow_executable(self):
-        """ Command representing the Dataflow executable to be run.
+        """
+        Command representing the Dataflow executable to be run.
+        For example:
 
-        Example:
-            java com.spotify.luigi.MyClass '-Xmx256m'
-        or:
-            python /path/to/python_script
+        return ['java com.spotify.luigi.MyClass', '-Xmx256m']
         """
         pass
 
     def args(self):
-        """ Extra String arguments that will be passed to your Dataflow job.
+        """
+        Extra String arguments that will be passed to your Dataflow job.
+        For example:
 
-        Example:
-                return [
-                    '--setup_file=setup.py'
-                ]
+        return ['--setup_file=setup.py']
         """
         return []
 
     def on_successful_run(self):
-        """ Callback that gets called right after the Dataflow job has finished
+        """
+        Callback that gets called right after the Dataflow job has finished
         successfully but before validate_output is run.
         """
         pass
 
     def validate_output(self):
-        """ Callback that can be used to validate your output before it is moved to
+        """
+        Callback that can be used to validate your output before it is moved to
         its final location. Returning false here will cause the job to fail, and
         output to be removed instead of published.
         """
         return True
 
     def file_pattern(self):
-        """ If one/some of the input target files are not in the pattern of part-*,
+        """
+        If one/some of the input target files are not in the pattern of part-*,
         we can add the key of the required target and the correct file pattern
         that should be appended in the command line here. If the input target key is not found
         in this dict, the file pattern will be assumed to be part-* for that target.
 
-        :return A dictionary of overriden file pattern that is not part-* for the inputs
-        :rtype: Dict of String to String
+        :return A dictionary of overridden file pattern that is not part-* for the inputs
         """
         return {}
 
     def on_output_validation(self):
-        """ Callback that gets called after the Dataflow job has finished
+        """
+        Callback that gets called after the Dataflow job has finished
         successfully if validate_output returns True.
         """
         pass
 
     def cleanup_on_error(self):
-        """ Callback that gets called after the Dataflow job has finished
+        """
+        Callback that gets called after the Dataflow job has finished
         unsuccessfully, or validate_output returns False.
         """
         pass
@@ -298,9 +290,11 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
             logger.error(e, exc_info=True)
             self.cleanup_on_error()
-            # Exit Luigi with the same exit code as the Dataflow job process, so
-            # users can easily exit the job with code 50 to avoid Styx retries
-            # https://github.com/spotify/styx/blob/master/doc/design-overview.md#workflow-state-graph
+            """
+            Exit Luigi with the same exit code as the Dataflow job process, so
+            users can easily exit the job with code 50 to avoid Styx retries
+            https://github.com/spotify/styx/blob/master/doc/design-overview.md#workflow-state-graph
+            """
             os._exit(e.returncode)
         self.on_successful_run()
 
@@ -402,8 +396,10 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
             uris = [self._targets_to_uri_getter.get(
                 uri_target.__class__)(uri_target) for uri_target in uri_targets]
             if isinstance(targets, dict):
-                # If targets is a dict that means it had multiple outputs.
-                #  Make the input args in that case "<input key>-<task output key>"
+                """
+                If targets is a dict that means it had multiple outputs.
+                Make the input args in that case "<input key>-<task output key>"
+                """
                 names = ["%s-%s" % (name, key) for key in targets.keys()]
             else:
                 names = [name] * len(uris)
@@ -437,9 +433,6 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
     @property
     def _targets_to_uri_getter(self):
-        """
-        This should be overridden for custom target types.
-        """
         return dict([
             (luigi.LocalTarget, lambda t: t.path),
             (gcs.GCSTarget, lambda t: t.path),
