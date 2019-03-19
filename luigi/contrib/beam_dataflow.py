@@ -429,14 +429,14 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         elif not isinstance(job_output, dict):
             raise ValueError("Input (requires()) must be dict type")
 
-        self.output_uris = []
+        self.output_uris = {}
         output_args = []
 
         for (name, target) in job_output.items():
             getter = self._targets_to_uri_getter.get(target.__class__)
             uri = getter(target)
 
-            self.output_uris.append(uri)
+            self.output_uris[name] = uri
             output_args.append("--%s=%s" % (name, uri))
 
         return output_args
