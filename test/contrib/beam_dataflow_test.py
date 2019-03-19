@@ -261,6 +261,7 @@ class BeamDataflowTest(unittest.TestCase):
     def test_dataflow_successful_run_callbacks(self):
         task = DummyCmdLineTestTask()
 
+        task.before_run = MagicMock()
         task.validate_output = MagicMock()
         task.on_successful_run = MagicMock()
         task.on_output_validation = MagicMock()
@@ -268,6 +269,7 @@ class BeamDataflowTest(unittest.TestCase):
 
         task.run()
 
+        task.before_run.assert_called_once_with()
         task.validate_output.assert_called_once_with()
         task.cleanup_on_error.assert_not_called()
         task.on_successful_run.assert_called_once_with()
@@ -276,6 +278,7 @@ class BeamDataflowTest(unittest.TestCase):
     def test_dataflow_successful_run_invalid_output_callbacks(self):
         task = DummyCmdLineTestTask()
 
+        task.before_run = MagicMock()
         task.validate_output = MagicMock(return_value=False)
         task.on_successful_run = MagicMock()
         task.on_output_validation = MagicMock()
@@ -284,6 +287,7 @@ class BeamDataflowTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             task.run()
 
+        task.before_run.assert_called_once_with()
         task.validate_output.assert_called_once_with()
         task.cleanup_on_error.assert_called_once_with()
         task.on_successful_run.assert_called_once_with()
@@ -294,6 +298,7 @@ class BeamDataflowTest(unittest.TestCase):
     def test_dataflow_failed_run_callbacks(self, popen, os_exit):
         task = DummyCmdLineTestTask()
 
+        task.before_run = MagicMock()
         task.validate_output = MagicMock()
         task.on_successful_run = MagicMock()
         task.on_output_validation = MagicMock()
@@ -302,6 +307,7 @@ class BeamDataflowTest(unittest.TestCase):
         with self.assertRaises(OSError):
             task.run()
 
+        task.before_run.assert_called_once_with()
         task.validate_output.assert_not_called()
         task.cleanup_on_error.assert_called_once_with()
         task.on_successful_run.assert_not_called()

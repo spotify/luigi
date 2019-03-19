@@ -241,6 +241,13 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         """
         return []
 
+    def before_run(self):
+        """
+        Hook that gets called right before the Dataflow job is launched.
+        Can be used to setup any temporary files/tables, validate input, etc.
+        """
+        pass
+
     def on_successful_run(self):
         """
         Callback that gets called right after the Dataflow job has finished
@@ -285,10 +292,11 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         cmd_line = self._mk_cmd_line()
         logger.info(' '.join(cmd_line))
 
+        self.before_run()
+
         try:
             self.cmd_line_runner.run(cmd_line, self)
         except subprocess.CalledProcessError as e:
-
             logger.error(e, exc_info=True)
             self.cleanup_on_error()
             """
@@ -297,6 +305,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
             https://github.com/spotify/styx/blob/master/doc/design-overview.md#workflow-state-graph
             """
             os._exit(e.returncode)
+
         self.on_successful_run()
 
         if self.validate_output():
