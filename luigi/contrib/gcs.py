@@ -136,13 +136,13 @@ class GCSClient(luigi.target.FileSystem):
 
     def _obj_exists(self, bucket, obj):
         try:
-            self.client.objects().get(bucket=bucket, object=obj).execute()
+            objects = self.client.objects().get(bucket=bucket, object=obj).execute()
         except errors.HttpError as ex:
             if ex.resp['status'] == '404':
                 return False
             raise
         else:
-            return True
+            return obj in objects
 
     def _list_iter(self, bucket, prefix):
         request = self.client.objects().list(bucket=bucket, prefix=prefix)
