@@ -18,6 +18,7 @@
 import abc
 from abc import abstractmethod, abstractproperty, ABCMeta
 import logging
+import json
 import os
 import subprocess
 
@@ -375,7 +376,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         if self.service_account:
             output.append(f(self.dataflow_params.service_account, self.service_account))
         if self.labels:
-            output.append(f(self.dataflow_params.labels, self.labels))
+            output.append(f(self.dataflow_params.labels, json.dumps(self.labels)))
 
         return output
 

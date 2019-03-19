@@ -15,12 +15,12 @@
 # limitations under the License.
 #
 
-import unittest
-
+import json
 import luigi
 from luigi.contrib import beam_dataflow
 from luigi import local_target
 from mock import MagicMock, patch
+import unittest
 
 
 class TestDataflowParams(beam_dataflow.DataflowParams):
@@ -224,12 +224,13 @@ class BeamDataflowTest(unittest.TestCase):
             '--subnetwork=some-subnetwork',
             '--jobName=SomeJobName',
             '--serviceAccount=some-service-account@google.com',
-            '--labels={\'k1\': \'v1\'}',
+            '--labels={"k1": "v1"}',
             '--extraArg=present',
             '--input=some-input-dir/part-*',
             '--output=some-output.txt'
         ]
 
+        self.assertEqual(json.loads(cmd_line_args[19][9:]), {'k1': 'v1'})
         self.assertEqual(cmd_line_args, expected)
         self.assertEqual(task.output_uris, ["some-output.txt"])
 
