@@ -24,77 +24,24 @@ import unittest
 
 
 class TestDataflowParams(beam_dataflow.DataflowParams):
-    @property
-    def runner(self):
-        return "runner"
-
-    @property
-    def project(self):
-        return "project"
-
-    @property
-    def zone(self):
-        return "zone"
-
-    @property
-    def region(self):
-        return "region"
-
-    @property
-    def staging_location(self):
-        return "stagingLocation"
-
-    @property
-    def temp_location(self):
-        return "tempLocation"
-
-    @property
-    def gcp_temp_location(self):
-        return "gcpTempLocation"
-
-    @property
-    def num_workers(self):
-        return "numWorkers"
-
-    @property
-    def autoscaling_algorithm(self):
-        return "autoscalingAlgorithm"
-
-    @property
-    def max_num_workers(self):
-        return "maxNumWorkers"
-
-    @property
-    def disk_size_gb(self):
-        return "diskSizeGb"
-
-    @property
-    def worker_machine_type(self):
-        return "workerMachineType"
-
-    @property
-    def worker_disk_type(self):
-        return "workerDiskType"
-
-    @property
-    def job_name(self):
-        return "jobName"
-
-    @property
-    def service_account(self):
-        return "serviceAccount"
-
-    @property
-    def network(self):
-        return "network"
-
-    @property
-    def subnetwork(self):
-        return "subnetwork"
-
-    @property
-    def labels(self):
-        return "labels"
+    runner = "runner"
+    project = "project"
+    zone = "zone"
+    region = "region"
+    staging_location = "stagingLocation"
+    temp_location = "tempLocation"
+    gcp_temp_location = "gcpTempLocation"
+    num_workers = "numWorkers"
+    autoscaling_algorithm = "autoscalingAlgorithm"
+    max_num_workers = "maxNumWorkers"
+    disk_size_gb = "diskSizeGb"
+    worker_machine_type = "workerMachineType"
+    worker_disk_type = "workerDiskType"
+    job_name = "jobName"
+    service_account = "serviceAccount"
+    network = "network"
+    subnetwork = "subnetwork"
+    labels = "labels"
 
 
 class TestRequires(luigi.ExternalTask):
