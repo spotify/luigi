@@ -41,7 +41,7 @@ install_requires = [
     'tornado>=4.0,<5',
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
-    'python-dateutil==2.7.5',
+    'python-dateutil>=2.7.5,<3',
 ]
 
 # Note: To support older versions of setuptools, we're explicitly not
