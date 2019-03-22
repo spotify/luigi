@@ -32,6 +32,7 @@ from luigi.contrib import sqla
 from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 from helpers import skipOnTravis
+import mock
 
 if six.PY3:
     unicode = str
@@ -236,6 +237,25 @@ class TestSQLA(unittest.TestCase):
         self.assertFalse(target.exists())
         target.touch()
         self.assertTrue(target.exists())
+
+    def test_touch_when_not_use_marker_table(self):
+        """
+        Test case to ensure touch() behaves the same when use_marker_table is set as False.
+        """
+        target = sqla.SQLAlchemyTarget(self.connection_string, "test_table", "12312123", use_marker_table=False)
+        self.assertRaises(NotImplementedError, target.create_marker_table())
+        self.assertFalse(target.exists())
+        target.touch()
+        self.assertTrue(target.exists())
+    
+    @mock.patch("luigi.contrib.sqla.SQLAlchemyTarget.create_marker_table", new_callable=mock.PropertyMock)
+    def test_no_marker_table_created(self, mock_create_marker_table):
+        """
+        Test case to ensure no marker table is created when use_marker_table is set as False
+        """
+        target = sqla.SQLAlchemyTarget(self.connection_string, "test_table", "12312123", use_marker_table=False)
+        target.touch()
+        self.assertFalse(mock_create_marker_table.called)
 
     def test_row_overload(self):
         """Overload the rows method and we should be able to insert data into database"""
