@@ -163,7 +163,7 @@ class SQLAlchemyTarget(luigi.Target):
     _engine_dict = {}  # dict of sqlalchemy engine instances
     Connection = collections.namedtuple("Connection", "engine pid")
 
-    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=None):
+    def __init__(self, connection_string, target_table, update_id, echo=False, connect_args=None, use_marker_table=True):
         """
         Constructor for the SQLAlchemyTarget.
 
@@ -177,6 +177,8 @@ class SQLAlchemyTarget(luigi.Target):
         :type echo: bool
         :param connect_args: A dictionary of connection arguments
         :type connect_args: dict
+        :param use_marker_table: Flag to use marker table
+        :type use_marker_table: bool
         :return:
         """
         if connect_args is None:
@@ -188,6 +190,10 @@ class SQLAlchemyTarget(luigi.Target):
         self.echo = echo
         self.connect_args = connect_args
         self.marker_table_bound = None
+        self.use_marker_table = use_marker_table
+
+        if use_marker_table:
+            self.is_completed = False
 
     @property
     def engine(self):
@@ -213,24 +219,30 @@ class SQLAlchemyTarget(luigi.Target):
         """
         Mark this update as complete.
         """
-        if self.marker_table_bound is None:
-            self.create_marker_table()
+        if not self.use_marker_table:
+            self.is_completed = True
+        else:
+            if self.marker_table_bound is None:
+                self.create_marker_table()
 
-        table = self.marker_table_bound
-        id_exists = self.exists()
-        with self.engine.begin() as conn:
-            if not id_exists:
-                ins = table.insert().values(update_id=self.update_id, target_table=self.target_table,
-                                            inserted=datetime.datetime.now())
-            else:
-                ins = table.update().where(sqlalchemy.and_(table.c.update_id == self.update_id,
-                                                           table.c.target_table == self.target_table)).\
-                    values(update_id=self.update_id, target_table=self.target_table,
-                           inserted=datetime.datetime.now())
-            conn.execute(ins)
+            table = self.marker_table_bound
+            id_exists = self.exists()
+            with self.engine.begin() as conn:
+                if not id_exists:
+                    ins = table.insert().values(update_id=self.update_id, target_table=self.target_table,
+                                                inserted=datetime.datetime.now())
+                else:
+                    ins = table.update().where(sqlalchemy.and_(table.c.update_id == self.update_id,
+                                                            table.c.target_table == self.target_table)).\
+                        values(update_id=self.update_id, target_table=self.target_table,
+                            inserted=datetime.datetime.now())
+                conn.execute(ins)
         assert self.exists()
 
     def exists(self):
+        if not self.use_marker_table:
+            return self.is_completed
+
         row = None
         if self.marker_table_bound is None:
             self.create_marker_table()
@@ -247,6 +259,9 @@ class SQLAlchemyTarget(luigi.Target):
 
         Using a separate connection since the transaction might have to be reset.
         """
+        if not self.use_marker_table:
+            raise NotImplementedError("Cannot create_marker_table() for SQLAlchemyTarget with use_marker_table equals to True")
+
         if self.marker_table is None:
             self.marker_table = luigi.configuration.get_config().get('sqlalchemy', 'marker-table', 'table_updates')
 
@@ -314,6 +329,7 @@ class CopyToTable(luigi.Task):
     column_separator = "\t"  # how columns are separated in the file copied into postgres
     chunk_size = 5000   # default chunk size for insert
     reflect = False  # Set this to true only if the table has already been created by alternate means
+    use_marker_table = True  # Set this to False if you do not want to create a marker table for tracking if output exists
 
     def create_table(self, engine):
         """
@@ -368,7 +384,8 @@ class CopyToTable(luigi.Task):
             target_table=self.table,
             update_id=self.update_id(),
             connect_args=self.connect_args,
-            echo=self.echo)
+            echo=self.echo,
+            use_marker_table=self.use_marker_table)
 
     def rows(self):
         """
