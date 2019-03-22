@@ -247,7 +247,7 @@ class TestSQLA(unittest.TestCase):
         self.assertFalse(target.exists())
         target.touch()
         self.assertTrue(target.exists())
-    
+
     @mock.patch("luigi.contrib.sqla.SQLAlchemyTarget.create_marker_table", new_callable=mock.PropertyMock)
     def test_no_marker_table_created(self, mock_create_marker_table):
         """
