@@ -51,6 +51,11 @@ class AzureBlobClientTest(unittest.TestCase):
         self.assertEqual(container, "abc")
         self.assertEqual(blob, "cde")
 
+    def test_splitfilepath_blob_windowspath(self):
+        container, blob = self.client.splitfilepath("abc\\cde")
+        self.assertEqual(container, "abc")
+        self.assertEqual(blob, "cde")
+
     def test_splitfilepath_blob_nested(self):
         container, blob = self.client.splitfilepath("abc/cde/xyz.txt")
         self.assertEqual(container, "abc")
