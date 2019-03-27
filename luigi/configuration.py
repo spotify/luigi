@@ -33,6 +33,7 @@ import logging
 import os
 import warnings
 
+from configparser import Interpolation
 try:
     from ConfigParser import ConfigParser, NoOptionError, NoSectionError
 except ImportError:
@@ -40,6 +41,10 @@ except ImportError:
 
 
 class LuigiConfigParser(ConfigParser):
+
+    # for python2/3 compatibility
+    _DEFAULT_INTERPOLATION = Interpolation()
+
     NO_DEFAULT = object()
     _instance = None
     _config_paths = [
