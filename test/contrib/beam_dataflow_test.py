@@ -19,11 +19,12 @@ import json
 import luigi
 from luigi.contrib import beam_dataflow
 from luigi import local_target
+import mock
 from mock import MagicMock, patch
 import unittest
 
 
-class TestDataflowParams(beam_dataflow.DataflowParams):
+class TestDataflowParamKeys(beam_dataflow.DataflowParamKeys):
     runner = "runner"
     project = "project"
     zone = "zone"
@@ -50,7 +51,7 @@ class TestRequires(luigi.ExternalTask):
 
 
 class SimpleTestTask(beam_dataflow.BeamDataflowJobTask):
-    dataflow_params = TestDataflowParams()
+    dataflow_params = TestDataflowParamKeys()
 
     def requires(self):
         return TestRequires()
@@ -82,7 +83,7 @@ class FullTestTask(beam_dataflow.BeamDataflowJobTask):
     region = 'europe-west1'
     labels = {'k1': 'v1'}
 
-    dataflow_params = TestDataflowParams()
+    dataflow_params = TestDataflowParamKeys()
 
     def requires(self):
         return TestRequires()
@@ -98,7 +99,7 @@ class FullTestTask(beam_dataflow.BeamDataflowJobTask):
 
 
 class FilePatternsTestTask(beam_dataflow.BeamDataflowJobTask):
-    dataflow_params = TestDataflowParams()
+    dataflow_params = TestDataflowParamKeys()
 
     def requires(self):
         return {
@@ -117,7 +118,7 @@ class FilePatternsTestTask(beam_dataflow.BeamDataflowJobTask):
 
 
 class DummyCmdLineTestTask(beam_dataflow.BeamDataflowJobTask):
-    dataflow_params = TestDataflowParams()
+    dataflow_params = TestDataflowParamKeys()
 
     def dataflow_executable(self):
         pass
@@ -135,7 +136,8 @@ class DummyCmdLineTestTask(beam_dataflow.BeamDataflowJobTask):
 class BeamDataflowTest(unittest.TestCase):
 
     def test_dataflow_simple_cmd_line_args(self):
-        cmd_line_args = SimpleTestTask()._mk_cmd_line()
+        task = SimpleTestTask()
+        task.runner = 'DirectRunner'
 
         expected = [
             'java',
@@ -145,11 +147,11 @@ class BeamDataflowTest(unittest.TestCase):
             '--output=some-output.txt'
         ]
 
-        self.assertEqual(cmd_line_args, expected)
+        self.assertEqual(task._mk_cmd_line(), expected)
 
     def test_dataflow_full_cmd_line_args(self):
-        task = FullTestTask()
-        cmd_line_args = task._mk_cmd_line()
+        full_test_task = FullTestTask()
+        cmd_line_args = full_test_task._mk_cmd_line()
 
         expected = [
             'java',
@@ -179,7 +181,7 @@ class BeamDataflowTest(unittest.TestCase):
 
         self.assertEqual(json.loads(cmd_line_args[19][9:]), {'k1': 'v1'})
         self.assertEqual(cmd_line_args, expected)
-        self.assertEqual(task.output_uris, {"output": "some-output.txt"})
+        self.assertEqual(full_test_task.output_uris, {"output": "some-output.txt"})
 
     def test_dataflow_with_file_patterns(self):
         cmd_line_args = FilePatternsTestTask()._mk_cmd_line()
@@ -196,14 +198,14 @@ class BeamDataflowTest(unittest.TestCase):
     def test_dataflow_runner_resolution(self):
         task = SimpleTestTask()
         # Test that supported runners are passed through
-        for runner in ["DirectRunner", "BlockingDataflowPipelineRunner",
-                       "InProcessPipelineRunner", "DataflowRunner"]:
+        for runner in ["DirectRunner", "DataflowRunner"]:
             task.runner = runner
             self.assertEqual(task._get_runner(), runner)
 
-        # Test that unsupported runners default to DirectRunner
+        # Test that unsupported runners throw an error
         task.runner = "UnsupportedRunner"
-        self.assertEqual(task._get_runner(), "DirectRunner")
+        with self.assertRaises(ValueError):
+            task._get_runner()
 
     def test_dataflow_successful_run_callbacks(self):
         task = DummyCmdLineTestTask()
@@ -211,7 +213,7 @@ class BeamDataflowTest(unittest.TestCase):
         task.before_run = MagicMock()
         task.validate_output = MagicMock()
         task.on_successful_run = MagicMock()
-        task.on_output_validation = MagicMock()
+        task.on_successful_output_validation = MagicMock()
         task.cleanup_on_error = MagicMock()
 
         task.run()
@@ -220,7 +222,7 @@ class BeamDataflowTest(unittest.TestCase):
         task.validate_output.assert_called_once_with()
         task.cleanup_on_error.assert_not_called()
         task.on_successful_run.assert_called_once_with()
-        task.on_output_validation.assert_called_once_with()
+        task.on_successful_output_validation.assert_called_once_with()
 
     def test_dataflow_successful_run_invalid_output_callbacks(self):
         task = DummyCmdLineTestTask()
@@ -228,7 +230,7 @@ class BeamDataflowTest(unittest.TestCase):
         task.before_run = MagicMock()
         task.validate_output = MagicMock(return_value=False)
         task.on_successful_run = MagicMock()
-        task.on_output_validation = MagicMock()
+        task.on_successful_output_validation = MagicMock()
         task.cleanup_on_error = MagicMock()
 
         with self.assertRaises(ValueError):
@@ -236,9 +238,9 @@ class BeamDataflowTest(unittest.TestCase):
 
         task.before_run.assert_called_once_with()
         task.validate_output.assert_called_once_with()
-        task.cleanup_on_error.assert_called_once_with()
+        task.cleanup_on_error.assert_called_once_with(mock.ANY)
         task.on_successful_run.assert_called_once_with()
-        task.on_output_validation.assert_not_called()
+        task.on_successful_output_validation.assert_not_called()
 
     @patch('luigi.contrib.beam_dataflow.subprocess.Popen.wait', return_value=1)
     @patch('luigi.contrib.beam_dataflow.os._exit', side_effect=OSError)
@@ -248,7 +250,7 @@ class BeamDataflowTest(unittest.TestCase):
         task.before_run = MagicMock()
         task.validate_output = MagicMock()
         task.on_successful_run = MagicMock()
-        task.on_output_validation = MagicMock()
+        task.on_successful_output_validation = MagicMock()
         task.cleanup_on_error = MagicMock()
 
         with self.assertRaises(OSError):
@@ -256,6 +258,6 @@ class BeamDataflowTest(unittest.TestCase):
 
         task.before_run.assert_called_once_with()
         task.validate_output.assert_not_called()
-        task.cleanup_on_error.assert_called_once_with()
+        task.cleanup_on_error.assert_called_once_with(mock.ANY)
         task.on_successful_run.assert_not_called()
-        task.on_output_validation.assert_not_called()
+        task.on_successful_output_validation.assert_not_called()

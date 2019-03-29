@@ -31,7 +31,7 @@ logger = logging.getLogger('luigi-interface')
 
 
 @six.add_metaclass(abc.ABCMeta)
-class DataflowParams(object):
+class DataflowParamKeys(object):
     """
     Defines the naming conventions for Dataflow execution params.
     For example, the Java API expects param names in lower camel case, whereas
@@ -219,8 +219,8 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
     output_uris = None
 
     def __init__(self):
-        if not isinstance(self.dataflow_params, DataflowParams):
-            raise ValueError("dataflow_params must be of type DataflowParams")
+        if not isinstance(self.dataflow_params, DataflowParamKeys):
+            raise ValueError("dataflow_params must be of type DataflowParamKeys")
 
     @abstractmethod
     def dataflow_executable(self):
@@ -228,7 +228,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         Command representing the Dataflow executable to be run.
         For example:
 
-        return ['java com.spotify.luigi.MyClass', '-Xmx256m']
+        return ['java', 'com.spotify.luigi.MyClass', '-Xmx256m']
         """
         pass
 
@@ -274,14 +274,14 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         """
         return {}
 
-    def on_output_validation(self):
+    def on_successful_output_validation(self):
         """
         Callback that gets called after the Dataflow job has finished
         successfully if validate_output returns True.
         """
         pass
 
-    def cleanup_on_error(self):
+    def cleanup_on_error(self, error):
         """
         Callback that gets called after the Dataflow job has finished
         unsuccessfully, or validate_output returns False.
@@ -298,21 +298,17 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
             self.cmd_line_runner.run(cmd_line, self)
         except subprocess.CalledProcessError as e:
             logger.error(e, exc_info=True)
-            self.cleanup_on_error()
-            """
-            Exit Luigi with the same exit code as the Dataflow job process, so
-            users can easily exit the job with code 50 to avoid Styx retries
-            https://github.com/spotify/styx/blob/master/doc/design-overview.md#workflow-state-graph
-            """
+            self.cleanup_on_error(e)
             os._exit(e.returncode)
 
         self.on_successful_run()
 
         if self.validate_output():
-            self.on_output_validation()
+            self.on_successful_output_validation()
         else:
-            self.cleanup_on_error()
-            raise ValueError("Output validation failed")
+            error = ValueError("Output validation failed")
+            self.cleanup_on_error(error)
+            raise error
 
     def _mk_cmd_line(self):
         cmd_line = self.dataflow_executable()
@@ -324,24 +320,17 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         return cmd_line
 
     def _get_runner(self):
-        if self.runner in [
+        if not self.runner:
+            logger.warning("Runner not supplied to BeamDataflowJobTask. " +
+                           "Defaulting to DirectRunner.")
+            return "DirectRunner"
+        elif self.runner in [
             "DataflowRunner",
             "DirectRunner"
         ]:
             return self.runner
-
-        elif self.runner in [
-            "InProcessPipelineRunner",
-            "BlockingDataflowPipelineRunner"
-        ]:
-            logger.warning("Using deprecated runner %s. Consider upgrading to "
-                           "Beam 2.x." % self.runner)
-            return self.runner
-
         else:
-            logger.warning("Found unsupported runner %s. Defaulting to "
-                           "DirectRunner." % self.runner)
-            return "DirectRunner"
+            raise ValueError("Runner %s is unsupported." % self.runner)
 
     def _get_dataflow_args(self):
         def f(key, value):
@@ -349,9 +338,8 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
         output = []
 
-        runner = self._get_runner()
-        if runner:
-            output.append(f(self.dataflow_params.runner, runner))
+        output.append(f(self.dataflow_params.runner, self._get_runner()))
+
         if self.project:
             output.append(f(self.dataflow_params.project, self.project))
         if self.zone:
@@ -391,8 +379,10 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
     def _format_input_args(self):
         job_input = self.input()
+
         if isinstance(job_input, luigi.Target):
             job_input = {"input": job_input}
+
         elif not isinstance(job_input, dict):
             raise ValueError("Input (requires()) must be dict type")
 
