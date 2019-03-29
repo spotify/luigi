@@ -139,7 +139,6 @@ class _CmdLineRunner(object):
         if exit_code:
             output = "".join(output_lines)
             raise subprocess.CalledProcessError(exit_code, cmd, output=output)
-        return exit_code
 
 
 @six.add_metaclass(ABCMeta)
@@ -392,9 +391,9 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         input_args = []
 
         for (name, targets) in job_input.items():
-            uri_targets = luigi.task.flatten(targets)
-            uris = [self._targets_to_uri_getter.get(
-                uri_target.__class__)(uri_target) for uri_target in uri_targets]
+            uris = [
+              self.get_target_path(uri_target) for uri_target in luigi.task.flatten(targets)
+            ]
             if isinstance(targets, dict):
                 """
                 If targets is a dict that means it had multiple outputs.
@@ -423,19 +422,18 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         output_args = []
 
         for (name, target) in job_output.items():
-            getter = self._targets_to_uri_getter.get(target.__class__)
-            uri = getter(target)
+            uri = self.get_target_path(target)
 
             self.output_uris[name] = uri
             output_args.append("--%s=%s" % (name, uri))
 
         return output_args
 
-    @property
-    def _targets_to_uri_getter(self):
-        return dict([
-            (luigi.LocalTarget, lambda t: t.path),
-            (gcs.GCSTarget, lambda t: t.path),
-            (bigquery.BigQueryTarget, lambda t: "{}:{}.{}".format(
-                t.project_id, t.dataset_id, t.table_id))
-        ])
+    @staticmethod
+    def get_target_path(target):
+        if isinstance(target, luigi.LocalTarget) or isinstance(target, gcs.GCSTarget):
+            return target.path
+        elif isinstance(target, bigquery.BigQueryTarget):
+            "{}:{}.{}".format(target.project_id, target.dataset_id, target.table_id)
+        else:
+            raise ValueError("Target not supported")
