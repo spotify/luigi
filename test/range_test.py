@@ -961,7 +961,7 @@ class RangeMonthlyTest(unittest.TestCase):
         )
 
     def test_start_after_long_months_back(self):
-        total = 12 - 3
+        total = 12 - 4
         self._nonempty_subcase(
             {
                 'now': datetime_to_epoch(datetime.datetime(2014, 11, 22)),
@@ -969,7 +969,7 @@ class RangeMonthlyTest(unittest.TestCase):
                 'task_limit': 4,
                 'months_back': 12 * 24,
             },
-            (datetime.datetime(2014, 3, 1), datetime.datetime(2014, 11, 1)),
+            (datetime.datetime(2014, 3, 1), datetime.datetime(2014, 10, 1)),
             [
                 'CommonMonthTask(m=2014-03)',
                 'CommonMonthTask(m=2014-04)',
@@ -1000,22 +1000,83 @@ class RangeMonthlyTest(unittest.TestCase):
                 'months_back': 3 * 12,
                 'months_forward': 3 * 12,
             },
-            (datetime.datetime(2014, 11, 1), datetime.datetime(2020, 10, 1)),
+            (datetime.datetime(2014, 10, 1), datetime.datetime(2020, 9, 1)),
             [
+                'CommonMonthTask(m=2014-10)',
                 'CommonMonthTask(m=2014-11)',
                 'CommonMonthTask(m=2014-12)',
                 'CommonMonthTask(m=2015-01)',
-                'CommonMonthTask(m=2015-02)',
             ],
             {
                 'event.tools.range.delay': [
-                    ('CommonMonthTask', (2025 - (2017 - 3)) * 12 - 10),
+                    ('CommonMonthTask', (2025 - (2017 - 3)) * 12 - 9),
                 ],
                 'event.tools.range.complete.count': [
                     ('CommonMonthTask', total - 7),
                 ],
                 'event.tools.range.complete.fraction': [
                     ('CommonMonthTask', (total - 7.0) / total),
+                ],
+            }
+        )
+
+    def test_zero_months_forward(self):
+        total = (2017 - 2011) * 12
+        self._nonempty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2017, 10, 31, 12, 4, 29)),
+                'start': datetime.date(2011, 10, 1),
+                'task_limit': 10,
+                'months_back': 4,
+            },
+            (datetime.datetime(2017, 6, 1), datetime.datetime(2017, 9, 1)),
+            [
+                'CommonMonthTask(m=2017-06)',
+                'CommonMonthTask(m=2017-07)',
+                'CommonMonthTask(m=2017-08)',
+                'CommonMonthTask(m=2017-09)',
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', 4),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', total - 4),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', (total - 4.0) / total),
+                ],
+            }
+        )
+
+    def test_months_forward_on_first_of_month(self):
+        total = (2017 - 2011) * 12 + 2
+        self._nonempty_subcase(
+            {
+                'now': datetime_to_epoch(datetime.datetime(2017, 10, 1, 12, 4, 29)),
+                'start': datetime.date(2011, 10, 1),
+                'task_limit': 10,
+                'months_back': 4,
+                'months_forward': 2
+            },
+            (datetime.datetime(2017, 6, 1), datetime.datetime(2017, 11, 1)),
+            [
+                'CommonMonthTask(m=2017-06)',
+                'CommonMonthTask(m=2017-07)',
+                'CommonMonthTask(m=2017-08)',
+                'CommonMonthTask(m=2017-09)',
+                'CommonMonthTask(m=2017-10)',
+                'CommonMonthTask(m=2017-11)',
+            ],
+            {
+                'event.tools.range.delay': [
+                    ('CommonMonthTask', 6),
+                ],
+                'event.tools.range.complete.count': [
+                    ('CommonMonthTask', total - 6),
+                ],
+                'event.tools.range.complete.fraction': [
+                    ('CommonMonthTask', (total - 6.0) / total),
                 ],
             }
         )
