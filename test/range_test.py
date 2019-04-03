@@ -1044,7 +1044,7 @@ class MonthInstantiationTest(LuigiTestCase):
                                   start=datetime.date(2015, 12, 1),
                                   stop=datetime.date(2016, 1, 1))
         expected_task = MyTask(month_param=datetime.date(2015, 12, 1))
-        self.assertEqual(expected_task, list(range_task._requires())[0])
+        self.assertEqual(expected_task, list(range_task.process_requires())[0])
 
     def test_month_cli_instantiation(self):
         """
@@ -1082,7 +1082,7 @@ class MonthInstantiationTest(LuigiTestCase):
                                   stop=datetime.date(2016, 1, 1),
                                   param_name='month_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
-        self.assertEqual(expected_task, list(range_task._requires())[0])
+        self.assertEqual(expected_task, list(range_task.process_requires())[0])
 
     def test_param_name_with_inferred_fs(self):
         class MyTask(luigi.Task):
@@ -1098,7 +1098,7 @@ class MonthInstantiationTest(LuigiTestCase):
                                   stop=datetime.date(2016, 1, 1),
                                   param_name='month_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
-        self.assertEqual(expected_task, list(range_task._requires())[0])
+        self.assertEqual(expected_task, list(range_task.process_requires())[0])
 
     def test_of_param_distinction(self):
         class MyTask(luigi.Task):
@@ -1465,7 +1465,7 @@ class RangeInstantiationTest(LuigiTestCase):
                                     start=datetime.date(2015, 12, 1),
                                     stop=datetime.date(2015, 12, 2))
         expected_task = MyTask(date_param=datetime.date(2015, 12, 1))
-        self.assertEqual(expected_task, list(range_task._requires())[0])
+        self.assertEqual(expected_task, list(range_task.process_requires())[0])
 
     def test_cli_instantiation(self):
         """
@@ -1503,7 +1503,7 @@ class RangeInstantiationTest(LuigiTestCase):
                                     stop=datetime.date(2015, 12, 2),
                                     param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
-        self.assertEqual(expected_task, list(range_task._requires())[0])
+        self.assertEqual(expected_task, list(range_task.process_requires())[0])
 
     def test_param_name_with_inferred_fs(self):
         class MyTask(luigi.Task):
@@ -1519,7 +1519,7 @@ class RangeInstantiationTest(LuigiTestCase):
                                 stop=datetime.date(2015, 12, 2),
                                 param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
-        self.assertEqual(expected_task, list(range_task._requires())[0])
+        self.assertEqual(expected_task, list(range_task.process_requires())[0])
 
     def test_of_param_distinction(self):
         class MyTask(luigi.Task):

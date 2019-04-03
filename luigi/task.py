@@ -613,16 +613,25 @@ class Task(object):
         """
         return []  # default impl
 
-    def _requires(self):
+    def process_requires(self):
         """
         Override in "template" tasks which themselves are supposed to be
         subclassed and thus have their requires() overridden (name preserved to
         provide consistent end-user experience), yet need to introduce
         (non-input) dependencies.
 
-        Must return an iterable which among others contains the _requires() of
+        Must return an iterable which among others contains the process_requires() of
         the superclass.
         """
+
+        _requires = getattr(self, '_requires', None)
+        if callable(_requires):
+            warnings.warn("Use of _requires has been deprecated. To customize "
+                          "dependencies in a child class, use `process_requires`.",
+                          DeprecationWarning)
+
+            return _requires()
+
         return flatten(self.requires())  # base impl
 
     def process_resources(self):
@@ -651,7 +660,7 @@ class Task(object):
         Returns the flattened list of requires.
         """
         # used by scheduler
-        return flatten(self._requires())
+        return flatten(self.process_requires())
 
     def run(self):
         """
