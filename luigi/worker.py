@@ -176,7 +176,7 @@ class TaskProcess(multiprocessing.Process):
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
             if self.check_unfulfilled_deps and not _is_external(self.task):
-                missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
+                missing = [dep.task_id for dep in self.task.process_requires() if not dep.complete()]
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
                     raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
@@ -641,7 +641,7 @@ class Worker(object):
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in process_requires() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
@@ -675,7 +675,7 @@ class Worker(object):
         if self._config.send_failure_email:
             self._email_error(task, formatted_traceback,
                               subject="Luigi: {task} failed scheduling. Host: {host}",
-                              headline="Will not run {task} or any dependencies due to error in deps() method",
+                              headline="Will not run {task} or any dependencies due to error in process_requires() method",
                               )
 
     def _email_unexpected_error(self, task, formatted_traceback):
@@ -821,7 +821,7 @@ class Worker(object):
 
             else:
                 try:
-                    deps = task.deps()
+                    deps = task.process_requires()
                     self._add_task_batcher(task)
                 except Exception as ex:
                     formatted_traceback = traceback.format_exc()

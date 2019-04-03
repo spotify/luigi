@@ -510,7 +510,7 @@ class WorkerTest(LuigiTestCase):
 
         # For b to be done, we must have rescheduled its dependencies to run them twice
         self.assertTrue(b.complete())
-        self.assertTrue(all(a.complete() for a in b.deps()))
+        self.assertTrue(all(a.complete() for a in b.process_requires()))
 
     def test_interleaved_workers(self):
         class A(DummyTask):

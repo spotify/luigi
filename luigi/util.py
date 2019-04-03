@@ -407,9 +407,9 @@ def delegates(task_that_delegates):
     @task._task_wraps(task_that_delegates)
     class Wrapped(task_that_delegates):
 
-        def deps(self):
+        def process_requires(self):
             # Overrides method in base class
-            return task.flatten(self.requires()) + task.flatten([t.deps() for t in task.flatten(self.subtasks())])
+            return task.flatten(self.requires()) + task.flatten([t.process_requires() for t in task.flatten(self.subtasks())])
 
         def run(self):
             for t in task.flatten(self.subtasks()):

@@ -653,15 +653,6 @@ class Task(object):
         """
         return getpaths(self.requires())
 
-    def deps(self):
-        """
-        Internal method used by the scheduler.
-
-        Returns the flattened list of requires.
-        """
-        # used by scheduler
-        return flatten(self.process_requires())
-
     def run(self):
         """
         The task run method, to be overridden in a subclass.

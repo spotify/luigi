@@ -180,7 +180,7 @@ class WorkerExternalTaskTest(unittest.TestCase):
         test_task = TestTask(tempdir=self.tempdir, complete_after=3)
         test_task.run = NotImplemented
 
-        assert len(test_task.deps()) > 0
+        assert len(test_task.process_requires()) > 0
 
         # split up scheduling task and running to simulate runtime scenario
         with self._make_worker() as w:

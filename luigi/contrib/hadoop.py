@@ -754,7 +754,7 @@ class BaseHadoopJobTask(luigi.Task):
     def input_hadoop(self):
         return luigi.task.getpaths(self.requires_hadoop())
 
-    def deps(self):
+    def process_requires(self):
         # Overrides the default implementation
         return luigi.task.flatten(self.requires_hadoop()) + luigi.task.flatten(self.requires_local())
 
