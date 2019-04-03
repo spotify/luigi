@@ -625,6 +625,18 @@ class Task(object):
         """
         return flatten(self.requires())  # base impl
 
+    def process_dynamic_deps(self, deps):
+        """
+        Override in "template" tasks which themselves are supposed to be
+        subclassed and thus have their dynamic dependencies modified.
+
+        Takes a flattened list of dynamic dependencies.
+
+        Must return an iterable which among others contains the original
+        dynamic dependencies the superclass.
+        """
+        return deps
+
     def process_resources(self):
         """
         Override in "template" tasks which provide common resource functionality
