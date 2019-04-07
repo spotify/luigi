@@ -196,7 +196,7 @@ class BatchTask(luigi.Task):
 
     :param job_definition (str): name of pre-registered jobDefinition
     :param job_name: name of specific job, for tracking in the queue and logs.
-    :param job_queue: name of job queue where job is going to be submitted. This is optional, if not specified, one queue whose state is VALID and ENABLED is going to be automatically selected.
+    :param job_queue: name of job queue where job is going to be submitted.
 
     """
     job_definition = luigi.Parameter()
