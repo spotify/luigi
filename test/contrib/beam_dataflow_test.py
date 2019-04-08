@@ -196,27 +196,14 @@ class BeamDataflowTest(unittest.TestCase):
             task._mk_cmd_line()
 
     def test_dataflow_input_arg_formatting(self):
-        class TestTaskListInput(SimpleTestTask):
-            class TestRequiresList(luigi.ExternalTask):
-                def output(self):
-                    return [luigi.LocalTarget(path='some-input-1'),
-                            luigi.LocalTarget(path='some-input-2')]
-
-            def requires(self):
-                return self.TestRequiresList()
-
-        task_list_input = TestTaskListInput()
-        self.assertEqual(task_list_input._format_input_args(),
-                         ['--input=some-input-1/part-*,some-input-2/part-*'])
-
         class TestTaskListOfTargetsInput(SimpleTestTask):
-            class TestRequiresList(luigi.ExternalTask):
+            class TestRequiresListOfTargets(luigi.ExternalTask):
                 def output(self):
                     return [luigi.LocalTarget(path='some-input-1'),
                             luigi.LocalTarget(path='some-input-2')]
 
             def requires(self):
-                return self.TestRequiresList()
+                return self.TestRequiresListOfTargets()
 
         task_list_input = TestTaskListOfTargetsInput()
         self.assertEqual(task_list_input._format_input_args(),
