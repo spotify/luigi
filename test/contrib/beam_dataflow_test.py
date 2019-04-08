@@ -195,6 +195,73 @@ class BeamDataflowTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             task._mk_cmd_line()
 
+    def test_dataflow_input_arg_formatting(self):
+        class TestTaskListInput(SimpleTestTask):
+            class TestRequiresList(luigi.ExternalTask):
+                def output(self):
+                    return [luigi.LocalTarget(path='some-input-1'),
+                            luigi.LocalTarget(path='some-input-2')]
+
+            def requires(self):
+                return self.TestRequiresList()
+
+        task_list_input = TestTaskListInput()
+        self.assertEqual(task_list_input._format_input_args(),
+                         ['--input=some-input-1/part-*,some-input-2/part-*'])
+
+        class TestTaskListOfTargetsInput(SimpleTestTask):
+            class TestRequiresList(luigi.ExternalTask):
+                def output(self):
+                    return [luigi.LocalTarget(path='some-input-1'),
+                            luigi.LocalTarget(path='some-input-2')]
+
+            def requires(self):
+                return self.TestRequiresList()
+
+        task_list_input = TestTaskListOfTargetsInput()
+        self.assertEqual(task_list_input._format_input_args(),
+                         ['--input=some-input-1/part-*,some-input-2/part-*'])
+
+        class TestTaskListOfTuplesInput(SimpleTestTask):
+            class TestRequiresListOfTuples(luigi.ExternalTask):
+                def output(self):
+                    return [('input1', luigi.LocalTarget(path='some-input-1')),
+                            ('input2', luigi.LocalTarget(path='some-input-2'))]
+
+            def requires(self):
+                return self.TestRequiresListOfTuples()
+
+        task_list_tuples_input = TestTaskListOfTuplesInput()
+        self.assertEqual(task_list_tuples_input._format_input_args(),
+                         ['--input1=some-input-1/part-*',
+                          '--input2=some-input-2/part-*'])
+
+        class TestTaskDictInput(SimpleTestTask):
+            class TestRequiresDict(luigi.ExternalTask):
+                def output(self):
+                    return {'input1': luigi.LocalTarget(path='some-input-1'),
+                            'input2': luigi.LocalTarget(path='some-input-2')}
+
+            def requires(self):
+                return self.TestRequiresDict()
+
+        task_dict_input = TestTaskDictInput()
+        self.assertEqual(task_dict_input._format_input_args(),
+                         ['--input1=some-input-1/part-*',
+                          '--input2=some-input-2/part-*'])
+
+        class TestTaskTupleInput(SimpleTestTask):
+            class TestRequiresTuple(luigi.ExternalTask):
+                def output(self):
+                    return 'some-key', luigi.LocalTarget(path='some-input')
+
+            def requires(self):
+                return self.TestRequiresTuple()
+
+        task_tuple_input = TestTaskTupleInput()
+        self.assertEqual(task_tuple_input._format_input_args(),
+                         ['--some-key=some-input/part-*'])
+
     def test_dataflow_runner_resolution(self):
         task = SimpleTestTask()
         # Test that supported runners are passed through

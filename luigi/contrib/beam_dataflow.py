@@ -382,6 +382,15 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         if isinstance(job_input, luigi.Target):
             job_input = {"input": job_input}
 
+        elif isinstance(job_input, tuple):
+            job_input = {job_input[0]: job_input[1]}
+
+        elif isinstance(job_input, list):
+            if all(isinstance(item, tuple) for item in job_input):
+                job_input = dict(job_input)
+            else:
+                job_input = {"input": job_input}
+
         elif not isinstance(job_input, dict):
             raise ValueError("Input (requires()) must be dict type")
 
@@ -400,14 +409,20 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
                 Make the input args in that case "<input key>-<task output key>"
                 """
                 names = ["%s-%s" % (name, key) for key in targets.keys()]
+
             else:
                 names = [name] * len(uris)
+
+            input_dict = {}
+
             for (arg_name, uri) in zip(names, uris):
                 pattern = self.file_pattern().get(name, 'part-*')
-                input_args.append(
-                    "--%s=%s" %
-                    (arg_name, uri.rstrip('/') + '/' + pattern)
-                )
+                input_value = input_dict.get(arg_name, [])
+                input_value.append(uri.rstrip('/') + '/' + pattern)
+                input_dict[arg_name] = input_value
+
+            for (key, paths) in input_dict.items():
+                input_args.append("--%s=%s" % (key, ','.join(paths)))
 
         return input_args
 
@@ -416,7 +431,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         if isinstance(job_output, luigi.Target):
             job_output = {"output": job_output}
         elif not isinstance(job_output, dict):
-            raise ValueError("Input (requires()) must be dict type")
+            raise ValueError("Task output must be Target or dict type")
 
         self.output_uris = {}
         output_args = []
