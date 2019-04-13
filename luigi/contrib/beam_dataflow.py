@@ -377,6 +377,22 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         return output
 
     def _format_input_args(self):
+        """
+            Parses the result(s) of self.input() into a string-serialized
+            key-value list passed to the Dataflow job. Valid inputs include:
+
+            return FooTarget()
+
+            return {"input1": FooTarget(), "input2": FooTarget2())
+
+            return ("input", FooTarget())
+
+            return [("input1", FooTarget()), ("input2": FooTarget2())]
+
+            return [FooTarget(), FooTarget2()]
+
+            Unlabeled input are passed in with under the default key "input".
+        """
         job_input = self.input()
 
         if isinstance(job_input, luigi.Target):
@@ -392,7 +408,9 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
                 job_input = {"input": job_input}
 
         elif not isinstance(job_input, dict):
-            raise ValueError("Input (requires()) must be dict type")
+            raise ValueError("Invalid job input requires(). Supported types: ["
+                             "Target, tuple of (name, Target), "
+                             "dict of (name: Target), list of Targets]")
 
         if not isinstance(self.file_pattern(), dict):
             raise ValueError('file_pattern() must return a dict type')
@@ -427,11 +445,22 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
         return input_args
 
     def _format_output_args(self):
+        """
+            Parses the result(s) of self.output() into a string-serialized
+            key-value list passed to the Dataflow job. Valid outputs include:
+
+            return FooTarget()
+
+            return {"output1": FooTarget(), "output2": FooTarget2()}
+
+            Unlabeled outputs are passed in with under the default key "output".
+        """
         job_output = self.output()
         if isinstance(job_output, luigi.Target):
             job_output = {"output": job_output}
         elif not isinstance(job_output, dict):
-            raise ValueError("Task output must be Target or dict type")
+            raise ValueError(
+                "Task output must be a Target or a dict from String to Target")
 
         self.output_uris = {}
         output_args = []

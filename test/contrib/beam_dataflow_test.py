@@ -249,6 +249,40 @@ class BeamDataflowTest(unittest.TestCase):
         self.assertEqual(task_tuple_input._format_input_args(),
                          ['--some-key=some-input/part-*'])
 
+    def test_task_output_arg_completion(self):
+        class TestCompleteTarget(luigi.Target):
+            def exists(self):
+                return True
+
+        class TestIncompleteTarget(luigi.Target):
+            def exists(self):
+                return False
+
+        class TestTaskDictOfCompleteOutput(SimpleTestTask):
+            def output(self):
+                return {
+                    "output": TestCompleteTarget()
+                }
+
+        self.assertEqual(TestTaskDictOfCompleteOutput().complete(), True)
+
+        class TestTaskDictOfIncompleteOutput(SimpleTestTask):
+            def output(self):
+                return {
+                    "output": TestIncompleteTarget()
+                }
+
+        self.assertEqual(TestTaskDictOfIncompleteOutput().complete(), False)
+
+        class TestTaskDictOfMixedCompleteOutput(SimpleTestTask):
+            def output(self):
+                return {
+                    "output1": TestIncompleteTarget(),
+                    "output2": TestCompleteTarget()
+                }
+
+        self.assertEqual(TestTaskDictOfMixedCompleteOutput().complete(), False)
+
     def test_dataflow_runner_resolution(self):
         task = SimpleTestTask()
         # Test that supported runners are passed through
