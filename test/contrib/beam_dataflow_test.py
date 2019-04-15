@@ -181,7 +181,6 @@ class BeamDataflowTest(unittest.TestCase):
 
         self.assertEqual(json.loads(cmd_line_args[19][9:]), {'k1': 'v1'})
         self.assertEqual(cmd_line_args, expected)
-        self.assertEqual(full_test_task.output_uris, {"output": "some-output.txt"})
 
     def test_dataflow_with_file_patterns(self):
         cmd_line_args = FilePatternsTestTask()._mk_cmd_line()

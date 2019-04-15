@@ -215,7 +215,6 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
     cmd_line_runner = _CmdLineRunner
     dataflow_params = None
-    output_uris = None
 
     def __init__(self):
         if not isinstance(self.dataflow_params, DataflowParamKeys):
@@ -462,13 +461,10 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
             raise ValueError(
                 "Task output must be a Target or a dict from String to Target")
 
-        self.output_uris = {}
         output_args = []
 
         for (name, target) in job_output.items():
             uri = self.get_target_path(target)
-
-            self.output_uris[name] = uri
             output_args.append("--%s=%s" % (name, uri))
 
         return output_args
