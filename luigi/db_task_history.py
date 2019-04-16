@@ -278,6 +278,7 @@ class TaskRecord(Base):
     scheduling_ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP)
     execution_ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP)
     completion_ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP)
+    tracking_url = sqlalchemy.Column(sqlalchemy.String(255))
 
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
