@@ -26,7 +26,7 @@ logger = logging.getLogger('luigi-interface')
 try:
     import mysql.connector
     from mysql.connector import errorcode, Error
-except ImportError as e:
+except ImportError:
     logger.warning("Loading MySQL module without the python package mysql-connector-python. \
        This will crash at runtime if MySQL functionality is used.")
 

@@ -236,7 +236,7 @@ class DockerTask(luigi.Task):
             self.__logger.error("Container " + container_name +
                                 " exited with non zero code: " + message)
             raise
-        except ImageNotFound as e:
+        except ImageNotFound:
             self.__logger.error("Image " + self._image + " not found")
             raise
         except APIError as e:
