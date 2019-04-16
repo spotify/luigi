@@ -143,6 +143,8 @@ class DbTaskHistory(object):
                 if k not in task_record.parameters:
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
             # yield the record
+            if hasattr(task, 'tracking_url') and task.tracking_url:
+                task_record.tracking_url = task.tracking_url
             yield (task_record, session)
 
     def _get_or_create_deps_records(self, dep_ids, session=None):
@@ -320,3 +322,8 @@ def _upgrade_schema(engine):
                     engine.dialect
                 )
             )
+
+        # Upgrade 3.  Add tracking url column
+        if 'tracking_url' not in [x['name'] for x in inspector.get_columns('tasks')]:
+            logger.warning('Upgrading DbTaskHistory schema: Adding tasks.tracking_url')
+            conn.execute('ALTER TABLE tasks ADD COLUMN tracking_url VARCHAR(255)')
