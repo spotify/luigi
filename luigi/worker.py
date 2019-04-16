@@ -62,7 +62,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, TimeDeltaParameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
 
 try:
     import simplejson as json
@@ -407,6 +407,8 @@ def check_complete(task, out_queue):
 class worker(Config):
     # NOTE: `section.config-variable` in the config_path argument is deprecated in favor of `worker.config_variable`
 
+    id = Parameter(default='',
+                   description='Override the auto-generated worker_id')
     ping_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-ping-interval'))
     keep_alive = BoolParameter(default=False,
@@ -513,10 +515,9 @@ class Worker(object):
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
 
-        if not worker_id:
-            worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
-
         self._config = worker(**kwargs)
+
+        worker_id = worker_id or self._config.id or self._generate_worker_id(self._worker_info)
 
         assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
         assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
@@ -627,6 +628,10 @@ class Worker(object):
         except BaseException:
             pass
         return args
+
+    def _generate_worker_id(self, worker_info):
+        worker_info_str = ', '.join(['{}={}'.format(k, v) for k, v in worker_info])
+        return 'Worker({})'.format(worker_info_str)
 
     def _validate_task(self, task):
         if not isinstance(task, Task):

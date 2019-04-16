@@ -22,6 +22,10 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
+try:
+    from collections.abc import MutableSet
+except ImportError:
+    from collections import MutableSet
 import json
 
 from luigi.batch_notifier import BatchNotifier
@@ -208,7 +212,7 @@ def _get_default(x, default):
         return default
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(MutableSet):
     """
     Standard Python OrderedSet recipe found at http://code.activestate.com/recipes/576694/
 

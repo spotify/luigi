@@ -168,12 +168,6 @@ log_level
 logging_conf_file
   Location of the logging configuration file.
 
-max_reschedules
-  The maximum number of times that a job can be automatically
-  rescheduled by a worker before it will stop trying. Workers will
-  reschedule a job if it is found to not be done when attempting to run
-  a dependent job. This defaults to 1.
-
 max_shown_tasks
   .. versionadded:: 1.0.20
 
@@ -320,8 +314,10 @@ max_keep_alive_idle_duration
   Default: 0 (Indefinitely)
 
 max_reschedules
-  Maximum number of times to reschedule a failed task.
-  Default: 1
+  The maximum number of times that a job can be automatically
+  rescheduled by a worker before it will stop trying. Workers will
+  reschedule a job if it is found to not be done when attempting to run
+  a dependent job. This defaults to 1.
 
 retry_external_tasks
   If true, incomplete external tasks (i.e. tasks where the `run()` method is

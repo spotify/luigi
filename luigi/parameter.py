@@ -26,7 +26,11 @@ import warnings
 from enum import IntEnum
 import json
 from json import JSONEncoder
-from collections import OrderedDict, Mapping
+from collections import OrderedDict
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 import operator
 import functools
 from ast import literal_eval
