@@ -254,6 +254,15 @@ class SchedulerIoTest(unittest.TestCase):
         collector = scheduler_state._metrics_collector
         self.assertTrue(isinstance(collector, DatadogMetricsCollector))
 
+    @with_config({'scheduler': {'metrics_collector': 'prometheus'}})
+    def test_prometheus_metrics_collector(self):
+        from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
+
+        s = luigi.scheduler.Scheduler()
+        scheduler_state = s._state
+        collector = scheduler_state._metrics_collector
+        self.assertTrue(isinstance(collector, PrometheusMetricsCollector))
+
 
 class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):

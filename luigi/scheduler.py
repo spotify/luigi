@@ -571,11 +571,9 @@ class SimpleTaskState(object):
 
         if new_status == FAILED and task.status != DISABLED:
             task.add_failure()
-            self.update_metrics_task_failed(task)
             if task.has_excessive_failures():
                 task.scheduler_disable_time = time.time()
                 new_status = DISABLED
-                self.update_metrics_task_disabled(task, config)
                 if not config.batch_emails:
                     notifications.send_error_email(
                         'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
@@ -594,9 +592,7 @@ class SimpleTaskState(object):
             self._status_tasks[new_status][task.id] = task
             task.status = new_status
             task.updated = time.time()
-
-            if new_status == DONE:
-                self.update_metrics_task_done(task)
+            self.update_metrics(task, config)
 
         if new_status == FAILED:
             task.retry = time.time() + config.retry_delay
@@ -680,17 +676,13 @@ class SimpleTaskState(object):
             worker.disabled = True
             worker.tasks.clear()
 
-    def update_metrics_task_started(self, task):
-        self._metrics_collector.handle_task_started(task)
-
-    def update_metrics_task_disabled(self, task, config):
-        self._metrics_collector.handle_task_disabled(task, config)
-
-    def update_metrics_task_failed(self, task):
-        self._metrics_collector.handle_task_failed(task)
-
-    def update_metrics_task_done(self, task):
-        self._metrics_collector.handle_task_done(task)
+    def update_metrics(self, task, config):
+        if task.status == DISABLED:
+            self._metrics_collector.handle_task_disabled(task, config)
+        elif task.status == DONE:
+            self._metrics_collector.handle_task_done(task)
+        elif task.status == FAILED:
+            self._metrics_collector.handle_task_failed(task)
 
 
 class Scheduler(object):

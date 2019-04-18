@@ -3,6 +3,7 @@ import unittest
 import luigi.metrics as metrics
 
 from luigi.contrib.datadog_metric import DatadogMetricsCollector
+from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
 
 
 class TestMetricsCollectors(unittest.TestCase):
@@ -17,6 +18,12 @@ class TestMetricsCollectors(unittest.TestCase):
         output = metrics.MetricsCollectors.get(collector)
 
         assert type(output) is DatadogMetricsCollector
+
+    def test_prometheus_value(self):
+        collector = metrics.MetricsCollectors.prometheus
+        output = metrics.MetricsCollectors.get(collector)
+
+        assert type(output) is PrometheusMetricsCollector
 
     def test_none_value(self):
         collector = metrics.MetricsCollectors.none
