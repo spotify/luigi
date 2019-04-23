@@ -23,7 +23,7 @@ logger = logging.getLogger('luigi-interface')
 
 try:
     import _mssql
-except ImportError as e:
+except ImportError:
     logger.warning("Loading MSSQL module without the python package pymssql. \
         This will crash at runtime if SQL Server functionality is used.")
 

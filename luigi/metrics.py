@@ -8,6 +8,7 @@ class MetricsCollectors(Enum):
     default = 1
     none = 1
     datadog = 2
+    prometheus = 3
 
     @classmethod
     def get(cls, which):
@@ -16,6 +17,9 @@ class MetricsCollectors(Enum):
         elif which == MetricsCollectors.datadog:
             from luigi.contrib.datadog_metric import DatadogMetricsCollector
             return DatadogMetricsCollector()
+        elif which == MetricsCollectors.prometheus:
+            from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
+            return PrometheusMetricsCollector()
         else:
             raise ValueError("MetricsCollectors value ' {0} ' isn't supported", which)
 
@@ -45,6 +49,9 @@ class MetricsCollector(object):
     @abc.abstractmethod
     def handle_task_done(self, task):
         pass
+
+    def generate_latest(self):
+        return
 
 
 class NoMetricsCollector(MetricsCollector):
