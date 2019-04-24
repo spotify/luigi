@@ -847,6 +847,7 @@ class Scheduler(object):
             if task.batch_id is not None:
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.tracking_url = tracking_url
+            should_update_history = True
 
         if batchable is not None:
             task.batchable = batchable
