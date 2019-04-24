@@ -689,11 +689,10 @@ class Scheduler(object):
         if self._config.record_task_history:
             from luigi import db_task_history  # Needs sqlalchemy, thus imported here
             self._task_history = db_task_history.DbTaskHistory()
-            # set up workers to do db updates in the background
-            for i in range(5):
-                w = history.HistoryWorker(self._history_queue, self._task_history)
-                w.setDaemon(True)
-                w.start()
+            # set up worker to do db updates in the background
+            w = history.HistoryWorker(self._history_queue, self._task_history)
+            w.setDaemon(True)
+            w.start()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
