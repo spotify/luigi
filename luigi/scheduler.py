@@ -154,6 +154,12 @@ class scheduler(Config):
 
     metrics_collector = parameter.EnumParameter(enum=MetricsCollectors, default=MetricsCollectors.default)
 
+    stable_done_cooldown_secs = parameter.IntParameter(default=10,
+                                                       description="Sets cooldown period to avoid running the same task twice")
+    """
+    Sets a cooldown period in seconds after a task was completed, during this period the same task will not accepted by the scheduler.
+    """
+
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
@@ -847,6 +853,10 @@ class Scheduler(object):
         task = self._state.get_task(task_id, setdefault=_default_task)
 
         if task is None or (task.status != RUNNING and not worker.enabled):
+            return
+
+        # Ignore claims that the task is PENDING if it very recently was marked as DONE.
+        if status == PENDING and task.status == DONE and (time.time() - task.updated) < self._config.stable_done_cooldown_secs:
             return
 
         # for setting priority, we'll sometimes create tasks with unset family and params
