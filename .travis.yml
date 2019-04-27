@@ -1,5 +1,5 @@
 language: python
-
+python: 2.7
 dist: xenial
 
 services:
@@ -25,6 +25,7 @@ env:
     - TOXENV=flake8
     - TOXENV=docs
     - TOXENV=py27-core
+    - TOXENV=py27-dropbox
     - TOXENV=py27-unixsocket
     - TOXENV=py27-apache
     - TOXENV=py27-aws
@@ -47,11 +48,17 @@ matrix:
     - python: 3.6
       env: TOXENV=py36-core
     - python: 3.6
+      env: TOXENV=py36-dropbox
+    - python: 3.6
       env: TOXENV=py36-unixsocket
     - python: 3.7
       dist: xenial
       sudo: true
       env: TOXENV=py37-core
+    - python: 3.7
+      dist: xenial
+      sudo: true
+      env: TOXENV=py37-dropbox
     - python: 3.7
       dist: xenial
       sudo: true
