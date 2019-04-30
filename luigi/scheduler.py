@@ -842,7 +842,7 @@ class Scheduler(object):
         if accepts_messages is not None:
             task.accepts_messages = accepts_messages
 
-        if tracking_url is not None or task.status != RUNNING:
+        if tracking_url is not None and getattr(task, "tracking_url", None) != tracking_url:
             task.tracking_url = tracking_url
             if task.batch_id is not None:
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
