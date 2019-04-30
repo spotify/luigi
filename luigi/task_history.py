@@ -20,6 +20,7 @@ Currently the only subclass is :py:class:`~luigi.db_task_history.DbTaskHistory`.
 """
 
 import abc
+import datetime
 import logging
 import threading
 
@@ -36,7 +37,7 @@ class StatusUpdate(object):
         self.task = task
         self.status = status
         self.host = host
-
+        self.ts = datetime.datetime.now()
 
 class HistoryWorker(threading.Thread):
     def __init__(self, queue, task_history):
@@ -50,14 +51,14 @@ class HistoryWorker(threading.Thread):
             try:
                 if update.status == DONE or update.status == FAILED:
                     successful = (update.status == DONE)
-                    self._task_history.task_finished(update.task, successful)
+                    self._task_history.task_finished(update.task, successful, update.ts)
                 elif update.status == PENDING:
-                    self._task_history.task_scheduled(update.task)
+                    self._task_history.task_scheduled(update.task, update.ts)
                 elif update.status == RUNNING:
-                    self._task_history.task_started(update.task, update.host)
+                    self._task_history.task_started(update.task, update.host, update.ts)
                 else:
-                    self._task_history.other_event(update.task, update.status)
-                logger.info("Task history updated for %s with %s" % (update.task.id, update.status))
+                    self._task_history.other_event(update.task, update.status, update.ts)
+                logger.info("Task history updated for %s with status=%s and ts=%s" % (update.task.id, update.status, str(update.ts)))
             except:
                 logger.warning("Error saving Task history for %s with %s" % (update.task, update.status), exc_info=1)
             self._queue.task_done()

@@ -91,44 +91,52 @@ class DbTaskHistory(object):
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
 
-    def task_scheduled(self, task):
+    def task_scheduled(self, task, ts=None):
+        if ts is None:
+            ts = datetime.datetime.now()
         for (task_record, session) in self._get_or_create_task_record(task):
             # set only the very first scheduling timestamp
             if task_record.scheduling_ts is None:
-                task_record.scheduling_ts = datetime.datetime.now()
+                task_record.scheduling_ts = ts
             # update status and add event
             task_record.status = PENDING
-            task_record.events.append(TaskEvent(event_name=PENDING, ts=datetime.datetime.now()))
+            task_record.events.append(TaskEvent(event_name=PENDING, ts=ts))
             # record deps if needed
             if task.deps and not task_record.deps:
                 for (dep_record, s) in self._get_or_create_deps_records(task.deps, session):
                     task_record.deps.append(dep_record)
 
-    def task_finished(self, task, successful):
+    def task_finished(self, task, successful, ts=None):
+        if ts is None:
+            ts = datetime.datetime.now()
         status = DONE if successful else FAILED
         for (task_record, session) in self._get_or_create_task_record(task):
             # if task is done, register completion time
             if status == DONE and task_record.status != DONE:
-                task_record.completion_ts = datetime.datetime.now()
+                task_record.completion_ts = ts
             # update status and add event
             task_record.status = status
-            task_record.events.append(TaskEvent(event_name=status, ts=datetime.datetime.now()))
+            task_record.events.append(TaskEvent(event_name=status, ts=ts))
 
-    def task_started(self, task, worker_host):
+    def task_started(self, task, worker_host, ts=None):
+        if ts is None:
+            ts = datetime.datetime.now()
         for (task_record, session) in self._get_or_create_task_record(task):
             # mark task as running
             if task_record.status != RUNNING:
-                task_record.execution_ts = datetime.datetime.now()
+                task_record.execution_ts = ts
             # update status, worker host and add event
             task_record.status = RUNNING
             task_record.host = worker_host
-            task_record.events.append(TaskEvent(event_name=RUNNING, ts=datetime.datetime.now()))
+            task_record.events.append(TaskEvent(event_name=RUNNING, ts=ts))
 
-    def other_event(self, task, event_name):
+    def other_event(self, task, event_name, ts=None):
+        if ts is None:
+            ts = datetime.datetime.now()
         for (task_record, session) in self._get_or_create_task_record(task):
             # update status and add event
             task_record.status = event_name
-            task_record.events.append(TaskEvent(event_name=event_name, ts=datetime.datetime.now()))
+            task_record.events.append(TaskEvent(event_name=event_name, ts=ts))
 
     def _get_or_create_task_record(self, task, session=None):
         with self._session(session) as session:
