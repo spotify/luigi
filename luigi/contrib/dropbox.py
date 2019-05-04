@@ -1,3 +1,20 @@
+# -*- coding: utf-8 -*-
+#
+# Copyright (c) 2019 Jose-Ignacio Riaño Chico
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not
+# use this file except in compliance with the License. You may obtain a copy of
+# the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations under
+# the License.
+#
+
 from __future__ import absolute_import
 
 import datetime
@@ -24,21 +41,20 @@ except ImportError:
 
 class DropboxClient(FileSystem):
     """
-    Create an Azure Blob Storage client for authentication.
-
-    see :py:meth:`luigi.contrib.dropbox:DropboxTarget:__init__` for more information about how to
-    generate the token.
+    Dropbox client for authentication, designed to be used by the :py:class:`DropboxTarget` class.
     """
 
     def __init__(self, token):
-
+        """
+        :param str token: Dropbox Oauth2 Token. See :class:`DropboxTarget` for more information about generating a token
+        """
         if not token:
             raise ValueError("The token parameter must contain a valid Dropbox Oauth2 Token")
 
         try:
             conn = dropbox.dropbox.Dropbox(oauth2_access_token=token, user_agent="Luigi")
         except Exception as e:
-            raise Exception("Cannot connect to the Dropbox storage. Check the connection and the token. \n" + repr(e))
+            raise Exception("Cannot connect to Dropbox. Check your Internet connection and the token. \n" + repr(e))
 
         self.token = token
         self.conn = conn
@@ -128,8 +144,10 @@ class DropboxClient(FileSystem):
 class ReadableDropboxFile(object):
     def __init__(self, path, client):
         """
-        :param str path: adfbool
-        :param DropboxClient client: asdfa
+        Represents a file inside the Dropbox cloud which will be read
+
+        :param str path: Dropbpx path of the file to be read (always starting with /)
+        :param DropboxClient client: a DropboxClient object (initialized with a valid token)
 
         """
         self.path = path
@@ -150,7 +168,7 @@ class ReadableDropboxFile(object):
 
     def __del__(self):
         self.close()
-        if os._exists(self.download_file_location):
+        if os.path.exists(self.download_file_location):
             os.remove(self.download_file_location)
 
     def close(self):
@@ -171,11 +189,20 @@ class ReadableDropboxFile(object):
 
 class AtomicWritableDropboxFile(AtomicLocalFile):
     def __init__(self, path, client):
+        """
+        Represents a file that will be created inside the Dropbox cloud
+
+        :param str path: Destination path inside Dropbox
+        :param DropboxClient client: a DropboxClient object (initialized with a valid token, for the desired account)
+        """
         super(AtomicWritableDropboxFile, self).__init__(path)
         self.path = path
         self.client = client
 
     def move_to_final_destination(self):
+        """
+        After editing the file locally, this function uploads it to the Dropbox cloud
+        """
         self.client.upload(self.tmp_path, self.path)
 
 
@@ -186,24 +213,30 @@ class DropboxTarget(FileSystemTarget):
 
     def __init__(self, path, token=None, format=None):
         """
-        Constructor for the Dropbox filesystem target.
+        Create an Dropbox Target for storing data in a dropbox.com account
 
-        The Dropbox target requires an OAuth2 token as a parameter (which means that a `Dropbox API app
+        **About the path parameter**
+
+        The path must start with '/' and must not end with '/' (even if it is a directory).
+        If the app has 'App folder' access, then / will refer to this app folder (which
+        mean that there is no need to prepend the name of the app to the path)
+        Otherwise, if the app has 'full access', then / will refer to the root of the Dropbox folder
+
+
+        **About the token parameter:**
+
+        The Dropbox target requires a valid OAuth2 token as a parameter (which means that a `Dropbox API app
         <https://www.dropbox.com/developers/apps>`_ must be created. This app can have 'App folder' access
         or 'Full Dropbox', as desired).
 
-        More infornation about generating the token can be read here:
+        Information about generating the token can be read here:
 
         - https://dropbox-sdk-python.readthedocs.io/en/latest/api/oauth.html#dropbox.oauth.DropboxOAuth2Flow
         - https://blogs.dropbox.com/developers/2014/05/generate-an-access-token-for-your-own-account/
 
-        The path must start with '/'. If the app has 'App folder' access, then / will refer to this app folder (which
-        mean that there is no need to prepend the name of the app to the path)
-
-
-        :param str path: Remote path in Dropbox (starting with '/')
-        :param str token: A OAuth2 token for the Dropbox account
-        :param format: the luigi format to use (e.g. luigi.format.Nop)
+        :param str path: Remote path in Dropbox (starting with '/').
+        :param str token:
+        :param luigi.Format format: the luigi format to use (e.g. `luigi.format.Nop`)
 
 
         """
