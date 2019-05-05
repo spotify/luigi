@@ -41,8 +41,6 @@ logger = logging.getLogger('luigi-interface')
 try:
     import boto3
     client = boto3.client('lambda')
-                          # aws_access_key_id=os.environ['X'],
-                          # aws_secret_access_key=os.environ['TEST_AWS_SECRET'])
 except ImportError:
     logger.warning('boto3 is required for lambda_runner but not installed')
 
