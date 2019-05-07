@@ -47,6 +47,7 @@ matrix:
       if: env(DROPBOX_APP_TOKEN) is present
     - python: 3.6
       env: TOXENV=py36-unixsocket
+
     - python: 3.7
       dist: xenial
       sudo: true
