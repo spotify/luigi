@@ -33,7 +33,7 @@ DROPBOX_TEST_SIMPLE_FILE = DROPBOX_TEST_PATH + '/test.txt'
 DROPBOX_TEST_SMALL_FILE = DROPBOX_TEST_PATH + '/dir/small.txt'
 DROPBOX_TEST_LARGE_FILE = DROPBOX_TEST_PATH + '/dir/big.bin'
 DROPBOX_TEST_DIR_TO_DELETE = DROPBOX_TEST_PATH + '/dir_to_delete'
-DROPBOX_TEST_FILE_TO_DELETE_2 = DROPBOX_TEST_DIR_TO_DELETE +'/test3.2.txt'
+DROPBOX_TEST_FILE_TO_DELETE_2 = DROPBOX_TEST_DIR_TO_DELETE + '/test3.2.txt'
 DROPBOX_TEST_FILE_TO_DELETE_1 = DROPBOX_TEST_DIR_TO_DELETE + '/test3.1.txt'
 DROPBOX_TEST_FILE_TO_COPY_ORIG = DROPBOX_TEST_PATH + '/dir4/test4.txt'
 DROPBOX_TEST_FILE_TO_COPY_DEST = DROPBOX_TEST_PATH + '/dir_four/test_four.txt'
@@ -90,18 +90,18 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
 
     def test_remove(self):
-        #We remove File_to_delete_1. We make sure it is the only file that gets deleted
+        # We remove File_to_delete_1. We make sure it is the only file that gets deleted
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_1))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_2))
         self.assertTrue(self.luigiconn.remove(DROPBOX_TEST_FILE_TO_DELETE_1))
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_1))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_2))
 
-        #We remove a directory, we make sure that the files that were in the directory are also deleted
+        # We remove a directory, we make sure that the files that were in the directory are also deleted
         self.luigiconn.remove(DROPBOX_TEST_DIR_TO_DELETE)
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_2))
 
-        #We make sure that we return False when we fail to remove a non-existing path
+        # We make sure that we return False when we fail to remove a non-existing path
         self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE))
 
     def test_remove_nonexisting(self):
