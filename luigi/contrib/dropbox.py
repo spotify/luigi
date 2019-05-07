@@ -17,7 +17,7 @@
 
 from __future__ import absolute_import
 
-import datetime
+import time
 import logging
 import ntpath
 import os
@@ -44,7 +44,7 @@ class DropboxClient(FileSystem):
     Dropbox client for authentication, designed to be used by the :py:class:`DropboxTarget` class.
     """
 
-    def __init__(self, token):
+    def __init__(self, token, user_agent="Luigi"):
         """
         :param str token: Dropbox Oauth2 Token. See :class:`DropboxTarget` for more information about generating a token
         """
@@ -52,7 +52,7 @@ class DropboxClient(FileSystem):
             raise ValueError("The token parameter must contain a valid Dropbox Oauth2 Token")
 
         try:
-            conn = dropbox.dropbox.Dropbox(oauth2_access_token=token, user_agent="Luigi")
+            conn = dropbox.dropbox.Dropbox(oauth2_access_token=token, user_agent=user_agent)
         except Exception as e:
             raise Exception("Cannot connect to Dropbox. Check your Internet connection and the token. \n" + repr(e))
 
@@ -62,9 +62,12 @@ class DropboxClient(FileSystem):
     def exists(self, path):
         if path == '/':
             return True
+        if path.endswith('/'):
+            logging.warning("The path you supplied '{}' ends with '/' . "
+                            "Even if it is a directory, Dropbox paths should not have a trailing slash".format(path))
         try:
-            md = self.conn.files_get_metadata(path)
-            return bool(md)
+            self.conn.files_get_metadata(path)
+            return True
         except dropbox.exceptions.ApiError as e:
             if isinstance(e.error.get_path(), dropbox.files.LookupError):
                 return False
@@ -152,7 +155,7 @@ class ReadableDropboxFile(object):
         """
         self.path = path
         self.client = client
-        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(datetime.datetime.utcnow())),
+        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(time.time())),
                                                    ntpath.basename(path))
         self.fid = None
         self.closed = False
@@ -183,9 +186,6 @@ class ReadableDropboxFile(object):
     def seekable(self):
         return False
 
-    def seek(self, offset, whence=None):
-        pass
-
 
 class AtomicWritableDropboxFile(AtomicLocalFile):
     def __init__(self, path, client):
@@ -211,7 +211,7 @@ class DropboxTarget(FileSystemTarget):
     A Dropbox filesystem target.
     """
 
-    def __init__(self, path, token=None, format=None):
+    def __init__(self, path, token, format=None, user_agent="Luigi"):
         """
         Create an Dropbox Target for storing data in a dropbox.com account
 
@@ -247,7 +247,7 @@ class DropboxTarget(FileSystemTarget):
 
         self.path = path
         self.token = token
-        self.client = DropboxClient(token)
+        self.client = DropboxClient(token, user_agent)
         self.format = format or luigi.format.get_default_format()
 
     @property
