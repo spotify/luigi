@@ -64,6 +64,12 @@ class TomlConfigParserTest(LuigiTestCase):
         config.set('hdfs', 'check', 'test me')
         self.assertEqual(config.get('hdfs', 'check'), 'test me')
 
+    def test_has_option(self):
+        config = get_config('toml')
+        self.assertTrue(config.has_option('hdfs', 'client'))
+        self.assertFalse(config.has_option('hdfs', 'nope'))
+        self.assertFalse(config.has_option('nope', 'client'))
+
 
 class HelpersTest(LuigiTestCase):
     def test_add_without_install(self):
