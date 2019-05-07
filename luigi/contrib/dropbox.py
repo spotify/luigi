@@ -186,9 +186,6 @@ class ReadableDropboxFile(object):
     def seekable(self):
         return False
 
-    def seek(self, offset, whence=None):
-        pass
-
 
 class AtomicWritableDropboxFile(AtomicLocalFile):
     def __init__(self, path, client):

@@ -89,7 +89,7 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
 
-    def test_aa_remove(self):
+    def test_remove(self):
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_1))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_DELETE_2))
         self.luigiconn.remove(DROPBOX_TEST_FILE_TO_DELETE_1)
