@@ -22,7 +22,6 @@ import signal
 import time
 import tempfile
 from helpers import unittest, skipOnTravis
-import mock
 import luigi.rpc
 import luigi.server
 import luigi.cmdline

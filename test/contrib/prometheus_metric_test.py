@@ -1,11 +1,16 @@
 from helpers import unittest
 from nose.plugins.attrib import attr
-from mock import MagicMock
 from prometheus_client import CONTENT_TYPE_LATEST
 
 from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
 from luigi.metrics import MetricsCollectors
 from luigi.scheduler import Scheduler
+
+try:
+    from unittest import mock
+except ImportError:
+    import mock
+
 
 WORKER = 'myworker'
 TASK_ID = 'TaskID'
@@ -72,6 +77,6 @@ class PrometheusMetricTest(unittest.TestCase):
         assert self.collector.registry.get_sample_value(gauge_name, labels=labels) == task.updated - task.time_running
 
     def test_configure_http_handler(self):
-        mock_http_handler = MagicMock()
+        mock_http_handler = mock.MagicMock()
         self.collector.configure_http_handler(mock_http_handler)
         mock_http_handler.set_header.assert_called_once_with('Content-Type', CONTENT_TYPE_LATEST)
