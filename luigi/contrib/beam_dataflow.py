@@ -471,9 +471,13 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
     @staticmethod
     def get_target_path(target):
+        """
+            Given a luigi Target, determine a stringly typed path to pass as a
+            Dataflow job argument.
+        """
         if isinstance(target, luigi.LocalTarget) or isinstance(target, gcs.GCSTarget):
             return target.path
         elif isinstance(target, bigquery.BigQueryTarget):
-            "{}:{}.{}".format(target.project_id, target.dataset_id, target.table_id)
+            return "{}:{}.{}".format(target.table.project_id, target.table.dataset_id, target.table.table_id)
         else:
-            raise ValueError("Target not supported")
+            raise ValueError("Target %s not supported" % target)
