@@ -219,6 +219,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
     def __init__(self):
         if not isinstance(self.dataflow_params, DataflowParamKeys):
             raise ValueError("dataflow_params must be of type DataflowParamKeys")
+        super(BeamDataflowJobTask, self).__init__()
 
     @abstractmethod
     def dataflow_executable(self):
