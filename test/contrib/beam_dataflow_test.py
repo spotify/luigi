@@ -17,7 +17,7 @@
 
 import json
 import luigi
-from luigi.contrib import beam_dataflow
+from luigi.contrib import beam_dataflow, bigquery, gcs
 from luigi import local_target
 import mock
 from mock import MagicMock, patch
@@ -281,6 +281,20 @@ class BeamDataflowTest(unittest.TestCase):
                 }
 
         self.assertEqual(TestTaskDictOfMixedCompleteOutput().complete(), False)
+
+    def test_get_target_path(self):
+        bq_target = bigquery.BigQueryTarget("p", "d", "t", client="fake_client")
+        self.assertEqual(
+            SimpleTestTask.get_target_path(bq_target),
+            "p:d.t")
+
+        gcs_target = gcs.GCSTarget("gs://foo/bar.txt", client="fake_client")
+        self.assertEqual(
+            SimpleTestTask.get_target_path(gcs_target),
+            "gs://foo/bar.txt")
+
+        with self.assertRaises(ValueError):
+            SimpleTestTask.get_target_path("not_a_target")
 
     def test_dataflow_runner_resolution(self):
         task = SimpleTestTask()
