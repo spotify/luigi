@@ -279,9 +279,10 @@ class MetricsHandler(tornado.web.RequestHandler):
         self._scheduler = scheduler
 
     def get(self):
-        metrics = self._scheduler._state._metrics_collector.generate_latest()
+        metrics_collector = self._scheduler._state._metrics_collector
+        metrics = metrics_collector.generate_latest()
         if metrics:
-            metrics.configure_http_handler(self)
+            metrics_collector.configure_http_handler(self)
             self.write(metrics)
 
 
