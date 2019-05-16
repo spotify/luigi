@@ -196,7 +196,7 @@ class TaskProcess(multiprocessing.Process):
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
                 if not new_deps:
-                    if self.complete():
+                    if self.task.complete():
                         status = DONE
                     else:
                         status = FAILED
