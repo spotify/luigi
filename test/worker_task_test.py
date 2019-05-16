@@ -106,7 +106,6 @@ class TaskProcessTest(LuigiTestCase):
                 []
             ))
 
-
     def test_cleanup_children_on_terminate(self):
         """
         Subprocesses spawned by tasks should be terminated on terminate
