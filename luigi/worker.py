@@ -186,8 +186,6 @@ class TaskProcess(multiprocessing.Process):
 
             if _is_external(self.task):
                 # External task
-                # TODO(erikbern): We should check for task completeness after non-external tasks too!
-                # This will resolve #814 and make things a lot more consistent
                 if self.task.complete():
                     status = DONE
                 else:
@@ -197,7 +195,15 @@ class TaskProcess(multiprocessing.Process):
             else:
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
-                status = DONE if not new_deps else PENDING
+                if not new_deps:
+                    if self.complete():
+                        status = DONE
+                    else:
+                        status = FAILED
+                        ex = TaskException("Task finished running, but complete() is still returning false.")
+                        expl = self._handle_run_exception(ex)
+                else:
+                    status = PENDING
 
             if new_deps:
                 logger.info(
@@ -215,14 +221,16 @@ class TaskProcess(multiprocessing.Process):
             raise
         except BaseException as ex:
             status = FAILED
-            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
-            self.task.trigger_event(Event.FAILURE, self.task, ex)
-            raw_error_message = self.task.on_failure(ex)
-            expl = raw_error_message
+            expl = self._handle_run_exception(ex)
 
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, expl, missing, new_deps))
+
+    def _handle_run_exception(self, ex):
+        logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
+        self.task.trigger_event(Event.FAILURE, self.task, ex)
+        return self.task.on_failure(ex)
 
     def _recursive_terminate(self):
         import psutil
