@@ -465,7 +465,8 @@ class MetricsHandlerTest(unittest.TestCase):
         with mock.patch.object(self.handler, 'write') as patched_write:
             self.handler.get()
             patched_write.assert_called_once_with(mock_metrics)
-            mock_metrics.configure_http_handler.assert_called_once_with(self.handler)
+            self.mock_scheduler._state._metrics_collector.configure_http_handler.assert_called_once_with(
+                self.handler)
 
     def test_get_no_metrics(self):
         self.mock_scheduler._state._metrics_collector.generate_latest.return_value = None
