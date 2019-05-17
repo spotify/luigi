@@ -17,13 +17,15 @@
 
 from __future__ import absolute_import
 
-import time
 import logging
+import re
 import ntpath
 import os
 import random
 import tempfile
+import time
 from contextlib import contextmanager
+from functools import wraps
 
 import luigi.format
 from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
@@ -37,6 +39,33 @@ try:
 except ImportError:
     logger.warning("Loading Dropbox module without the python package dropbox (https://pypi.org/project/dropbox/). "
                    "Will crash at runtime if Dropbox functionality is used.")
+
+
+def accept_trailing_slash_in_existing_dirpaths(func):
+    @wraps(func)
+    def wrapped(self, path, *args, **kwargs):
+        if path != '/' and path.endswith('/') and self._exists_and_is_dir(re.sub("/+$", '', path)):
+            orig_path = path
+            path = re.sub("/+$", '', path)
+
+            logger.warning("* Dropbox paths should NOT end with a '/'. ")
+            logger.warning("* Your path was converted from {} to {}".format(orig_path, path))
+            logger.warning(
+                "* Consider modifying your calls to {}, so that they dont use paths with trailing slashes".format(
+                    func.__name__))
+        return func(self, path, *args, **kwargs)
+
+    return wrapped
+
+
+def accept_trailing_slash(func):
+    @wraps(func)
+    def wrapped(self, path, *args, **kwargs):
+        if path != '/' and path.endswith('/'):
+            path = re.sub("/+$", '', path)
+        return func(self, path, *args, **kwargs)
+
+    return wrapped
 
 
 class DropboxClient(FileSystem):
@@ -59,12 +88,14 @@ class DropboxClient(FileSystem):
         self.token = token
         self.conn = conn
 
+    @accept_trailing_slash_in_existing_dirpaths
     def exists(self, path):
         if path == '/':
             return True
         if path.endswith('/'):
-            logging.warning("The path you supplied '{}' ends with '/' . "
-                            "Even if it is a directory, Dropbox paths should not have a trailing slash".format(path))
+            path = re.sub("/+$", '', path)
+            return self._exists_and_is_dir(path)
+
         try:
             self.conn.files_get_metadata(path)
             return True
@@ -74,12 +105,14 @@ class DropboxClient(FileSystem):
             else:
                 raise e
 
+    @accept_trailing_slash_in_existing_dirpaths
     def remove(self, path, recursive=True, skip_trash=True):
         if not self.exists(path):
             return False
         self.conn.files_delete_v2(path)
         return True
 
+    @accept_trailing_slash
     def mkdir(self, path, parents=True, raise_if_exists=False):
         if self.exists(path):
             if not self.isdir(path):
@@ -91,6 +124,7 @@ class DropboxClient(FileSystem):
 
         self.conn.files_create_folder_v2(path)
 
+    @accept_trailing_slash_in_existing_dirpaths
     def isdir(self, path):
         if path == '/':
             return True
@@ -103,6 +137,7 @@ class DropboxClient(FileSystem):
             else:
                 raise e
 
+    @accept_trailing_slash_in_existing_dirpaths
     def listdir(self, path, **kwargs):
         dirs = []
         lister = self.conn.files_list_folder(path, recursive=True, **kwargs)
@@ -112,9 +147,11 @@ class DropboxClient(FileSystem):
             dirs.extend(lister.entries)
         return [d.path_display for d in dirs]
 
+    @accept_trailing_slash_in_existing_dirpaths
     def move(self, path, dest):
         self.conn.files_move_v2(from_path=path, to_path=dest)
 
+    @accept_trailing_slash_in_existing_dirpaths
     def copy(self, path, dest):
         self.conn.files_copy_v2(from_path=path, to_path=dest)
 
@@ -142,6 +179,20 @@ class DropboxClient(FileSystem):
                 else:
                     self.conn.files_upload_session_append_v2(f.read(CHUNK_SIZE), cursor)
                     cursor.offset = f.tell()
+
+    def _exists_and_is_dir(self, path):
+        """
+        Auxiliary method, used by the 'accept_trailing_slash' and 'accept_trailing_slash_in_existing_dirpaths' decorators
+        :param path: a Dropbox path that does NOT ends with a '/' (even if it is a directory)
+        """
+        if path == '/':
+            return True
+        try:
+            md = self.conn.files_get_metadata(path)
+            is_dir = isinstance(md, dropbox.files.FolderMetadata)
+            return is_dir
+        except dropbox.exceptions.ApiError:
+            return False
 
 
 class ReadableDropboxFile(object):

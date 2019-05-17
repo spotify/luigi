@@ -26,24 +26,28 @@ if not DROPBOX_APP_TOKEN:
 
 DROPBOX_TEST_PATH = "/luigi-tests/luigi-test-" + datetime.now().strftime("%Y.%m.%d-%H.%M.%S") + str(uuid.uuid4())
 
+# These paths will be created in the test set-up
 DROPBOX_TEST_SIMPLE_DIR = DROPBOX_TEST_PATH + '/dir2'
-DROPBOX_TEST_DIR_WITH_3_LEVELS = DROPBOX_TEST_PATH + '/dir_multi_level'
 DROPBOX_TEST_FILE_IN_DIR = DROPBOX_TEST_SIMPLE_DIR + '/test2.txt'
 DROPBOX_TEST_SIMPLE_FILE = DROPBOX_TEST_PATH + '/test.txt'
-DROPBOX_TEST_SMALL_FILE = DROPBOX_TEST_PATH + '/dir/small.txt'
-DROPBOX_TEST_LARGE_FILE = DROPBOX_TEST_PATH + '/dir/big.bin'
 DROPBOX_TEST_DIR_TO_DELETE = DROPBOX_TEST_PATH + '/dir_to_delete'
 DROPBOX_TEST_FILE_TO_DELETE_2 = DROPBOX_TEST_DIR_TO_DELETE + '/test3.2.txt'
 DROPBOX_TEST_FILE_TO_DELETE_1 = DROPBOX_TEST_DIR_TO_DELETE + '/test3.1.txt'
 DROPBOX_TEST_FILE_TO_COPY_ORIG = DROPBOX_TEST_PATH + '/dir4/test4.txt'
+DROPBOX_TEST_FILE_TO_MOVE_ORIG = DROPBOX_TEST_PATH + '/dir3/test3.txt'
+
+# All the following paths will be used by the tests
+DROPBOX_TEST_SMALL_FILE = DROPBOX_TEST_PATH + '/dir/small.txt'
+DROPBOX_TEST_LARGE_FILE = DROPBOX_TEST_PATH + '/dir/big.bin'
+
 DROPBOX_TEST_FILE_TO_COPY_DEST = DROPBOX_TEST_PATH + '/dir_four/test_four.txt'
 
-DROPBOX_TEST_FILE_TO_MOVE_ORIG = DROPBOX_TEST_PATH + '/dir3/test3.txt'
 DROPBOX_TEST_FILE_TO_MOVE_DEST = DROPBOX_TEST_PATH + '/dir_three/test_three.txt'
 DROPBOX_TEST_OUTER_DIR_TO_CREATE = DROPBOX_TEST_PATH + '/new_folder'
-DROPBOX_TEST_TRAILING_SLASH_DIR_TO_CREATE = DROPBOX_TEST_PATH + '/another_new_folder/'
-
 DROPBOX_TEST_DIR_TO_CREATE = DROPBOX_TEST_OUTER_DIR_TO_CREATE + '/inner_folder'
+
+DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE = DROPBOX_TEST_PATH + '/another_new_folder'
+
 DROPBOX_TEST_FILE_TO_UPLOAD_BZIP2 = DROPBOX_TEST_PATH + '/bin.file'
 DROPBOX_TEST_FILE_TO_UPLOAD_TEXT = DROPBOX_TEST_PATH + '/text.txt'
 DROPBOX_TEST_FILE_TO_UPLOAD_BIN = DROPBOX_TEST_PATH + '/file.bin'
@@ -73,12 +77,28 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(self.luigiconn.exists('/'))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_PATH))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR))
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR + '/'))
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR + '//'))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE))
 
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE + '/'))
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE + '//'))
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_NON_EXISTING_FILE))
 
     def test_listdir_simple(self):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH)
+        self.assertTrue('/' not in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
+
+    def test_listdir_simple_with_one_slash(self):
+        list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + '/')
+        self.assertTrue('/' not in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
+
+    def test_listdir_simple_with_two_slashes(self):
+        list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + '//')
         self.assertTrue('/' not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
@@ -88,6 +108,10 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue('/' not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
+
+    def test_listdir_nonexisting(self):
+        with self.assertRaises(dropbox.exceptions.ApiError):
+            self.luigiconn.listdir(DROPBOX_TEST_NON_EXISTING_FILE)
 
     def test_remove(self):
         # We remove File_to_delete_1. We make sure it is the only file that gets deleted
@@ -103,9 +127,7 @@ class TestClientDropbox(unittest.TestCase):
 
         # We make sure that we return False when we fail to remove a non-existing path
         self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE))
-
-    def test_remove_nonexisting(self):
-        self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE))
+        self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE + '/'))
 
     def test_mkdir_new_dir(self):
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_DIR_TO_CREATE))
@@ -113,10 +135,43 @@ class TestClientDropbox(unittest.TestCase):
         self.luigiconn.mkdir(DROPBOX_TEST_DIR_TO_CREATE)
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_OUTER_DIR_TO_CREATE))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_DIR_TO_CREATE))
+        self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_DIR_TO_CREATE))
 
-        with self.assertRaises(dropbox.exceptions.ApiError):
-            self.luigiconn.mkdir(DROPBOX_TEST_TRAILING_SLASH_DIR_TO_CREATE)
-            # Path with a trailing slash are considered by Dropbox API as a 'malformed_path'
+    def aux_lifecycle_of_directory(self, path):
+        # Initially, the directory does not exists
+        self.assertFalse(self.luigiconn.exists(path))
+        self.assertFalse(self.luigiconn.isdir(path))
+
+        # Now we create the directory and verify that it exists
+        self.luigiconn.mkdir(path)
+        self.assertTrue(self.luigiconn.exists(path))
+        self.assertTrue(self.luigiconn.isdir(path))
+
+        # Now we remote the directory and verify that it no longer exists
+        self.luigiconn.remove(path)
+        self.assertFalse(self.luigiconn.exists(path))
+        self.assertFalse(self.luigiconn.isdir(path))
+
+    def test_lifecycle_of_dirpath(self):
+        self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
+
+    def test_lifecycle_of_dirpath_with_trailing_slash(self):
+        self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
+
+    def test_lifecycle_of_dirpath_with_several_trailing_slashes(self):
+        self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '//')
+
+    def test_lifecycle_of_dirpath_with_several_trailing_mixed(self):
+        self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///')
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
+        self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///'))
+
+    def test_lifecycle_of_dirpath_with_several_trailing_mixed_2(self):
+        self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///'))
+        self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///')
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
 
     def test_mkdir_recreate_dir(self):
         try:
@@ -132,6 +187,20 @@ class TestClientDropbox(unittest.TestCase):
         with self.assertRaises(luigi.target.FileAlreadyExists):
             self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR, raise_if_exists=True)
 
+    def test_mkdir_recreate_slashed_dir(self):
+        try:
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + '/')
+        except Exception as ex:
+            self.fail("mkdir with default options raises Exception:" + str(ex))
+
+        try:
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + '/', raise_if_exists=False)
+        except Exception as ex:
+            self.fail("mkdir with 'raise_if_exists=False' raises Exception:" + str(ex))
+
+        with self.assertRaises(luigi.target.FileAlreadyExists):
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + '/', raise_if_exists=True)
+
     def test_mkdir_recreate_file(self):
         with self.assertRaises(luigi.target.NotADirectory):
             self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_FILE)
@@ -146,8 +215,12 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(self.luigiconn.isdir('/'))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_PATH))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR))
+        self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR + '/'))
+        self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR + '//'))
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_FILE))
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE))
+        self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE + '/'))
+        self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE + '//'))
 
     def test_move(self):
         md, res = self.dropbox_api.files_download(DROPBOX_TEST_FILE_TO_MOVE_ORIG)
