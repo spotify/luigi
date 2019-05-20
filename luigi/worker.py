@@ -201,9 +201,7 @@ class TaskProcess(multiprocessing.Process):
                     if not self.check_complete_on_run or self.task.complete():
                         status = DONE
                     else:
-                        status = FAILED
-                        ex = TaskException("Task finished running, but complete() is still returning false.")
-                        expl = self._handle_run_exception(ex)
+                        raise TaskException("Task finished running, but complete() is still returning false.")
                 else:
                     status = PENDING
 
