@@ -458,10 +458,10 @@ class worker(Config):
                                            description='If true, check for completeness of '
                                            'dependencies before running a task')
     check_complete_on_run = BoolParameter(default=False,
-                                           config_path=dict(section='core', name='check-complete-on-run'),
-                                           description='If true, only mark tasks as done after running if they are complete. '
-                                           'Regardless of this setting, the worker will always check if external '
-                                           'tasks are complete before marking them as done.')
+                                          config_path=dict(section='core', name='check-complete-on-run'),
+                                          description='If true, only mark tasks as done after running if they are complete. '
+                                          'Regardless of this setting, the worker will always check if external '
+                                          'tasks are complete before marking them as done.')
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
