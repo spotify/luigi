@@ -103,7 +103,7 @@ class TaskProcessTest(LuigiTestCase):
                 FAILED,
                 StringContaining("finished running, but complete() is still returning false"),
                 [],
-                []
+                None
             ))
 
     def test_cleanup_children_on_terminate(self):
