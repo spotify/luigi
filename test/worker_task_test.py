@@ -94,7 +94,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = NeverCompleteTask()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue, mock.Mock())
+        task_process = TaskProcess(task, 1, result_queue, mock.Mock(), check_complete_on_run=True)
 
         with mock.patch.object(result_queue, 'put') as mock_put:
             task_process.run()

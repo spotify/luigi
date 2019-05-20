@@ -124,7 +124,8 @@ class TaskProcess(multiprocessing.Process):
     }
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
-                 use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True):
+                 use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True,
+                 check_complete_on_run=False):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
@@ -134,6 +135,7 @@ class TaskProcess(multiprocessing.Process):
         self.timeout_time = time.time() + self.worker_timeout if self.worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
         self.check_unfulfilled_deps = check_unfulfilled_deps
+        self.check_complete_on_run = check_complete_on_run
 
     def _run_get_new_deps(self):
         task_gen = self.task.run()
@@ -196,7 +198,7 @@ class TaskProcess(multiprocessing.Process):
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
                 if not new_deps:
-                    if self.task.complete():
+                    if not self.check_complete_on_run or self.task.complete():
                         status = DONE
                     else:
                         status = FAILED
@@ -455,6 +457,11 @@ class worker(Config):
     check_unfulfilled_deps = BoolParameter(default=True,
                                            description='If true, check for completeness of '
                                            'dependencies before running a task')
+    check_complete_on_run = BoolParameter(default=False,
+                                           config_path=dict(section='core', name='check-complete-on-run'),
+                                           description='If true, only mark tasks as done after running if they are complete. '
+                                           'Regardless of this setting, the worker will always check if external '
+                                           'tasks are complete before marking them as done.')
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
@@ -1024,6 +1031,7 @@ class Worker(object):
             use_multiprocessing=use_multiprocessing,
             worker_timeout=self._config.timeout,
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
+            check_complete_on_run=self._config.check_complete_on_run,
         )
 
     def _purge_children(self):
