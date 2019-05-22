@@ -78,11 +78,9 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_PATH))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR + '/'))
-        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR + '//'))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE))
 
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE + '/'))
-        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE + '//'))
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_NON_EXISTING_FILE))
 
     def test_listdir_simple(self):
@@ -93,12 +91,6 @@ class TestClientDropbox(unittest.TestCase):
 
     def test_listdir_simple_with_one_slash(self):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + '/')
-        self.assertTrue('/' not in list_of_dirs)
-        self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
-        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
-
-    def test_listdir_simple_with_two_slashes(self):
-        list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + '//')
         self.assertTrue('/' not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
@@ -158,20 +150,21 @@ class TestClientDropbox(unittest.TestCase):
     def test_lifecycle_of_dirpath_with_trailing_slash(self):
         self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
 
-    def test_lifecycle_of_dirpath_with_several_trailing_slashes(self):
-        self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '//')
-
     def test_lifecycle_of_dirpath_with_several_trailing_mixed(self):
-        self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///')
+        self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
         self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
-        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///'))
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/'))
 
     def test_lifecycle_of_dirpath_with_several_trailing_mixed_2(self):
         self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
-        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///'))
-        self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '///')
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/'))
+        self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
+
+    def test_mkdir_new_dir_two_slashes(self):
+        with self.assertRaises(dropbox.dropbox.ApiError):
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '//')
 
     def test_mkdir_recreate_dir(self):
         try:
@@ -216,11 +209,10 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_PATH))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR + '/'))
-        self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR + '//'))
+
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_FILE))
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE))
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE + '/'))
-        self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE + '//'))
 
     def test_move(self):
         md, res = self.dropbox_api.files_download(DROPBOX_TEST_FILE_TO_MOVE_ORIG)
