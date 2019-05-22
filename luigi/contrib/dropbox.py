@@ -18,7 +18,6 @@
 from __future__ import absolute_import
 
 import logging
-import re
 import ntpath
 import os
 import random
@@ -44,15 +43,13 @@ except ImportError:
 def accept_trailing_slash_in_existing_dirpaths(func):
     @wraps(func)
     def wrapped(self, path, *args, **kwargs):
-        if path != '/' and path.endswith('/') and self._exists_and_is_dir(re.sub("/+$", '', path)):
-            orig_path = path
-            path = re.sub("/+$", '', path)
+        if path != '/' and path.endswith('/'):
+            logger.warning("Dropbox paths should NOT have trailing slashes. This causes additional API calls")
+            logger.warning("Consider modifying your calls to {}, so that they don't use paths than end with '/'".format(func.__name__))
 
-            logger.warning("* Dropbox paths should NOT end with a '/'. ")
-            logger.warning("* Your path was converted from {} to {}".format(orig_path, path))
-            logger.warning(
-                "* Consider modifying your calls to {}, so that they dont use paths with trailing slashes".format(
-                    func.__name__))
+            if self._exists_and_is_dir(path[:-1]):
+                path = path[:-1]
+
         return func(self, path, *args, **kwargs)
 
     return wrapped
@@ -62,7 +59,7 @@ def accept_trailing_slash(func):
     @wraps(func)
     def wrapped(self, path, *args, **kwargs):
         if path != '/' and path.endswith('/'):
-            path = re.sub("/+$", '', path)
+            path = path[:-1]
         return func(self, path, *args, **kwargs)
 
     return wrapped
@@ -93,7 +90,7 @@ class DropboxClient(FileSystem):
         if path == '/':
             return True
         if path.endswith('/'):
-            path = re.sub("/+$", '', path)
+            path = path[:-1]
             return self._exists_and_is_dir(path)
 
         try:
@@ -268,7 +265,9 @@ class DropboxTarget(FileSystemTarget):
 
         **About the path parameter**
 
-        The path must start with '/' and must not end with '/' (even if it is a directory).
+        The path must start with '/' and should not end with '/' (even if it is a directory).
+        The path must not contain adjacent slashes ('/files//img.jpg' is an invalid path)
+
         If the app has 'App folder' access, then / will refer to this app folder (which
         mean that there is no need to prepend the name of the app to the path)
         Otherwise, if the app has 'full access', then / will refer to the root of the Dropbox folder
@@ -286,7 +285,7 @@ class DropboxTarget(FileSystemTarget):
         - https://blogs.dropbox.com/developers/2014/05/generate-an-access-token-for-your-own-account/
 
         :param str path: Remote path in Dropbox (starting with '/').
-        :param str token:
+        :param str token: a valid OAuth2 Dropbox token.
         :param luigi.Format format: the luigi format to use (e.g. `luigi.format.Nop`)
 
 
