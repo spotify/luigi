@@ -322,7 +322,7 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
         with mock.patch('sendgrid.SendGridAPIClient') as SendGridAPIClient:
             notifications.send_email_sendgrid(*self.notification_args)
 
-            SendGridAPIClient.assert_called_once_with("456abcdef123", raise_errors=True)
+            SendGridAPIClient.assert_called_once_with("456abcdef123")
             self.assertTrue(SendGridAPIClient.return_value.send.called)
 
 
