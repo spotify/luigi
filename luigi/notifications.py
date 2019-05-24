@@ -126,12 +126,9 @@ class smtp(luigi.Config):
 
 
 class sendgrid(luigi.Config):
-    username = luigi.parameter.Parameter(
-        config_path=dict(section='email', name='SENDGRID_USERNAME'),
-        description='Username for sendgrid login')
-    password = luigi.parameter.Parameter(
-        config_path=dict(section='email', name='SENDGRID_PASSWORD'),
-        description='Username for sendgrid login')
+    apikey = luigi.parameter.Parameter(
+        config_path=dict(section='email', name='SENGRID_API_KEY'),
+        description='API key for SendGrid login')
 
 
 def generate_email(sender, subject, message, recipients, image_png):
@@ -234,20 +231,21 @@ def send_email_ses(sender, subject, message, recipients, image_png):
 
 def send_email_sendgrid(sender, subject, message, recipients, image_png):
     import sendgrid as sendgrid_lib
-    client = sendgrid_lib.SendGridClient(
-        sendgrid().username, sendgrid().password, raise_errors=True)
-    to_send = sendgrid_lib.Mail()
-    to_send.add_to(recipients)
-    to_send.set_from(sender)
-    to_send.set_subject(subject)
+    client = sendgrid_lib.SendGridAPIClient(sendgrid().apikey)
     if email().format == 'html':
-        to_send.set_html(message)
+        to_send = sendgrid_lib.Mail(from_email=sender,
+            to_emails=recipients,
+            subject=subject,
+            html_content=message)
     else:
-        to_send.set_text(message)
+        to_send = sendgrid_lib.Mail(from_email=sender,
+            to_emails=recipients,
+            subject=subject,
+            plain_text_content=message)
     if image_png:
         to_send.add_attachment(image_png)
 
-    client.send(to_send)
+    response = client.send(to_send)
 
 
 def _email_disabled_reason():
