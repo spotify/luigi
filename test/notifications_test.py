@@ -312,7 +312,7 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
     def tearDown(self):
         del sys.modules['sendgrid']
 
-    @with_config({"sendgrid": {"apikey":"456abcdef123"}})
+    @with_config({"sendgrid": {"apikey": "456abcdef123"}})
     def test_sends_sendgrid_email(self):
         """
         Call notifications.send_email_sendgrid with fixture parameters
