@@ -239,9 +239,9 @@ def send_email_sendgrid(sender, subject, message, recipients, image_png):
             subject=subject)
 
     if email().format == 'html':
-        to_send.add_content(message,'text/html')
+        to_send.add_content(message, 'text/html')
     else:
-        to_send.add_content(message,'text/plain')
+        to_send.add_content(message, 'text/plain')
 
     if image_png:
         to_send.add_attachment(image_png)
