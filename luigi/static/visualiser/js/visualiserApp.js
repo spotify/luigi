@@ -921,6 +921,10 @@ function visualiserApp(luigi) {
                 }
             });
 
+            $('#clear-task-filter').on('click', function () {
+                filterByTaskFamily("", dt);
+            });
+
             if ($.isEmptyObject(missingCategories)) {
                 $('#warnings').html('');
             }

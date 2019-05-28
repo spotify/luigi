@@ -207,3 +207,16 @@ span.status-icon {
 #resourceList i.resources-collapse {
   padding-left: 10px;
 }
+
+#clear-task-filter {
+  margin-left: 20px;
+  cursor: pointer;
+}
+
+#clear-task-filter:hover {
+  opacity: 0.9;
+}
+
+#clear-task-filter:active {
+  box-shadow: inset -2px 3px 1px rgba(0,0,0,0.2);
+}
