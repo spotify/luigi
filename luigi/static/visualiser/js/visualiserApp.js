@@ -968,6 +968,12 @@ function visualiserApp(luigi) {
             else {
                 $('#warnings').html(renderWarnings());
             }
+            
+            if ($('.sidebar-folder.expanded').length === 0) {
+                var folder = $('.sidebar-folder:contains(Others)')
+                folder.toggleClass('expanded')
+                folder.next().show()
+            }
 
             processHashChange();
         });
