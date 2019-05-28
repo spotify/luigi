@@ -939,6 +939,17 @@ function visualiserApp(luigi) {
             $('.sidebar').html(renderSidebar(dt.column(1).data()));
             var selectedFamily = $('.sidebar-menu').find('li[data-task="' + currentFilter.taskFamily + '"]')[0];
             selectSidebarItem(selectedFamily);
+
+            if (selectedFamily) {
+                var selectedUl = $(selectedFamily).parent();
+                selectedUl.show();
+                selectedUl.prev().addClass('expanded');
+            } else {
+                var others = $('.sidebar-folder:contains(Others)')
+                others.addClass('expanded')
+                others.next().show()
+            }
+            
             $('.sidebar-menu').on('click', 'li:not(.sidebar-folder)', function (e) {
                 e.stopPropagation();
                 if (this.dataset.task) {
@@ -969,12 +980,6 @@ function visualiserApp(luigi) {
                 $('#warnings').html(renderWarnings());
             }
             
-            if ($('.sidebar-folder.expanded').length === 0) {
-                var folder = $('.sidebar-folder:contains(Others)')
-                folder.toggleClass('expanded')
-                folder.next().show()
-            }
-
             processHashChange();
         });
     }
