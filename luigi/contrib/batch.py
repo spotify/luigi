@@ -196,10 +196,12 @@ class BatchTask(luigi.Task):
 
     :param job_definition (str): name of pre-registered jobDefinition
     :param job_name: name of specific job, for tracking in the queue and logs.
+    :param job_queue: name of job queue where job is going to be submitted.
 
     """
     job_definition = luigi.Parameter()
     job_name = luigi.OptionalParameter(default=None)
+    job_queue = luigi.OptionalParameter(default=None)
     poll_time = luigi.IntParameter(default=POLL_TIME)
 
     def run(self):
@@ -207,7 +209,8 @@ class BatchTask(luigi.Task):
         job_id = bc.submit_job(
             self.job_definition,
             self.parameters,
-            job_name=self.job_name)
+            job_name=self.job_name,
+            queue=self.job_queue)
         bc.wait_on_job(job_id)
 
     @property

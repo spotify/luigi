@@ -168,12 +168,6 @@ log_level
 logging_conf_file
   Location of the logging configuration file.
 
-max_reschedules
-  The maximum number of times that a job can be automatically
-  rescheduled by a worker before it will stop trying. Workers will
-  reschedule a job if it is found to not be done when attempting to run
-  a dependent job. This defaults to 1.
-
 max_shown_tasks
   .. versionadded:: 1.0.20
 
@@ -300,10 +294,8 @@ timeout
 
   Number of seconds after which to kill a task which has been running
   for too long. This provides a default value for all tasks, which can
-  be overridden by setting the worker-timeout property in any task. This
-  only works when using multiple workers, as the timeout is implemented
-  by killing worker subprocesses. Default value is 0, meaning no
-  timeout.
+  be overridden by setting the worker-timeout property in any task.
+  Default value is 0, meaning no timeout.
 
 wait_interval
   Number of seconds for the worker to wait before asking the scheduler
@@ -322,8 +314,10 @@ max_keep_alive_idle_duration
   Default: 0 (Indefinitely)
 
 max_reschedules
-  Maximum number of times to reschedule a failed task.
-  Default: 1
+  The maximum number of times that a job can be automatically
+  rescheduled by a worker before it will stop trying. Workers will
+  reschedule a job if it is found to not be done when attempting to run
+  a dependent job. This defaults to 1.
 
 retry_external_tasks
   If true, incomplete external tasks (i.e. tasks where the `run()` method is
@@ -831,8 +825,8 @@ send_messages
 metrics_collector
   Optional setting allowing Luigi to use a contribution to collect metrics
   about the pipeline to a third-party. By default this uses the default metric
-  collector that acts as a shell and does nothing. The only currently available
-  option is "datadog".
+  collector that acts as a shell and does nothing. The currently available
+  options are "datadog" and "prometheus".
 
 
 [sendgrid]
@@ -985,7 +979,7 @@ db_connection
 
 Parameters controlling execution summary of a worker
 
-summary-length
+summary_length
   Maximum number of tasks to show in an execution summary.  If the value is 0,
   then all tasks will be displayed.  Default value is 5.
 

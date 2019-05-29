@@ -78,5 +78,8 @@ class LuigiTomlParser(BaseParser):
             self.data[section] = {}
         self.data[section][option] = value
 
+    def has_option(self, section, option):
+        return section in self.data and option in self.data[section]
+
     def __getitem__(self, name):
         return self.data[name]

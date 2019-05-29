@@ -18,7 +18,7 @@ import multiprocessing
 from subprocess import check_call
 import sys
 
-from helpers import LuigiTestCase
+from helpers import LuigiTestCase, StringContaining
 import mock
 from psutil import Process
 from time import sleep
@@ -86,6 +86,25 @@ class TaskProcessTest(LuigiTestCase):
         with mock.patch.object(result_queue, 'put') as mock_put:
             task_process.run()
             mock_put.assert_called_once_with((task.task_id, FAILED, "test failure expl", [], []))
+
+    def test_fail_on_false_complete(self):
+        class NeverCompleteTask(luigi.Task):
+            def complete(self):
+                return False
+
+        task = NeverCompleteTask()
+        result_queue = multiprocessing.Queue()
+        task_process = TaskProcess(task, 1, result_queue, mock.Mock(), check_complete_on_run=True)
+
+        with mock.patch.object(result_queue, 'put') as mock_put:
+            task_process.run()
+            mock_put.assert_called_once_with((
+                task.task_id,
+                FAILED,
+                StringContaining("finished running, but complete() is still returning false"),
+                [],
+                None
+            ))
 
     def test_cleanup_children_on_terminate(self):
         """

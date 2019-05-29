@@ -129,6 +129,22 @@ class BatchClientTest(unittest.TestCase):
             job_name='test_job')
         self.assertEqual(job_id, 'abcd')
 
+    def test_submit_job_specific_queue(self):
+        job_id = self.bc.submit_job(
+            'test_job_def',
+            {'param1': 'foo', 'param2': 'bar'},
+            job_name='test_job',
+            queue='test_queue')
+        self.assertEqual(job_id, 'abcd')
+
+    def test_submit_job_non_existant_queue(self):
+        with self.assertRaises(Exception):
+            self.bc.submit_job(
+                'test_job_def',
+                {'param1': 'foo', 'param2': 'bar'},
+                job_name='test_job',
+                queue='non_existant_queue')
+
     def test_wait_on_job(self):
         job_id = self.bc.submit_job(
             'test_job_def',

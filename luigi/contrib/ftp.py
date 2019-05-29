@@ -213,7 +213,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         try:
             names = ftp.nlst()
-        except ftplib.all_errors as e:
+        except ftplib.all_errors:
             # some FTP servers complain when you try and list non-existent paths
             return
 
@@ -226,7 +226,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
                 ftp.cwd(wd)   # don't try a nuke a folder we're in
                 ftp.cwd(path)  # then go back to where we were
                 self._rm_recursive(ftp, name)
-            except ftplib.all_errors as e:
+            except ftplib.all_errors:
                 ftp.delete(name)
 
         try:

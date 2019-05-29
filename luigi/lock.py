@@ -142,7 +142,7 @@ def _read_pids_file(pid_file):
     # First setup a python 2 vs 3 compatibility
     # http://stackoverflow.com/a/21368622/621449
     try:
-        FileNotFoundError
+        FileNotFoundError  # noqa: F823
     except NameError:
         # Should only happen on python 2
         FileNotFoundError = IOError

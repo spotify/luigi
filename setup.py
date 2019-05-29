@@ -41,7 +41,7 @@ install_requires = [
     'tornado>=4.0,<5',
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
-    'python-dateutil==2.7.5',
+    'python-dateutil>=2.7.5,<3',
 ]
 
 # Note: To support older versions of setuptools, we're explicitly not
@@ -60,7 +60,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.8.3',
+    version='2.8.6',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
@@ -87,6 +87,7 @@ setup(
     },
     install_requires=install_requires,
     extras_require={
+        'prometheus': ['prometheus-client==0.5.0'],
         'toml': ['toml<2.0.0'],
     },
     classifiers=[

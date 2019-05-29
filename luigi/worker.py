@@ -62,7 +62,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, TimeDeltaParameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
 
 try:
     import simplejson as json
@@ -124,17 +124,18 @@ class TaskProcess(multiprocessing.Process):
     }
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
-                 use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True):
+                 use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True,
+                 check_complete_on_run=False):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.status_reporter = status_reporter
-        if task.worker_timeout is not None:
-            worker_timeout = task.worker_timeout
-        self.timeout_time = time.time() + worker_timeout if worker_timeout else None
+        self.worker_timeout = task.worker_timeout or worker_timeout
+        self.timeout_time = time.time() + self.worker_timeout if self.worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
         self.check_unfulfilled_deps = check_unfulfilled_deps
+        self.check_complete_on_run = check_complete_on_run
 
     def _run_get_new_deps(self):
         task_gen = self.task.run()
@@ -187,8 +188,6 @@ class TaskProcess(multiprocessing.Process):
 
             if _is_external(self.task):
                 # External task
-                # TODO(erikbern): We should check for task completeness after non-external tasks too!
-                # This will resolve #814 and make things a lot more consistent
                 if self.task.complete():
                     status = DONE
                 else:
@@ -198,7 +197,13 @@ class TaskProcess(multiprocessing.Process):
             else:
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
-                status = DONE if not new_deps else PENDING
+                if not new_deps:
+                    if not self.check_complete_on_run or self.task.complete():
+                        status = DONE
+                    else:
+                        raise TaskException("Task finished running, but complete() is still returning false.")
+                else:
+                    status = PENDING
 
             if new_deps:
                 logger.info(
@@ -216,14 +221,16 @@ class TaskProcess(multiprocessing.Process):
             raise
         except BaseException as ex:
             status = FAILED
-            logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
-            self.task.trigger_event(Event.FAILURE, self.task, ex)
-            raw_error_message = self.task.on_failure(ex)
-            expl = raw_error_message
+            expl = self._handle_run_exception(ex)
 
         finally:
             self.result_queue.put(
                 (self.task.task_id, status, expl, missing, new_deps))
+
+    def _handle_run_exception(self, ex):
+        logger.exception("[pid %s] Worker %s failed    %s", os.getpid(), self.worker_id, self.task)
+        self.task.trigger_event(Event.FAILURE, self.task, ex)
+        return self.task.on_failure(ex)
 
     def _recursive_terminate(self):
         import psutil
@@ -408,6 +415,8 @@ def check_complete(task, out_queue):
 class worker(Config):
     # NOTE: `section.config-variable` in the config_path argument is deprecated in favor of `worker.config_variable`
 
+    id = Parameter(default='',
+                   description='Override the auto-generated worker_id')
     ping_interval = FloatParameter(default=1.0,
                                    config_path=dict(section='core', name='worker-ping-interval'))
     keep_alive = BoolParameter(default=False,
@@ -446,6 +455,10 @@ class worker(Config):
     check_unfulfilled_deps = BoolParameter(default=True,
                                            description='If true, check for completeness of '
                                            'dependencies before running a task')
+    check_complete_on_run = BoolParameter(default=False,
+                                          description='If true, only mark tasks as done after running if they are complete. '
+                                          'Regardless of this setting, the worker will always check if external '
+                                          'tasks are complete before marking them as done.')
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')
@@ -514,10 +527,9 @@ class Worker(object):
         self.worker_processes = int(worker_processes)
         self._worker_info = self._generate_worker_info()
 
-        if not worker_id:
-            worker_id = 'Worker(%s)' % ', '.join(['%s=%s' % (k, v) for k, v in self._worker_info])
-
         self._config = worker(**kwargs)
+
+        worker_id = worker_id or self._config.id or self._generate_worker_id(self._worker_info)
 
         assert self._config.wait_interval >= _WAIT_INTERVAL_EPS, "[worker] wait_interval must be positive"
         assert self._config.wait_jitter >= 0.0, "[worker] wait_jitter must be equal or greater than zero"
@@ -628,6 +640,10 @@ class Worker(object):
         except BaseException:
             pass
         return args
+
+    def _generate_worker_id(self, worker_info):
+        worker_info_str = ', '.join(['{}={}'.format(k, v) for k, v in worker_info])
+        return 'Worker({})'.format(worker_info_str)
 
     def _validate_task(self, task):
         if not isinstance(task, Task):
@@ -1012,6 +1028,7 @@ class Worker(object):
             use_multiprocessing=use_multiprocessing,
             worker_timeout=self._config.timeout,
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
+            check_complete_on_run=self._config.check_complete_on_run,
         )
 
     def _purge_children(self):
@@ -1026,7 +1043,7 @@ class Worker(object):
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
             elif p.timeout_time is not None and time.time() > float(p.timeout_time) and p.is_alive():
                 p.terminate()
-                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.task.worker_timeout)
+                error_msg = 'Task {} timed out after {} seconds and was terminated.'.format(task_id, p.worker_timeout)
                 p.task.trigger_event(Event.TIMEOUT, p.task, error_msg)
             else:
                 continue
