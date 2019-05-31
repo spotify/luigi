@@ -127,16 +127,17 @@ Response of luigi.build()/luigi.run()
          print(luigi_run_result.summary_text)
 
 
-Running Luigi on Windows
-^^^^^^^^^^^^^^^^^^^^^^^^
+Luigi on Windows
+^^^^^^^^^^^^^^^^
 
 Most Luigi functionality works on Windows. Exceptions:
 
-- Specifying multiple worker processes using the `workers` argument for `luigi.build`,
-  or using `--workers` on the command line. (Similarly for specifying
-  `--worker-force-multiprocessing`). For most programs, this will result in
-  failure (a common sight is `BrokenPipeError`). The reason is that worker processes
-  are assumed to be forked from the main process. Forking is [not possible](https://docs.python.org/dev/library/multiprocessing.html#contexts-and-start-methods)
+- Specifying multiple worker processes using the ``workers`` argument for
+  ``luigi.build``, or using the ``--workers`` command line argument. (Similarly,
+  specifying ``--worker-force-multiprocessing``). For most programs, this will
+  result in failure (a common sight is ``BrokenPipeError``). The reason is that
+  worker processes are assumed to be forked from the main process. Forking is
+  `not possible <https://docs.python.org/dev/library/multiprocessing.html#contexts-and-start-methods>`_
   on Windows.
-- Running the Luigi central scheduling server as a daemon (i.e. with `--background`).
+- Running the Luigi central scheduling server as a daemon (i.e. with ``--background``).
   Again, a Unix-only concept.
