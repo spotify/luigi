@@ -1,4 +1,5 @@
-.. _RunningLuigi:
+Running Luigi
+-------------
 
 Running from the Command Line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,6 +111,8 @@ which will return your worker and/or scheduler implementations:
 
 In some cases (like task queue) it may be useful.
 
+
+
 Response of luigi.build()/luigi.run()
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -122,3 +125,18 @@ Response of luigi.build()/luigi.run()
     if __name__ == '__main__':
          luigi_run_result = luigi.build(..., detailed_summary=True)
          print(luigi_run_result.summary_text)
+
+
+Running Luigi on Windows
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Most Luigi functionality works on Windows. Exceptions:
+
+- Specifying multiple worker processes using the `workers` argument for `luigi.build`,
+  or using `--workers` on the command line. (Similarly for specifying
+  `--worker-force-multiprocessing`). For most programs, this will result in
+  failure (a common sight is `BrokenPipeError`). The reason is that worker processes
+  are assumed to be forked from the main process. Forking is [not possible](https://docs.python.org/dev/library/multiprocessing.html#contexts-and-start-methods)
+  on Windows.
+- Running the Luigi central scheduling server as a daemon (i.e. with `--background`).
+  Again, a Unix-only concept.
