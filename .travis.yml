@@ -1,5 +1,5 @@
 language: python
-
+python: 2.7
 dist: xenial
 
 services:
@@ -21,21 +21,7 @@ env:
     - AWS_DEFAULT_REGION=us-east-1
     - AWS_ACCESS_KEY_ID=accesskey
     - AWS_SECRET_ACCESS_KEY=secretkey
-  matrix:
-    - TOXENV=flake8
-    - TOXENV=docs
-    - TOXENV=py27-core
-    - TOXENV=py27-unixsocket
-    - TOXENV=py27-apache
-    - TOXENV=py27-aws
-      # - TOXENV=py27-cdh
-      # minicluster (cdh) tests disabled as lack of love, #2140.
-      # Sometimes it runs too slow for Travis. And sometimes it crashes on downloading cdh
-    # - TOXENV=pypy-scheduler # Disabled to unbreak https://github.com/spotify/luigi/pull/2190
-    # - TOXENV=py27-gcloud # At least broken as of  https://github.com/spotify/luigi/pull/1917
-    - TOXENV=py27-postgres
-      # - TOXENV=visualiser
-      # Disabling this test because of intermittent failures :-/
+
 
 sudo: false
 
@@ -44,14 +30,33 @@ sudo: false
 # https://github.com/travis-ci/travis-ci/issues/9815
 matrix:
   include:
+    - env: TOXENV=flake8
+    - env: TOXENV=docs
+    - env: TOXENV=py27-core
+    - env: TOXENV=py27-dropbox
+      if: env(DROPBOX_APP_TOKEN) is present
+    - env: TOXENV=py27-unixsocket
+    - env: TOXENV=py27-apache
+    - env: TOXENV=py27-aws
+    - env: TOXENV=py27-postgres
+
     - python: 3.6
       env: TOXENV=py36-core
     - python: 3.6
+      env: TOXENV=py36-dropbox
+      if: env(DROPBOX_APP_TOKEN) is present
+    - python: 3.6
       env: TOXENV=py36-unixsocket
+
     - python: 3.7
       dist: xenial
       sudo: true
       env: TOXENV=py37-core
+    - python: 3.7
+      dist: xenial
+      sudo: true
+      env: TOXENV=py37-dropbox
+      if: env(DROPBOX_APP_TOKEN) is present
     - python: 3.7
       dist: xenial
       sudo: true

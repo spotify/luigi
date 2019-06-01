@@ -1430,7 +1430,7 @@ function visualiserApp(luigi) {
                     state.filterOnServer = '1';
                 }
 
-                var family = $('#familySidebar li.active').attr('data-task')
+                var family = $('#familySidebar li.active').attr('data-task');
                 if (family) {
                     state.family = family;
                 } else {
