@@ -65,7 +65,7 @@ class kubernetes(luigi.Config):
 
 
 class KubernetesJobTask(luigi.Task):
-    __POLL_TIME = 5  # see __track_job
+    __DEFAULT_POLL_INTERVAL = 5  # see __track_job
     _kubernetes_config = None  # Needs to be loaded at runtime
 
     def _init_kubernetes(self):
@@ -208,17 +208,22 @@ class KubernetesJobTask(luigi.Task):
             self._kubernetes_config = kubernetes()
         return self._kubernetes_config
 
+    @property
+    def poll_interval(self):
+        """How often to poll Kubernetes for job status, in seconds."""
+        return self.__DEFAULT_POLL_INTERVAL
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
-            time.sleep(self.__POLL_TIME)
+            time.sleep(self.__DEFAULT_POLL_INTERVAL)
             self.__logger.debug("Waiting for Kubernetes job " + self.uu_name + " to start")
         self.__print_kubectl_hints()
 
         status = self.__get_job_status()
         while status == "RUNNING":
             self.__logger.debug("Kubernetes job " + self.uu_name + " is running")
-            time.sleep(self.__POLL_TIME)
+            time.sleep(self.poll_interval)
             status = self.__get_job_status()
 
         assert status != "FAILED", "Kubernetes job " + self.uu_name + " failed"
