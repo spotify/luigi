@@ -7,7 +7,7 @@ Luigi to pypi.
 #. Push to GitHub at [spotify/luigi](https://github.com/spotify/luigi).
 #. Clean up previous distributions by executing ``rm -rf dist``
 #. Build a source distribution by executing ``python setup.py sdist``
-#. Upload to pypi by executing ``twine upload dist/luigi``
+#. Upload to pypi by executing ``twine upload dist/*``
 #. Add a tag on github (https://github.com/spotify/luigi/releases),
    including a handwritten changelog, possibly inspired from previous notes.
 
