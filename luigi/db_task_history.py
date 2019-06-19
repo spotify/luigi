@@ -306,6 +306,7 @@ def _upgrade_schema(engine):
             logger.warning('Upgrading DbTaskHistory schema: Adding tasks.task_id')
             conn.execute('ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)')
             conn.execute('CREATE INDEX ix_task_id ON tasks (task_id)')
+            conn.execute('CREATE INDEX ix_tasks_name_scheduling_ts_status ON tasks(name, scheduling_ts, status)')
             conn.execute('CREATE INDEX ix_tasks_name_completion_ts_status ON tasks(name, completion_ts, status)')
             conn.execute('CREATE INDEX ix_tasks_name_execution_ts_status ON tasks(name, execution_ts, status)')
         # Upgrade 2. Alter value column to be TEXT, note that this is idempotent so no if-guard
