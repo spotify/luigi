@@ -669,6 +669,35 @@ class SimpleTaskState(object):
             worker.tasks.clear()
 
 
+class Queues(object):
+
+    def __init__(self, num_queues):
+        priority_queues = [Queue.PriorityQueue() for i in range(num_queues)]
+        self.num_queues = num_queues
+        self.priority_queues = priority_queues
+
+    def get_queue(self, i):
+      return self.priority_queues[i]
+
+    def get(self, i):
+        return self.priority_queues[i].get()
+
+    def put(self, item):
+        hsh = hash(str(item.task.id))
+        i = hsh % self.num_queues
+        logger.info("Hash: {}, Queue: #{} Item: {}".format(hsh, i, str(item)))
+        self.priority_queues[i].put(item)
+
+    def qsize(self, i):
+        return self.priority_queues[i].qsize()
+
+    def join(self):
+      [i.join() for i in self.priority_queues]
+
+    def task_done(self, i):
+      self.priority_queues[i].task_done()
+
+
 class Scheduler(object):
     """
     Async scheduler that can handle multiple workers, etc.
@@ -684,15 +713,17 @@ class Scheduler(object):
         """
         self._config = config or scheduler(**kwargs)
         self._state = SimpleTaskState(self._config.state_path)
-        self._history_queue = Queue.Queue()
+        num_threads = 10
+        self._history_queue = Queues(num_threads)
         self._task_history = None
         if self._config.record_task_history:
             from luigi import db_task_history  # Needs sqlalchemy, thus imported here
             self._task_history = db_task_history.DbTaskHistory()
             # set up worker to do db updates in the background
-            w = history.HistoryWorker(self._history_queue, self._task_history)
-            w.setDaemon(True)
-            w.start()
+            for i in range(num_threads):
+                w = history.HistoryWorker(self._history_queue.get_queue(i), self._task_history, i)
+                w.setDaemon(True)
+                w.start()
         self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}

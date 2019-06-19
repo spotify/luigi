@@ -39,11 +39,25 @@ class StatusUpdate(object):
         self.host = host
         self.ts = datetime.datetime.now()
 
+    def __cmp__(self, other):
+        return cmp(self.ts, other.ts)
+
+    def __lt__(self, other):
+      return self.ts < other.ts
+
+    def __gt__(self, other):
+      return self.ts > other.ts
+
+    def __str__(self):
+      return "{} {} {} {}".format(self.task.id, self.status, self.host, self.ts)
+
+
 class HistoryWorker(threading.Thread):
-    def __init__(self, queue, task_history):
+    def __init__(self, queue, task_history, thread_num=0):
         threading.Thread.__init__(self)
         self._queue = queue
         self._task_history = task_history
+        self.thread_num = thread_num
 
     def run(self):
         while True:
@@ -58,7 +72,8 @@ class HistoryWorker(threading.Thread):
                     self._task_history.task_started(update.task, update.host, update.ts)
                 else:
                     self._task_history.other_event(update.task, update.status, update.ts)
-                logger.info("Task history updated for %s with status=%s and ts=%s" % (update.task.id, update.status, str(update.ts)))
+                logger.info("Worker #%s, Queue size: %s, Task history updated for %s with status=%s and ts=%s" % (self.thread_num, self._queue.qsize(), update.task.id, update.status, str(update.ts)))
             except:
                 logger.warning("Error saving Task history for %s with %s" % (update.task, update.status), exc_info=1)
+                self._queue.put(update)
             self._queue.task_done()
