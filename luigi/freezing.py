@@ -1,3 +1,9 @@
+"""Internal-only module with immutable data structures.
+
+Please, do not use it outside of Luigi codebase itself.
+"""
+
+
 from collections import OrderedDict, Mapping
 import operator
 import functools
