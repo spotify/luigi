@@ -36,7 +36,7 @@ Scheduler
 
 A client only starts the ``run()`` method of a task when the single-threaded
 central scheduler has permitted it. Since the number of tasks is usually very
-small (in comparision with the petabytes of data one task is processing), we
+small (in comparison with the petabytes of data one task is processing), we
 can afford the convenience of a simple centralised server.
 
 .. figure:: https://tarrasch.github.io/luigid-basics-jun-2015/img/50.gif

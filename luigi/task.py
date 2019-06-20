@@ -188,8 +188,7 @@ class Task(object):
 
     #: Number of seconds after which to time out the run function.
     #: No timeout if set to 0.
-    #: Defaults to 0 or worker-timeout value in config file
-    #: Only works when using multiple workers.
+    #: Defaults to 0 or worker-timeout value in config
     worker_timeout = None
 
     #: Maximum number of tasks to run together as a batch. Infinite by default
@@ -606,7 +605,7 @@ class Task(object):
 
         A Task will only run if all of the Tasks that it requires are completed.
         If your Task does not require any other Tasks, then you don't need to
-        override this method. Otherwise, a Subclasses can override this method
+        override this method. Otherwise, a subclass can override this method
         to return a single Task, a list of Task instances, or a dict whose
         values are Task instances.
 

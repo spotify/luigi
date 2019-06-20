@@ -13,6 +13,7 @@
 # the License.
 
 import os
+import sys
 
 from setuptools import setup
 
@@ -40,8 +41,15 @@ install_requires = [
     'tornado>=4.0,<5',
     # https://pagure.io/python-daemon/issue/18
     'python-daemon<2.2.0',
-    'enum34>1.1.0;python_version<"3.4"',
+    'python-dateutil>=2.7.5,<3',
 ]
+
+# Note: To support older versions of setuptools, we're explicitly not
+#   using conditional syntax (i.e. 'enum34>1.1.0;python_version<"3.4"').
+#   This syntax is a problem for setuptools as recent as `20.1.1`,
+#   published Feb 16, 2016.
+if sys.version_info[:2] < (3, 4):
+    install_requires.append('enum34>1.1.0')
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
@@ -52,7 +60,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.8.0',
+    version='2.8.7',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
@@ -79,6 +87,7 @@ setup(
     },
     install_requires=install_requires,
     extras_require={
+        'prometheus': ['prometheus-client==0.5.0'],
         'toml': ['toml<2.0.0'],
     },
     classifiers=[

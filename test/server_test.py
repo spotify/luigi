@@ -448,3 +448,28 @@ class INETLuigidDaemonServerTest(_INETServerTest):
         shutil.rmtree(self.server_client.tempdir)
 
     server_client_class = ServerClient
+
+
+class MetricsHandlerTest(unittest.TestCase):
+    def setUp(self):
+        self.mock_scheduler = mock.MagicMock()
+        self.handler = luigi.server.MetricsHandler(tornado.web.Application(), mock.MagicMock(),
+                                                   scheduler=self.mock_scheduler)
+
+    def test_initialize(self):
+        self.assertIs(self.handler._scheduler, self.mock_scheduler)
+
+    def test_get(self):
+        mock_metrics = mock.MagicMock()
+        self.mock_scheduler._state._metrics_collector.generate_latest.return_value = mock_metrics
+        with mock.patch.object(self.handler, 'write') as patched_write:
+            self.handler.get()
+            patched_write.assert_called_once_with(mock_metrics)
+            self.mock_scheduler._state._metrics_collector.configure_http_handler.assert_called_once_with(
+                self.handler)
+
+    def test_get_no_metrics(self):
+        self.mock_scheduler._state._metrics_collector.generate_latest.return_value = None
+        with mock.patch.object(self.handler, 'write') as patched_write:
+            self.handler.get()
+            patched_write.assert_not_called()

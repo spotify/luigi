@@ -2243,3 +2243,44 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.forgive_failures(task_id='A')
         self.sch.forgive_failures(task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+
+    @mock.patch('luigi.metrics.NoMetricsCollector')
+    def test_collector_metrics_on_task_started(self, MetricsCollector):
+        from luigi.metrics import MetricsCollectors
+
+        s = Scheduler(metrics_collector=MetricsCollectors.none)
+        s.add_task(worker=WORKER, task_id='A', status=PENDING)
+        s.get_work(worker=WORKER)
+
+        task = s._state.get_task('A')
+        MetricsCollector().handle_task_started.assert_called_once_with(task)
+
+    @mock.patch('luigi.metrics.NoMetricsCollector')
+    def test_collector_metrics_on_task_disabled(self, MetricsCollector):
+        from luigi.metrics import MetricsCollectors
+
+        s = Scheduler(metrics_collector=MetricsCollectors.none, retry_count=0)
+        s.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        task = s._state.get_task('A')
+        MetricsCollector().handle_task_disabled.assert_called_once_with(task, s._config)
+
+    @mock.patch('luigi.metrics.NoMetricsCollector')
+    def test_collector_metrics_on_task_failed(self, MetricsCollector):
+        from luigi.metrics import MetricsCollectors
+
+        s = Scheduler(metrics_collector=MetricsCollectors.none)
+        s.add_task(worker=WORKER, task_id='A', status=FAILED)
+
+        task = s._state.get_task('A')
+        MetricsCollector().handle_task_failed.assert_called_once_with(task)
+
+    @mock.patch('luigi.metrics.NoMetricsCollector')
+    def test_collector_metrics_on_task_done(self, MetricsCollector):
+        from luigi.metrics import MetricsCollectors
+
+        s = Scheduler(metrics_collector=MetricsCollectors.none)
+        s.add_task(worker=WORKER, task_id='A', status=DONE)
+
+        task = s._state.get_task('A')
+        MetricsCollector().handle_task_done.assert_called_once_with(task)

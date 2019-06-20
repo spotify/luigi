@@ -24,12 +24,68 @@ at the end of luigi invocations.
 import textwrap
 import collections
 import functools
+import enum
 
 import luigi
 
 
 class execution_summary(luigi.Config):
     summary_length = luigi.IntParameter(default=5)
+
+
+class LuigiStatusCode(enum.Enum):
+    """
+    All possible status codes for the attribute ``status`` in :class:`~luigi.execution_summary.LuigiRunResult` when
+    the argument ``detailed_summary=True`` in *luigi.run() / luigi.build*.
+    Here are the codes and what they mean:
+
+    =============================  ==========================================================
+    Status Code Name               Meaning
+    =============================  ==========================================================
+    SUCCESS                        There were no failed tasks or missing dependencies
+    SUCCESS_WITH_RETRY             There were failed tasks but they all succeeded in a retry
+    FAILED                         There were failed tasks
+    FAILED_AND_SCHEDULING_FAILED   There were failed tasks and tasks whose scheduling failed
+    SCHEDULING_FAILED              There were tasks whose scheduling failed
+    NOT_RUN                        There were tasks that were not granted run permission by the scheduler
+    MISSING_EXT                    There were missing external dependencies
+    =============================  ==========================================================
+
+    """
+    SUCCESS = (":)", "there were no failed tasks or missing dependencies")
+    SUCCESS_WITH_RETRY = (":)", "there were failed tasks but they all succeeded in a retry")
+    FAILED = (":(", "there were failed tasks")
+    FAILED_AND_SCHEDULING_FAILED = (":(", "there were failed tasks and tasks whose scheduling failed")
+    SCHEDULING_FAILED = (":(", "there were tasks whose scheduling failed")
+    NOT_RUN = (":|", "there were tasks that were not granted run permission by the scheduler")
+    MISSING_EXT = (":|", "there were missing external dependencies")
+
+
+class LuigiRunResult(object):
+    """
+    The result of a call to build/run when passing the detailed_summary=True argument.
+
+    Attributes:
+        - one_line_summary (str): One line summary of the progress.
+        - summary_text (str): Detailed summary of the progress.
+        - status (LuigiStatusCode): Luigi Status Code. See :class:`~luigi.execution_summary.LuigiStatusCode` for what these codes mean.
+        - worker (luigi.worker.worker): Worker object. See :class:`~luigi.worker.worker`.
+        - scheduling_succeeded (bool): Boolean which is *True* if all the tasks were scheduled without errors.
+
+    """
+    def __init__(self, worker, worker_add_run_status=True):
+        self.worker = worker
+        summary_dict = _summary_dict(worker)
+        self.summary_text = _summary_wrap(_summary_format(summary_dict, worker))
+        self.status = _tasks_status(summary_dict)
+        self.one_line_summary = _create_one_line_summary(self.status)
+        self.scheduling_succeeded = worker_add_run_status
+
+    def __str__(self):
+        return "LuigiRunResult with status {0}".format(self.status)
+
+    def __repr__(self):
+        return "LuigiRunResult(status={0!r},worker={1!r},scheduling_succeeded={2!r})".format(self.status, self.worker, self.scheduling_succeeded)
 
 
 def _partition_tasks(worker):
@@ -377,33 +433,39 @@ def _summary_format(set_tasks, worker):
         if len(ext_workers) == 0:
             str_output += '\n'
         str_output += 'Did not run any tasks'
-    smiley = ""
-    reason = ""
-    if set_tasks["ever_failed"]:
-        if not set_tasks["failed"]:
-            smiley = ":)"
-            reason = "there were failed tasks but they all succeeded in a retry"
-        else:
-            smiley = ":("
-            reason = "there were failed tasks"
-            if set_tasks["scheduling_error"]:
-                reason += " and tasks whose scheduling failed"
-    elif set_tasks["scheduling_error"]:
-        smiley = ":("
-        reason = "there were tasks whose scheduling failed"
-    elif set_tasks["not_run"]:
-        smiley = ":|"
-        reason = "there were tasks that were not granted run permission by the scheduler"
-    elif set_tasks["still_pending_ext"]:
-        smiley = ":|"
-        reason = "there were missing external dependencies"
-    else:
-        smiley = ":)"
-        reason = "there were no failed tasks or missing dependencies"
-    str_output += "\nThis progress looks {0} because {1}".format(smiley, reason)
+    one_line_summary = _create_one_line_summary(_tasks_status(set_tasks))
+    str_output += "\n{0}".format(one_line_summary)
     if num_all_tasks == 0:
         str_output = 'Did not schedule any tasks'
     return str_output
+
+
+def _create_one_line_summary(status_code):
+    """
+    Given a status_code of type LuigiStatusCode which has a tuple value, returns a one line summary
+    """
+    return "This progress looks {0} because {1}".format(*status_code.value)
+
+
+def _tasks_status(set_tasks):
+    """
+    Given a grouped set of tasks, returns a LuigiStatusCode
+    """
+    if set_tasks["ever_failed"]:
+        if not set_tasks["failed"]:
+            return LuigiStatusCode.SUCCESS_WITH_RETRY
+        else:
+            if set_tasks["scheduling_error"]:
+                return LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED
+            return LuigiStatusCode.FAILED
+    elif set_tasks["scheduling_error"]:
+        return LuigiStatusCode.SCHEDULING_FAILED
+    elif set_tasks["not_run"]:
+        return LuigiStatusCode.NOT_RUN
+    elif set_tasks["still_pending_ext"]:
+        return LuigiStatusCode.MISSING_EXT
+    else:
+        return LuigiStatusCode.SUCCESS
 
 
 def _summary_wrap(str_output):

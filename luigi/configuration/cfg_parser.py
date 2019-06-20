@@ -33,6 +33,8 @@ import os
 import re
 import warnings
 
+# In python3 ConfigParser was renamed
+# https://stackoverflow.com/a/41202010
 try:
     from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
     Interpolation = object
@@ -160,7 +162,18 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         Raises an exception if the default value is not None and doesn't match the expected_type.
         """
         try:
-            return method(self, section, option, **kwargs)
+            try:
+                # Underscore-style is the recommended configuration style
+                option = option.replace('-', '_')
+                return method(self, section, option, **kwargs)
+            except (NoOptionError, NoSectionError):
+                # Support dash-style option names (with deprecation warning).
+                option_alias = option.replace('_', '-')
+                value = method(self, section, option_alias, **kwargs)
+                warn = 'Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.'.format(
+                    s=section, o=option_alias, u=option)
+                warnings.warn(warn, DeprecationWarning)
+                return value
         except (NoOptionError, NoSectionError):
             if default is LuigiConfigParser.NO_DEFAULT:
                 raise

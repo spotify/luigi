@@ -277,15 +277,29 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
 
         Optionally override:
 
+        * `port`,
         * `autocommit`
+        * `update_id`
 
         Subclass and override the following methods:
 
+        * `run`
         * `output`
     """
 
     @abc.abstractproperty
     def host(self):
+        """
+        Host of the RDBMS. Implementation should support `hostname:port`
+        to encode port.
+        """
+        return None
+
+    @property
+    def port(self):
+        """
+        Override to specify port separately from host.
+        """
         return None
 
     @abc.abstractproperty
@@ -312,6 +326,13 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
     def autocommit(self):
         return False
 
+    @property
+    def update_id(self):
+        """
+        Override to create a custom marker table 'update_id' signature for Query subclass task instances
+        """
+        return self.task_id
+
     @abc.abstractmethod
     def run(self):
         raise NotImplementedError("This method must be overridden")
@@ -322,10 +343,3 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         Override with an RDBMS Target (e.g. PostgresTarget or RedshiftTarget) to record execution in a marker table
         """
         raise NotImplementedError("This method must be overridden")
-
-    @property
-    def update_id(self):
-        """
-        Override to create a custom marker table 'update_id' signature for Query subclass task instances
-        """
-        return self.task_id

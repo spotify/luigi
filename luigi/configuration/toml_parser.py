@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright 2018 Cindicator Ltd.
+# Copyright 2018 Vote Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -85,6 +85,9 @@ class LuigiTomlParser(BaseParser):
         if section not in self.data:
             self.data[section] = {}
         self.data[section][option] = value
+
+    def has_option(self, section, option):
+        return section in self.data and option in self.data[section]
 
     def __getitem__(self, name):
         return self.data[name]

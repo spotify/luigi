@@ -274,6 +274,18 @@ class RootPathHandler(BaseTaskHistoryHandler):
         self.redirect("/static/visualiser/index.html")
 
 
+class MetricsHandler(tornado.web.RequestHandler):
+    def initialize(self, scheduler):
+        self._scheduler = scheduler
+
+    def get(self):
+        metrics_collector = self._scheduler._state._metrics_collector
+        metrics = metrics_collector.generate_latest()
+        if metrics:
+            metrics_collector.configure_http_handler(self)
+            self.write(metrics)
+
+
 def app(scheduler):
     settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"),
                 "unescape": tornado.escape.xhtml_unescape,
@@ -287,7 +299,8 @@ def app(scheduler):
         (r'/history', RecentRunHandler, {'scheduler': scheduler}),
         (r'/history/by_name/(.*?)', ByNameHandler, {'scheduler': scheduler}),
         (r'/history/by_id/(.*?)', ByIdHandler, {'scheduler': scheduler}),
-        (r'/history/by_params/(.*?)', ByParamsHandler, {'scheduler': scheduler})
+        (r'/history/by_params/(.*?)', ByParamsHandler, {'scheduler': scheduler}),
+        (r'/metrics', MetricsHandler, {'scheduler': scheduler})
     ]
     api_app = tornado.web.Application(handlers, **settings)
     return api_app

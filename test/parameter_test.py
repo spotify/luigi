@@ -595,6 +595,11 @@ class TestRemoveGlobalParameters(LuigiTestCase):
         self.assertEqual(MyConfigWithoutSection().mc_r, 555)
         self.assertEqual(MyConfigWithoutSection().mc_s, 888)
 
+    @with_config({"MyConfig": {"mc_p": "555", "mc-p": "666", "mc-q": "777"}})
+    def test_configuration_style(self):
+        self.assertEqual(MyConfig().mc_p, 555)
+        self.assertEqual(MyConfig().mc_q, 777)
+
     def test_misc_1(self):
         class Dogs(luigi.Config):
             n_dogs = luigi.IntParameter()
@@ -1005,7 +1010,7 @@ class OverrideEnvStuff(LuigiTestCase):
     @with_config({"core": {"scheduler-port": '6544'}})
     def testOverrideSchedulerPort2(self):
         if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'scheduler_port \(with dashes\) should be avoided'):
+            with self.assertWarnsRegex(DeprecationWarning, r'scheduler-port \(with dashes\) should be avoided'):
                 env_params = luigi.interface.core()
         else:
             env_params = luigi.interface.core()
@@ -1097,6 +1102,13 @@ class TestTaskParameter(LuigiTestCase):
 
         # OtherTask is serialized because it is used as an argument for DepTask.
         self.assertTrue(self.run_locally(['MainTask']))
+
+
+class TestSerializeTupleParameter(LuigiTestCase):
+    def testSerialize(self):
+        the_tuple = (1, 2, 3)
+
+        self.assertEqual(luigi.TupleParameter().parse(luigi.TupleParameter().serialize(the_tuple)), the_tuple)
 
 
 class NewStyleParameters822Test(LuigiTestCase):

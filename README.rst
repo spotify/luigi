@@ -154,6 +154,7 @@ or held presentations about Luigi:
 * `Glossier <https://www.glossier.com/>`_ `(blog, 2018) <https://medium.com/glossier/how-to-build-a-data-warehouse-what-weve-learned-so-far-at-glossier-6ff1e1783e31>`__
 * `Data Revenue <https://www.datarevenue.com/>`_ `(blog, 2018) <https://www.datarevenue.com/en/blog/how-to-scale-your-machine-learning-pipeline>`_
 * `Uppsala University <http://pharmb.io>`_ `(tutorial) <http://uppnex.se/twiki/do/view/Courses/EinfraMPS2015/Luigi.html>`_   / `(presentation, 2015) <https://www.youtube.com/watch?v=f26PqSXZdWM>`_ / `(slides, 2015) <https://www.slideshare.net/SamuelLampa/building-workflows-with-spotifys-luigi>`_ / `(poster, 2015) <https://pharmb.io/poster/2015-sciluigi/>`_ / `(paper, 2016) <https://doi.org/10.1186/s13321-016-0179-6>`_ / `(project) <https://github.com/pharmbio/sciluigi>`_
+* `GIPHY <https://giphy.com/>`_ `(blog, 2019) <https://engineering.giphy.com/luigi-the-10x-plumber-containerizing-scaling-luigi-in-kubernetes/>`_
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 
@@ -176,6 +177,13 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Movio <https://movio.co.nz/>`_
 * `Bonnier News <https://www.bonniernews.se/>`_
 * `Starsky Robotics <https://www.starsky.io/>`_
+* `BaseTIS <https://www.basetis.com/>`_
+* `Hopper <https://www.hopper.com/>`_
+* `VOYAGE GROUP/Zucks <https://zucks.co.jp/en/>`_
+* `Textpert <https://www.textpert.ai/>`_
+* `Whizar <https://www.whizar.com/>`_
+* `xtream <https://www.xtreamers.io/>`_
+
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
@@ -184,8 +192,8 @@ External links
 
 * `Mailing List <https://groups.google.com/d/forum/luigi-user/>`_ for discussions and asking questions. (Google Groups)
 * `Releases <https://pypi.python.org/pypi/luigi>`_ (PyPI)
-* `Source code <https://github.com/spotify/luigi>`_ (Github)
-* `Hubot Integration <https://github.com/houzz/hubot-luigi>`_ plugin for Slack, Hipchat, etc (Github)
+* `Source code <https://github.com/spotify/luigi>`_ (GitHub)
+* `Hubot Integration <https://github.com/houzz/hubot-luigi>`_ plugin for Slack, Hipchat, etc (GitHub)
 
 Authors
 -------

@@ -75,3 +75,23 @@ class ConfigParserTest(LuigiTestCase):
 
         with self.assertRaises(InterpolationMissingEnvvarError):
             config.get("test", "d")
+
+    @with_config({"test": {
+        "foo-bar": "fob",
+        "baz_qux": "bax",
+    }})
+    def test_underscore_vs_dash_style(self):
+        config = get_config()
+        self.assertEqual(config.get("test", "foo-bar"), "fob")
+        self.assertEqual(config.get("test", "foo_bar"), "fob")
+        self.assertEqual(config.get("test", "baz-qux"), "bax")
+        self.assertEqual(config.get("test", "baz_qux"), "bax")
+
+    @with_config({"test": {
+        "foo-bar": "fob",
+        "foo_bar": "bax",
+    }})
+    def test_underscore_vs_dash_style_priority(self):
+        config = get_config()
+        self.assertEqual(config.get("test", "foo-bar"), "bax")
+        self.assertEqual(config.get("test", "foo_bar"), "bax")
