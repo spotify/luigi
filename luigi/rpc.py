@@ -92,7 +92,7 @@ class RequestsFetcher(object):
 
     def fetch(self, full_url, body, timeout):
         self.check_pid()
-        resp = self.session.get(full_url, data=body, timeout=timeout)
+        resp = self.session.post(full_url, data=body, timeout=timeout)
         resp.raise_for_status()
         return resp.text
 
