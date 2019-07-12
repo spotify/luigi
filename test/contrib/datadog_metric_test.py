@@ -6,11 +6,14 @@ import time
 
 from luigi.contrib.datadog_metric import DatadogMetricsCollector
 from luigi.metrics import MetricsCollectors
+from luigi.parameter import ParameterVisibility
 from luigi.scheduler import Scheduler
+from nose.plugins.attrib import attr
 
 WORKER = 'myworker'
 
 
+@attr('contrib')
 class DatadogMetricTest(unittest.TestCase):
     def setUp(self):
         self.mockDatadog()
@@ -149,3 +152,13 @@ class DatadogMetricTest(unittest.TestCase):
         self.mock_gauge.assert_called_once_with('luigi.task.execution_time', 0, tags=['task_name:DDTaskName',
                                                                                       'environment:development',
                                                                                       'application:luigi'])
+
+    def test_format_task_params_to_tags(self):
+        task = task = self.startTask()
+        task.set_params({'test_param': 'test_value'})
+        self.assertEqual(self.collector._format_task_params_to_tags(task), ['test_param:test_value'])
+
+    def test_format_task_params_to_tags_hidden(self):
+        task = self.startTask()
+        with mock.patch.object(task, 'param_visibilities', {'test_param': ParameterVisibility.HIDDEN}):
+            self.assertEqual(self.collector._format_task_params_to_tags(task), [])

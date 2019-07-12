@@ -109,7 +109,7 @@ class DatadogMetricsCollector(MetricsCollector):
 
     def _format_task_params_to_tags(self, task):
         params = []
-        for key, value in task.params.items():
+        for key, value in task.public_params.items():
             params.append("{key}:{value}".format(key=key, value=value))
 
         return params
