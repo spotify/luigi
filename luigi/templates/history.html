@@ -53,7 +53,7 @@
 		}
 		var refined_failed_data = {"key": "FAILED", "color": "#CC0000", "values":[]};
 		var refined_done_data = {"key": "DONE", "color": "#669900", "values":[]};
-		var dateSetL = new Array();
+		var dateSetL = [];
 		dateSet.forEach(function(d) {
 			dateSetL.push(d);
 		});
@@ -87,13 +87,15 @@
 			.showMaxMin(false)
 			.ticks(refined_failed_data.values.length+refined_done_data.values.length)
 			.tickFormat(function(d, i) {
-					var dx = (merged_data[0].values[d] && merged_data[0].values[d][0]) || (merged_data[1].values[d] && merged_data[1].values[d][0]);
-					return d3.time.format('%x %X')(new Date(dx));
+				var dx = (merged_data[0].values[d] && merged_data[0].values[d][0]) || (merged_data[1].values[d] && merged_data[1].values[d][0]);
+				return d3.time.format('%x %X')(new Date(dx));
 			});
 			chart.yAxis
 			.axisLabel("Processing Time (H:M:S)")
 			.tickFormat(function(d) {
-				return d3.time.format('%X')(new Date(d - 32400000));
+				var dy = new Date();
+				dy.setHours(0, 0, 0, d);
+				return d3.time.format('%X')(dy);
 			});
 			chart.tooltipContent(function(key, x, y, e, graph) {
 				tooltip_str = '<center><b>Result status: '+key+'</b></center>'+'<center>processing time: '+y+'</center><center> on '+x+'</center>';

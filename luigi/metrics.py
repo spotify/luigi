@@ -53,6 +53,9 @@ class MetricsCollector(object):
     def generate_latest(self):
         return
 
+    def configure_http_handler(self, http_handler):
+        pass
+
 
 class NoMetricsCollector(MetricsCollector):
     """Empty MetricsCollector when no collector is being used

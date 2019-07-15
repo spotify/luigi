@@ -312,19 +312,18 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
     def tearDown(self):
         del sys.modules['sendgrid']
 
-    @with_config({"sendgrid": {"username": "Nikola",
-                               "password": "jahuS"}})
+    @with_config({"sendgrid": {"apikey": "456abcdef123"}})
     def test_sends_sendgrid_email(self):
         """
         Call notifications.send_email_sendgrid with fixture parameters
-        and check that SendGridClient is properly called.
+        and check that SendGridAPIClient is properly called.
         """
 
-        with mock.patch('sendgrid.SendGridClient') as SendgridClient:
+        with mock.patch('sendgrid.SendGridAPIClient') as SendGridAPIClient:
             notifications.send_email_sendgrid(*self.notification_args)
 
-            SendgridClient.assert_called_once_with("Nikola", "jahuS", raise_errors=True)
-            self.assertTrue(SendgridClient.return_value.send.called)
+            SendGridAPIClient.assert_called_once_with("456abcdef123")
+            self.assertTrue(SendGridAPIClient.return_value.send.called)
 
 
 class TestSESEmail(unittest.TestCase, NotificationFixture):

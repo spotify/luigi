@@ -45,7 +45,6 @@ import sys
 import time
 
 import pkg_resources
-from prometheus_client import CONTENT_TYPE_LATEST
 import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
@@ -280,10 +279,11 @@ class MetricsHandler(tornado.web.RequestHandler):
         self._scheduler = scheduler
 
     def get(self):
-        metrics = self._scheduler._state._metrics_collector.generate_latest()
+        metrics_collector = self._scheduler._state._metrics_collector
+        metrics = metrics_collector.generate_latest()
         if metrics:
+            metrics_collector.configure_http_handler(self)
             self.write(metrics)
-            self.set_header('Content-Type', CONTENT_TYPE_LATEST)
 
 
 def app(scheduler):

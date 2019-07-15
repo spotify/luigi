@@ -1,4 +1,4 @@
-from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest
+from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from luigi.metrics import MetricsCollector
 
 
@@ -58,3 +58,6 @@ class PrometheusMetricsCollector(MetricsCollector):
         # time_running can be `None` if task was already complete
         if task.time_running is not None:
             self.task_execution_time.labels(family=task.family).set(task.updated - task.time_running)
+
+    def configure_http_handler(self, http_handler):
+        http_handler.set_header('Content-Type', CONTENT_TYPE_LATEST)

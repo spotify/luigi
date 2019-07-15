@@ -328,9 +328,16 @@
 
         <script type="text/template" name="sidebarTemplate">
             <ul class="sidebar-menu">
-                <li class="header">TASK FAMILIES</li>
+                <li class="header">TASK FAMILIES <span class="badge" id="clear-task-filter">Clear selection</span></li>
                 {{#tasks}}
-                <li data-task="{{name}}"><a href="#"><span class="badge">{{count}}</span> {{name}}</a>
+                <li>
+                  <a href="#" class="sidebar-folder">{{name}}</a>
+                  <ul class="sidebar-menu" style="display: none">
+                    {{#tasks}}
+                    <li data-task="{{name}}"><a href="#"><span class="badge">{{count}}</span> {{name}}</a>
+                    </li>
+                    {{/tasks}}
+                  </ul>
                 </li>
                 {{/tasks}}
             </ul>

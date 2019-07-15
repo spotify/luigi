@@ -138,6 +138,13 @@ class RunOnceTask(luigi.Task):
         self.comp = True
 
 
+# string subclass that matches arguments containing the specified substring
+# for use in mock 'called_with' assertions
+class StringContaining(str):
+    def __eq__(self, other_str):
+        return self in other_str
+
+
 class LuigiTestCase(unittest.TestCase):
     """
     Tasks registred within a test case will get unregistered in a finalizer
