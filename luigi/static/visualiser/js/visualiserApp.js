@@ -192,10 +192,40 @@ function visualiserApp(luigi) {
         });
         var taskList = [];
         $.each(counts, function (name) {
-            taskList.push({name: name, count: counts[name]});
+            var dotIndex = name.indexOf('.');
+            var prefix = 'Others';
+            if (dotIndex > 0) {
+                prefix = name.slice(0, dotIndex);
+            }
+            var prefixList = taskList.find(function (pref) {
+                return pref.name == prefix;
+            })
+            if (prefixList) {
+                prefixList.tasks.push({name: name, count: counts[name]});
+            } else {
+                prefixList = {
+                    name: prefix,
+                    tasks: [{name: name, count: counts[name]}]
+                }
+                taskList.push(prefixList);
+            }
+
         });
         taskList.sort(function(a,b){
-          return a.name.localeCompare(b.name);
+            if (a.name == 'Others') {
+                if (b.name == 'Others') {
+                    return 0;
+                }
+                return 1;
+            } else if (b.name == 'Others') {
+                return -1;
+            }
+            return a.name.localeCompare(b.name);
+        });
+        taskList.forEach(function(p){
+            p.tasks.sort(function(a,b){
+                return a.name.localeCompare(b.name);
+            });
         });
         return renderTemplate("sidebarTemplate", {"tasks": taskList});
     }
@@ -909,7 +939,19 @@ function visualiserApp(luigi) {
             $('.sidebar').html(renderSidebar(dt.column(1).data()));
             var selectedFamily = $('.sidebar-menu').find('li[data-task="' + currentFilter.taskFamily + '"]')[0];
             selectSidebarItem(selectedFamily);
-            $('.sidebar-menu').on('click', 'li', function () {
+
+            if (selectedFamily) {
+                var selectedUl = $(selectedFamily).parent();
+                selectedUl.show();
+                selectedUl.prev().addClass('expanded');
+            } else {
+                var others = $('.sidebar-folder:contains(Others)')
+                others.addClass('expanded')
+                others.next().show()
+            }
+            
+            $('.sidebar-menu').on('click', 'li:not(.sidebar-folder)', function (e) {
+                e.stopPropagation();
                 if (this.dataset.task) {
                     selectSidebarItem(this);
                     if ($(this).hasClass('active')) {
@@ -921,13 +963,23 @@ function visualiserApp(luigi) {
                 }
             });
 
+            $('.sidebar-menu').on('click', '.sidebar-folder', function () {
+                const ul = this.nextElementSibling;
+                $(ul).slideToggle()
+                this.classList.toggle('expanded')
+            })
+
+            $('#clear-task-filter').on('click', function () {
+                filterByTaskFamily("", dt);
+            });
+
             if ($.isEmptyObject(missingCategories)) {
                 $('#warnings').html('');
             }
             else {
                 $('#warnings').html(renderWarnings());
             }
-
+            
             processHashChange();
         });
     }
@@ -1430,7 +1482,7 @@ function visualiserApp(luigi) {
                     state.filterOnServer = '1';
                 }
 
-                var family = $('#familySidebar li.active').attr('data-task')
+                var family = $('#familySidebar li.active').attr('data-task');
                 if (family) {
                     state.family = family;
                 } else {
