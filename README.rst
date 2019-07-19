@@ -184,6 +184,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Whizar <https://www.whizar.com/>`_
 * `xtream <https://www.xtreamers.io/>`_
 * `Skyscanner <https://www.skyscanner.net/>`_
+* `Jodel <https://www.jodel.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
