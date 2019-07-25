@@ -801,7 +801,7 @@ class Scheduler(object):
 
     @rpc_method()
     def force_commit(self, task_id=None):
-        status = SUCCESS
+        status = DONE
         task = self._state.get_task(task_id)
         if task is None:
             return {"task_id": task_id, "status": None}
