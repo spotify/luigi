@@ -63,6 +63,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.forceCommit = function (taskId, callback) {
+        return jsonRPC(this.urlRoot + "/force_commit", {task_id: taskId}, function(response) {
+            callback(flatten(response.response));
+        });
+    };
+
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));

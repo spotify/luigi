@@ -74,6 +74,7 @@ function visualiserApp(luigi) {
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
+            force_commit: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DISABLED"),
             statusMessage: task.status_message,
             progressPercentage: task.progress_percentage,
             acceptsMessages: task.accepts_messages,
@@ -949,7 +950,7 @@ function visualiserApp(luigi) {
                 others.addClass('expanded')
                 others.next().show()
             }
-            
+
             $('.sidebar-menu').on('click', 'li:not(.sidebar-folder)', function (e) {
                 e.stopPropagation();
                 if (this.dataset.task) {
@@ -979,7 +980,7 @@ function visualiserApp(luigi) {
             else {
                 $('#warnings').html(renderWarnings());
             }
-            
+
             processHashChange();
         });
     }
@@ -1086,7 +1087,7 @@ function visualiserApp(luigi) {
         return $('.resource-box.in').toArray().map(function (val) { return val.dataset.resource; });
     }
 
-    function expandResources(resources) {        
+    function expandResources(resources) {
         if (resources === undefined) {
             resources = [];
         } else {
@@ -1325,6 +1326,21 @@ function visualiserApp(luigi) {
             var row = dt.row( tr );
             var data = row.data();
             luigi.forgiveFailures(data.taskId, function(data) {
+                if (ev.altKey) {
+                    updateTasks(); // update may not be cheap
+                } else {
+                    that.tooltip('hide');
+                    that.remove();
+                }
+            });
+        } );
+
+        $('#taskTable tbody').on('click', 'td.details-control .forceCommit', function (ev) {
+            var that = $(this);
+            var tr = that.closest('tr');
+            var row = dt.row( tr );
+            var data = row.data();
+            luigi.forceCommit(data.taskId, function(data) {
                 if (ev.altKey) {
                     updateTasks(); // update may not be cheap
                 } else {
