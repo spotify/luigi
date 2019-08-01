@@ -807,7 +807,7 @@ class Scheduler(object):
             return {"task_id": task_id, "status": None}
 
         # we will force-commit tasks in almost any state
-        if task.status in {FAILED, DISABLED, PENDING, RUNNING}:
+        if task.status in {RUNNING, FAILED, DISABLED}:
             self._update_task_history(task, status)
             self._state.set_status(task, status, self._config)
         return {"task_id": task_id, "status": task.status}
