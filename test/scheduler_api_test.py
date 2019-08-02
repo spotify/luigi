@@ -2244,17 +2244,17 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.forgive_failures(task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
-    def test_force_commit_running_works(self):
+    def test_mark_running_as_done_works(self):
         # Adding a task, it runs, then force-commiting it sends it to DONE
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
         self.setTime(1)
         self.assertEqual({'A'}, set(self.sch.task_list(RUNNING, '').keys()))
-        self.sch.force_commit(task_id='A')
+        self.sch.mark_as_done(task_id='A')
         self.assertEqual({'A'}, set(self.sch.task_list(DONE, '').keys()))
 
-    def test_force_commit_failed_works(self):
+    def test_mark_failed_as_done_works(self):
         # Adding a task, saying it failed, then force-commiting it sends it to DONE
         self.setTime(0)
         self.sch.add_task(worker=WORKER, task_id='A')
@@ -2263,7 +2263,7 @@ class SchedulerApiTest(unittest.TestCase):
         self.setTime(1)
         self.assertEqual(set(), set(self.sch.task_list(RUNNING, '').keys()))
         self.assertEqual({'A'}, set(self.sch.task_list(FAILED, '').keys()))
-        self.sch.force_commit(task_id='A')
+        self.sch.mark_as_done(task_id='A')
         self.assertEqual({'A'}, set(self.sch.task_list(DONE, '').keys()))
 
     @mock.patch('luigi.metrics.NoMetricsCollector')

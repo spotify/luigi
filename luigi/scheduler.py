@@ -800,13 +800,13 @@ class Scheduler(object):
         return {"task_id": task_id, "status": task.status}
 
     @rpc_method()
-    def force_commit(self, task_id=None):
+    def mark_as_done(self, task_id=None):
         status = DONE
         task = self._state.get_task(task_id)
         if task is None:
             return {"task_id": task_id, "status": None}
 
-        # we will force-commit tasks in almost any state
+        # we can force mark DONE for running or failed tasks
         if task.status in {RUNNING, FAILED, DISABLED}:
             self._update_task_history(task, status)
             self._state.set_status(task, status, self._config)

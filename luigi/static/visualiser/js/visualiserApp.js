@@ -74,7 +74,7 @@ function visualiserApp(luigi) {
             graph: (task.status == "PENDING" || task.status == "RUNNING" || task.status == "DONE"),
             error: task.status == "FAILED",
             re_enable: task.status == "DISABLED" && task.re_enable_able,
-            force_commit: (task.status == "RUNNING" || task.status == "FAILED" || task.status == "DISABLED"),
+            mark_as_done: (task.status == "RUNNING" || task.status == "FAILED" || task.status == "DISABLED"),
             statusMessage: task.status_message,
             progressPercentage: task.progress_percentage,
             acceptsMessages: task.accepts_messages,
@@ -1335,12 +1335,12 @@ function visualiserApp(luigi) {
             });
         } );
 
-        $('#taskTable tbody').on('click', 'td.details-control .forceCommit', function (ev) {
+        $('#taskTable tbody').on('click', 'td.details-control .markAsDone', function (ev) {
             var that = $(this);
             var tr = that.closest('tr');
             var row = dt.row( tr );
             var data = row.data();
-            luigi.forceCommit(data.taskId, function(data) {
+            luigi.markAsDone(data.taskId, function(data) {
                 if (ev.altKey) {
                     updateTasks(); // update may not be cheap
                 } else {

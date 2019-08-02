@@ -63,8 +63,8 @@ var LuigiAPI = (function() {
         });
     };
 
-    LuigiAPI.prototype.forceCommit = function (taskId, callback) {
-        return jsonRPC(this.urlRoot + "/force_commit", {task_id: taskId}, function(response) {
+    LuigiAPI.prototype.markAsDone = function (taskId, callback) {
+        return jsonRPC(this.urlRoot + "/mark_as_done", {task_id: taskId}, function(response) {
             callback(flatten(response.response));
         });
     };
