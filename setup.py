@@ -58,14 +58,19 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.remove('python-daemon<2.2.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
 
+# load meta package infos
+meta = {}
+with open("luigi/__meta__.py", "r") as f:
+    exec(f.read(), meta)
+
 setup(
     name='luigi',
-    version='2.8.7',
-    description='Workflow mgmgt + task scheduling + dependency resolution',
+    version=meta['__version__'],
+    description=meta['__doc__'],
     long_description=long_description,
-    author='The Luigi Authors',
-    url='https://github.com/spotify/luigi',
-    license='Apache License 2.0',
+    author=meta['__author__'],
+    url=meta['__contact__'],
+    license=meta['__license__'],
     packages=[
         'luigi',
         'luigi.configuration',
