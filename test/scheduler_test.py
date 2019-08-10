@@ -229,6 +229,16 @@ class SchedulerIoTest(unittest.TestCase):
         task_9.add_failure()
         self.assertTrue(task_9.has_excessive_failures())
 
+    @with_config({'scheduler': {'record_task_history': 'true'}})
+    def test_has_task_history(self):
+        s = luigi.scheduler.Scheduler()
+        self.assertTrue(s.has_task_history())
+
+    @with_config({'scheduler': {'record_task_history': 'false'}})
+    def test_has_no_task_history(self):
+        s = luigi.scheduler.Scheduler()
+        self.assertFalse(s.has_task_history())
+
     @with_config({'scheduler': {'pause_enabled': 'false'}})
     def test_pause_disabled(self):
         s = luigi.scheduler.Scheduler()

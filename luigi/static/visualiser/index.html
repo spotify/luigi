@@ -361,6 +361,14 @@
           </div>
         </script>
 
+        <script type="text/template" name="topNavbarItem">
+          <li>
+            <a class="js-nav-link" href="{{href}}" {{#dataTab}}data-tab="{{dataTab}}"{{/dataTab}}>
+              {{label}}
+            </a>
+          </li>
+        </script>
+
     </head>
     <body class="skin-green-light fixed">
         <div class="modal fade" id="errorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
@@ -387,7 +395,7 @@
                             </button>
                         </div>
                         <div class="collapse navbar-collapse">
-                            <ul class="nav navbar-nav">
+                            <ul class="nav navbar-nav" id="topNavbar">
                                 <li><a class="js-nav-link" href="#tab=tasks" data-tab="taskList">Task List</a></li>
                                 <li><a class="js-nav-link" href="#tab=graph" data-tab="dependencyGraph">Dependency Graph</a></li>
                                 <li><a class="js-nav-link" href="#tab=workers" data-tab="workerList">Workers</a></li>
