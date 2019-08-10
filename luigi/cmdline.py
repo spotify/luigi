@@ -21,8 +21,13 @@ def luigid(argv=sys.argv[1:]):
     parser.add_argument(u'--address', help=u'Listening interface')
     parser.add_argument(u'--unix-socket', help=u'Unix socket path')
     parser.add_argument(u'--port', default=8082, help=u'Listening port')
+    parser.add_argument(u'--version', u'-V', action='store_true', help=u'print version and exit')
 
     opts = parser.parse_args(argv)
+
+    if opts.version:
+        print(luigi.__version__)
+        sys.exit()
 
     if opts.state_path:
         config = luigi.configuration.get_config()
