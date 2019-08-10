@@ -22,6 +22,7 @@ import time
 from helpers import unittest
 
 import luigi.scheduler
+import luigi.configuration
 from helpers import with_config
 
 
@@ -231,8 +232,11 @@ class SchedulerIoTest(unittest.TestCase):
 
     @with_config({'scheduler': {'record_task_history': 'true'}})
     def test_has_task_history(self):
-        s = luigi.scheduler.Scheduler()
-        self.assertTrue(s.has_task_history())
+        cfg = luigi.configuration.get_config()
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=True) as fn:
+            cfg.set('task_history', 'db_connection', 'sqlite:///' + fn.name)
+            s = luigi.scheduler.Scheduler()
+            self.assertTrue(s.has_task_history())
 
     @with_config({'scheduler': {'record_task_history': 'false'}})
     def test_has_no_task_history(self):
