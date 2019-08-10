@@ -53,7 +53,7 @@ def on_sge_master():
 class TestSGEWrappers(unittest.TestCase):
 
     def test_track_job(self):
-        '''`track_job` returns the state using qstat'''
+        """`track_job` returns the state using qstat"""
         self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT, 1), 'r')
         self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT, 2), 'qw')
         self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT, 3), 't')
@@ -63,7 +63,7 @@ class TestSGEWrappers(unittest.TestCase):
 
 class TestJobTask(SGEJobTask):
 
-    '''Simple SGE job: write a test file to NSF shared drive and waits a minute'''
+    """Simple SGE job: write a test file to NSF shared drive and waits a minute"""
 
     i = luigi.Parameter()
 
@@ -79,7 +79,7 @@ class TestJobTask(SGEJobTask):
 @attr('contrib')
 class TestSGEJob(unittest.TestCase):
 
-    '''Test from SGE master node'''
+    """Test from SGE master node"""
 
     def test_run_job(self):
         if on_sge_master():
@@ -94,7 +94,7 @@ class TestSGEJob(unittest.TestCase):
             'Your job 12345 ("test_job") has been submitted',
             ''
         ]
-        task = TestJobTask(i=1, n_cpu=1, shared_tmp_dir='/tmp')
+        task = TestJobTask(i="1", n_cpu=1, shared_tmp_dir='/tmp')
         luigi.build([task], local_scheduler=True)
         self.assertEqual(mock_check_output.call_count, 2)
 
