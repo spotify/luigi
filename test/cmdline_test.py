@@ -278,7 +278,7 @@ class InvokeOverCmdlineTest(unittest.TestCase):
 
     def test_bin_luigid_version(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigid', '--version'])
-        self.assertEqual(stdout.strip(), luigi.__version__)
+        self.assertEqual(stdout.decode('utf-8').strip(), luigi.__version__)
 
     def test_error_mesage_on_misspelled_task(self):
         returncode, stdout, stderr = self._run_cmdline(['./bin/luigi', 'RangeDaili'])
