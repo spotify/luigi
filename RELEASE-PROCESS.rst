@@ -2,7 +2,7 @@ For maintainers of Luigi, who have push access to pypi. Here's how you upload
 Luigi to pypi.
 
 #. Make sure [twine](https://pypi.org/project/twine/) is installed ``pip install twine``.
-#. Update version number in `setup.py`.
+#. Update version number in `luigi/__meta__.py`.
 #. Commit, perhaps simply with a commit message like ``Version x.y.z``.
 #. Push to GitHub at [spotify/luigi](https://github.com/spotify/luigi).
 #. Clean up previous distributions by executing ``rm -rf dist``
