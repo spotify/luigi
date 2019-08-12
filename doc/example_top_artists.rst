@@ -155,7 +155,7 @@ Python code for the Spark job is found below.
         # The second field is the artist
         counts = streams \
             .map(lambda row: (row[1], 1)) \
-            .reduceByKey(add)
+            .reduceByKey(operator.add)
 
         counts.write.option('sep', '\t').csv(output_path)
 
