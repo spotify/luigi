@@ -2244,6 +2244,28 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.forgive_failures(task_id='A')
         self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
 
+    def test_mark_running_as_done_works(self):
+        # Adding a task, it runs, then force-commiting it sends it to DONE
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.setTime(1)
+        self.assertEqual({'A'}, set(self.sch.task_list(RUNNING, '').keys()))
+        self.sch.mark_as_done(task_id='A')
+        self.assertEqual({'A'}, set(self.sch.task_list(DONE, '').keys()))
+
+    def test_mark_failed_as_done_works(self):
+        # Adding a task, saying it failed, then force-commiting it sends it to DONE
+        self.setTime(0)
+        self.sch.add_task(worker=WORKER, task_id='A')
+        self.assertEqual(self.sch.get_work(worker=WORKER)['task_id'], 'A')
+        self.sch.add_task(worker=WORKER, task_id='A', status=FAILED)
+        self.setTime(1)
+        self.assertEqual(set(), set(self.sch.task_list(RUNNING, '').keys()))
+        self.assertEqual({'A'}, set(self.sch.task_list(FAILED, '').keys()))
+        self.sch.mark_as_done(task_id='A')
+        self.assertEqual({'A'}, set(self.sch.task_list(DONE, '').keys()))
+
     @mock.patch('luigi.metrics.NoMetricsCollector')
     def test_collector_metrics_on_task_started(self, MetricsCollector):
         from luigi.metrics import MetricsCollectors
