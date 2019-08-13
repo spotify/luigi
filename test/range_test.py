@@ -1100,7 +1100,7 @@ class MonthInstantiationTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2016, 1, 1)),
                                   of=MyTask,
                                   start=datetime.date(2015, 12, 1),
                                   stop=datetime.date(2016, 1, 1))
@@ -1125,7 +1125,7 @@ class MonthInstantiationTest(LuigiTestCase):
                 self.comp = True
                 MyTask.secret = 'yay'
 
-        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        now = str(int(datetime_to_epoch(datetime.datetime(2016, 1, 1))))
         self.run_locally_split('RangeMonthly --of wohoo.MyTask --now {now} --start 2015-12 --stop 2016-01'.format(now=now))
         self.assertEqual(MyTask(month_param=datetime.date(1934, 12, 1)).secret, 'yay')
 
@@ -1137,7 +1137,7 @@ class MonthInstantiationTest(LuigiTestCase):
             def complete(self):
                 return False
 
-        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2016, 1, 1)),
                                   of=MyTask,
                                   start=datetime.date(2015, 12, 1),
                                   stop=datetime.date(2016, 1, 1),
@@ -1153,7 +1153,7 @@ class MonthInstantiationTest(LuigiTestCase):
             def output(self):
                 return MockTarget(self.month_param.strftime('/n2000y01a05n/%Y_%m-aww/21mm%Hdara21/ooo'))
 
-        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
+        range_task = RangeMonthly(now=datetime_to_epoch(datetime.datetime(2016, 1, 1)),
                                   of=MyTask,
                                   start=datetime.date(2015, 12, 1),
                                   stop=datetime.date(2016, 1, 1),
@@ -1197,7 +1197,7 @@ class MonthInstantiationTest(LuigiTestCase):
                 self.comp = True
                 MyTask.state = (self.arbitrary_param, self.arbitrary_integer_param)
 
-        now = str(int(datetime_to_epoch(datetime.datetime(2015, 12, 2))))
+        now = str(int(datetime_to_epoch(datetime.datetime(2016, 1, 1))))
         self.run_locally(['RangeMonthly', '--of', 'wohoo.MyTask',
                           '--of-params', '{"arbitrary_param":"bar","arbitrary_integer_param":5}',
                           '--now', '{0}'.format(now), '--start', '2015-12', '--stop', '2016-01'])
@@ -1444,7 +1444,7 @@ class RangeByMinutesTest(unittest.TestCase):
 
             @classmethod
             def bulk_complete(cls, parameter_tuples):
-                return parameter_tuples[:-2]
+                return list(parameter_tuples)[:-2]
 
             def output(self):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
@@ -1471,9 +1471,10 @@ class RangeByMinutesTest(unittest.TestCase):
 
             @classmethod
             def bulk_complete(cls, parameter_tuples):
+                ptuples = list(parameter_tuples)
                 for t in map(cls, parameter_tuples):
                     assert t.arbitrary_argument
-                return parameter_tuples[:-2]
+                return ptuples[:-2]
 
             def output(self):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
