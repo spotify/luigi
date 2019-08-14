@@ -353,3 +353,48 @@ messages:
 
 Messages can be sent right from the scheduler UI which also displays responses (if any). Note that
 this feature is only available when the scheduler is configured to send messages (see the :ref:`scheduler-config` config), and the task is configured to accept them.
+
+Synchronization between tasks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some use cases might require the synchronization of certain parts in the ``run()`` method of tasks. A good example is the writing of a summary to a shared file or terminal output. Consider the following task:
+
+.. code-block:: python
+
+    class ASyncExample(luigi.Task):
+
+        name = luigi.Parameter()
+
+        def output(self):
+            ...
+
+        def run(self):
+            # do some computation
+            data = ...
+
+            # write a long-ish summary to stdout
+            print("summary of task " + self.name)
+            for obj in data:
+                print(obj)
+
+When two ``ASyncExample`` tasks with different ``--name`` parameters are run simultaneously by a worker with 2 worker processes (``--workers 2``) and the point of printing the summary is reached at the same time, the terminal output is likely to be mixed between the two tasks. This way, the respective summaries become rather impractical.
+
+To ensure that the summaries are printed one after another, you can make use the ``worker_lock`` that is known to tasks within their ``run()`` method:
+
+.. code-block:: python
+
+    class SyncExample(luigi.Task):
+
+        ...
+
+        def run(self):
+            # do some computation
+            data = ...
+
+            # write a long-ish summary to stdout, avoid interference using the worker lock
+            with self.worker_lock:
+                print("summary of task " + self.name)
+                for obj in data:
+                    print(obj)
+
+Please note that lock objects are defined per worker (as the name suggests), so synchronization can only be achieved between tasks run by the same worker.
