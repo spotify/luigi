@@ -563,14 +563,11 @@ class Worker(object):
             except AttributeError:
                 pass
 
-        # store a single multiprocessing Manager object to safely create queues and locks
-        self.mp_manager = multiprocessing.Manager()
-
         # create a lock that is passed to task processes for optional inter-task synchronization
-        self.worker_lock = self.mp_manager.Lock()
+        self.worker_lock = multiprocessing.Lock()
 
         # Keep info about what tasks are running (could be in other processes)
-        self._task_result_queue = self.mp_manager.Queue()
+        self._task_result_queue = multiprocessing.Queue()
         self._running_tasks = {}
         self._idle_since = None
 
@@ -752,7 +749,7 @@ class Worker(object):
             self._first_task = task.task_id
         self.add_succeeded = True
         if multiprocess:
-            queue = self.mp_manager.Queue()
+            queue = multiprocessing.Queue()
             pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
@@ -1027,7 +1024,7 @@ class Worker(object):
             task_process.run()
 
     def _create_task_process(self, task):
-        message_queue = self.mp_manager.Queue() if task.accepts_messages else None
+        message_queue = multiprocessing.Queue() if task.accepts_messages else None
         reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue,
                                       self.worker_lock)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
