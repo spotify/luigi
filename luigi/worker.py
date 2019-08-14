@@ -749,7 +749,7 @@ class Worker(object):
             self._first_task = task.task_id
         self.add_succeeded = True
         if multiprocess:
-            queue = multiprocessing.Queue()
+            queue = multiprocessing.Manager().Queue()
             pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
