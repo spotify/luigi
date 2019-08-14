@@ -121,6 +121,7 @@ class TaskProcess(multiprocessing.Process):
         "update_progress_percentage": "set_progress_percentage",
         "decrease_running_resources": "decrease_running_resources",
         "scheduler_messages": "scheduler_messages",
+        "worker_lock": "worker_lock",
     }
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
@@ -300,11 +301,12 @@ class TaskStatusReporter(object):
     This object must be pickle-able for passing to `TaskProcess` on systems
     where fork method needs to pickle the process object (e.g.  Windows).
     """
-    def __init__(self, scheduler, task_id, worker_id, scheduler_messages):
+    def __init__(self, scheduler, task_id, worker_id, scheduler_messages, worker_lock):
         self._task_id = task_id
         self._worker_id = worker_id
         self._scheduler = scheduler
         self.scheduler_messages = scheduler_messages
+        self.worker_lock = worker_lock
 
     def update_tracking_url(self, tracking_url):
         self._scheduler.add_task(
@@ -561,8 +563,14 @@ class Worker(object):
             except AttributeError:
                 pass
 
+        # store a single multiprocessing Manager object to safely create queues and locks
+        self.mp_manager = multiprocessing.Manager()
+
+        # create a lock that is passed to task processes for optional inter-task synchronization
+        self.worker_lock = self.mp_manager.Lock()
+
         # Keep info about what tasks are running (could be in other processes)
-        self._task_result_queue = multiprocessing.Queue()
+        self._task_result_queue = self.mp_manager.Queue()
         self._running_tasks = {}
         self._idle_since = None
 
@@ -744,7 +752,7 @@ class Worker(object):
             self._first_task = task.task_id
         self.add_succeeded = True
         if multiprocess:
-            queue = multiprocessing.Manager().Queue()
+            queue = self.mp_manager.Queue()
             pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
@@ -1019,8 +1027,9 @@ class Worker(object):
             task_process.run()
 
     def _create_task_process(self, task):
-        message_queue = multiprocessing.Queue() if task.accepts_messages else None
-        reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue)
+        message_queue = self.mp_manager.Queue() if task.accepts_messages else None
+        reporter = TaskStatusReporter(self._scheduler, task.task_id, self._id, message_queue,
+                                      self.worker_lock)
         use_multiprocessing = self._config.force_multiprocessing or bool(self.worker_processes > 1)
         return ContextManagedTaskProcess(
             self._config.task_process_context,

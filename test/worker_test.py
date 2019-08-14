@@ -27,7 +27,7 @@ import threading
 import time
 
 import psutil
-from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
+from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase, RunOnceTask,
                      temporary_unloaded_module)
 
 import luigi.notifications
@@ -1040,6 +1040,62 @@ class WorkerDisabledTest(LuigiTestCase):
 
     def test_stop_getting_new_work_assistant_keep_alive(self):
         self._test_stop_getting_new_work(keep_alive=True, assistant=True)
+
+
+class WorkerLockTest(LuigiTestCase):
+
+    class LockTask(RunOnceTask):
+
+        name = luigi.Parameter()
+        delay1 = luigi.FloatParameter()
+        delay2 = luigi.FloatParameter()
+        use_locking = luigi.BoolParameter()
+        log_file = luigi.Parameter()
+
+        def write_line(self, line):
+            with open(self.log_file, "a") as f:
+                f.write(line + "\n")
+
+        def run(self):
+            time.sleep(self.delay1)
+            if self.use_locking:
+                self.worker_lock.acquire()
+            self.write_line("start " + self.name)
+            time.sleep(self.delay2)
+            self.write_line("end " + self.name)
+            if self.use_locking:
+                self.worker_lock.release()
+
+    def run_tasks_and_get_log_lines(self, use_locking):
+        with tempfile.NamedTemporaryFile(delete=True) as tf:
+            scheduler = Scheduler()
+            with luigi.worker.Worker(scheduler=scheduler, worker_processes=2) as worker:
+                # set the delays to have "start A", "start B", "end A", "end B"
+                # in the log file when use_locking is False
+                worker.add(self.LockTask(name="A", delay1=0, delay2=1.0, use_locking=use_locking,
+                                         log_file=tf.name))
+                worker.add(self.LockTask(name="B", delay1=0.5, delay2=1.0, use_locking=use_locking,
+                                         log_file=tf.name))
+
+                worker.run()
+
+            # check the output
+            with open(tf.name, "r") as f:
+                lines = tuple(line.strip() for line in f.readlines())
+
+        return lines
+
+    def test_without_locking(self):
+        # here, we don't use the worker lock so that the logged lines should be mixed
+        lines = self.run_tasks_and_get_log_lines(use_locking=False)
+
+        self.assertEqual(lines, ("start A", "start B", "end A", "end B"))
+
+    def test_with_locking(self):
+        # here, we use locking so that the logged lines should be after each other for both tasks
+        lines = self.run_tasks_and_get_log_lines(use_locking=True)
+
+        self.assertEqual(lines, ("start A", "end A", "start B", "end B"))
 
 
 class DynamicDependenciesTest(unittest.TestCase):
