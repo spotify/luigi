@@ -26,11 +26,15 @@ import datetime
 import ftplib
 import os
 import shutil
+import sys
 from helpers import unittest
 try:
     from cStringIO import StringIO
 except ImportError:
-    from io import StringIO
+    from io import BytesIO
+
+    def StringIO(s):
+        return BytesIO(s.encode('utf8'))
 
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
@@ -180,11 +184,19 @@ class TestRemoteTarget(unittest.TestCase):
         with remotetarget.open('r') as fin:
             self.assertEqual(fin.read(), "something to fill")
 
+        # check for cleaning temporary files
+        if sys.version_info >= (3, 2):
+            # cleanup uses tempfile.TemporaryDirectory only available in 3.2+
+            temppath = remotetarget._RemoteTarget__tmp_path
+            self.assertTrue(os.path.exists(temppath))
+            remotetarget = None  # garbage collect remotetarget
+            self.assertFalse(os.path.exists(temppath))
+
         # file is successfuly created
         self.assertTrue(os.path.exists(local_filepath))
 
         # test RemoteTarget with mtime
-        ts = datetime.datetime.now() - datetime.timedelta(minutes=2)
+        ts = datetime.datetime.now() - datetime.timedelta(days=2)
         delayed_remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD, mtime=ts)
         self.assertTrue(delayed_remotetarget.exists())
 
