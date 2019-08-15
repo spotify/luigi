@@ -408,6 +408,9 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
         elif mode == 'r':
+            temppath = '{}-luigi-tmp-{:09d}'.format(
+                self.path.lstrip('/'), random.randrange(0, 1e10)
+            )
             try:
                 # store reference to the TemporaryDirectory because it will be removed on GC
                 self.__temp_dir = tempfile.TemporaryDirectory(
@@ -417,15 +420,10 @@ class RemoteTarget(luigi.target.FileSystemTarget):
                 # TemporaryDirectory only available in Python3, use old behaviour in Python2
                 # this file will not be cleaned up automatically
                 self.__tmp_path = os.path.join(
-                    tempfile.gettempdir(),
-                    'luigi-contrib-ftp',
-                    self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10),
+                    tempfile.gettempdir(), 'luigi-contrib-ftp', temppath
                 )
             else:
-                self.__tmp_path = os.path.join(
-                    self.__temp_dir.name,
-                    self.path + "-luigi-tmp-%09d" % random.randrange(0, 1e10),
-                )
+                self.__tmp_path = os.path.join(self.__temp_dir.name, temppath)
 
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
