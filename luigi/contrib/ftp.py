@@ -414,7 +414,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             try:
                 # store reference to the TemporaryDirectory because it will be removed on GC
                 self.__temp_dir = tempfile.TemporaryDirectory(
-                    prefix="luigi-contrib-ftp"
+                    prefix="luigi-contrib-ftp_"
                 )
             except AttributeError:
                 # TemporaryDirectory only available in Python3, use old behaviour in Python2
