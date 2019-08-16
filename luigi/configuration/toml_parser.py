@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 import os.path
+from configparser import ConfigParser
+
 
 try:
     import toml
@@ -24,7 +26,7 @@ except ImportError:
 from .base_parser import BaseParser
 
 
-class LuigiTomlParser(BaseParser):
+class LuigiTomlParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
     enabled = bool(toml)
     data = dict()
