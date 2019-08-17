@@ -15,8 +15,10 @@
 # limitations under the License.
 #
 import os.path
-from configparser import ConfigParser
-
+try:
+    from ConfigParser import ConfigParser
+except ImportError:
+    from configparser import ConfigParser
 
 try:
     import toml
