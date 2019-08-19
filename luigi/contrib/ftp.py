@@ -15,14 +15,14 @@
 # limitations under the License.
 #
 """
-This library is a wrapper of ftplib.
-It is convenient to move data from/to FTP.
+This library is a wrapper of ftplib or pysftp.
+It is convenient to move data from/to (S)FTP servers.
 
 There is an example on how to use it (example/ftp_experiment_outputs.py)
 
 You can also find unittest for each class.
 
-Be aware that normal ftp do not provide secure communication.
+Be aware that normal ftp does not provide secure communication.
 """
 
 import datetime
@@ -368,7 +368,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     """
     Target used for reading from remote files.
 
-    The target is implemented using ssh commands streaming data over the network.
+    The target is implemented using intermediate files on the local system.
+    On Python2, these files may not be cleaned up.
     """
 
     def __init__(
@@ -407,8 +408,23 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
         elif mode == 'r':
-            temp_dir = os.path.join(tempfile.gettempdir(), 'luigi-contrib-ftp')
-            self.__tmp_path = temp_dir + '/' + self.path.lstrip('/') + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+            temppath = '{}-luigi-tmp-{:09d}'.format(
+                self.path.lstrip('/'), random.randrange(0, 1e10)
+            )
+            try:
+                # store reference to the TemporaryDirectory because it will be removed on GC
+                self.__temp_dir = tempfile.TemporaryDirectory(
+                    prefix="luigi-contrib-ftp_"
+                )
+            except AttributeError:
+                # TemporaryDirectory only available in Python3, use old behaviour in Python2
+                # this file will not be cleaned up automatically
+                self.__tmp_path = os.path.join(
+                    tempfile.gettempdir(), 'luigi-contrib-ftp', temppath
+                )
+            else:
+                self.__tmp_path = os.path.join(self.__temp_dir.name, temppath)
+
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 
