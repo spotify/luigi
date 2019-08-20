@@ -50,6 +50,8 @@ import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
 from sqlalchemy.engine import reflection
+from sqlalchemy.ext.compiler import compiles
+
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
@@ -214,6 +216,11 @@ class TaskEvent(Base):
 
     def __repr__(self):
         return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
+
+
+@compiles(sqlalchemy.TIMESTAMP, "mssql")
+def compile_timestamp_mssql(type_, compiler, **kw):
+    return "DATETIME2"
 
 
 class TaskRecord(Base):
