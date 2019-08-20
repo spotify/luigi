@@ -186,6 +186,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.hasTaskHistory = function(callback) {
+        jsonRPC(this.urlRoot + '/has_task_history', {}, function(response) {
+            callback(response.response);
+        });
+    };
+
     LuigiAPI.prototype.pause = function() {
         jsonRPC(this.urlRoot + '/pause');
     };

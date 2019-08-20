@@ -1006,6 +1006,10 @@ class Scheduler(object):
         return {"response": response}
 
     @rpc_method()
+    def has_task_history(self):
+        return self._config.record_task_history
+
+    @rpc_method()
     def is_pause_enabled(self):
         return {'enabled': self._config.pause_enabled}
 
