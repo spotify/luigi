@@ -504,21 +504,23 @@ class S3Client(FileSystem):
 
     @staticmethod
     def _get_s3_config(key=None):
-        defaults = dict(configuration.get_config().defaults())
-        try:
-            config = dict(configuration.get_config().items('s3'))
-        except (NoSectionError, KeyError):
-            return {}
-        # So what ports etc can be read without us having to specify all dtypes
-        for k, v in six.iteritems(config):
+        if os.environ.get("LUIGI_CONFIG_PARSER") != "toml":
+            defaults = dict(configuration.get_config().defaults())
             try:
-                config[k] = int(v)
-            except ValueError:
-                pass
-        if key:
-            return config.get(key)
-        section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
-
+                config = dict(configuration.get_config().items('s3'))
+            except (NoSectionError, KeyError):
+                return {}
+            # So what ports etc can be read without us having to specify all dtypes
+            for k, v in six.iteritems(config):
+                try:
+                    config[k] = int(v)
+                except ValueError:
+                    pass
+            if key:
+                return config.get(key)
+            section_only = {k: v for k, v in config.items() if k not in defaults or v != defaults[k]}
+        else:
+            return {}
         return section_only
 
     @staticmethod
