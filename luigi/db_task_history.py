@@ -165,7 +165,6 @@ class DbTaskHistory(task_history.TaskHistory):
             return session.query(TaskRecord).\
                 join(TaskEvent).\
                 filter(TaskEvent.ts >= yesterday).\
-                group_by(TaskRecord.id, TaskEvent.event_name, TaskEvent.ts).\
                 order_by(TaskEvent.ts.desc()).\
                 all()
 
