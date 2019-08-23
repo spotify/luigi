@@ -363,7 +363,7 @@ check_unfulfilled_deps
 
 force_multiprocessing
   By default, luigi uses multiprocessing when *more than one* worker process is
-  requested. Whet set to true, multiprocessing is used independent of the
+  requested. When set to true, multiprocessing is used independent of the
   the number of workers.
   Defaults to false.
 
@@ -405,8 +405,8 @@ method
   config files or run Luigi on an EC2 instance with proper instance
   profile.
 
-  In order to use sendgrid, fill in your sendgrid username and password
-  in the `[sendgrid]`_ section.
+  In order to use sendgrid, fill in your sendgrid API key in the
+  `[sendgrid]`_ section.
 
   In order to use smtp, fill in the appropriate fields in the `[smtp]`_
   section.
@@ -834,11 +834,8 @@ metrics_collector
 
 These parameters control sending error e-mails through SendGrid.
 
-password
-  Password used for sendgrid login
-
-username
-  Name of the user for the sendgrid login
+apikey
+  API key of the SendGrid account.
 
 
 [smtp]

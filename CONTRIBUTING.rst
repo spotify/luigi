@@ -22,10 +22,10 @@ You will need a ``tox --version`` of at least 2.0.
     # These commands are pretty fast and will tell if you've
     # broken something major:
     tox -e flake8
-    tox -e py27-nonhdfs
+    tox -e py27-core
 
     # You can also test particular files for even faster iterations
-    tox -e py27-nonhdfs test/rpc_test.py
+    tox -e py27-core test/rpc_test.py
 
     # The visualiser tests require phantomjs to be installed on your path
     tox -e visualiser
@@ -35,9 +35,9 @@ You will need a ``tox --version`` of at least 2.0.
     tox -e py34-hdp
 
 Where ``flake8`` is the lint checking, ``py27`` is obviously Python 2.7.
-``nonhdfs`` are tests not running on the Hadoop minicluster and ``cdh`` and
+``core`` are tests that do not require external components and ``cdh`` and
 ``hdp`` are two different hadoop distributions. For most local development it's
-usually enough to run the lint checking and a python version for ``nonhdfs``
+usually enough to run the lint checking and a python version for ``core``
 and let Travis run for the whole matrix.
 
 For `cdh` and `hdp`, tox will download the hadoop distribution for you. You

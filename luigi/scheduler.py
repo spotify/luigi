@@ -800,6 +800,19 @@ class Scheduler(object):
         return {"task_id": task_id, "status": task.status}
 
     @rpc_method()
+    def mark_as_done(self, task_id=None):
+        status = DONE
+        task = self._state.get_task(task_id)
+        if task is None:
+            return {"task_id": task_id, "status": None}
+
+        # we can force mark DONE for running or failed tasks
+        if task.status in {RUNNING, FAILED, DISABLED}:
+            self._update_task_history(task, status)
+            self._state.set_status(task, status, self._config)
+        return {"task_id": task_id, "status": task.status}
+
+    @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None, param_visibilities=None, accepts_messages=False,
@@ -991,6 +1004,10 @@ class Scheduler(object):
             task = self._state.get_task(task_id)
             response = task.scheduler_message_responses.pop(message_id, None)
         return {"response": response}
+
+    @rpc_method()
+    def has_task_history(self):
+        return self._config.record_task_history
 
     @rpc_method()
     def is_pause_enabled(self):

@@ -63,6 +63,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.markAsDone = function (taskId, callback) {
+        return jsonRPC(this.urlRoot + "/mark_as_done", {task_id: taskId}, function(response) {
+            callback(flatten(response.response));
+        });
+    };
+
     LuigiAPI.prototype.getFailedTaskList = function(callback) {
         return jsonRPC(this.urlRoot + "/task_list", {status: "FAILED", upstream_status: "", search: searchTerm()}, function(response) {
             callback(flatten(response.response));
@@ -177,6 +183,12 @@ var LuigiAPI = (function() {
     LuigiAPI.prototype.isPauseEnabled = function(callback) {
         jsonRPC(this.urlRoot + '/is_pause_enabled', {}, function(response) {
             callback(response.response.enabled);
+        });
+    };
+
+    LuigiAPI.prototype.hasTaskHistory = function(callback) {
+        jsonRPC(this.urlRoot + '/has_task_history', {}, function(response) {
+            callback(response.response);
         });
     };
 
