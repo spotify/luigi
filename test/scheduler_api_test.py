@@ -46,6 +46,7 @@ class SchedulerApiTest(unittest.TestCase):
             'disable_window': 10,
             'retry_count': 3,
             'disable_hard_timeout': 60 * 60,
+            'stable_done_cooldown_secs': 0
         }
 
     def tearDown(self):

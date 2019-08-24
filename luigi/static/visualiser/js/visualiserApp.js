@@ -1127,6 +1127,15 @@ function visualiserApp(luigi) {
     $(document).ready(function() {
         loadTemplates();
 
+        luigi.hasTaskHistory(function(hasTaskHistory) {
+            if (hasTaskHistory) {
+                $('#topNavbar').append(renderTemplate('topNavbarItem', {
+                    label: "History",
+                    href: "../../history",
+                }).children()[0]);
+            }
+        });
+
         luigi.isPauseEnabled(function(enabled) {
             if (enabled) {
                 luigi.isPaused(createPauseToggle);

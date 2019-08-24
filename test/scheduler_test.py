@@ -19,10 +19,16 @@ from __future__ import print_function
 import pickle
 import tempfile
 import time
+import os
+import shutil
+from multiprocessing import Process
 from helpers import unittest
 
 import luigi.scheduler
+import luigi.server
+import luigi.configuration
 from helpers import with_config
+from luigi.target import FileAlreadyExists
 
 
 class SchedulerIoTest(unittest.TestCase):
@@ -229,6 +235,19 @@ class SchedulerIoTest(unittest.TestCase):
         task_9.add_failure()
         self.assertTrue(task_9.has_excessive_failures())
 
+    @with_config({'scheduler': {'record_task_history': 'true'}})
+    def test_has_task_history(self):
+        cfg = luigi.configuration.get_config()
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=True) as fn:
+            cfg.set('task_history', 'db_connection', 'sqlite:///' + fn.name)
+            s = luigi.scheduler.Scheduler()
+            self.assertTrue(s.has_task_history())
+
+    @with_config({'scheduler': {'record_task_history': 'false'}})
+    def test_has_no_task_history(self):
+        s = luigi.scheduler.Scheduler()
+        self.assertFalse(s.has_task_history())
+
     @with_config({'scheduler': {'pause_enabled': 'false'}})
     def test_pause_disabled(self):
         s = luigi.scheduler.Scheduler()
@@ -281,3 +300,68 @@ class SchedulerWorkerTest(unittest.TestCase):
 
         non_trivial_worker = scheduler_state.get_worker('NON_TRIVIAL')
         self.assertEqual({'A'}, self.get_pending_ids(non_trivial_worker, scheduler_state))
+
+
+class FailingOnDoubleRunTask(luigi.Task):
+    time_to_check_secs = 1
+    time_to_run_secs = 2
+    output_dir = luigi.Parameter(default="")
+
+    def __init__(self, *args, **kwargs):
+        super(FailingOnDoubleRunTask, self).__init__(*args, **kwargs)
+        self.file_name = os.path.join(self.output_dir, "AnyTask")
+
+    def complete(self):
+        time.sleep(self.time_to_check_secs)  # e.g., establish connection
+        exists = os.path.exists(self.file_name)
+        time.sleep(self.time_to_check_secs)  # e.g., close connection
+        return exists
+
+    def run(self):
+        time.sleep(self.time_to_run_secs)
+        if os.path.exists(self.file_name):
+            raise FileAlreadyExists(self.file_name)
+        open(self.file_name, 'w').close()
+
+
+class StableDoneCooldownSecsTest(unittest.TestCase):
+
+    def setUp(self):
+        self.p = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.p)
+
+    def run_task(self):
+        return luigi.build([FailingOnDoubleRunTask(output_dir=self.p)],
+                           detailed_summary=True,
+                           parallel_scheduling=True,
+                           parallel_scheduling_processes=2)
+
+    @with_config({'worker': {'keep_alive': 'false'}})
+    def get_second_run_result_on_double_run(self):
+        server_process = Process(target=luigi.server.run)
+        process = Process(target=self.run_task)
+        try:
+            # scheduler is started
+            server_process.start()
+            # first run is started
+            process.start()
+            time.sleep(FailingOnDoubleRunTask.time_to_run_secs + FailingOnDoubleRunTask.time_to_check_secs)
+            # second run of the same task is started
+            second_run_result = self.run_task()
+            return second_run_result
+        finally:
+            process.join(1)
+            server_process.terminate()
+            server_process.join(1)
+
+    @with_config({'scheduler': {'stable_done_cooldown_secs': '5'}})
+    def test_sending_same_task_twice_with_cooldown_does_not_lead_to_double_run(self):
+        second_run_result = self.get_second_run_result_on_double_run()
+        self.assertEqual(second_run_result.scheduling_succeeded, True)
+
+    @with_config({'scheduler': {'stable_done_cooldown_secs': '0'}})
+    def test_sending_same_task_twice_without_cooldown_leads_to_double_run(self):
+        second_run_result = self.get_second_run_result_on_double_run()
+        self.assertEqual(second_run_result.scheduling_succeeded, False)
