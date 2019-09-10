@@ -17,6 +17,7 @@
 
 import logging
 import os
+import re
 import sys
 import tempfile
 import shutil
@@ -298,8 +299,9 @@ class PySparkTask(SparkSubmitTask):
         return [self.app, pickle_loc] + self.app_options()
 
     def run(self):
-        self.run_path = tempfile.mkdtemp(prefix=self.name)
-        self.run_pickle = os.path.join(self.run_path, '.'.join([self.name.replace(' ', '_'), 'pickle']))
+        name = re.sub(r'[^\w]', '_', self.name)
+        self.run_path = tempfile.mkdtemp(prefix=name)
+        self.run_pickle = os.path.join(self.run_path, '.'.join([name, 'pickle']))
         with open(self.run_pickle, 'wb') as fd:
             # Copy module file to run path.
             module_path = os.path.abspath(inspect.getfile(self.__class__))
