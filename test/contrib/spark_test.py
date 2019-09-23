@@ -97,6 +97,10 @@ class TestPySparkTask(PySparkTask):
         sc.textFile(self.input().path).saveAsTextFile(self.output().path)
 
 
+class MessyNamePySparkTask(TestPySparkTask):
+    name = 'AppName(a,b,c,1:2,3/4)'
+
+
 @attr('apache')
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
@@ -289,3 +293,10 @@ class PySparkTaskTest(unittest.TestCase):
 
         sc.textFile.assert_called_with('input')
         sc.textFile.return_value.saveAsTextFile.assert_called_with('output')
+
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_name_cleanup(self, proc):
+        setup_run_process(proc)
+        job = MessyNamePySparkTask()
+        job.run()
+        assert 'AppName_a_b_c_1_2_3_4_' in job.run_path

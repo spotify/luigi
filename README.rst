@@ -154,7 +154,8 @@ or held presentations about Luigi:
 * `Glossier <https://www.glossier.com/>`_ `(blog, 2018) <https://medium.com/glossier/how-to-build-a-data-warehouse-what-weve-learned-so-far-at-glossier-6ff1e1783e31>`__
 * `Data Revenue <https://www.datarevenue.com/>`_ `(blog, 2018) <https://www.datarevenue.com/en/blog/how-to-scale-your-machine-learning-pipeline>`_
 * `Uppsala University <http://pharmb.io>`_ `(tutorial) <http://uppnex.se/twiki/do/view/Courses/EinfraMPS2015/Luigi.html>`_   / `(presentation, 2015) <https://www.youtube.com/watch?v=f26PqSXZdWM>`_ / `(slides, 2015) <https://www.slideshare.net/SamuelLampa/building-workflows-with-spotifys-luigi>`_ / `(poster, 2015) <https://pharmb.io/poster/2015-sciluigi/>`_ / `(paper, 2016) <https://doi.org/10.1186/s13321-016-0179-6>`_ / `(project) <https://github.com/pharmbio/sciluigi>`_
-* `GIPHY <https://giphy.com/>`_ `(blog, 2019) <https://engineering.giphy.com/luigi-the-10x-plumber-containerizing-scaling-luigi-in-kubernetes/>`_
+* `GIPHY <https://giphy.com/>`_ `(blog, 2019) <https://engineering.giphy.com/luigi-the-10x-plumber-containerizing-scaling-luigi-in-kubernetes/>`__
+* `xtream <https://xtreamers.io/>`__ `(blog, 2019) <https://towardsdatascience.com/lessons-from-a-real-machine-learning-project-part-1-from-jupyter-to-luigi-bdfd0b050ca5>`__
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 
@@ -182,7 +183,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `VOYAGE GROUP/Zucks <https://zucks.co.jp/en/>`_
 * `Textpert <https://www.textpert.ai/>`_
 * `Whizar <https://www.whizar.com/>`_
-* `xtream <https://www.xtreamers.io/>`_
+* `xtream <https://www.xtreamers.io/>`__
 * `Skyscanner <https://www.skyscanner.net/>`_
 * `Jodel <https://www.jodel.com/>`_
 
