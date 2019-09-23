@@ -283,6 +283,10 @@ class ServerTest(ServerTestBase):
 
         self.assertIsNone(headers.get('Access-Control-Allow-Origin'))
 
+    def test_api_allow_head_on_root(self):
+        response = self.fetch('/', method='HEAD')
+        self.assertEqual(response.code, 204)
+
 
 class _ServerTest(unittest.TestCase):
     """
