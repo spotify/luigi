@@ -91,7 +91,7 @@ class URLLibFetcher(object):
 
         # add the request body
         if body:
-            req.add_data(urlencode(body).encode('utf-8'))
+            req.data = urlencode(body).encode('utf-8')
 
         return req
 
