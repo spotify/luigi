@@ -405,7 +405,7 @@ def format_task_error(headline, task, command, formatted_exception=None):
         </html>
         ''')
 
-        str_params = task.to_str_params()
+        str_params = task.to_str_params(only_public=True)
         params = '\n'.join('<tr><th>{}</th><td>{}</td></tr>'.format(*items) for items in str_params.items())
         body = msg_template.format(headline=headline, name=task.task_family, param_rows=params,
                                    command=command, traceback=formatted_exception)
@@ -424,7 +424,7 @@ def format_task_error(headline, task, command, formatted_exception=None):
         {traceback}
         ''')
 
-        str_params = task.to_str_params()
+        str_params = task.to_str_params(only_public=True)
         max_width = max([0] + [len(x) for x in str_params.keys()])
         params = '\n'.join('  {:{width}}: {}'.format(*items, width=max_width) for items in str_params.items())
         body = msg_template.format(headline=headline, name=task.task_family, params=params,
