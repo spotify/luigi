@@ -83,6 +83,14 @@ class DockerTask(luigi.Task):
         return {}
 
     @property
+    def host_config_options(self):
+        '''
+        Set additional keyword arguments for create_host_config
+        https://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_host_config
+        '''
+        return {}
+
+    @property
     def environment(self):
         return {}
 
@@ -110,6 +118,10 @@ class DockerTask(luigi.Task):
     @property
     def auto_remove(self):
         return True
+
+    @property
+    def stream_output(self):
+        return False
 
     @property
     def force_pull(self):
@@ -193,7 +205,8 @@ class DockerTask(luigi.Task):
                          % (self._image, self.command, self._binds))
 
             host_config = self._client.create_host_config(binds=self._binds,
-                                                          network_mode=self.network_mode)
+                                                          network_mode=self.network_mode,
+                                                          **self.host_config_options)
 
             container = self._client.create_container(self._image,
                                                       command=self.command,
@@ -203,6 +216,11 @@ class DockerTask(luigi.Task):
                                                       host_config=host_config,
                                                       **self.container_options)
             self._client.start(container['Id'])
+
+            if  self.stream_output:
+                logs_generator = self._client.logs(container['Id'], stream=True)
+                for line in logs_generator:
+                    print(line.strip().decode('utf-8'))
 
             exit_status = self._client.wait(container['Id'])
             # docker-py>=3.0.0 returns a dict instead of the status code directly
