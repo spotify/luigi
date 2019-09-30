@@ -42,9 +42,9 @@ install_requires = ['python-dateutil>=2.7.5,<3']
 # Can't use python-daemon>=2.2.0 if on windows
 #     See https://pagure.io/python-daemon/issue/18
 if sys.platform == 'nt':
-    insall_requires.append('python-daemon<2.2.0')
+    install_requires.append('python-daemon<2.2.0')
 else:
-    insall_requires.append('python-daemon')
+    install_requires.append('python-daemon')
 
 # Tornado >=5 requires updated ssl module so we only allow it for recent enough
 # versions of python (3.4+ and 2.7.9+).
@@ -65,7 +65,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
     install_requires.append('sqlalchemy')
     # readthedocs don't like python-daemon, see #1342
-    install_requires = [x for x install_requires if not x.startswith('python-daemon')
+    install_requires = [x for x in install_requires if not x.startswith('python-daemon')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
 
 setup(
