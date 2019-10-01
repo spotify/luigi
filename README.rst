@@ -1,6 +1,6 @@
 .. figure:: https://raw.githubusercontent.com/spotify/luigi/master/doc/luigi.png
    :alt: Luigi Logo
-   :align: center
+   :align: right
 
 .. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
     :target: https://travis-ci.org/spotify/luigi
@@ -20,8 +20,9 @@
 Luigi is a Python (2.7, 3.6, 3.7 tested) package that helps you build complex
 pipelines of batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much more.
+Also Luigi is a fictional character featured in video games and related media released by Nintendo!!!
 
-Getting Started
+Getting Started :
 ---------------
 
 Run ``pip install luigi`` to install the latest stable version from `PyPI
