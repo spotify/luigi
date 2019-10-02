@@ -58,7 +58,6 @@ except ImportError:
     logger.warning("Loading S3 module without the python package boto3. "
                    "Will crash at runtime if S3 functionality is used.")
 
-
 # two different ways of marking a directory
 # with a suffix in S3
 S3_DIRECTORY_MARKER_SUFFIX_0 = '_$folder$'
@@ -101,7 +100,7 @@ class S3Client(FileSystem):
     DEFAULT_PART_SIZE = 8388608
     DEFAULT_THREADS = 100
 
-    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
+    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None,
                  **kwargs):
         options = self._get_s3_config()
         options.update(kwargs)
@@ -109,6 +108,8 @@ class S3Client(FileSystem):
             options['aws_access_key_id'] = aws_access_key_id
         if aws_secret_access_key:
             options['aws_secret_access_key'] = aws_secret_access_key
+        if aws_session_token:
+            options['aws_session_token'] = aws_session_token
 
         self._options = options
 
@@ -129,7 +130,8 @@ class S3Client(FileSystem):
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
 
-        aws_session_token = None
+        # In case the aws_session_token is provided use it
+        aws_session_token = options.get('aws_session_token')
 
         if role_arn and role_session_name:
             sts_client = boto3.client('sts')
@@ -143,7 +145,7 @@ class S3Client(FileSystem):
                          .format(role_session_name))
 
         for key in ['aws_access_key_id', 'aws_secret_access_key',
-                    'aws_role_session_name', 'aws_role_arn']:
+                    'aws_role_session_name', 'aws_role_arn', 'aws_session_token']:
             if key in options:
                 options.pop(key)
 
