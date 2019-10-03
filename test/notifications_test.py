@@ -359,6 +359,27 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
                     Destinations=self.recipients,
                     RawMessage={'Data': self.mocked_email_msg})
 
+    @with_config({'email': {'region': 'whatever'}})
+    def test_sends_ses_email_with_reguon(self):
+        """
+        Call notifications.send_email_ses with fixture parameters
+        and check that boto is properly called.
+        """
+
+        with mock.patch('boto3.client') as boto_client:
+            with mock.patch('luigi.notifications.generate_email') as generate_email:
+                generate_email.return_value\
+                    .as_string.return_value = self.mocked_email_msg
+
+                notifications.send_email_ses(*self.notification_args)
+
+                boto_client.assert_called_once_with('ses', region_name='whatever')
+                SES = boto_client.return_value
+                SES.send_raw_email.assert_called_once_with(
+                    Source=self.sender,
+                    Destinations=self.recipients,
+                    RawMessage={'Data': self.mocked_email_msg})
+
 
 class TestSNSNotification(unittest.TestCase, NotificationFixture):
     """

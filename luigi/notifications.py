@@ -88,6 +88,10 @@ class email(luigi.Config):
         default=DEFAULT_CLIENT_EMAIL,
         config_path=dict(section='core', name='email-sender'),
         description='Address to send e-mails from')
+    region = luigi.parameter.Parameter(
+        default='',
+        config_path=dict(section='email', name='region'),
+        description='AWS region for SES if you want to override the default AWS region for boto3')
 
 
 class smtp(luigi.Config):
@@ -219,7 +223,8 @@ def send_email_ses(sender, subject, message, recipients, image_png):
     """
     from boto3 import client as boto3_client
 
-    client = boto3_client('ses')
+    region = email().region or None
+    client = boto3_client('ses', region_name=region)
 
     msg_root = generate_email(sender, subject, message, recipients, image_png)
     response = client.send_raw_email(Source=sender,
