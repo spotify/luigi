@@ -41,6 +41,7 @@ if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
 
 AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+AWS_SESSION_TOKEN = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 
 def create_bucket():
@@ -72,6 +73,11 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         create_bucket()
         return S3Target('s3://mybucket/test_file', client=client, format=format, **kwargs)
 
+    def create_target_with_session(self, format=None, **kwargs):
+        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_SESSION_TOKEN)
+        create_bucket()
+        return S3Target('s3://mybucket/test_file', client=client, format=format, **kwargs)
+
     def test_read(self):
         client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         create_bucket()
@@ -81,8 +87,21 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         file_str = read_file.read()
         self.assertEqual(self.tempFileContents, file_str.encode('utf-8'))
 
+    def test_read_with_session(self):
+        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_SESSION_TOKEN)
+        create_bucket()
+        client.put(self.tempFilePath, 's3://mybucket/tempfile-with-session')
+        t = S3Target('s3://mybucket/tempfile-with-session', client=client)
+        read_file = t.open()
+        file_str = read_file.read()
+        self.assertEqual(self.tempFileContents, file_str.encode('utf-8'))
+
     def test_read_no_file(self):
         t = self.create_target()
+        self.assertRaises(FileNotFoundException, t.open)
+
+    def test_read_no_file_with_session(self):
+        t = self.create_target_with_session()
         self.assertRaises(FileNotFoundException, t.open)
 
     def test_read_no_file_sse(self):
@@ -183,6 +202,10 @@ class TestS3Client(unittest.TestCase):
     def test_put(self):
         create_bucket()
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
+        self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
+
+        s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_SESSION_TOKEN)
         s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
