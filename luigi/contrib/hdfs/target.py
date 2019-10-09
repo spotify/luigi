@@ -19,8 +19,8 @@ Provides access to HDFS using the :py:class:`HdfsTarget`, a subclass of :py:clas
 """
 
 import luigi
-import random
 import warnings
+from uuid import uuid4
 from luigi.target import FileSystemTarget
 from luigi.contrib.hdfs.config import tmppath
 from luigi.contrib.hdfs import format as hdfs_format
@@ -178,7 +178,7 @@ class HdfsTarget(FileSystemTarget):
             return False
 
     def _is_writable(self, path):
-        test_path = path + '.test_write_access-%09d' % random.randrange(1e10)
+        test_path = path + '.test_write_access-%s' % uuid4().hex
         try:
             self.fs.touchz(test_path)
             self.fs.remove(test_path, recursive=False)

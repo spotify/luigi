@@ -28,9 +28,9 @@ Be aware that normal ftp does not provide secure communication.
 import datetime
 import ftplib
 import os
-import random
 import tempfile
 import io
+from uuid import uuid4
 
 import luigi
 import luigi.file
@@ -254,7 +254,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.conn.makedirs(directory)
 
         if atomic:
-            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, 1e10)))
+            tmp_path = os.path.join(directory, 'luigi-tmp-{}'.format(uuid4().hex))
         else:
             tmp_path = normpath
 
@@ -279,7 +279,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         # random file name
         if atomic:
-            tmp_path = folder + os.sep + 'luigi-tmp-%09d' % random.randrange(0, 1e10)
+            tmp_path = folder + os.sep + 'luigi-tmp-%s' % uuid4().hex
         else:
             tmp_path = normpath
 
@@ -297,7 +297,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if folder and not os.path.exists(folder):
             os.makedirs(folder)
 
-        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        tmp_local_path = local_path + '-luigi-tmp-%s' % uuid4().hex
 
         # download file
         self._connect()
@@ -408,8 +408,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
             return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
         elif mode == 'r':
-            temppath = '{}-luigi-tmp-{:09d}'.format(
-                self.path.lstrip('/'), random.randrange(0, 1e10)
+            temppath = '{}-luigi-tmp-{}'.format(
+                self.path.lstrip('/'), uuid4().hex
             )
             try:
                 # store reference to the TemporaryDirectory because it will be removed on GC

@@ -26,6 +26,7 @@ import random
 import tempfile
 import logging
 import warnings
+from uuid import uuid4
 from contextlib import contextmanager
 from luigi import six
 
@@ -329,7 +330,7 @@ class AtomicLocalFile(io.BufferedWriter):
         self.move_to_final_destination()
 
     def generate_tmp_path(self, path):
-        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 1e10))
+        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%s' % uuid4().hex)
 
     def move_to_final_destination(self):
         raise NotImplementedError()

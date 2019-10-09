@@ -40,9 +40,9 @@ protocol or circumvent firewalls (as long as they are open for ssh traffic).
 import contextlib
 import logging
 import os
-import random
 import subprocess
 import posixpath
+from uuid import uuid4
 
 import luigi
 import luigi.format
@@ -254,7 +254,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if folder and not self.exists(folder):
             self.remote_context.check_output(['mkdir', '-p', folder])
 
-        tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        tmp_path = path + '-luigi-tmp-%s' % uuid4().hex
         self._scp(local_path, "%s:%s" % (self.remote_context._host_ref(), tmp_path))
         self.remote_context.check_output(['mv', tmp_path, path])
 
@@ -268,7 +268,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
             except OSError:
                 pass
 
-        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        tmp_local_path = local_path + '-luigi-tmp-%s' % uuid4().hex
         self._scp("%s:%s" % (self.remote_context._host_ref(), path), tmp_local_path)
         os.rename(tmp_local_path, local_path)
 
@@ -285,7 +285,7 @@ class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
         if folder:
             self.fs.mkdir(folder)
 
-        self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        self.__tmp_path = self.path + '-luigi-tmp-%s' % uuid4().hex
         super(AtomicRemoteFileWriter, self).__init__(
             self.fs.remote_context._prepare_cmd(['cat', '>', self.__tmp_path]))
 
