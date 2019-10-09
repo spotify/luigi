@@ -890,6 +890,51 @@ class EnumParameter(Parameter):
         return e.name
 
 
+class EnumListParameter(Parameter):
+    """
+    A parameter whose value is a str-separated (default ",") list of :class:`~enum.Enum`.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class Model(enum.Enum):
+          Honda = 1
+          Volvo = 2
+
+        class MyTask(luigi.Task):
+          my_param = luigi.EnumListParameter(enum=Model)
+
+    At the command line, use,
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param Honda,Volvo
+
+    """
+
+    def __init__(self, *args, **kwargs):
+        if 'enum' not in kwargs:
+            raise ParameterException('An enum class must be specified.')
+        self._enum = kwargs.pop('enum')
+        self._delim = kwargs.pop('delim', ',')
+        super(EnumListParameter, self).__init__(*args, **kwargs)
+
+    def parse(self, s):
+        values = [] if s == '' else s.split(self._delim)
+
+        for i, v in enumerate(values):
+            try:
+                values[i] = self._enum[v]
+            except KeyError:
+                raise ValueError('Invalid enum value "{}" index {} - could not be parsed'.format(v, i))
+
+        return tuple(values)
+
+    def serialize(self, enum_values):
+        return self._delim.join([e.name for e in enum_values])
+
+
 class _DictParamEncoder(JSONEncoder):
     """
     JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
