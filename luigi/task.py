@@ -40,6 +40,7 @@ from luigi import six
 from luigi import parameter
 from luigi.task_register import Register
 from luigi.parameter import ParameterVisibility
+from luigi.target import Target
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -875,7 +876,7 @@ def flatten(struct):
         for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
-    if isinstance(struct, six.string_types):
+    if isinstance(struct, (six.string_types, Task, Target)):
         return [struct]
 
     try:
