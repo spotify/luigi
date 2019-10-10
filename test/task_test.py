@@ -106,12 +106,27 @@ class TaskTest(unittest.TestCase):
         self.assertTrue(hasattr(struct["generator"], "__iter__"))
 
     def test_flatten(self):
+        class TaskWithIter(luigi.Task):
+            def __iter__(self):
+                yield 1
+
+        class TargetWithIter(luigi.Target):
+            def exists(self):
+                return True
+
+            def __iter__(self):
+                yield 1
+
+        task_iter = TaskWithIter()
+        target_iter = TargetWithIter()
         flatten = luigi.task.flatten
         self.assertEqual(sorted(flatten({'a': 'foo', 'b': 'bar'})), ['bar', 'foo'])
         self.assertEqual(sorted(flatten(['foo', ['bar', 'troll']])), ['bar', 'foo', 'troll'])
         self.assertEqual(flatten('foo'), ['foo'])
         self.assertEqual(flatten(42), [42])
         self.assertEqual(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+        self.assertEqual(flatten(task_iter), [task_iter])
+        self.assertEqual(flatten(target_iter), [target_iter])
         self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
 
     def test_externalized_task_picklable(self):
