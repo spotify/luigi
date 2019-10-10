@@ -630,7 +630,7 @@ class SimpleTaskState(object):
                 self.re_enable(task, config)
 
         # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
-        if task.status == FAILED and config.retry_delay >= 0 and task.retry < time.time():
+        if task.status == FAILED and config.retry_delay >= 0 and (False if task.retry is None else task.retry < time.time()):
             self.set_status(task, PENDING, config)
 
     def may_prune(self, task):
