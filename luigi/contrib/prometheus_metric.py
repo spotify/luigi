@@ -46,12 +46,16 @@ class PrometheusMetricsCollector(MetricsCollector):
         self.task_execution_time.labels(family=task.family)
 
     def handle_task_failed(self, task):
-        self.task_failed_counter.labels(family=task.family).inc()
-        self.task_execution_time.labels(family=task.family).set(task.updated - task.time_running)
+        # time_running can be `None` if task was already complete
+        if task.time_running is not None:
+            self.task_failed_counter.labels(family=task.family).inc()
+            self.task_execution_time.labels(family=task.family).set(task.updated - task.time_running)
 
     def handle_task_disabled(self, task, config):
-        self.task_disabled_counter.labels(family=task.family).inc()
-        self.task_execution_time.labels(family=task.family).set(task.updated - task.time_running)
+        # time_running can be `None` if task was already complete
+        if task.time_running is not None:
+            self.task_disabled_counter.labels(family=task.family).inc()
+            self.task_execution_time.labels(family=task.family).set(task.updated - task.time_running)
 
     def handle_task_done(self, task):
         self.task_done_counter.labels(family=task.family).inc()
