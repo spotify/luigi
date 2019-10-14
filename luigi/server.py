@@ -274,6 +274,7 @@ class RootPathHandler(BaseTaskHistoryHandler):
         self.redirect("/static/visualiser/index.html")
 
     def head(self):
+        """HEAD endpoint for health checking the scheduler"""
         self.set_status(204)
         self.finish()
 
