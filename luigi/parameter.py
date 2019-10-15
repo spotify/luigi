@@ -892,7 +892,7 @@ class EnumParameter(Parameter):
 
 class EnumListParameter(Parameter):
     """
-    A parameter whose value is a str-separated (default ",") list of :class:`~enum.Enum`.
+    A parameter whose value is a comma-separated list of :class:`~enum.Enum`.
 
     In the task definition, use
 
@@ -913,15 +913,16 @@ class EnumListParameter(Parameter):
 
     """
 
+    _sep = ','
+
     def __init__(self, *args, **kwargs):
         if 'enum' not in kwargs:
             raise ParameterException('An enum class must be specified.')
         self._enum = kwargs.pop('enum')
-        self._delim = kwargs.pop('delim', ',')
         super(EnumListParameter, self).__init__(*args, **kwargs)
 
     def parse(self, s):
-        values = [] if s == '' else s.split(self._delim)
+        values = [] if s == '' else s.split(self._sep)
 
         for i, v in enumerate(values):
             try:
@@ -932,7 +933,7 @@ class EnumListParameter(Parameter):
         return tuple(values)
 
     def serialize(self, enum_values):
-        return self._delim.join([e.name for e in enum_values])
+        return self._sep.join([e.name for e in enum_values])
 
 
 class _DictParamEncoder(JSONEncoder):
