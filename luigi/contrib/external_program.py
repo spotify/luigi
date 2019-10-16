@@ -42,6 +42,7 @@ from time import sleep
 
 import luigi
 from luigi.parameter import ParameterVisibility
+from luigi import six
 
 logger = logging.getLogger('luigi-interface')
 
@@ -121,7 +122,7 @@ class ExternalProgramTask(luigi.Task):
     def run(self):
         args = list(map(str, self.program_args()))
 
-        logger.info('Running command: %s', ' '.join(args))
+        logger.info('Running command: %s', ' '.join(six.moves.shlex_quote(arg) for arg in args))
         env = self.program_environment()
         kwargs = {'env': env}
         tmp_stdout, tmp_stderr = None, None
