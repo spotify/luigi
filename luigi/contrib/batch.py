@@ -164,7 +164,13 @@ class BatchClient(object):
                 job_str = json.dumps(jobs, indent=4)
                 logger.debug('Job details:\n' + job_str)
 
-                log_stream_name = jobs[0]['attempts'][0]['container']['logStreamName']
+                job_attempt = jobs[0]['attempts'][-1]
+                if job_attempt['statusReason'] == 'Task failed to start':
+                    raise BatchJobException('Job {} failed: {}'.format(
+                        job_id, job_attempt['container']['reason']
+                    ))
+
+                log_stream_name = job_attempt['container']['logStreamName']
                 logs = self.get_logs(log_stream_name)
                 raise BatchJobException('Job {} failed: {}'.format(
                     job_id, logs))
