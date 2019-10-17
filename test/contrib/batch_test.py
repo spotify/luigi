@@ -62,6 +62,7 @@ class MockBotoBatchClient(object):
                     'status': 'SUCCEEDED',
                     'attempts': [
                         {
+                            'statusReason': 'Essential container in task exited',
                             'container': {
                                 'logStreamName': 'test_job_abcd_log_stream'
                             }
@@ -161,6 +162,46 @@ class BatchClientTest(unittest.TestCase):
         with self.assertRaises(batch.BatchJobException) as context:
             self.bc.wait_on_job(job_id)
             self.assertTrue('log line 1' in context.exception)
+
+    def test_wait_on_job_failed_before_start(self):
+        job_id = self.bc.submit_job(
+            'test_job_def',
+            {'param1': 'foo', 'param2': 'bar'},
+            job_name='test_job')
+        self.bc.get_job_status = lambda x: 'FAILED'
+
+        def describe_jobs_failed(jobs=()):
+            return {
+                'ResponseMetadata': {
+                    'HTTPStatusCode': 200
+                },
+                'jobs': [
+                    {
+                        'status': 'FAILED',
+                        'attempts': [
+                            {
+                                'statusReason': 'Task failed to start',
+                                'container': {
+                                    'reason': 'First error attempt',
+                                    'logStreamName': 'test_job_abcd_log_stream'
+                                }
+                            },
+                            {
+                                'statusReason': 'Task failed to start',
+                                'container': {
+                                    'reason': 'CannotPullContainerError',
+                                    'logStreamName': 'test_job_abcd_log_stream'
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+
+        self.bc._client.describe_jobs = describe_jobs_failed
+        with self.assertRaises(batch.BatchJobException) as context:
+            self.bc.wait_on_job(job_id)
+            self.assertTrue('CannotPullContainerError' in context.exception)
 
 
 @attr('aws')
