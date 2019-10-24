@@ -273,6 +273,11 @@ class RootPathHandler(BaseTaskHistoryHandler):
     def get(self):
         self.redirect("/static/visualiser/index.html")
 
+    def head(self):
+        """HEAD endpoint for health checking the scheduler"""
+        self.set_status(204)
+        self.finish()
+
 
 class MetricsHandler(tornado.web.RequestHandler):
     def initialize(self, scheduler):
