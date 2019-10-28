@@ -213,10 +213,15 @@ class KubernetesJobTask(luigi.Task):
         """How often to poll Kubernetes for job status, in seconds."""
         return self.__DEFAULT_POLL_INTERVAL
 
+    @property
+    def pod_creation_wait_interal(self):
+        """Delay for initial pod creation for just submitted job"""
+        return 5
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
-            time.sleep(self.__DEFAULT_POLL_INTERVAL)
+            time.sleep(self.poll_interval)
             self.__logger.debug("Waiting for Kubernetes job " + self.uu_name + " to start")
         self.__print_kubectl_hints()
 
@@ -276,6 +281,11 @@ class KubernetesJobTask(luigi.Task):
 
         # Verify that the pod started
         pods = self.__get_pods()
+        if not pods:
+            self.__logger.debug(
+                'No pods found for {}, waiting for cluster state to match the job definition', self.uu_name
+            )
+            time.sleep(self.pod_creation_wait_interal)
 
         assert len(pods) > 0, "No pod scheduled by " + self.uu_name
         for pod in pods:
