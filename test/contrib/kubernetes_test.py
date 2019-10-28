@@ -29,7 +29,7 @@ hostname, and NOT to an IP address.
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
-
+import time
 import unittest
 import luigi
 import logging
@@ -43,7 +43,7 @@ logger = logging.getLogger('luigi-interface')
 try:
     from pykube.config import KubeConfig
     from pykube.http import HTTPClient
-    from pykube.objects import Job
+    from pykube.objects import Job, Pod
 except ImportError:
     raise unittest.SkipTest('pykube is not installed. This test requires pykube.')
 
@@ -81,7 +81,7 @@ class TestK8STask(unittest.TestCase):
 
     def test_fail_job(self):
         fail = FailJob()
-        self.assertRaises(RuntimeError, fail.run)
+        self.assertRaises(AssertionError, fail.run)
         # Check for retrials
         kube_api = HTTPClient(KubeConfig.from_file("~/.kube/config"))  # assumes minikube
         jobs = Job.objects(kube_api).filter(selector="luigi_task_id="
@@ -89,11 +89,17 @@ class TestK8STask(unittest.TestCase):
         self.assertEqual(len(jobs.response["items"]), 1)
         job = Job(kube_api, jobs.response["items"][0])
         self.assertTrue("failed" in job.obj["status"])
-        self.assertTrue(job.obj["status"]["failed"] > fail.max_retrials)
+        time.sleep(10)
+        self.assertTrue(
+            len(Pod.objects(kube_api).filter(selector=f"job-name={fail.uu_name}").response['items']) ==
+            fail.max_retrials
+        )
 
     @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__get_job_status")
+    @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__verify_job_has_started")
+    @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__print_kubectl_hints")
     @mock.patch.object(KubernetesJobTask, "signal_complete")
-    def test_output(self, mock_signal, mock_job_status):
+    def test_output(self, mock_signal, _, __, mock_job_status):
         # mock that the job succeeded
         mock_job_status.return_value = "succeeded"
         # create a kubernetes job
