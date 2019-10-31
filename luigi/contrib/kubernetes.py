@@ -66,6 +66,7 @@ class kubernetes(luigi.Config):
 
 class KubernetesJobTask(luigi.Task):
     __DEFAULT_POLL_INTERVAL = 5  # see __track_job
+    __DEFAULT_POD_CREATION_INTERVAL = 5
     _kubernetes_config = None  # Needs to be loaded at runtime
 
     def _init_kubernetes(self):
@@ -215,8 +216,8 @@ class KubernetesJobTask(luigi.Task):
 
     @property
     def pod_creation_wait_interal(self):
-        """Delay for initial pod creation for just submitted job"""
-        return 5
+        """Delay for initial pod creation for just submitted job in seconds"""
+        return self.__DEFAULT_POD_CREATION_INTERVAL
 
     def __track_job(self):
         """Poll job status while active"""
@@ -286,6 +287,7 @@ class KubernetesJobTask(luigi.Task):
                 'No pods found for {}, waiting for cluster state to match the job definition', self.uu_name
             )
             time.sleep(self.pod_creation_wait_interal)
+            pods = self.__get_pods()
 
         assert len(pods) > 0, "No pod scheduled by " + self.uu_name
         for pod in pods:
