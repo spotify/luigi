@@ -284,7 +284,7 @@ class KubernetesJobTask(luigi.Task):
         pods = self.__get_pods()
         if not pods:
             self.__logger.debug(
-                'No pods found for {}, waiting for cluster state to match the job definition', self.uu_name
+                'No pods found for %s, waiting for cluster state to match the job definition' % self.uu_name
             )
             time.sleep(self.pod_creation_wait_interal)
             pods = self.__get_pods()
