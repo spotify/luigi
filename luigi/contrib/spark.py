@@ -35,6 +35,12 @@ from luigi import configuration
 
 logger = logging.getLogger('luigi-interface')
 
+_DEFINED_SYSTEM_SETTINGS = (
+    'HADOOP_CONF_DIR',
+    'HADOOP_USER_NAME',
+    'PYSPARK_PYTHON',
+    'PYSPARK_DRIVER_PYTHON'
+)
 
 class SparkSubmitTask(ExternalProgramTask):
     """
@@ -72,6 +78,24 @@ class SparkSubmitTask(ExternalProgramTask):
 
         """
         return []
+
+    def _upd_env_if_not_none(self, env, prop):
+        # type: (SparkSubmitTask, dict, str) -> None
+        var = getattr(self, prop.lower(), None)
+        if var:
+            env[prop] = var
+
+    @property
+    def pyspark_python(self):
+        return None
+
+    @property
+    def pyspark_driver_python(self):
+        return None
+
+    @property
+    def hadoop_user_name(self):
+        return os.getlogin()
 
     @property
     def spark_version(self):
@@ -170,9 +194,8 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def get_environment(self):
         env = os.environ.copy()
-        hadoop_conf_dir = self.hadoop_conf_dir
-        if hadoop_conf_dir:
-            env['HADOOP_CONF_DIR'] = hadoop_conf_dir
+        for prop in _DEFINED_SYSTEM_SETTINGS:
+            self._upd_env_if_not_none(env, prop)
         return env
 
     def program_environment(self):
