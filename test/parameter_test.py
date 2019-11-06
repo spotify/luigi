@@ -1099,6 +1099,7 @@ class TestTaskParameter(LuigiTestCase):
                 return True
 
         class DepTask(luigi.Task):
+
             dep = luigi.TaskParameter()
             ran = False
 
@@ -1121,6 +1122,7 @@ class TestTaskParameter(LuigiTestCase):
 
 
 class TestSerializeTupleParameter(LuigiTestCase):
+
     def testSerialize(self):
         the_tuple = (1, 2, 3)
 
@@ -1132,7 +1134,6 @@ class NewStyleParameters822Test(LuigiTestCase):
     I bet these tests created at 2015-03-08 are reduntant by now (Oct 2015).
     But maintaining them anyway, just in case I have overlooked something.
     """
-
     # See https://github.com/spotify/luigi/issues/822
 
     def test_subclasses(self):
