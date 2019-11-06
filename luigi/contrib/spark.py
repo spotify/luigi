@@ -24,6 +24,7 @@ import shutil
 import importlib
 import tarfile
 import inspect
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -41,6 +42,7 @@ _DEFINED_SYSTEM_SETTINGS = (
     'PYSPARK_PYTHON',
     'PYSPARK_DRIVER_PYTHON'
 )
+
 
 class SparkSubmitTask(ExternalProgramTask):
     """
@@ -192,14 +194,11 @@ class SparkSubmitTask(ExternalProgramTask):
     def hadoop_conf_dir(self):
         return configuration.get_config().get(self.spark_version, "hadoop-conf-dir", None)
 
-    def get_environment(self):
-        env = os.environ.copy()
+    def program_environment(self):
+        env = super(SparkSubmitTask, self).program_environment()
         for prop in _DEFINED_SYSTEM_SETTINGS:
             self._upd_env_if_not_none(env, prop)
         return env
-
-    def program_environment(self):
-        return self.get_environment()
 
     def program_args(self):
         return self.spark_command() + self.app_command()
