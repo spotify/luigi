@@ -17,6 +17,7 @@
 
 import datetime
 
+import pytest
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
@@ -27,11 +28,15 @@ import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
-from luigi.parameter import ParameterException
+from luigi.parameter import ParameterException, FutureDateException
 from luigi import six
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
+
+
+class TaskWithPastDateParameter(luigi.Task):
+    day = luigi.parameter.PastDateParameter()
 
 
 class A(luigi.Task):
@@ -165,6 +170,20 @@ def _value(parameter):
 
 
 class ParameterTest(LuigiTestCase):
+    @pytest.mark.freeze_time('2019-01-01 00:00:00')
+    def test_past_param_date_is_past(self):
+        TaskWithPastDateParameter(day=datetime.date(year=2018, month=12, day=31))
+
+    @pytest.mark.freeze_time('2019-01-01 00:09:00')
+    def test_past_param_date_is_future(self):
+        with pytest.raises(FutureDateException):
+            TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=2))
+
+    @pytest.mark.freeze_time('2019-01-01 00:09:00')
+    def test_past_param_date_today(self):
+        with pytest.raises(FutureDateException):
+            TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=2))
+
 
     def test_default_param(self):
         self.assertEqual(WithDefault().x, 'xyz')
@@ -1045,7 +1064,6 @@ class TestSerializeTimeDeltaParameters(LuigiTestCase):
 class TestTaskParameter(LuigiTestCase):
 
     def testUsage(self):
-
         class MetaTask(luigi.Task):
             task_namespace = "mynamespace"
             a = luigi.TaskParameter()
@@ -1075,14 +1093,12 @@ class TestTaskParameter(LuigiTestCase):
         self.assertEqual(MetaTask.saved_value, OtherTask)
 
     def testSerialize(self):
-
         class OtherTask(luigi.Task):
 
             def complete(self):
                 return True
 
         class DepTask(luigi.Task):
-
             dep = luigi.TaskParameter()
             ran = False
 
@@ -1116,6 +1132,7 @@ class NewStyleParameters822Test(LuigiTestCase):
     I bet these tests created at 2015-03-08 are reduntant by now (Oct 2015).
     But maintaining them anyway, just in case I have overlooked something.
     """
+
     # See https://github.com/spotify/luigi/issues/822
 
     def test_subclasses(self):

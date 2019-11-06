@@ -27,6 +27,7 @@ from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -91,6 +92,13 @@ class DuplicateParameterException(ParameterException):
     """
     Exception signifying that a Parameter was specified multiple times.
     """
+    pass
+
+
+class FutureDateException(ParameterException):
+    """
+       Exception signifying that a Date Parameter was specified in the future
+       """
     pass
 
 
@@ -496,6 +504,19 @@ class YearParameter(DateParameter):
 
         delta = (value.year - self.start.year) % self.interval
         return datetime.date(year=value.year - delta, month=1, day=1)
+
+
+class PastDateParameter(DateParameter):
+    """
+    caveat: if your host default timezone is different from your `business` timezone
+    that might not work for you
+    """
+
+    def normalize(self, value):
+        if value >= datetime.date.today():
+            raise FutureDateException()
+
+        return value
 
 
 class _DatetimeParameterBase(Parameter):
@@ -1242,7 +1263,7 @@ class ChoiceParameter(Parameter):
         else:
             self.description = ""
         self.description += (
-            "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
+                "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
 
     def parse(self, s):
         var = self._var_type(s)
