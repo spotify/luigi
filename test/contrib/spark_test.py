@@ -70,6 +70,9 @@ class TestSparkSubmitTask(SparkSubmitTask):
     num_executors = 2
     archives = ["archive1", "archive2"]
     app = "file"
+    pyspark_python = '/a/b/c'
+    pyspark_driver_python = '/a/b/d'
+    hadoop_user_name = 'luigiuser'
 
     def app_options(self):
         return ["arg1", "arg2"]
@@ -128,6 +131,9 @@ class SparkSubmitTaskTest(unittest.TestCase):
         job = TestSparkSubmitTask()
         job.run()
 
+        assert job.program_environment()['PYSPARK_PYTHON'] == '/a/b/c'
+        assert job.program_environment()['PYSPARK_DRIVER_PYTHON'] == '/a/b/d'
+        assert job.program_environment()['HADOOP_USER_NAME'] == 'luigiuser'
         self.assertIn('HADOOP_CONF_DIR', proc.call_args[1]['env'])
         self.assertEqual(proc.call_args[1]['env']['HADOOP_CONF_DIR'], 'path')
 
