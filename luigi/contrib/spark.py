@@ -83,7 +83,6 @@ class SparkSubmitTask(ExternalProgramTask):
         return []
 
     def _upd_env_if_not_none(self, env, prop):
-        # type: (SparkSubmitTask, dict, str) -> None
         var = getattr(self, prop.lower(), None)
         if var:
             env[prop] = var
