@@ -138,7 +138,7 @@ class BatchClient(object):
         events = response['events']
         return '\n'.join(e['message'] for e in events[-get_last:])
 
-    def submit_job(self, job_definition, parameters, job_name=None, queue=None):
+    def submit_job(self, job_definition, parameters, job_name=None, queue=None, container_overrides=None):
         """Wrap submit_job with useful defaults"""
         if job_name is None:
             job_name = _random_id()
@@ -146,7 +146,8 @@ class BatchClient(object):
             jobName=job_name,
             jobQueue=queue or self.get_active_queue(),
             jobDefinition=job_definition,
-            parameters=parameters
+            parameters=parameters,
+            contianerOverrides=container_overrides or {}
         )
         return response['jobId']
 
@@ -203,14 +204,33 @@ class BatchTask(luigi.Task):
     job_name = luigi.OptionalParameter(default=None)
     job_queue = luigi.OptionalParameter(default=None)
     poll_time = luigi.IntParameter(default=POLL_TIME)
+    environment_override = luigi.ListParameter(default=None)
+    vcpus_override = luigi.IntParameter(default=None)
+    memory_override = luigi.IntParameter(default=None)
+    command_override = luigi.ListParameter(default=None)
 
     def run(self):
+        container_overrides = {}
+
+        if self.environment_override:
+            container_overrides['environment'] = self.environment_override
+
+        if self.vcpus_override:
+            container_overrides['vcpus'] = self.vcpus_override
+
+        if self.memory_override:
+            container_overrides['memory'] = self.memory_override
+
+        if self.command_override:
+            container_overrides['command'] = self.command_override
+
         bc = BatchClient(self.poll_time)
         job_id = bc.submit_job(
             self.job_definition,
             self.parameters,
             job_name=self.job_name,
-            queue=self.job_queue)
+            queue=self.job_queue,
+            container_overrides=container_overrides)
         bc.wait_on_job(job_id)
 
     @property
