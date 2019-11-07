@@ -18,6 +18,7 @@
 import datetime
 
 import pytest
+from freezegun import freeze_time
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
@@ -170,16 +171,16 @@ def _value(parameter):
 
 
 class ParameterTest(LuigiTestCase):
-    @pytest.mark.freeze_time('2019-01-01 00:00:00')
+    @freeze_time('2019-01-01 00:00:00')
     def test_past_param_date_is_past(self):
         TaskWithPastDateParameter(day=datetime.date(year=2018, month=12, day=31))
 
-    @pytest.mark.freeze_time('2019-01-01 00:09:00')
+    @freeze_time('2019-01-01 00:09:00')
     def test_past_param_date_is_future(self):
         with pytest.raises(FutureDateException):
             TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=2))
 
-    @pytest.mark.freeze_time('2019-01-01 00:09:00')
+    @freeze_time('2019-01-01 00:09:00')
     def test_past_param_date_today(self):
         with pytest.raises(FutureDateException):
             TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=2))
