@@ -28,7 +28,7 @@ import luigi.date_interval
 import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
-from luigi.parameter import ParameterException, FutureDateException
+from luigi.parameter import ParameterException
 from luigi import six
 from worker_test import email_patch
 
@@ -172,22 +172,30 @@ def _value(parameter):
 class ParameterTest(LuigiTestCase):
     @freeze_time('2019-01-01 00:00:00')
     def test_past_param_date_is_past(self):
-        TaskWithPastDateParameter(day=datetime.date(year=2018, month=12, day=31))
+        def _create_task_instance():
+            return TaskWithPastDateParameter(day=datetime.date(year=2018, month=12, day=31))
+
+        _create_task_instance()
 
     @freeze_time('2019-01-01 00:09:00')
     def test_past_param_date_is_future(self):
+        def _create_task_instance():
+            return TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=2))
+
         self.assertRaises(
             luigi.parameter.FutureDateException,
-            TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=2))
+            _create_task_instance
         )
 
     @freeze_time('2019-01-01 00:09:00')
     def test_past_param_date_today(self):
+        def _create_task_instance():
+            return TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=1))
+
         self.assertRaises(
             luigi.parameter.FutureDateException,
-            TaskWithPastDateParameter(day=datetime.date(year=2019, month=1, day=1))
+            _create_task_instance
         )
-
 
     def test_default_param(self):
         self.assertEqual(WithDefault().x, 'xyz')
