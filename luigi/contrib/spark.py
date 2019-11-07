@@ -62,6 +62,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     # Only log stderr if spark fails (since stderr is normally quite verbose)
     always_log_stderr = False
+
     # Spark applications write its logs into stderr
     stream_for_searching_tracking_url = 'stderr'
 
