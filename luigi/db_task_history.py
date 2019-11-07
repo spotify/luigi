@@ -81,8 +81,8 @@ class DbTaskHistory(object):
         if 'mysql' in connection_string:
             self.engine = sqlalchemy.create_engine(
                 connection_string,
-                pool_size=config.getint('task_history', 'db_pool_size', 20),
-                max_overflow=config.getint('task_history', 'db_pool_max_overflow', 30),
+                pool_size=config.getint('task_history', 'db_pool_size', 100),
+                max_overflow=config.getint('task_history', 'db_pool_max_overflow', 200),
                 pool_timeout=config.getint('task_history', 'db_pool_timeout', 60),
                 pool_recycle=config.getint('task_history', 'db_pool_recycle', 3600)
             )
