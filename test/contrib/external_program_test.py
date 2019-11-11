@@ -267,7 +267,6 @@ class ExternalProgramTaskTest(unittest.TestCase):
             def logs_output_pattern_to_url(self, logs_output):
                 return 'The {} is mine'.format(logs_output)
 
-
         test_val = Value('i', 0)
 
         def fake_set_tracking_url(val, url):
