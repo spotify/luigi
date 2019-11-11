@@ -61,19 +61,19 @@ __all__ = [
     'NumericalParameter', 'ChoiceParameter', 'OptionalParameter', 'LuigiStatusCode'
 ]
 
-if not configuration.get_config().has_option('core', 'autoload-range'):
+if not configuration.get_config().has_option('core', 'autoload_range'):
     import warnings
     warning_message = '''
         Autoloading range tasks by default has been deprecated and will be removed in a future version.
         To get the behavior now add an option to luigi.cfg:
 
           [core]
-            autoload-range: false
+            autoload_range: false
 
         Alternately set the option to true to continue with existing behaviour and suppress this warning.
     '''
     warnings.warn(warning_message, DeprecationWarning)
 
-if configuration.get_config().getboolean('core', 'autoload-range', True):
+if configuration.get_config().getboolean('core', 'autoload_range', True):
     from .tools import range  # noqa: F401    just makes the tool classes available from command line
     __all__.append('range')
