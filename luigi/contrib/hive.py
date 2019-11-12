@@ -280,7 +280,7 @@ class WarehouseHiveClient(HiveClient):
 
     def table_exists(self, table, database='default', partition=None):
         """
-        We consider tabel/partition as existing if corresponding path in hdfs exists
+        We consider table/partition as existing if corresponding path in hdfs exists
         and contains file except those which match pattern set in  `ignored_file_masks`
         """
         path = self.table_location(table, database, partition)
@@ -299,7 +299,7 @@ class WarehouseHiveClient(HiveClient):
 
     def partition_spec(self, partition):
         return '/'.join([
-            "{0}={1}".format(k, v) for (k, v) in sorted(six.iteritems(partition or {}), key=operator.itemgetter(0))
+            '{}={}'.format(k, v) for (k, v) in six.iteritems(partition or {})
         ])
 
 
