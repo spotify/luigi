@@ -16,6 +16,7 @@
 #
 
 import abc
+import collections
 import logging
 import operator
 import os
@@ -95,6 +96,23 @@ def run_hive_script(script):
     if not os.path.isfile(script):
         raise RuntimeError("Hive script: {0} does not exist.".format(script))
     return run_hive(['-f', script])
+
+
+class AmbiguousLocationException(Exception):
+    pass
+
+
+def _validate_partition(partition):
+    """
+    If partition is set and it's size more than one and it's not ordered
+    than we're unable to restore its path in warehouse definitely
+    """
+    if (
+            partition
+            and len(partition) > 1
+            and not isinstance(partition, collections.OrderedDict)
+    ):
+        raise AmbiguousLocationException()
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -298,6 +316,7 @@ class WarehouseHiveClient(HiveClient):
         return False
 
     def partition_spec(self, partition):
+        _validate_partition(partition)
         return '/'.join([
             '{}={}'.format(k, v) for (k, v) in six.iteritems(partition or {})
         ])
@@ -535,8 +554,10 @@ class ExternalHiveTask(luigi.ExternalTask):
     def output(self):
         if len(self.partition) != 0:
             assert self.partition, "partition required"
-            return HivePartitionTarget(table=self.table,
-                                       partition=self.partition,
-                                       database=self.database)
+            return HivePartitionTarget(
+                table=self.table,
+                partition=self.partition,
+                database=self.database
+            )
         else:
             return HiveTableTarget(self.table, self.database)
