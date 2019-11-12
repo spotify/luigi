@@ -19,6 +19,7 @@ import abc
 import logging
 import operator
 import os
+import re
 import subprocess
 import tempfile
 import warnings
@@ -27,6 +28,7 @@ from luigi import six
 
 import luigi
 import luigi.contrib.hadoop
+from luigi.contrib.hdfs import get_autoconfig_client
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
@@ -51,6 +53,14 @@ def load_hive_cmd():
 
 def get_hive_syntax():
     return luigi.configuration.get_config().get('hive', 'release', 'cdh4')
+
+
+def get_hive_warehouse_location():
+    return luigi.configuration.get_config().get('hive', 'warehouse_location', '/user/hive/warehouse')
+
+
+def get_ignored_file_masks():
+    return luigi.configuration.get_config().get('hive', 'ignored_file_masks', None)
 
 
 def run_hive(args, check_return_code=True):
@@ -248,12 +258,59 @@ class HiveThriftContext(object):
         self.transport.close()
 
 
+class WarehouseHiveClient(HiveClient):
+    """
+    Client for managed tables that makes decision based on presence of directory in hdfs
+    """
+
+    def __init__(self, hdfs_client=None, warehouse_location=None):
+        self.hdfs_client = hdfs_client or get_autoconfig_client()
+        self.warehouse_location = warehouse_location or get_hive_warehouse_location()
+
+    def table_schema(self, table, database='default'):
+        return NotImplemented
+
+    def table_location(self, table, database='default', partition=None):
+        return os.path.join(
+            self.warehouse_location,
+            database + '.db',
+            table,
+            self.partition_spec(partition)
+        )
+
+    def table_exists(self, table, database='default', partition=None):
+        """
+        We consider tabel/partition as existing if corresponding path in hdfs exists
+        and contains file except those which match pattern set in  `ignored_file_masks`
+        """
+        path = self.table_location(table, database, partition)
+        if self.hdfs_client.exists(path):
+            ignored_files = get_ignored_file_masks()
+            filenames = self.hdfs_client.listdir(path)
+            if ignored_files is None:
+                return True
+
+            pattern = re.compile(ignored_files)
+            for filename in filenames:
+                if not pattern.match(filename):
+                    return True
+
+        return False
+
+    def partition_spec(self, partition):
+        return '/'.join([
+            "{0}={1}".format(k, v) for (k, v) in sorted(six.iteritems(partition or {}), key=operator.itemgetter(0))
+        ])
+
+
 def get_default_client():
     syntax = get_hive_syntax()
     if syntax == "apache":
         return ApacheHiveCommandClient()
     elif syntax == "metastore":
         return MetastoreClient()
+    elif syntax == 'warehouse':
+        return WarehouseHiveClient()
     else:
         return HiveCommandClient()
 
@@ -429,7 +486,8 @@ class HivePartitionTarget(luigi.Target):
 
     def exists(self):
         try:
-            logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
+            logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table,
+                                                                                  p=str(self.partition)))
             return self.client.table_exists(self.table, self.database, self.partition)
         except HiveCommandError:
             if self.fail_missing_table:
@@ -463,7 +521,8 @@ class ExternalHiveTask(luigi.ExternalTask):
 
     database = luigi.Parameter(default='default')
     table = luigi.Parameter()
-    partition = luigi.DictParameter(default={}, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
+    partition = luigi.DictParameter(default={},
+                                    description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
 
     def output(self):
         if len(self.partition) != 0:

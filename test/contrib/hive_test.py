@@ -284,6 +284,64 @@ class HiveCommandClientTest(unittest.TestCase):
         self.assertEqual("", returned)
 
 
+class WarehouseHiveClientTest(unittest.TestCase):
+    def test_table_exists_files_actually_exist(self):
+        # arrange
+        hdfs_client = mock.Mock(name='hdfs_client')
+        hdfs_client.exists.return_value = True
+        hdfs_client.listdir.return_value = [
+            '00000_0',
+            '00000_1',
+            '00000_2',
+            '.tmp/'
+        ]
+
+        warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
+            hdfs_client=hdfs_client,
+            warehouse_location='/apps/hive/warehouse'
+        )
+
+        # act
+        exists = warehouse_hive_client.table_exists(
+            database='some_db',
+            table='table_name',
+            partition={'a': 1}
+        )
+
+        # assert
+        assert exists
+        hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
+        hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
+
+    @mock.patch("luigi.configuration")
+    def test_table_exists_only_tmp_files_exist(self, ignored_file_masks):
+        # arrange
+        ignored_file_masks.get_config.return_value.get.return_value = r"(\.tmp.*)"
+        hdfs_client = mock.Mock(name='hdfs_client')
+        hdfs_client.exists.return_value = True
+        hdfs_client.listdir.return_value = [
+            '.tmp/'
+        ]
+
+        warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
+            hdfs_client=hdfs_client,
+            warehouse_location='/apps/hive/warehouse'
+        )
+
+        # act
+        exists = warehouse_hive_client.table_exists(
+            database='some_db',
+            table='table_name',
+            partition={'a': 1}
+        )
+
+        # assert
+        assert not exists
+        hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
+        hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
+
+
+
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
     param = luigi.Parameter()
 
