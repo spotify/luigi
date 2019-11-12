@@ -305,13 +305,40 @@ class WarehouseHiveClientTest(unittest.TestCase):
         exists = warehouse_hive_client.table_exists(
             database='some_db',
             table='table_name',
-            partition={'a': 1}
+            partition=OrderedDict(a=1, b=2)
         )
 
         # assert
         assert exists
-        hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
-        hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
+        hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
+        hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
+
+    def test_table_exists_wothout_partition_spec_files_actually_exist(self):
+        # arrange
+        hdfs_client = mock.Mock(name='hdfs_client')
+        hdfs_client.exists.return_value = True
+        hdfs_client.listdir.return_value = [
+            '00000_0',
+            '00000_1',
+            '00000_2',
+            '.tmp/'
+        ]
+
+        warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
+            hdfs_client=hdfs_client,
+            warehouse_location='/apps/hive/warehouse'
+        )
+
+        # act
+        exists = warehouse_hive_client.table_exists(
+            database='some_db',
+            table='table_name',
+        )
+
+        # assert
+        assert exists
+        hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/')
+        hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/')
 
     @mock.patch("luigi.configuration")
     def test_table_exists_only_tmp_files_exist(self, ignored_file_masks):
@@ -340,6 +367,21 @@ class WarehouseHiveClientTest(unittest.TestCase):
         hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
         hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
 
+    def test_table_exists_ambiguous_partition(self):
+        # arrange
+        warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
+            warehouse_location='/apps/hive/warehouse'
+        )
+
+        def _call_exists():
+            warehouse_hive_client.table_exists(
+                database='some_db',
+                table='table_name',
+                partition={'a': 1, 'b': 2}
+            )
+
+        # act & assert
+        self.assertRaises(luigi.contrib.hive.AmbiguousLocationException, _call_exists)
 
 
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
