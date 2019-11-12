@@ -1,6 +1,7 @@
 """Specialized tasks for handling Avro data in BigQuery from GCS.
 """
 import logging
+import sys
 
 from luigi.contrib.bigquery import BigQueryLoadTask, SourceFormat
 from luigi.contrib.gcs import GCSClient
@@ -60,7 +61,7 @@ class BigQueryLoadAvro(BigQueryLoadTask):
             # requiring the remainder of the file...
             try:
                 reader = avro.datafile.DataFileReader(fp, avro.io.DatumReader())
-                schema[:] = [reader.datum_reader.writers_schema]
+                schema[:] = [self.get_writer_schema(reader.datum_reader)]
             except Exception as e:
                 # Save but assume benign unless schema reading ultimately fails. The benign
                 # exception in case of insufficiently big downloaded file part seems to be:
@@ -73,6 +74,13 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         if not schema:
             raise exception_reading_schema[0]
         return schema[0]
+
+    @staticmethod
+    def get_writer_schema(datum_reader):
+        if sys.version_info >= (3, 0):
+            return datum_reader.writer_schema
+        else:
+            return datum_reader.writers_schema
 
     def _set_output_doc(self, avro_schema):
         bq_client = self.output().client.client
