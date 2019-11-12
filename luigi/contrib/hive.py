@@ -98,10 +98,6 @@ def run_hive_script(script):
     return run_hive(['-f', script])
 
 
-class AmbiguousLocationException(Exception):
-    pass
-
-
 def _validate_partition(partition):
     """
     If partition is set and it's size more than one and it's not ordered
@@ -112,7 +108,7 @@ def _validate_partition(partition):
             and len(partition) > 1
             and not isinstance(partition, collections.OrderedDict)
     ):
-        raise AmbiguousLocationException()
+        raise ValueError('Unable to restore table/partition location')
 
 
 @six.add_metaclass(abc.ABCMeta)

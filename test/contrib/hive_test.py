@@ -381,7 +381,7 @@ class WarehouseHiveClientTest(unittest.TestCase):
             )
 
         # act & assert
-        self.assertRaises(luigi.contrib.hive.AmbiguousLocationException, _call_exists)
+        self.assertRaises(ValueError, _call_exists)
 
 
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):
