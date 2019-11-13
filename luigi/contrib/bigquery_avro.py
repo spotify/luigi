@@ -1,7 +1,7 @@
 """Specialized tasks for handling Avro data in BigQuery from GCS.
 """
 import logging
-import sys
+import six
 
 from luigi.contrib.bigquery import BigQueryLoadTask, SourceFormat
 from luigi.contrib.gcs import GCSClient
@@ -77,10 +77,10 @@ class BigQueryLoadAvro(BigQueryLoadTask):
 
     @staticmethod
     def get_writer_schema(datum_reader):
-        if sys.version_info >= (3, 0):
-            return datum_reader.writer_schema
-        else:
+        if six.PY2:
             return datum_reader.writers_schema
+        else:
+            return datum_reader.writer_schema
 
     def _set_output_doc(self, avro_schema):
         bq_client = self.output().client.client
