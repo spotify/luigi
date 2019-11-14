@@ -54,13 +54,26 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         schema = []
         exception_reading_schema = []
 
+        def extract_writer_schema(datum_reader):
+            # Extracts the writer's schema from datum_reader.
+            # The Py2 version of the code calls the field 'writers_schema'
+            # The Py3 version of the code calls the field 'writer_schema'
+            # See:
+            # https://github.com/apache/avro/blob/master/lang/py/src/avro/io.py#L634-L641
+            # https://github.com/apache/avro/blob/master/lang/py3/avro/io.py#L421-L428
+            # So we arrange to handle either one. (Or raise an exception if neither is there.)
+            try:
+                return datum_reader.writer_schema
+            except Exception:
+                return datum_reader.writers_schema
+
         def read_schema(fp):
             # fp contains the file part downloaded thus far. We rely on that the DataFileReader
             # initializes itself fine as soon as the file header with schema is downloaded, without
             # requiring the remainder of the file...
             try:
                 reader = avro.datafile.DataFileReader(fp, avro.io.DatumReader())
-                schema[:] = [reader.datum_reader.writers_schema]
+                schema[:] = [extract_writer_schema(reader.datum_reader)]
             except Exception as e:
                 # Save but assume benign unless schema reading ultimately fails. The benign
                 # exception in case of insufficiently big downloaded file part seems to be:
