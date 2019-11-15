@@ -23,7 +23,9 @@ import unittest
 from avro.io import DatumReader
 from luigi.contrib.bigquery_avro import BigQueryLoadAvro
 
+from nose.plugins.attrib import attr
 
+@attr('gcloud')
 class BigQueryAvroTest(unittest.TestCase):
 
     def test_writer_schema_method_existence(self):
