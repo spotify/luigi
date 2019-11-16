@@ -100,8 +100,8 @@ def run_hive_script(script):
 
 def _validate_partition(partition):
     """
-    If partition is set and it's size more than one and it's not ordered
-    than we're unable to restore its path in warehouse definitely
+    If partition is set and its size is more than one and not ordered,
+    then we're unable to restore its path in the warehouse
     """
     if (
             partition
@@ -294,7 +294,7 @@ class WarehouseHiveClient(HiveClient):
 
     def table_exists(self, table, database='default', partition=None):
         """
-        We consider table/partition as existing if corresponding path in hdfs exists
+        The table/partition is considered existing if corresponding path in hdfs exists
         and contains file except those which match pattern set in  `ignored_file_masks`
         """
         path = self.table_location(table, database, partition)
