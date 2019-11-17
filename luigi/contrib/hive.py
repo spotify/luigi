@@ -117,7 +117,7 @@ def _validate_partition(partition):
     if (
             partition
             and len(partition) > 1
-            and _is_ordered_dict(partition)
+            and not _is_ordered_dict(partition)
     ):
         raise ValueError('Unable to restore table/partition location')
 
