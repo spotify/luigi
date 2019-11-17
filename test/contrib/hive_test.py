@@ -17,6 +17,7 @@
 
 from collections import OrderedDict
 import os
+import sys
 import tempfile
 from helpers import unittest
 
@@ -53,6 +54,7 @@ class HiveTest(unittest.TestCase):
     def test_run_hive_script_not_exists(self):
         def test():
             luigi.contrib.hive.run_hive_script("/tmp/some-non-existant-file______")
+
         self.assertRaises(RuntimeError, test)
 
     def test_run_hive_script_exists(self):
@@ -77,7 +79,6 @@ class HiveTest(unittest.TestCase):
 
 @attr('apache')
 class HiveCommandClientTest(unittest.TestCase):
-
     """Note that some of these tests are really for the CDH releases of Hive, to which I do not currently have access.
     Hopefully there are no significant differences in the expected output"""
 
@@ -367,21 +368,34 @@ class WarehouseHiveClientTest(unittest.TestCase):
         hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
         hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1')
 
-    def test_table_exists_ambiguous_partition(self):
+    @mock.patch("luigi.configuration")
+    def test_table_exists_ambiguous_partition(self, ignored_file_masks):
         # arrange
+        ignored_file_masks.get_config.return_value.get.return_value = r"(\.tmp.*)"
+        hdfs_client = mock.Mock(name='hdfs_client')
+        hdfs_client.exists.return_value = True
+        hdfs_client.listdir.return_value = [
+            '.tmp/'
+        ]
         warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
             warehouse_location='/apps/hive/warehouse'
         )
 
         def _call_exists():
-            warehouse_hive_client.table_exists(
+            return warehouse_hive_client.table_exists(
                 database='some_db',
                 table='table_name',
                 partition={'a': 1, 'b': 2}
             )
 
         # act & assert
-        self.assertRaises(ValueError, _call_exists)
+        if sys.version_info >= (3, 7):
+            exists = _call_exists()
+            assert not exists
+            hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
+            hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
+        else:
+            self.assertRaises(ValueError, _call_exists)
 
 
 class MyHiveTask(luigi.contrib.hive.HiveQueryTask):

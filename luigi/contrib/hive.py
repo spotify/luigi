@@ -22,6 +22,7 @@ import operator
 import os
 import re
 import subprocess
+import sys
 import tempfile
 import warnings
 
@@ -98,6 +99,16 @@ def run_hive_script(script):
     return run_hive(['-f', script])
 
 
+def _is_ordered_dict(dikt):
+    if isinstance(dikt, collections.OrderedDict):
+        return True
+
+    if sys.version_info >= (3, 7):
+        return isinstance(dikt, dict)
+
+    return False
+
+
 def _validate_partition(partition):
     """
     If partition is set and its size is more than one and not ordered,
@@ -106,7 +117,7 @@ def _validate_partition(partition):
     if (
             partition
             and len(partition) > 1
-            and not isinstance(partition, collections.OrderedDict)
+            and _is_ordered_dict(partition)
     ):
         raise ValueError('Unable to restore table/partition location')
 
@@ -548,7 +559,7 @@ class ExternalHiveTask(luigi.ExternalTask):
     )
 
     def output(self):
-        if len(self.partition) != 0:
+        if self.partition:
             assert self.partition, "partition required"
             return HivePartitionTarget(
                 table=self.table,
