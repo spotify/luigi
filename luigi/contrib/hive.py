@@ -560,11 +560,13 @@ class ExternalHiveTask(luigi.ExternalTask):
 
     def output(self):
         if self.partition:
-            assert self.partition, "partition required"
             return HivePartitionTarget(
+                database=self.database,
                 table=self.table,
                 partition=self.partition,
-                database=self.database
             )
         else:
-            return HiveTableTarget(self.table, self.database)
+            return HiveTableTarget(
+                database=self.database,
+                table=self.table,
+            )

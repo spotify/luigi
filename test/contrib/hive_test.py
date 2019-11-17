@@ -262,6 +262,10 @@ class HiveCommandClientTest(unittest.TestCase):
         client = luigi.contrib.hive.get_default_client()
         self.assertEqual(luigi.contrib.hive.MetastoreClient, type(client))
 
+        hive_syntax.get_config.return_value.get.return_value = "warehouse"
+        client = luigi.contrib.hive.get_default_client()
+        self.assertEqual(luigi.contrib.hive.WarehouseHiveClient, type(client))
+
     @mock.patch('subprocess.Popen')
     def test_run_hive_command(self, popen):
         # I'm testing this again to check the return codes
@@ -314,8 +318,10 @@ class WarehouseHiveClientTest(unittest.TestCase):
         hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
         hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
 
-    def test_table_exists_wothout_partition_spec_files_actually_exist(self):
+    @mock.patch("luigi.configuration")
+    def test_table_exists_without_partition_spec_files_actually_exist(self, warehouse_location):
         # arrange
+        warehouse_location.get_config.return_value.get.return_value = '/apps/hive/warehouse'
         hdfs_client = mock.Mock(name='hdfs_client')
         hdfs_client.exists.return_value = True
         hdfs_client.listdir.return_value = [
@@ -327,7 +333,6 @@ class WarehouseHiveClientTest(unittest.TestCase):
 
         warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
             hdfs_client=hdfs_client,
-            warehouse_location='/apps/hive/warehouse'
         )
 
         # act
@@ -463,3 +468,35 @@ class TestHiveTarget(unittest.TestCase):
         target = luigi.contrib.hive.HivePartitionTarget(database='db', table='foo', partition='bar', client=client)
         target.exists()
         client.table_exists.assert_called_with('foo', 'db', 'bar')
+
+
+class ExternalHiveTaskTest(unittest.TestCase):
+    def test_table(self):
+        # arrange
+        class _Task(luigi.contrib.hive.ExternalHiveTask):
+            database = 'schema1'
+            table = 'table1'
+
+        # act
+        output = _Task().output()
+
+        # assert
+        assert isinstance(output, luigi.contrib.hive.HiveTableTarget)
+        assert output.database == 'schema1'
+        assert output.table == 'table1'
+
+    def test_partition_exists(self):
+        # arrange
+        class _Task(luigi.contrib.hive.ExternalHiveTask):
+            database = 'schema2'
+            table = 'table2'
+            partition = {'a': 1}
+
+        # act
+        output = _Task().output()
+
+        # assert
+        assert isinstance(output, luigi.contrib.hive.HivePartitionTarget)
+        assert output.database == 'schema2'
+        assert output.table == 'table2'
+        assert output.partition == {'a': 1}
