@@ -378,6 +378,7 @@ class WarehouseHiveClientTest(unittest.TestCase):
             '.tmp/'
         ]
         warehouse_hive_client = luigi.contrib.hive.WarehouseHiveClient(
+            hdfs_client=hdfs_client,
             warehouse_location='/apps/hive/warehouse'
         )
 
