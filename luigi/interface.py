@@ -36,7 +36,7 @@ from luigi import rpc
 from luigi import scheduler
 from luigi import task
 from luigi import worker
-from luigi import execution_summary
+from luigi.execution_summary import LuigiRunResult
 from luigi.cmdline_parser import CmdlineParser
 
 
@@ -205,8 +205,9 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
             success &= worker.add(t, env_params.parallel_scheduling, env_params.parallel_scheduling_processes)
         logger.info('Done scheduling tasks')
         success &= worker.run()
-    logger.info(execution_summary.summary(worker))
-    return dict(success=success, worker=worker)
+    luigi_run_result = LuigiRunResult(worker, success)
+    logger.info(luigi_run_result.summary_text)
+    return luigi_run_result
 
 
 class PidLockAlreadyTakenExit(SystemExit):
@@ -217,11 +218,15 @@ class PidLockAlreadyTakenExit(SystemExit):
 
 
 def run(*args, **kwargs):
-    return _run(*args, **kwargs)['success']
+    luigi_run_result = _run(*args, **kwargs)
+    if kwargs.get('detailed_summary'):
+        return luigi_run_result
+    else:
+        return luigi_run_result.scheduling_succeeded
 
 
 def _run(cmdline_args=None, main_task_cls=None,
-         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False):
+         worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, detailed_summary=False):
     """
     Please dont use. Instead use `luigi` binary.
 
@@ -248,7 +253,7 @@ def _run(cmdline_args=None, main_task_cls=None,
         return _schedule_and_run([cp.get_task_obj()], worker_scheduler_factory)
 
 
-def build(tasks, worker_scheduler_factory=None, **env_params):
+def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_params):
     """
     Run internally, bypassing the cmdline parsing.
 
@@ -271,4 +276,9 @@ def build(tasks, worker_scheduler_factory=None, **env_params):
     if "no_lock" not in env_params:
         env_params["no_lock"] = True
 
-    return _schedule_and_run(tasks, worker_scheduler_factory, override_defaults=env_params)['success']
+    luigi_run_result = _schedule_and_run(tasks, worker_scheduler_factory,
+        override_defaults=env_params)
+    if detailed_summary:
+        return luigi_run_result
+    else:
+        return luigi_run_result.scheduling_succeeded

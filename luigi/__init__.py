@@ -43,6 +43,7 @@ from luigi import configuration
 
 from luigi import interface
 from luigi.interface import run, build
+from luigi.execution_summary import LuigiStatusCode
 
 from luigi import event
 from luigi.event import Event
@@ -59,5 +60,5 @@ __all__ = [
     'FloatParameter', 'BoolParameter', 'TaskParameter',
     'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter',
     'configuration', 'interface', 'local_target', 'run', 'build', 'event', 'Event',
-    'NumericalParameter', 'ChoiceParameter', 'OptionalParameter'
+    'NumericalParameter', 'ChoiceParameter', 'OptionalParameter', 'LuigiStatusCode'
 ]
