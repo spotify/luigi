@@ -20,8 +20,8 @@ except ImportError:
 class BigQueryLoadAvro(BigQueryLoadTask):
     """A helper for loading specifically Avro data into BigQuery from GCS.
 
-    Copies table level description from Avro schema doc, BigQuery internally will copy field-level descriptions
-    to the table.
+    Copies table level description from Avro schema doc,
+    BigQuery internally will copy field-level descriptions to the table.
 
     Suitable for use via subclassing: override requires() to return Task(s) that output
     to GCS Targets; their paths are expected to be URIs of .avro files or URI prefixes
@@ -78,7 +78,7 @@ class BigQueryLoadAvro(BigQueryLoadTask):
     @staticmethod
     def _get_writer_schema(datum_reader):
         """Python-version agnostic getter for datum_reader writer(s)_schema attribute
-        
+
         Parameters:
         datum_reader (avro.io.DatumReader): DatumReader
 
