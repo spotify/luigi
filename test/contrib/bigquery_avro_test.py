@@ -20,16 +20,29 @@ These are the unit tests for the BigQueryLoadAvro class.
 """
 
 import unittest
-from avro.io import DatumReader
+import avro
 from luigi.contrib.bigquery_avro import BigQueryLoadAvro
-
 from nose.plugins.attrib import attr
+
 
 @attr('gcloud')
 class BigQueryAvroTest(unittest.TestCase):
 
     def test_writer_schema_method_existence(self):
-        reader = DatumReader(None, None)
-        schema = BigQueryLoadAvro.get_writer_schema(reader)
-        self.assertEqual(schema, None, "writer(s) schema attribute not found")
+        avro_schema = """
+        {
+            "namespace": "example.avro",
+            "type": "record",
+            "name": "User",
+            "fields": [
+                {"name": "name", "type": "string"},
+                {"name": "favorite_number",  "type": ["int", "null"]},
+                {"name": "favorite_color", "type": ["string", "null"]}
+            ]
+        }
+        """
+        reader = avro.io.DatumReader(avro_schema, avro_schema)
+        actual_schema = BigQueryLoadAvro._get_writer_schema(reader)
+        self.assertEqual(actual_schema, avro_schema, 
+                         "writer(s) avro_schema attribute not found")
         # otherwise AttributeError is thrown

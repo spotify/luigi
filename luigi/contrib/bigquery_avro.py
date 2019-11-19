@@ -61,7 +61,7 @@ class BigQueryLoadAvro(BigQueryLoadTask):
             # requiring the remainder of the file...
             try:
                 reader = avro.datafile.DataFileReader(fp, avro.io.DatumReader())
-                schema[:] = [self.get_writer_schema(reader.datum_reader)]
+                schema[:] = [BigQueryLoadAvro._get_writer_schema(reader.datum_reader)]
             except Exception as e:
                 # Save but assume benign unless schema reading ultimately fails. The benign
                 # exception in case of insufficiently big downloaded file part seems to be:
@@ -76,7 +76,15 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         return schema[0]
 
     @staticmethod
-    def get_writer_schema(datum_reader):
+    def _get_writer_schema(datum_reader):
+        """Python-version agnostic getter for datum_reader writer(s)_schema attribute
+        
+        Parameters:
+        datum_reader (avro.io.DatumReader): DatumReader
+
+        Returns:
+        Returning correct attribute name depending on Python version.
+        """
         if six.PY2:
             return datum_reader.writers_schema
         else:
