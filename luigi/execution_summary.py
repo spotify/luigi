@@ -476,19 +476,19 @@ def _status_to_code_num(status_code):
     POSIX assigns special meanings to 1 and 2 so start from 3
     """
     if status_code == LuigiStatusCode.SUCCESS:
-        return 3
+        return 0
     elif status_code == LuigiStatusCode.SUCCESS_WITH_RETRY:
-        return 4
+        return 3
     elif status_code == LuigiStatusCode.FAILED:
-        return 5
+        return 4
     elif status_code == LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED:
-        return 6
+        return 5
     elif status_code == LuigiStatusCode.SCHEDULING_FAILED:
-        return 7
+        return 6
     elif status_code == LuigiStatusCode.NOT_RUN:
-        return 8
+        return 7
     elif status_code == LuigiStatusCode.MISSING_EXT:
-        return 9
+        return 8
 
 
 def _summary_wrap(str_output):
