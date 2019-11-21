@@ -316,7 +316,6 @@ class WarehouseHiveClientTest(unittest.TestCase):
         # assert
         assert exists
         hdfs_client.exists.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
-        hdfs_client.listdir.assert_called_once_with('/apps/hive/warehouse/some_db.db/table_name/a=1/b=2')
 
     @mock.patch("luigi.configuration")
     def test_table_exists_without_partition_spec_files_actually_exist(self, warehouse_location):
