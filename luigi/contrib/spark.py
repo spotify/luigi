@@ -36,13 +36,6 @@ from luigi import configuration
 
 logger = logging.getLogger('luigi-interface')
 
-_DEFINED_SYSTEM_SETTINGS = (
-    'HADOOP_CONF_DIR',
-    'HADOOP_USER_NAME',
-    'PYSPARK_PYTHON',
-    'PYSPARK_DRIVER_PYTHON'
-)
-
 
 class SparkSubmitTask(ExternalProgramTask):
     """
@@ -81,11 +74,6 @@ class SparkSubmitTask(ExternalProgramTask):
 
         """
         return []
-
-    def _upd_env_if_not_none(self, env, prop):
-        var = getattr(self, prop.lower(), None)
-        if var:
-            env[prop] = var
 
     @property
     def pyspark_python(self):
@@ -132,6 +120,15 @@ class SparkSubmitTask(ExternalProgramTask):
     @property
     def files(self):
         return self._list_config(configuration.get_config().get(self.spark_version, "files", None))
+
+    @property
+    def _conf(self):
+        conf = self.conf or {}
+        if self.pyspark_python:
+            conf['spark.pyspark.python'] = self.pyspark_python
+        if self.pyspark_driver_python:
+            conf['spark.pyspark.driver.python'] = self.pyspark_driver_python
+        return conf
 
     @property
     def conf(self):
@@ -196,8 +193,10 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def program_environment(self):
         env = super(SparkSubmitTask, self).program_environment()
-        for prop in _DEFINED_SYSTEM_SETTINGS:
-            self._upd_env_if_not_none(env, prop)
+        for prop in ('HADOOP_CONF_DIR', 'HADOOP_USER_NAME'):
+            var = getattr(self, prop.lower(), None)
+            if var:
+                env[prop] = var
         return env
 
     def program_args(self):
@@ -214,7 +213,7 @@ class SparkSubmitTask(ExternalProgramTask):
         command += self._list_arg('--py-files', self.py_files)
         command += self._list_arg('--files', self.files)
         command += self._list_arg('--archives', self.archives)
-        command += self._dict_arg('--conf', self.conf)
+        command += self._dict_arg('--conf', self._conf)
         command += self._text_arg('--properties-file', self.properties_file)
         command += self._text_arg('--driver-memory', self.driver_memory)
         command += self._text_arg('--driver-java-options', self.driver_java_options)
