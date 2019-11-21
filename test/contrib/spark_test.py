@@ -208,7 +208,8 @@ class SparkSubmitTaskTest(unittest.TestCase):
                 val.value += 1
 
         def Popen_wrap(args, **kwargs):
-            return Popen('>&2 echo "INFO SparkUI: Bound SparkUI to 0.0.0.0, and started at http://10.66.76.155:4040"', shell=True, **kwargs)
+            return Popen('>&2 echo "INFO SparkUI: Bound SparkUI to 0.0.0.0, and started at http://10.66.76.155:4040"',
+                         shell=True, **kwargs)
 
         task = TestSparkSubmitTask()
         with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):

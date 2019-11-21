@@ -97,7 +97,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     @property
     def hadoop_user_name(self):
-        return os.getlogin()
+        return None
 
     @property
     def spark_version(self):
