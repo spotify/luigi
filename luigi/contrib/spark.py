@@ -24,6 +24,7 @@ import shutil
 import importlib
 import tarfile
 import inspect
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -57,14 +58,13 @@ class SparkSubmitTask(ExternalProgramTask):
     # Spark applications write its logs into stderr
     stream_for_searching_tracking_url = 'stderr'
 
-    def run(self):
+    @property
+    def tracking_url_pattern(self):
         if self.deploy_mode == "cluster":
             # in cluster mode client only receives application status once a period of time
-            self.tracking_url_pattern = r"tracking URL: (https?://.*)\s"
+            return r"tracking URL: (https?://.*)\s"
         else:
-            self.tracking_url_pattern = r"Bound (?:.*) to (?:.*), and started at (https?://.*)\s"
-
-        super(SparkSubmitTask, self).run()
+            return r"Bound (?:.*) to (?:.*), and started at (https?://.*)\s"
 
     def app_options(self):
         """
