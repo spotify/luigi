@@ -71,6 +71,7 @@ class TestSparkSubmitTask(SparkSubmitTask):
     archives = ["archive1", "archive2"]
     app = "file"
     pyspark_python = '/a/b/c'
+    pyspark_driver_python = '/b/c/d'
     hadoop_user_name = 'luigiuser'
 
     def app_options(self):
@@ -119,7 +120,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
                          ['ss-stub', '--master', 'yarn-client', '--deploy-mode', 'client', '--name', 'AppName',
                           '--class', 'org.test.MyClass', '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py',
                           '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', 'Prop=Value',
-                          '--conf', 'spark.pyspark.python=/a/b/c',
+                          '--conf', 'spark.pyspark.python=/a/b/c', '--conf', 'spark.pyspark.driver.python=/b/c/d',
                           '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G',
                           '--driver-java-options', '-Xopt',
                           '--driver-library-path', 'library/path', '--driver-class-path', 'class/path',
@@ -137,7 +138,8 @@ class SparkSubmitTaskTest(unittest.TestCase):
 
         assert job._conf == {
             'Prop': 'Value',
-            'spark.pyspark.python': '/a/b/c'
+            'spark.pyspark.python': '/a/b/c',
+            'spark.pyspark.driver.python': '/b/c/d'
         }
         assert job.program_environment()['HADOOP_USER_NAME'] == 'luigiuser'
         self.assertIn('HADOOP_CONF_DIR', proc.call_args[1]['env'])
