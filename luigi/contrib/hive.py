@@ -311,10 +311,10 @@ class WarehouseHiveClient(HiveClient):
         path = self.table_location(table, database, partition)
         if self.hdfs_client.exists(path):
             ignored_files = get_ignored_file_masks()
-            filenames = self.hdfs_client.listdir(path)
             if ignored_files is None:
                 return True
 
+            filenames = self.hdfs_client.listdir(path)
             pattern = re.compile(ignored_files)
             for filename in filenames:
                 if not pattern.match(filename):
