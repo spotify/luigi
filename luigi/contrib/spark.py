@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import collections
 import logging
 import os
 import re
@@ -123,7 +124,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     @property
     def _conf(self):
-        conf = self.conf or {}
+        conf = collections.OrderedDict(self.conf or {})
         if self.pyspark_python:
             conf['spark.pyspark.python'] = self.pyspark_python
         if self.pyspark_driver_python:
