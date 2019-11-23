@@ -97,8 +97,15 @@ class DuplicateParameterException(ParameterException):
 
 class FutureDateException(ParameterException):
     """
-       Exception signifying that a Date Parameter was specified in the future
-       """
+    Exception signifying that a Date Parameter was specified in the future
+    """
+    pass
+
+
+class UnknownTimezoneException(ParameterException):
+    """
+    Exception signifying that a Past Date Parameter was specified in unknown timezon
+    """
     pass
 
 
@@ -511,9 +518,35 @@ class PastDateParameter(DateParameter):
     caveat: if your host default timezone is different from your `business` timezone
     that might not work for you
     """
+    _LOCAL_TZ = 'local'
+    _UTC_TZ = 'utc'
+
+    def __init__(self, *args, **kwargs):
+        super(DateParameter, self).__init__(*args, **kwargs)
+        if self._default == _no_value:
+            self._default = self._today() - datetime.timedelta(days=1)
+
+    @property
+    def timezone(self):
+        return self._LOCAL_TZ
+
+    def _today(self):
+        if self.timezone == self._LOCAL_TZ:
+            return datetime.date.today()
+
+        if self.timezone == self._UTC_TZ:
+            return datetime.datetime.utcnow().date()
+
+        raise UnknownTimezoneException(
+            'Unknown timezone {}. Possible timezones are {}'.format(
+                self.timezone,
+                (self._LOCAL_TZ, self._UTC_TZ)
+            )
+        )
 
     def normalize(self, value):
-        if value >= datetime.date.today():
+        super(PastDateParameter, self).normalize(value)
+        if value >= self._today():
             raise FutureDateException()
 
         return value
@@ -1263,7 +1296,7 @@ class ChoiceParameter(Parameter):
         else:
             self.description = ""
         self.description += (
-            "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}"
+                "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}"
         )
 
     def parse(self, s):
