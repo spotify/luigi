@@ -539,7 +539,7 @@ class PastDateParameter(DateParameter):
         )
 
     def normalize(self, value):
-        super(PastDateParameter, self).normalize(value)
+        value = super(PastDateParameter, self).normalize(value)
         if value >= self._today():
             raise FutureDateException()
 
