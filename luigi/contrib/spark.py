@@ -192,13 +192,16 @@ class SparkSubmitTask(ExternalProgramTask):
     def hadoop_conf_dir(self):
         return configuration.get_config().get(self.spark_version, "hadoop-conf-dir", None)
 
-    def program_environment(self):
-        env = super(SparkSubmitTask, self).program_environment()
+    def get_environment(self):
+        env = os.environ.copy()
         for prop in ('HADOOP_CONF_DIR', 'HADOOP_USER_NAME'):
             var = getattr(self, prop.lower(), None)
             if var:
                 env[prop] = var
         return env
+
+    def program_environment(self):
+        return self.get_environment()
 
     def program_args(self):
         return self.spark_command() + self.app_command()
