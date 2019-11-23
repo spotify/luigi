@@ -526,11 +526,9 @@ class PastDateParameter(DateParameter):
 
     def _today(self):
         if self.timezone == self._LOCAL_TZ:
-            print(datetime.datetime.now())
             return datetime.date.today()
 
         if self.timezone == self._UTC_TZ:
-            print(datetime.datetime.now(pytz.utc))
             return datetime.datetime.now(pytz.utc).date()
 
         raise UnknownTimezoneException(
