@@ -27,6 +27,7 @@ from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict
+import pytz
 
 try:
     from collections.abc import Mapping
@@ -514,28 +515,23 @@ class YearParameter(DateParameter):
 
 
 class PastDateParameter(DateParameter):
-    """
-    caveat: if your host default timezone is different from your `business` timezone
-    that might not work for you
-    """
     _LOCAL_TZ = 'local'
     _UTC_TZ = 'utc'
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, timezone=_LOCAL_TZ, *args, **kwargs):
         super(DateParameter, self).__init__(*args, **kwargs)
+        self.timezone = timezone
         if self._default == _no_value:
             self._default = self._today() - datetime.timedelta(days=1)
 
-    @property
-    def timezone(self):
-        return self._LOCAL_TZ
-
     def _today(self):
         if self.timezone == self._LOCAL_TZ:
+            print(datetime.datetime.now())
             return datetime.date.today()
 
         if self.timezone == self._UTC_TZ:
-            return datetime.datetime.utcnow().date()
+            print(datetime.datetime.now(pytz.utc))
+            return datetime.datetime.now(pytz.utc).date()
 
         raise UnknownTimezoneException(
             'Unknown timezone {}. Possible timezones are {}'.format(
