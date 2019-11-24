@@ -6,7 +6,7 @@ import unittest
 
 from luigi.contrib.opener import OpenerTarget, NoOpenerError
 from luigi.mock import MockTarget
-from luigi.file import LocalTarget
+from luigi.local_target import LocalTarget
 
 from nose.plugins.attrib import attr
 
