@@ -24,8 +24,6 @@ import shutil
 import tempfile
 import unittest
 
-from luigi import six
-
 import luigi
 import sqlalchemy
 from luigi.contrib import sqla
@@ -33,12 +31,8 @@ from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 from helpers import skipOnTravis
 
-if six.PY3:
-    unicode = str
-
 
 class BaseTask(luigi.Task):
-
     TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
 
     def output(self):
@@ -96,6 +90,7 @@ class TestSQLA(unittest.TestCase):
         Test that this method creates table that we require
         :return:
         """
+
         class TestSQLData(sqla.CopyToTable):
             connection_string = self.connection_string
             connect_args = self.connect_args
@@ -123,6 +118,7 @@ class TestSQLA(unittest.TestCase):
         Check that the test fails when the columns are not set
         :return:
         """
+
         class TestSQLData(sqla.CopyToTable):
             connection_string = self.connection_string
             table = "test_table"
@@ -149,7 +145,7 @@ class TestSQLA(unittest.TestCase):
             result = conn.execute(s).fetchall()
             for i in range(len(BaseTask.TASK_LIST)):
                 given = BaseTask.TASK_LIST[i].strip("\n").split("\t")
-                given = (unicode(given[0]), unicode(given[1]))
+                given = (str(given[0]), str(given[1]))
                 self.assertEqual(given, tuple(result[i]))
 
     def test_rows(self):
@@ -204,8 +200,8 @@ class TestSQLA(unittest.TestCase):
                 return SQLATask()
 
             def copy(self, conn, ins_rows, table_bound):
-                ins = table_bound.update().\
-                    where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
+                ins = table_bound.update(). \
+                    where(table_bound.c.property == sqlalchemy.bindparam("_property")). \
                     values({table_bound.c.item: sqlalchemy.bindparam("_item")})
                 conn.execute(ins, ins_rows)
 
@@ -265,6 +261,7 @@ class TestSQLA(unittest.TestCase):
         Test alternate column row separator works
         :return:
         """
+
         class ModBaseTask(luigi.Task):
 
             def output(self):
@@ -299,6 +296,7 @@ class TestSQLA(unittest.TestCase):
         Overload the copy() method and implement an update action.
         :return:
         """
+
         class ModBaseTask(luigi.Task):
 
             def output(self):
@@ -332,8 +330,8 @@ class TestSQLA(unittest.TestCase):
                 return ModSQLATask()
 
             def copy(self, conn, ins_rows, table_bound):
-                ins = table_bound.update().\
-                    where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
+                ins = table_bound.update(). \
+                    where(table_bound.c.property == sqlalchemy.bindparam("_property")). \
                     values({table_bound.c.item: sqlalchemy.bindparam("_item")})
                 conn.execute(ins, ins_rows)
 
@@ -352,6 +350,7 @@ class TestSQLA(unittest.TestCase):
         Test a case where there are multiple tasks
         :return:
         """
+
         class SmallSQLATask(sqla.CopyToTable):
             item = luigi.Parameter()
             property = luigi.Parameter()
