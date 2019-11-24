@@ -19,10 +19,6 @@ import datetime
 import logging
 
 import luigi
-from luigi import six
-
-if six.PY3:
-    xrange = range
 
 logger = logging.getLogger('luigi-interface')
 
@@ -69,7 +65,7 @@ class ExternalDailySnapshot(luigi.ExternalTask):
     def __latest(cls, date, lookback, args, kwargs):
         assert lookback > 0
         t = None
-        for i in xrange(lookback):
+        for i in range(lookback):
             d = date - datetime.timedelta(i)
             t = cls(date=d, *args, **kwargs)
             if t.complete():
