@@ -17,7 +17,6 @@
 
 import doctest
 import pickle
-import six
 import warnings
 
 from helpers import unittest, LuigiTestCase
@@ -31,7 +30,6 @@ from luigi.task_register import load_task
 
 
 class DummyTask(luigi.Task):
-
     param = luigi.Parameter()
     bool_param = luigi.BoolParameter()
     int_param = luigi.IntParameter()
@@ -80,7 +78,7 @@ class TaskTest(unittest.TestCase):
 
     def test_external_tasks_loadable(self):
         task = load_task("luigi", "ExternalTask", {})
-        assert(isinstance(task, luigi.ExternalTask))
+        assert (isinstance(task, luigi.ExternalTask))
 
     def test_getpaths(self):
         class RequiredTask(luigi.Task):
@@ -137,23 +135,23 @@ class TaskTest(unittest.TestCase):
             DummyTask(**DUMMY_TASK_OK_PARAMS)
         self.assertEqual(len(w), 0, msg='No warning should be raised when correct parameter types are used')
 
-    if six.PY3:  # assertWarnsRegex was introduced in Python 3.2
-        def test_warn_on_non_str_param(self):
-            params = dict(**DUMMY_TASK_OK_PARAMS)
-            params['param'] = 42
-            with self.assertWarnsRegex(UserWarning, 'Parameter "param" with value "42" is not of type string.'):
-                DummyTask(**params)
+    def test_warn_on_non_str_param(self):
+        params = dict(**DUMMY_TASK_OK_PARAMS)
+        params['param'] = 42
+        with self.assertWarnsRegex(UserWarning, 'Parameter "param" with value "42" is not of type string.'):
+            DummyTask(**params)
 
-        def test_warn_on_non_timedelta_param(self):
-            params = dict(**DUMMY_TASK_OK_PARAMS)
+    def test_warn_on_non_timedelta_param(self):
+        params = dict(**DUMMY_TASK_OK_PARAMS)
 
-            class MockTimedelta(object):
-                days = 1
-                seconds = 1
+        class MockTimedelta(object):
+            days = 1
+            seconds = 1
 
-            params['timedelta_param'] = MockTimedelta()
-            with self.assertWarnsRegex(UserWarning, 'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
-                DummyTask(**params)
+        params['timedelta_param'] = MockTimedelta()
+        with self.assertWarnsRegex(UserWarning,
+                                   'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
+            DummyTask(**params)
 
 
 class ExternalizeTaskTest(LuigiTestCase):
@@ -232,6 +230,7 @@ class ExternalizeTaskTest(LuigiTestCase):
         class MyTask(luigi.Task):
             def run(self):
                 pass
+
         luigi.namespace()
 
         task_normal = MyTask()
@@ -258,6 +257,7 @@ class ExternalizeTaskTest(LuigiTestCase):
     def test_externalize_doesnt_affect_the_registry(self):
         class MyTask(luigi.Task):
             pass
+
         reg_orig = luigi.task_register.Register._get_reg()
         luigi.task.externalize(MyTask)
         reg_afterwards = luigi.task_register.Register._get_reg()
@@ -266,6 +266,7 @@ class ExternalizeTaskTest(LuigiTestCase):
     def test_can_uniquely_command_line_parse(self):
         class MyTask(luigi.Task):
             pass
+
         # This first check is just an assumption rather than assertion
         self.assertTrue(self.run_locally(['MyTask']))
         luigi.task.externalize(MyTask)
@@ -284,6 +285,7 @@ class TaskNamespaceTest(LuigiTestCase):
 
         class FooSubclass(Foo):
             pass
+
         return (Foo, FooSubclass, self.go_mynamespace())
 
     def go_mynamespace(self):
@@ -297,6 +299,7 @@ class TaskNamespaceTest(LuigiTestCase):
 
         class Baz(Bar):  # inherits namespace for Bar
             pass
+
         luigi.namespace()
         return collections.namedtuple('mynamespace', 'Foo Bar Baz')(Foo, Bar, Baz)
 
@@ -326,10 +329,12 @@ class TaskNamespaceTest(LuigiTestCase):
 
         class _BaseTask(luigi.Task):
             pass
+
         luigi.namespace('b')
 
         class _ChildTask(_BaseTask):
             pass
+
         luigi.namespace()  # Reset everything
         child_task = _ChildTask()
         self.assertEqual(child_task.task_family, 'b._ChildTask')
@@ -341,6 +346,7 @@ class TaskNamespaceTest(LuigiTestCase):
 
         class MyTask(luigi.Task):
             pass
+
         luigi.namespace(scope='task_test')
         luigi.namespace(scope='')
         self.assertEqual(MyTask.get_task_namespace(), 'wohoo')
@@ -351,6 +357,7 @@ class TaskNamespaceTest(LuigiTestCase):
 
         class MyTask(luigi.Task):
             pass
+
         luigi.namespace(scope='incorrect_namespace')
         luigi.namespace(scope='')
         self.assertEqual(MyTask.get_task_namespace(), 'bleh')
@@ -374,6 +381,7 @@ class AutoNamespaceTest(LuigiTestCase):
 
         class MyTask(luigi.Task):
             pass
+
         luigi.namespace(scope='task_test')
         luigi.namespace(scope='')
         self.assertEqual(MyTask.get_task_namespace(), self.this_module)
@@ -384,6 +392,7 @@ class AutoNamespaceTest(LuigiTestCase):
 
         class MyTask(luigi.Task):
             pass
+
         luigi.namespace(scope='incorrect_namespace')
         luigi.namespace(scope='')
         self.assertEqual(MyTask.get_task_namespace(), 'bleh')
@@ -393,5 +402,6 @@ class AutoNamespaceTest(LuigiTestCase):
 
         class MyTask(luigi.Task):
             pass
+
         luigi.namespace(scope='incorrect_namespace')
         self.assertEqual(MyTask.get_task_namespace(), '')
