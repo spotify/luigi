@@ -25,7 +25,6 @@ from luigi.contrib.salesforce import SalesforceAPI, QuerySalesforce
 from helpers import unittest
 import mock
 from luigi.mock import MockTarget
-from luigi.six import PY3
 import re
 
 from nose.plugins.attrib import attr
@@ -69,11 +68,9 @@ class TestSalesforceAPI(unittest.TestCase):
     @mock.patch('requests.get', side_effect=mocked_requests_get)
     def test_deprecated_results_warning(self, mock_get):
         sf = SalesforceAPI('xx', 'xx', 'xx')
-        if PY3:
-            with self.assertWarnsRegex(UserWarning, r'get_batch_results is deprecated'):
-                result_id = sf.get_batch_results('job_id', 'batch_id')
-        else:
+        with self.assertWarnsRegex(UserWarning, r'get_batch_results is deprecated'):
             result_id = sf.get_batch_results('job_id', 'batch_id')
+
         self.assertEqual('1234', result_id)
 
     @mock.patch('requests.get', side_effect=mocked_requests_get)
@@ -98,9 +95,7 @@ class TestQuerySalesforce(QuerySalesforce):
 
 @attr('contrib')
 class TestSalesforceQuery(unittest.TestCase):
-    patch_name = '__builtin__.open'
-    if PY3:
-        patch_name = 'builtins.open'
+    patch_name = 'builtins.open'
 
     @mock.patch(patch_name, side_effect=mocked_open)
     def setUp(self, mock_open):
@@ -113,9 +108,9 @@ class TestSalesforceQuery(unittest.TestCase):
         for i, id in enumerate(self.result_ids):
             filename = "%s.%d" % ('job_data.csv', i)
             with MockTarget(filename).open('w') as f:
-                line = "%d line\n%d line" % ((counter), (counter+1))
+                line = "%d line\n%d line" % ((counter), (counter + 1))
                 f.write(self.header + "\n" + line + "\n")
-                self.all_lines += line+"\n"
+                self.all_lines += line + "\n"
                 counter += 2
 
     @mock.patch(patch_name, side_effect=mocked_open)
