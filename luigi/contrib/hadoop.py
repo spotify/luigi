@@ -373,9 +373,10 @@ def fetch_task_failures(tracking_url):
     logger.debug('Fetching data from %s', failures_url)
     b = mechanize.Browser()
     b.open(failures_url, timeout=timeout)
-    links = list(b.links(text_regex='Last 4KB'))  # For some reason text_regex='All' doesn't work... no idea why
-    links = random.sample(links, min(10, len(
-        links)))  # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
+    # For some reason text_regex='All' doesn't work... no idea why
+    links = list(b.links(text_regex='Last 4KB'))
+    # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
+    links = random.sample(links, min(10, len(links)))
     error_text = []
     for link in links:
         task_url = link.url.replace('&start=-4097', '&start=-100000')  # Increase the offset
@@ -1038,15 +1039,21 @@ class JobTask(BaseHadoopJobTask):
         """
         self.init_hadoop()
         self.init_reducer()
-        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer,
-                                     self.final_reducer)
+        outputs = self._reduce_input(
+            self.internal_reader((line[:-1] for line in stdin)),
+            self.reducer,
+            self.final_reducer,
+        )
         self.writer(outputs, stdout)
 
     def run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
         self.init_hadoop()
         self.init_combiner()
-        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner,
-                                     self.final_combiner)
+        outputs = self._reduce_input(
+            self.internal_reader((line[:-1] for line in stdin)),
+            self.combiner,
+            self.final_combiner,
+        )
         self.internal_writer(outputs, stdout)
 
     def internal_reader(self, input_stream):
