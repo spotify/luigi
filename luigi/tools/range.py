@@ -90,8 +90,7 @@ class RangeBase(luigi.WrapperTask):
     # TODO lift the single parameter constraint by passing unknown parameters through WrapperTask?
     of = luigi.TaskParameter(
         description="task name to be completed. The task must take a single datetime parameter")
-    of_params = luigi.DictParameter(default=dict(),
-                                    description="Arguments to be provided to the 'of' class when instantiating")
+    of_params = luigi.DictParameter(default=dict(), description="Arguments to be provided to the 'of' class when instantiating")
     # The common parameters 'start' and 'stop' have type (e.g. DateParameter,
     # DateHourParameter) dependent on the concrete subclass, cumbersome to
     # define here generically without dark magic. Refer to the overrides.
@@ -179,8 +178,7 @@ class RangeBase(luigi.WrapperTask):
         expected_count = len(datetimes)
         complete_count = expected_count - len(missing_datetimes)
         self.trigger_event(RangeEvent.COMPLETE_COUNT, self.of_cls.task_family, complete_count)
-        self.trigger_event(RangeEvent.COMPLETE_FRACTION, self.of_cls.task_family,
-                           float(complete_count) / expected_count if expected_count else 1)
+        self.trigger_event(RangeEvent.COMPLETE_FRACTION, self.of_cls.task_family, float(complete_count) / expected_count if expected_count else 1)
 
     def _format_datetime(self, dt):
         return self.datetime_to_parameter(dt)
@@ -272,8 +270,7 @@ class RangeBase(luigi.WrapperTask):
             return self.missing_datetimes(finite_datetimes)
         except TypeError as ex:
             if 'missing_datetimes()' in repr(ex):
-                warnings.warn(
-                    'In your Range* subclass, missing_datetimes() should only take 1 argument (see latest docs)')
+                warnings.warn('In your Range* subclass, missing_datetimes() should only take 1 argument (see latest docs)')
                 return self.missing_datetimes(self.of_cls, finite_datetimes)
             else:
                 raise
@@ -582,24 +579,19 @@ def _get_filesystems_and_globs(datetime_to_task, datetime_to_re):
     """
     # probe some scattered datetimes unlikely to all occur in paths, other than by being sincere datetime parameter's representations
     # TODO limit to [self.start, self.stop) so messages are less confusing? Done trivially it can kill correctness
-    sample_datetimes = [datetime(y, m, d, h) for y in range(2000, 2050, 10) for m in range(1, 4) for d in range(5, 8)
-                        for h in range(21, 24)]
+    sample_datetimes = [datetime(y, m, d, h) for y in range(2000, 2050, 10) for m in range(1, 4) for d in range(5, 8) for h in range(21, 24)]
     regexes = [re.compile(datetime_to_re(d)) for d in sample_datetimes]
     sample_tasks = [datetime_to_task(d) for d in sample_datetimes]
     sample_outputs = [flatten_output(t) for t in sample_tasks]
 
     for o, t in zip(sample_outputs, sample_tasks):
         if len(o) != len(sample_outputs[0]):
-            raise NotImplementedError(
-                "Outputs must be consistent over time, sorry; was %r for %r and %r for %r" % (
-                    o, t, sample_outputs[0], sample_tasks[0])
-            )
+            raise NotImplementedError("Outputs must be consistent over time, sorry; was %r for %r and %r for %r" % (o, t, sample_outputs[0], sample_tasks[0]))
             # TODO fall back on requiring last couple of days? to avoid astonishing blocking when changes like that are deployed
             # erm, actually it's not hard to test entire hours_back..hours_forward and split into consistent subranges FIXME?
         for target in o:
             if not isinstance(target, FileSystemTarget):
-                raise NotImplementedError(
-                    "Output targets must be instances of FileSystemTarget; was %r for %r" % (target, t))
+                raise NotImplementedError("Output targets must be instances of FileSystemTarget; was %r for %r" % (target, t))
 
     for o in zip(*sample_outputs):  # transposed, so here we're iterating over logical outputs, not datetimes
         glob = _get_per_location_glob(sample_tasks, o, regexes)
@@ -641,8 +633,7 @@ def infer_bulk_complete_from_fs(datetimes, datetime_to_task, datetime_to_re):
     filesystems_and_globs_by_location = _get_filesystems_and_globs(datetime_to_task, datetime_to_re)
     paths_by_datetime = [[o.path for o in flatten_output(datetime_to_task(d))] for d in datetimes]
     listing = set()
-    for (f, g), p in zip(filesystems_and_globs_by_location, zip(
-            *paths_by_datetime)):  # transposed, so here we're iterating over logical outputs, not datetimes
+    for (f, g), p in zip(filesystems_and_globs_by_location, zip(*paths_by_datetime)):  # transposed, so here we're iterating over logical outputs, not datetimes
         listing |= _list_existing(f, g, p)
 
     # quickly learn everything that's missing
@@ -745,8 +736,7 @@ class RangeDaily(RangeDailyBase):
     def missing_datetimes(self, finite_datetimes):
         try:
             cls_with_params = functools.partial(self.of, **self.of_params)
-            complete_parameters = self.of.bulk_complete.__func__(cls_with_params,
-                                                                 map(self.datetime_to_parameter, finite_datetimes))
+            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, map(self.datetime_to_parameter, finite_datetimes))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
@@ -775,8 +765,7 @@ class RangeHourly(RangeHourlyBase):
         try:
             # TODO: Why is there a list() here but not for the RangeDaily??
             cls_with_params = functools.partial(self.of, **self.of_params)
-            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, list(
-                map(self.datetime_to_parameter, finite_datetimes)))
+            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, list(map(self.datetime_to_parameter, finite_datetimes)))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
@@ -804,8 +793,7 @@ class RangeByMinutes(RangeByMinutesBase):
     def missing_datetimes(self, finite_datetimes):
         try:
             cls_with_params = functools.partial(self.of, **self.of_params)
-            complete_parameters = self.of.bulk_complete.__func__(cls_with_params,
-                                                                 map(self.datetime_to_parameter, finite_datetimes))
+            complete_parameters = self.of.bulk_complete.__func__(cls_with_params, map(self.datetime_to_parameter, finite_datetimes))
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(

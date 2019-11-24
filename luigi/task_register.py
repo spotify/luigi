@@ -215,8 +215,7 @@ class Register(abc.ABCMeta):
 
     @classmethod
     def _missing_task_msg(cls, task_name):
-        weighted_tasks = [(Register._editdistance(task_name, task_name_2), task_name_2) for task_name_2 in
-                          cls.task_names()]
+        weighted_tasks = [(Register._editdistance(task_name, task_name_2), task_name_2) for task_name_2 in cls.task_names()]
         ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
         candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
         if candidates:

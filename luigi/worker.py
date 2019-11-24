@@ -200,8 +200,7 @@ class TaskProcess(multiprocessing.Process):
                     status = DONE
                 else:
                     status = FAILED
-                    expl = 'Task is an external data dependency ' \
-                           'and data does not exist (yet?).'
+                    expl = 'Task is an external data dependency and data does not exist (yet?).'
             else:
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
@@ -660,22 +659,18 @@ class Worker(object):
 
         if not task.initialized():
             # we can't get the repr of it since it's not initialized...
-            raise TaskException(
-                'Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
+            raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
     def _log_complete_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task,
-                                                                                                            tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task,
-                                                                                                        tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
-        logger.exception("Luigi unexpected framework error while scheduling %s",
-                         task)  # needs to be called from within except clause
+        logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
 
     def _announce_scheduling_failure(self, task, expl):
         try:
@@ -809,8 +804,7 @@ class Worker(object):
 
     def _add(self, task, is_complete):
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
-            logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task,
-                           self._config.task_limit)
+            logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
             deps = None
             status = UNKNOWN
             runnable = False

@@ -35,7 +35,7 @@ def getpcmd(pid):
     """
     if os.name == "nt":
         # Use wmic command instead of ps on Windows.
-        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid,)
+        cmd = f'wmic path win32_process where ProcessID={pid} get Commandline 2> nul'
         with os.popen(cmd, 'r') as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
             if lines:
@@ -43,7 +43,7 @@ def getpcmd(pid):
                 return val
     elif sys.platform == "darwin":
         # Use pgrep instead of /proc on macOS.
-        pidfile = ".%d.pid" % (pid,)
+        pidfile = f".{pid}.pid"
         with open(pidfile, 'w') as f:
             f.write(str(pid))
         try:

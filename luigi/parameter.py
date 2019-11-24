@@ -1236,8 +1236,7 @@ class ChoiceParameter(Parameter):
             self.description += " "
         else:
             self.description = ""
-        self.description += (
-                "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
+        self.description += ("Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
 
     def parse(self, s):
         var = self._var_type(s)

@@ -98,11 +98,13 @@ class InputPipeProcessWrapper(object):
             # non-Python subprocesses expect.
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
-        return subprocess.Popen(command,
-                                stdin=self._input_pipe,
-                                stdout=subprocess.PIPE,
-                                preexec_fn=subprocess_setup,
-                                close_fds=True)
+        return subprocess.Popen(
+            command,
+            stdin=self._input_pipe,
+            stdout=subprocess.PIPE,
+            preexec_fn=subprocess_setup,
+            close_fds=True,
+        )
 
     def _finish(self):
         # Need to close this before input_pipe to get all SIGPIPE messages correctly
@@ -118,7 +120,8 @@ class InputPipeProcessWrapper(object):
             # 141 == 128 + 13 == 128 + SIGPIPE - normally processes exit with 128 + {reiceived SIG}
             # 128 - 141 == -13 == -SIGPIPE, sometimes python receives -13 for some subprocesses
             raise RuntimeError(
-                'Error reading from pipe. Subcommand exited with non-zero exit status %s.' % self._process.returncode)
+                f'Error reading from pipe. Subcommand exited with non-zero exit status {self._process.returncode}.'
+            )
 
     def close(self):
         self._finish()

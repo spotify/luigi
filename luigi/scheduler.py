@@ -95,8 +95,9 @@ RPC_METHODS = {}
 def _getargspec(func):
     args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(func)
     if kwonlyargs or ann:
-        raise ValueError("Function has keyword-only parameters or annotations"
-                         ", use getfullargspec() API which can support them")
+        raise ValueError(
+            "Function has keyword-only parameters or annotations, use getfullargspec() API which can support them"
+        )
     return inspect.ArgSpec(args, varargs, varkw, defaults)
 
 
@@ -346,11 +347,9 @@ class Task(object):
     def set_params(self, params):
         self.params = _get_default(params, {})
         self.public_params = {key: value for key, value in self.params.items() if
-                              self.param_visibilities.get(key,
-                                                          ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
+                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
         self.hidden_params = {key: value for key, value in self.params.items() if
-                              self.param_visibilities.get(key,
-                                                          ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
+                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
 
     # TODO(2017-08-10) replace this function with direct calls to batchable
     # this only exists for backward compatibility
@@ -368,8 +367,7 @@ class Task(object):
             if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
                 return True
 
-        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(),
-                     self.retry_policy.retry_count)
+        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(), self.retry_policy.retry_count)
         if self.failures.num_failures() >= self.retry_policy.retry_count:
             logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.retry_policy.retry_count)
             return True
@@ -624,9 +622,7 @@ class SimpleTaskState(object):
 
     def fail_dead_worker_task(self, task, config, assistants):
         # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-        if task.status in (
-                BATCH_RUNNING,
-                RUNNING) and task.worker_running and task.worker_running not in task.stakeholders | assistants:
+        if task.status in (BATCH_RUNNING, RUNNING) and task.worker_running and task.worker_running not in task.stakeholders | assistants:
             logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
                         "FAILED with retry delay of %rs", task.id, task.worker_running,
                         config.retry_delay)
@@ -668,8 +664,7 @@ class SimpleTaskState(object):
             if last_active_lt is not None and worker.last_active >= last_active_lt:
                 continue
             last_get_work = worker.last_get_work
-            if last_get_work_gt is not None and (
-                    last_get_work is None or last_get_work <= last_get_work_gt):
+            if last_get_work_gt is not None and (last_get_work is None or last_get_work <= last_get_work_gt):
                 continue
             yield worker
 
@@ -734,8 +729,7 @@ class Scheduler(object):
             self._task_history = db_task_history.DbTaskHistory()
         else:
             self._task_history = history.NopHistory()
-        self._resources = resources or configuration.get_config().getintdict(
-            'resources')  # TODO: Can we make this a Parameter?
+        self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
         self._paused = False
@@ -876,8 +870,7 @@ class Scheduler(object):
             return
 
         # Ignore claims that the task is PENDING if it very recently was marked as DONE.
-        if status == PENDING and task.status == DONE and (
-                time.time() - task.updated) < self._config.stable_done_cooldown_secs:
+        if status == PENDING and task.status == DONE and (time.time() - task.updated) < self._config.stable_done_cooldown_secs:
             return
 
         # for setting priority, we'll sometimes create tasks with unset family and params
@@ -969,8 +962,7 @@ class Scheduler(object):
             # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
             # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
             for dep in task.deps or []:
-                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None,
-                                                                         priority=priority))
+                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
                 t.stakeholders.add(worker_id)
 
         self._update_priority(task, priority, worker_id)
@@ -1495,8 +1487,7 @@ class Scheduler(object):
 
         tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
         for task in filter(filter_func, tasks):
-            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id,
-                                                                                                         upstream_status_table):
+            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
                 serialized = self._serialize_task(task.id, include_deps=False)
                 result[task.id] = serialized
         if limit and len(result) > (max_shown_tasks or self._config.max_shown_tasks):
