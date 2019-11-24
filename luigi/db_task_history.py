@@ -160,14 +160,12 @@ class DbTaskHistory(task_history.TaskHistory):
         """
         with self._session(session) as session:
             yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-            return (
-                session.query(TaskRecord).
-                    join(TaskEvent).
-                    filter(TaskEvent.ts >= yesterday).
-                    group_by(TaskRecord.id, TaskEvent.event_name, TaskEvent.ts).
-                    order_by(TaskEvent.ts.desc()).
-                    all()
-            )
+            return session.query(TaskRecord).\
+                join(TaskEvent).\
+                filter(TaskEvent.ts >= yesterday).\
+                group_by(TaskRecord.id, TaskEvent.event_name, TaskEvent.ts).\
+                order_by(TaskEvent.ts.desc()).\
+                all()
 
     def find_all_runs(self, session=None):
         """
