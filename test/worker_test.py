@@ -1256,8 +1256,10 @@ class WorkerEmailTest(LuigiTestCase):
         worker = Worker(scheduler)
         a = A()
 
-        with mock.patch.object(worker._scheduler, 'announce_scheduling_failure', side_effect=Exception('Unexpected')), \
-             self.assertRaises(Exception):
+        with mock.patch.object(
+                worker._scheduler,
+                'announce_scheduling_failure', side_effect=Exception('Unexpected')
+        ), self.assertRaises(Exception):
             worker.add(a)
         self.assertTrue(len(emails) == 2)  # One for `complete` error, one for exception in announcing.
         self.assertTrue('Luigi: Framework error while scheduling' in emails[1])

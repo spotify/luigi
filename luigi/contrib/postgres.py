@@ -289,7 +289,9 @@ class CopyToTable(rdbms.CopyToTable):
         else:
             raise Exception(
                 'columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (
-                self.columns[0],))
+                    self.columns[0],
+                )
+            )
         cursor.copy_from(file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
 
     def run(self):

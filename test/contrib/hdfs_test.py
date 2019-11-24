@@ -17,7 +17,6 @@
 
 import functools
 import re
-from helpers import unittest
 import random
 import threading
 import pickle
