@@ -33,14 +33,8 @@ import os
 import re
 import warnings
 
-# In python3 ConfigParser was renamed
-# https://stackoverflow.com/a/41202010
-try:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    Interpolation = object
-except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    from configparser import Interpolation, BasicInterpolation
+from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+from configparser import Interpolation, BasicInterpolation
 
 from .base_parser import BaseParser
 
@@ -178,7 +172,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
             if default is LuigiConfigParser.NO_DEFAULT:
                 raise
             if expected_type is not None and default is not None and \
-               not isinstance(default, expected_type):
+                    not isinstance(default, expected_type):
                 raise
             return default
 
