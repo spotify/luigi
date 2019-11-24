@@ -12,8 +12,10 @@ try:
     import avro
     import avro.datafile
 except ImportError:
-    logger.warning('bigquery_avro module imported, but avro is not installed. Any '
-                   'BigQueryLoadAvro task will fail to propagate schema documentation')
+    logger.warning(
+        'bigquery_avro module imported, but avro is not installed. Any '
+        'BigQueryLoadAvro task will fail to propagate schema documentation'
+    )
 
 
 class BigQueryLoadAvro(BigQueryLoadTask):
@@ -76,13 +78,13 @@ class BigQueryLoadAvro(BigQueryLoadTask):
 
     @staticmethod
     def _get_writer_schema(datum_reader):
-        """Python-version agnostic getter for datum_reader writer(s)_schema attribute
+        """Getter for datum_reader writer(s)_schema attribute
 
         Parameters:
         datum_reader (avro.io.DatumReader): DatumReader
 
         Returns:
-        Returning correct attribute name depending on Python version.
+        Returning attribute name
         """
         return datum_reader.writer_schema
 
