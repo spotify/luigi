@@ -51,13 +51,16 @@ class hdfs(luigi.Config):
 
 
 class hadoopcli(luigi.Config):
-    command = luigi.Parameter(default="hadoop",
-                              config_path=dict(section="hadoop", name="command"),
-                              description='The hadoop command, will run split() on it, '
-                                          'so you can pass something like "hadoop --param"')
-    version = luigi.Parameter(default="cdh4",
-                              config_path=dict(section="hadoop", name="version"),
-                              description='Can also be cdh3 or apache1')
+    command = luigi.Parameter(
+        default="hadoop",
+        config_path=dict(section="hadoop", name="command"),
+        description='The hadoop command, will run split() on it, so you can pass something like "hadoop --param"',
+    )
+    version = luigi.Parameter(
+        default="cdh4",
+        config_path=dict(section="hadoop", name="version"),
+        description='Can also be cdh3 or apache1',
+    )
 
 
 def load_hadoop_cmd():
@@ -88,7 +91,7 @@ def get_configured_hdfs_client():
         "snakebite_with_hadoopcli_fallback",
         "snakebite",
     ]
-    if (custom in conf_usinf_snakebite):
+    if custom in conf_usinf_snakebite:
         warnings.warn(
             "snakebite client not compatible with python3 at the moment"
             "falling back on hadoopcli",
