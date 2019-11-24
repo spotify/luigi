@@ -138,7 +138,6 @@ class ExceptionFormatTest(unittest.TestCase):
         self.assertCountEqual(notifications._email_recipients(), ["a@a.a"])
         self.assertCountEqual(notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
         self.assertCountEqual(
-            self,
             notifications._email_recipients(["b@b.b", "c@c.c"]),
             ["a@a.a", "b@b.b", "c@c.c"]
         )
@@ -148,7 +147,6 @@ class ExceptionFormatTest(unittest.TestCase):
         self.assertCountEqual(notifications._email_recipients(), [])
         self.assertCountEqual(notifications._email_recipients("a@a.a"), ["a@a.a"])
         self.assertCountEqual(
-            self,
             notifications._email_recipients(["a@a.a", "b@b.b"]),
             ["a@a.a", "b@b.b"]
         )
