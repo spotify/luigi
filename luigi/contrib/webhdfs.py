@@ -27,8 +27,6 @@ from __future__ import absolute_import
 
 import logging
 
-from luigi import six
-
 from luigi.target import FileSystemTarget, AtomicLocalFile
 from luigi.format import get_default_format
 import luigi.contrib.hdfs
