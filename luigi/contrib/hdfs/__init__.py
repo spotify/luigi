@@ -29,7 +29,6 @@ API stability, everything is reexported under :py:mod:`luigi.contrib.hdfs`.
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import clients as hdfs_clients
 from luigi.contrib.hdfs import error as hdfs_error
-from luigi.contrib.hdfs import snakebite_client as hdfs_snakebite_client
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
 from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 from luigi.contrib.hdfs import format as hdfs_format
@@ -47,9 +46,7 @@ tmppath = hdfs_config.tmppath
 # clients
 HDFSCliError = hdfs_error.HDFSCliError
 call_check = hdfs_hadoopcli_clients.HdfsClient.call_check
-list_path = hdfs_snakebite_client.SnakebiteHdfsClient.list_path
 HdfsClient = hdfs_hadoopcli_clients.HdfsClient
-SnakebiteHdfsClient = hdfs_snakebite_client.SnakebiteHdfsClient
 WebHdfsClient = hdfs_webhdfs_client.WebHdfsClient
 HdfsClientCdh3 = hdfs_hadoopcli_clients.HdfsClientCdh3
 HdfsClientApache1 = hdfs_hadoopcli_clients.HdfsClientApache1

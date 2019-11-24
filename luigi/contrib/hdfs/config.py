@@ -23,7 +23,6 @@ You can configure what client by setting the "client" config under the "hdfs" se
 import random
 import luigi
 import luigi.configuration
-from luigi import six
 import warnings
 import os
 import getpass
@@ -55,7 +54,7 @@ class hadoopcli(luigi.Config):
     command = luigi.Parameter(default="hadoop",
                               config_path=dict(section="hadoop", name="command"),
                               description='The hadoop command, will run split() on it, '
-                              'so you can pass something like "hadoop --param"')
+                                          'so you can pass something like "hadoop --param"')
     version = luigi.Parameter(default="cdh4",
                               config_path=dict(section="hadoop", name="version"),
                               description='Can also be cdh3 or apache1')
@@ -89,7 +88,7 @@ def get_configured_hdfs_client():
         "snakebite_with_hadoopcli_fallback",
         "snakebite",
     ]
-    if six.PY3 and (custom in conf_usinf_snakebite):
+    if (custom in conf_usinf_snakebite):
         warnings.warn(
             "snakebite client not compatible with python3 at the moment"
             "falling back on hadoopcli",
