@@ -31,19 +31,11 @@ Now, you can launch this from the command line using
 ``--date-interval 2014`` (for a year) and some other notations.
 """
 
-from __future__ import division
-
-from luigi import six
-
 import datetime
 import re
 
-if six.PY3:
-    xrange = range
-
 
 class DateInterval(object):
-
     """
     The :class:`DateInterval` is the base class with subclasses :class:`Date`, :class:`Week`, :class:`Month`, :class:`Year`, and :class:`Custom`.
     Note that the :class:`DateInterval` is abstract and should not be used directly: use :class:`Custom` for arbitrary date intervals.
@@ -60,6 +52,7 @@ class DateInterval(object):
     This represents the half open range of the date interval.
     For instance, a May 2014 is represented as ``date_a = 2014-05-01``, ``date_b = 2014-06-01``.
     """
+
     def __init__(self, date_a, date_b):
         self.date_a = date_a
         self.date_b = date_b
@@ -77,7 +70,7 @@ class DateInterval(object):
     def hours(self):
         ''' Same as dates() but returns 24 times more info: one for each hour.'''
         for date in self.dates():
-            for hour in xrange(24):
+            for hour in range(24):
                 yield datetime.datetime.combine(date, datetime.time(hour))
 
     def __str__(self):
@@ -161,7 +154,6 @@ class DateInterval(object):
 
 
 class Date(DateInterval):
-
     ''' Most simple :class:`DateInterval` where ``date_b == date_a + datetime.timedelta(1)``.'''
 
     def __init__(self, y, m, d):
@@ -183,14 +175,14 @@ class Date(DateInterval):
 
 
 class Week(DateInterval):
-
     ''' ISO 8601 week. Note that it has some counterintuitive behavior around new year.
     For instance Monday 29 December 2008 is week 2009-W01, and Sunday 3 January 2010 is week 2009-W53
     This example was taken from from http://en.wikipedia.org/wiki/ISO_8601#Week_dates
     '''
+
     def __init__(self, y, w):
         ''' Python datetime does not have a method to convert from ISO weeks, so the constructor uses some stupid brute force'''
-        for d in xrange(-10, 370):
+        for d in range(-10, 370):
             date = datetime.date(y, 1, 1) + datetime.timedelta(d)
             if date.isocalendar() == (y, w, 1):
                 date_a = date
@@ -256,13 +248,13 @@ class Year(DateInterval):
 
 
 class Custom(DateInterval):
-
     '''Custom date interval (does not implement prev and next methods)
 
     Actually the ISO 8601 specifies <start>/<end> as the time interval format
     Not sure if this goes for date intervals as well. In any case slashes will
     most likely cause problems with paths etc.
     '''
+
     def to_string(self):
         return '-'.join([d.strftime('%Y-%m-%d') for d in (self.date_a, self.date_b)])
 

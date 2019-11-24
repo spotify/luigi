@@ -89,7 +89,7 @@ class ReadableWebHdfsFile(object):
         has_next = True
         while has_next:
             try:
-                chunk = six.next(self.generator)
+                chunk = next(self.generator)
                 yield chunk
             except StopIteration:
                 has_next = False

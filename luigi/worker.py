@@ -40,10 +40,7 @@ import subprocess
 import sys
 import contextlib
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+import queue as Queue
 import random
 import socket
 import threading
@@ -51,23 +48,35 @@ import time
 import traceback
 import types
 
-from luigi import six
-
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
-from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
+from luigi.scheduler import (
+    DISABLED,
+    DONE,
+    FAILED,
+    PENDING,
+    UNKNOWN,
+    Scheduler,
+    RetryPolicy,
+    WORKER_STATE_ACTIVE,
+    WORKER_STATE_DISABLED,
+)
+
 from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
+from luigi.parameter import (
+    BoolParameter,
+    FloatParameter,
+    IntParameter,
+    OptionalParameter,
+    Parameter,
+    TimeDeltaParameter,
+)
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -108,7 +117,6 @@ GetWorkResponse = collections.namedtuple('GetWorkResponse', (
 
 
 class TaskProcess(multiprocessing.Process):
-
     """ Wrap all task execution in this class.
 
     Mainly for convenience since this is run in a separate process. """
@@ -147,7 +155,7 @@ class TaskProcess(multiprocessing.Process):
         while True:
             try:
                 if next_send is None:
-                    requires = six.next(task_gen)
+                    requires = next(task_gen)
                 else:
                     requires = task_gen.send(next_send)
             except StopIteration:
@@ -193,7 +201,7 @@ class TaskProcess(multiprocessing.Process):
                 else:
                     status = FAILED
                     expl = 'Task is an external data dependency ' \
-                        'and data does not exist (yet?).'
+                           'and data does not exist (yet?).'
             else:
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
@@ -263,13 +271,13 @@ class TaskProcess(multiprocessing.Process):
     @contextlib.contextmanager
     def _forward_attributes(self):
         # forward configured attributes to the task
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+        for reporter_attr, task_attr in self.forward_reporter_attributes.items():
             setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
         try:
             yield self
         finally:
             # reset attributes again
-            for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+            for reporter_attr, task_attr in self.forward_reporter_attributes.items():
                 setattr(self.task, task_attr, None)
 
 
@@ -300,6 +308,7 @@ class TaskStatusReporter(object):
     This object must be pickle-able for passing to `TaskProcess` on systems
     where fork method needs to pickle the process object (e.g.  Windows).
     """
+
     def __init__(self, scheduler, task_id, worker_id, scheduler_messages):
         self._task_id = task_id
         self._worker_id = worker_id
@@ -424,8 +433,8 @@ class worker(Config):
     count_uniques = BoolParameter(default=False,
                                   config_path=dict(section='core', name='worker-count-uniques'),
                                   description='worker-count-uniques means that we will keep a '
-                                  'worker alive only if it has a unique pending task, as '
-                                  'well as having keep-alive true')
+                                              'worker alive only if it has a unique pending task, as '
+                                              'well as having keep-alive true')
     count_last_scheduled = BoolParameter(default=False,
                                          description='Keep a worker alive only if there are '
                                                      'pending tasks which it was the last to '
@@ -445,29 +454,29 @@ class worker(Config):
     retry_external_tasks = BoolParameter(default=False,
                                          config_path=dict(section='core', name='retry-external-tasks'),
                                          description='If true, incomplete external tasks will be '
-                                         'retested for completion while Luigi is running.')
+                                                     'retested for completion while Luigi is running.')
     send_failure_email = BoolParameter(default=True,
                                        description='If true, send e-mails directly from the worker'
                                                    'on failure')
     no_install_shutdown_handler = BoolParameter(default=False,
                                                 description='If true, the SIGUSR1 shutdown handler will'
-                                                'NOT be install on the worker')
+                                                            'NOT be install on the worker')
     check_unfulfilled_deps = BoolParameter(default=True,
                                            description='If true, check for completeness of '
-                                           'dependencies before running a task')
+                                                       'dependencies before running a task')
     check_complete_on_run = BoolParameter(default=False,
                                           description='If true, only mark tasks as done after running if they are complete. '
-                                          'Regardless of this setting, the worker will always check if external '
-                                          'tasks are complete before marking them as done.')
+                                                      'Regardless of this setting, the worker will always check if external '
+                                                      'tasks are complete before marking them as done.')
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
-                                          'running with 1 worker')
+                                                      'running with 1 worker')
     task_process_context = OptionalParameter(default=None,
                                              description='If set to a fully qualified class name, the class will '
-                                             'be instantiated with a TaskProcess as its constructor parameter and '
-                                             'applied as a context manager around its run() call, so this can be '
-                                             'used for obtaining high level customizable monitoring or logging of '
-                                             'each individual Task run.')
+                                                         'be instantiated with a TaskProcess as its constructor parameter and '
+                                                         'applied as a context manager around its run() call, so this can be '
+                                                         'used for obtaining high level customizable monitoring or logging of '
+                                                         'each individual Task run.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -651,18 +660,22 @@ class Worker(object):
 
         if not task.initialized():
             # we can't get the repr of it since it's not initialized...
-            raise TaskException('Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
+            raise TaskException(
+                'Task of class %s not initialized. Did you override __init__ and forget to call super(...).__init__?' % task.__class__.__name__)
 
     def _log_complete_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in complete() method:\n{tb}".format(task=task,
+                                                                                                            tb=tb)
         logger.warning(log_msg)
 
     def _log_dependency_error(self, task, tb):
-        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task, tb=tb)
+        log_msg = "Will not run {task} or any dependencies due to error in deps() method:\n{tb}".format(task=task,
+                                                                                                        tb=tb)
         logger.warning(log_msg)
 
     def _log_unexpected_error(self, task):
-        logger.exception("Luigi unexpected framework error while scheduling %s", task)  # needs to be called from within except clause
+        logger.exception("Luigi unexpected framework error while scheduling %s",
+                         task)  # needs to be called from within except clause
 
     def _announce_scheduling_failure(self, task, expl):
         try:
@@ -796,7 +809,8 @@ class Worker(object):
 
     def _add(self, task, is_complete):
         if self._config.task_limit is not None and len(self._scheduled_tasks) >= self._config.task_limit:
-            logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task, self._config.task_limit)
+            logger.warning('Will not run %s or any dependencies due to exceeded task-limit of %d', task,
+                           self._config.task_limit)
             deps = None
             status = UNKNOWN
             runnable = False
@@ -1037,7 +1051,7 @@ class Worker(object):
 
         :return:
         """
-        for task_id, p in six.iteritems(self._running_tasks):
+        for task_id, p in self._running_tasks.items():
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Task {} died unexpectedly with exit code {}'.format(task_id, p.exitcode)
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
@@ -1202,7 +1216,7 @@ class Worker(object):
                 if len(self._running_tasks) == 0:
                     self._idle_since = self._idle_since or datetime.datetime.now()
                     if self._keep_alive(get_work_response):
-                        six.next(sleeper)
+                        next(sleeper)
                         continue
                     else:
                         break

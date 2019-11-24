@@ -19,15 +19,12 @@ Locking functionality when launching things from the command line.
 Uses a pidfile.
 This prevents multiple identical workflows to be launched simultaneously.
 """
-from __future__ import print_function
 
 import errno
 import hashlib
 import os
 import sys
 from subprocess import Popen, PIPE
-
-from luigi import six
 
 
 def getpcmd(pid):
@@ -38,7 +35,7 @@ def getpcmd(pid):
     """
     if os.name == "nt":
         # Use wmic command instead of ps on Windows.
-        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid, )
+        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid,)
         with os.popen(cmd, 'r') as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
             if lines:
@@ -46,7 +43,7 @@ def getpcmd(pid):
                 return val
     elif sys.platform == "darwin":
         # Use pgrep instead of /proc on macOS.
-        pidfile = ".%d.pid" % (pid, )
+        pidfile = ".%d.pid" % (pid,)
         with open(pidfile, 'w') as f:
             f.write(str(pid))
         try:
@@ -66,10 +63,7 @@ def getpcmd(pid):
         # https://github.com/spotify/luigi/pull/1876
         try:
             with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
-                if six.PY3:
-                    return fh.read().replace('\0', ' ').rstrip()
-                else:
-                    return fh.read().replace('\0', ' ').decode('utf8').rstrip()
+                return fh.read().replace('\0', ' ').rstrip()
         except IOError:
             # the system may not allow reading the command line
             # of a process owned by another user

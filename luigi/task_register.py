@@ -20,8 +20,8 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 
 import abc
 
-from luigi import six
 import logging
+
 logger = logging.getLogger('luigi-interface')
 
 
@@ -76,6 +76,7 @@ class Register(abc.ABCMeta):
         If a Task has already been instantiated with the same parameters,
         the previous instance is returned to reduce number of object instances.
         """
+
         def instantiate():
             return super(Register, cls).__call__(*args, **kwargs)
 
@@ -189,7 +190,7 @@ class Register(abc.ABCMeta):
 
         :return: a generator of tuples (TODO: we should make this more elegant)
         """
-        for task_name, task_cls in six.iteritems(cls._get_reg()):
+        for task_name, task_cls in cls._get_reg().items():
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():
@@ -214,7 +215,8 @@ class Register(abc.ABCMeta):
 
     @classmethod
     def _missing_task_msg(cls, task_name):
-        weighted_tasks = [(Register._editdistance(task_name, task_name_2), task_name_2) for task_name_2 in cls.task_names()]
+        weighted_tasks = [(Register._editdistance(task_name, task_name_2), task_name_2) for task_name_2 in
+                          cls.task_names()]
         ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
         candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
         if candidates:

@@ -27,6 +27,7 @@ from enum import IntEnum
 import json
 from json import JSONEncoder
 from collections import OrderedDict
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -35,10 +36,7 @@ import operator
 import functools
 from ast import literal_eval
 
-try:
-    from ConfigParser import NoOptionError, NoSectionError
-except ImportError:
-    from configparser import NoOptionError, NoSectionError
+from configparser import NoOptionError, NoSectionError
 
 from luigi import date_interval
 from luigi import task_register
@@ -1239,7 +1237,7 @@ class ChoiceParameter(Parameter):
         else:
             self.description = ""
         self.description += (
-            "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
+                "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
 
     def parse(self, s):
         var = self._var_type(s)

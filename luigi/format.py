@@ -24,8 +24,6 @@ import locale
 import tempfile
 import warnings
 
-from luigi import six
-
 
 class FileWrapper(object):
     """
@@ -119,7 +117,8 @@ class InputPipeProcessWrapper(object):
         if self._process.returncode not in (0, 141, 128 - 141):
             # 141 == 128 + 13 == 128 + SIGPIPE - normally processes exit with 128 + {reiceived SIG}
             # 128 - 141 == -13 == -SIGPIPE, sometimes python receives -13 for some subprocesses
-            raise RuntimeError('Error reading from pipe. Subcommand exited with non-zero exit status %s.' % self._process.returncode)
+            raise RuntimeError(
+                'Error reading from pipe. Subcommand exited with non-zero exit status %s.' % self._process.returncode)
 
     def close(self):
         self._finish()
@@ -334,7 +333,7 @@ class MixedUnicodeBytesWrapper(BaseWrapper):
         self._stream.writelines((self._convert(line) for line in lines))
 
     def _convert(self, b):
-        if isinstance(b, six.text_type):
+        if isinstance(b, str):
             b = b.encode(self.encoding)
             warnings.warn('Writing unicode to byte stream', stacklevel=2)
         return b
@@ -455,27 +454,23 @@ class WrappedFormat(Format):
 
 
 class TextFormat(WrappedFormat):
-
     input = 'unicode'
     output = 'bytes'
     wrapper_cls = TextWrapper
 
 
 class MixedUnicodeBytesFormat(WrappedFormat):
-
     output = 'bytes'
     wrapper_cls = MixedUnicodeBytesWrapper
 
 
 class NewlineFormat(WrappedFormat):
-
     input = 'bytes'
     output = 'bytes'
     wrapper_cls = NewlineWrapper
 
 
 class GzipFormat(Format):
-
     input = 'bytes'
     output = 'bytes'
 
@@ -493,7 +488,6 @@ class GzipFormat(Format):
 
 
 class Bzip2Format(Format):
-
     input = 'bytes'
     output = 'bytes'
 
@@ -514,9 +508,4 @@ MixedUnicodeBytes = MixedUnicodeBytesFormat()
 
 
 def get_default_format():
-    if six.PY3:
-        return Text
-    elif os.linesep == '\n':
-        return Nop
-    else:
-        return SysNewLine
+    return Text
