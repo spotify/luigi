@@ -29,7 +29,7 @@ import luigi.notifications
 import minicluster
 import mock
 from luigi.mock import MockTarget
-from luigi.six import StringIO
+from io import StringIO
 from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True

@@ -24,8 +24,6 @@ import logging
 import re
 import tempfile
 
-from luigi import six
-
 import luigi
 from luigi.contrib import rdbms
 
@@ -36,7 +34,8 @@ try:
     import psycopg2.errorcodes
     import psycopg2.extensions
 except ImportError:
-    logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
+    logger.warning(
+        "Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
 
 class MultiReplacer(object):
@@ -63,7 +62,8 @@ class MultiReplacer(object):
         >>> MultiReplacer(replace_pairs)("ab")
         'xb'
     """
-# TODO: move to misc/util module
+
+    # TODO: move to misc/util module
 
     def __init__(self, replace_pairs):
         """
@@ -113,7 +113,7 @@ class PostgresTarget(luigi.Target):
     use_db_timestamps = True
 
     def __init__(
-        self, host, database, user, password, table, update_id, port=None
+            self, host, database, user, password, table, update_id, port=None
     ):
         """
         Args:
@@ -261,9 +261,9 @@ class CopyToTable(rdbms.CopyToTable):
         if value in self.null_values:
             return r'\\N'
         else:
-            return default_escape(six.text_type(value))
+            return default_escape(str(value))
 
-# everything below will rarely have to be overridden
+    # everything below will rarely have to be overridden
 
     def output(self):
         """
@@ -282,12 +282,14 @@ class CopyToTable(rdbms.CopyToTable):
         )
 
     def copy(self, cursor, file):
-        if isinstance(self.columns[0], six.string_types):
+        if isinstance(self.columns[0], str):
             column_names = self.columns
         elif len(self.columns[0]) == 2:
             column_names = [c[0] for c in self.columns]
         else:
-            raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
+            raise Exception(
+                'columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (
+                self.columns[0],))
         cursor.copy_from(file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
 
     def run(self):
@@ -363,6 +365,7 @@ class PostgresQuery(rdbms.Query):
 
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
+
     def run(self):
         connection = self.output().connect()
         connection.autocommit = self.autocommit
