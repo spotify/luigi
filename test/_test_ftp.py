@@ -28,13 +28,7 @@ import os
 import shutil
 import sys
 from helpers import unittest
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import BytesIO
-
-    def StringIO(s):
-        return BytesIO(s.encode('utf8'))
+from io import StringIO
 
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
@@ -68,12 +62,12 @@ class TestFTPFilesystem(unittest.TestCase):
         ftp.mkd('hola')
         ftp.cwd('hola')
         f2 = StringIO(FILE2)
-        ftp.storbinary('STOR file2', f2)     # send the file
+        ftp.storbinary('STOR file2', f2)  # send the file
         f3 = StringIO(FILE3)
-        ftp.storbinary('STOR file3', f3)     # send the file
+        ftp.storbinary('STOR file3', f3)  # send the file
         ftp.cwd('..')
         f1 = StringIO(FILE1)
-        ftp.storbinary('STOR file1', f1)     # send the file
+        ftp.storbinary('STOR file1', f1)  # send the file
         ftp.close()
 
     def test_file_remove(self):
