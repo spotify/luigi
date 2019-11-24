@@ -33,7 +33,6 @@ import mock
 from nose.plugins.attrib import attr
 
 
-
 def poll_generator():
     yield None
     yield 1
