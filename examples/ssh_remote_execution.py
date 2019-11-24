@@ -19,8 +19,6 @@ from __future__ import print_function
 
 from collections import defaultdict
 
-from luigi import six
-
 import luigi
 from luigi.contrib.ssh import RemoteContext, RemoteTarget
 from luigi.mock import MockTarget
@@ -79,7 +77,7 @@ class ProcessRemoteData(luigi.Task):
                 processes_per_user[username] += 1
 
         toplist = sorted(
-            six.iteritems(processes_per_user),
+            processes_per_user.items(),
             key=lambda x: x[1],
             reverse=True
         )
