@@ -23,15 +23,11 @@ import mimetypes
 import os
 import tempfile
 import time
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
 
+from urllib.parse import urlsplit
+from io import BytesIO
 from luigi.contrib import gcp
 import luigi.target
-from luigi import six
-from luigi.six.moves import xrange
 from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
@@ -71,7 +67,7 @@ def _wait_for_consistency(checker):
     This is necessary for e.g. create/delete where the operation might return,
     but won't be reflected for a bit.
     """
-    for _ in xrange(EVENTUAL_CONSISTENCY_MAX_SLEEPS):
+    for _ in range(EVENTUAL_CONSISTENCY_MAX_SLEEPS):
         if checker():
             return
 
@@ -108,6 +104,7 @@ class GCSClient(luigi.target.FileSystem):
       contents of this file (currently found at https://www.googleapis.com/discovery/v1/apis/storage/v1/rest )
       as the ``descriptor`` argument.
     """
+
     def __init__(self, oauth_credentials=None, descriptor='', http_=None,
                  chunksize=CHUNKSIZE, **discovery_build_kwargs):
         self.chunksize = chunksize
@@ -285,10 +282,10 @@ class GCSClient(luigi.target.FileSystem):
 
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        assert isinstance(mimetype, six.string_types)
-        if not isinstance(contents, six.binary_type):
+        assert isinstance(mimetype, str)
+        if not isinstance(contents, bytes):
             contents = contents.encode("utf-8")
-        media = http.MediaIoBaseUpload(six.BytesIO(contents), mimetype, resumable=bool(contents))
+        media = http.MediaIoBaseUpload(BytesIO(contents), mimetype, resumable=bool(contents))
         self._do_put(media, dest_path)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
@@ -378,7 +375,7 @@ class GCSClient(luigi.target.FileSystem):
 
         for it in self.listdir(path):
             if it.startswith(path + '/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
-                   len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
+                    len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
                 yield it
 
     def download(self, path, chunksize=None, chunk_callback=lambda _: False):
