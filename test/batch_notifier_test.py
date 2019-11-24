@@ -1,4 +1,3 @@
-# coding=utf-8
 from smtplib import SMTPServerDisconnected
 
 import mock
@@ -508,7 +507,6 @@ class BatchNotifierTest(unittest.TestCase):
             '<li>Task() (1 failure)\n'
             '<pre>Érror</pre>\n'
             '</ul>'
-            ,
         )
 
     def test_unicode_param_value(self):

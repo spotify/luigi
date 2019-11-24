@@ -16,7 +16,7 @@
 #
 
 import abc
-from abc import abstractmethod, abstractproperty, ABCMeta
+from abc import abstractmethod, ABCMeta
 import logging
 import json
 import os
