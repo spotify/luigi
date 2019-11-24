@@ -23,90 +23,107 @@ import os
 import subprocess
 
 import luigi
-from luigi import six
 from luigi.contrib import bigquery, gcs
 from luigi.task import MixinNaiveBulkComplete
 
 logger = logging.getLogger('luigi-interface')
 
 
-@six.add_metaclass(abc.ABCMeta)
-class DataflowParamKeys(object):
+class DataflowParamKeys(metaclass=abc.ABCMeta):
     """
     Defines the naming conventions for Dataflow execution params.
     For example, the Java API expects param names in lower camel case, whereas
     the Python implementation expects snake case.
 
     """
-    @abstractproperty
+
+    @property
+    @abstractmethod
     def runner(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def project(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def zone(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def region(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def staging_location(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def temp_location(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def gcp_temp_location(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def num_workers(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def autoscaling_algorithm(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def max_num_workers(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def disk_size_gb(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def worker_machine_type(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def worker_disk_type(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def job_name(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def service_account(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def network(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def subnetwork(self):
         pass
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def labels(self):
         pass
 
@@ -118,6 +135,7 @@ class _CmdLineRunner(object):
     own launcher class and set it in BeamDataflowJobTask.cmd_line_runner.
 
     """
+
     @staticmethod
     def run(cmd, task=None):
         process = subprocess.Popen(
@@ -141,8 +159,7 @@ class _CmdLineRunner(object):
             raise subprocess.CalledProcessError(exit_code, cmd, output=output)
 
 
-@six.add_metaclass(ABCMeta)
-class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
+class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=ABCMeta):
     """
     Luigi wrapper for a Dataflow job. Must be overridden for each Beam SDK
     with that SDK's dataflow_executable().
@@ -419,7 +436,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
 
         for (name, targets) in job_input.items():
             uris = [
-              self.get_target_path(uri_target) for uri_target in luigi.task.flatten(targets)
+                self.get_target_path(uri_target) for uri_target in luigi.task.flatten(targets)
             ]
             if isinstance(targets, dict):
                 """

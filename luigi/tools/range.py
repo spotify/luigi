@@ -590,8 +590,10 @@ def _get_filesystems_and_globs(datetime_to_task, datetime_to_re):
 
     for o, t in zip(sample_outputs, sample_tasks):
         if len(o) != len(sample_outputs[0]):
-            raise NotImplementedError("Outputs must be consistent over time, sorry; was %r for %r and %r for %r" % (
-            o, t, sample_outputs[0], sample_tasks[0]))
+            raise NotImplementedError(
+                "Outputs must be consistent over time, sorry; was %r for %r and %r for %r" % (
+                    o, t, sample_outputs[0], sample_tasks[0])
+            )
             # TODO fall back on requiring last couple of days? to avoid astonishing blocking when changes like that are deployed
             # erm, actually it's not hard to test entire hours_back..hours_forward and split into consistent subranges FIXME?
         for target in o:
