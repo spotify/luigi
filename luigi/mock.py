@@ -27,7 +27,7 @@ import sys
 import warnings
 
 from luigi import target
-from luigi.format import get_default_format, MixedUnicodeBytes
+from luigi.format import get_default_format
 
 
 class MockFileSystem(target.FileSystem):
