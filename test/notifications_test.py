@@ -135,8 +135,8 @@ class ExceptionFormatTest(unittest.TestCase):
 
     @with_config({"email": {"receiver": "a@a.a"}})
     def testEmailRecipients(self):
-        self.assertCountEqual(self, notifications._email_recipients(), ["a@a.a"])
-        self.assertCountEqual(self, notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
+        self.assertCountEqual(notifications._email_recipients(), ["a@a.a"])
+        self.assertCountEqual(notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
         self.assertCountEqual(
             self,
             notifications._email_recipients(["b@b.b", "c@c.c"]),
@@ -145,8 +145,8 @@ class ExceptionFormatTest(unittest.TestCase):
 
     @with_config({"email": {}}, replace_sections=True)
     def testEmailRecipientsNoConfig(self):
-        self.assertCountEqual(self, notifications._email_recipients(), [])
-        self.assertCountEqual(self, notifications._email_recipients("a@a.a"), ["a@a.a"])
+        self.assertCountEqual(notifications._email_recipients(), [])
+        self.assertCountEqual(notifications._email_recipients("a@a.a"), ["a@a.a"])
         self.assertCountEqual(
             self,
             notifications._email_recipients(["a@a.a", "b@b.b"]),
