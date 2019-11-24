@@ -20,11 +20,11 @@ import subprocess
 import tempfile
 from functools import partial
 from multiprocessing import Value
+from io import BytesIO
 
 from helpers import unittest
 import luigi
 import luigi.contrib.hdfs
-from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
@@ -32,7 +32,6 @@ from subprocess import Popen
 import mock
 from nose.plugins.attrib import attr
 
-BytesIO = six.BytesIO
 
 
 def poll_generator():
@@ -99,7 +98,7 @@ class ExternalProgramTaskTest(unittest.TestCase):
             job.run()
         except ExternalProgramRunError as e:
             self.assertEqual(e.err, 'stderr')
-            self.assertIn('STDERR: stderr', six.text_type(e))
+            self.assertIn('STDERR: stderr', str(e))
             self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
         else:
             self.fail('Should have thrown ExternalProgramRunError')
