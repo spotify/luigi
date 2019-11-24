@@ -16,8 +16,7 @@
 #
 
 import logging
-
-from luigi import six
+import types
 
 import luigi.target
 
@@ -49,13 +48,14 @@ class CascadingClient(object):
 
         for method_name in method_names:
             new_method = self._make_method(method_name)
-            real_method = six.create_bound_method(new_method, self)
+            real_method = types.MethodType(new_method, self)
             setattr(self, method_name, real_method)
 
     @classmethod
     def _make_method(cls, method_name):
         def new_method(self, *args, **kwargs):
             return self._chained_call(method_name, *args, **kwargs)
+
         return new_method
 
     def _chained_call(self, method_name, *args, **kwargs):
