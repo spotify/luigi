@@ -31,22 +31,21 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
-try:
-    from ConfigParser import NoSectionError
-except ImportError:
-    from configparser import NoSectionError
-
-from luigi import six
+from configparser import NoSectionError
 
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.target import (
+    FileAlreadyExists,
+    FileSystem,
+    FileSystemException,
+    FileSystemTarget,
+    AtomicLocalFile,
+    MissingParentDirectory
+)
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
@@ -482,14 +481,14 @@ class S3Client(FileSystem):
         for item in s3_bucket.objects.filter(Prefix=key_path):
             last_modified_date = item.last_modified
             if (
-                # neither are defined, list all
-                (not start_time and not end_time) or
-                # start defined, after start
-                (start_time and not end_time and start_time < last_modified_date) or
-                # end defined, prior to end
-                (not start_time and end_time and last_modified_date < end_time) or
-                (start_time and end_time and start_time <
-                 last_modified_date < end_time)  # both defined, between
+                    # neither are defined, list all
+                    (not start_time and not end_time) or
+                    # start defined, after start
+                    (start_time and not end_time and start_time < last_modified_date) or
+                    # end defined, prior to end
+                    (not start_time and end_time and last_modified_date < end_time) or
+                    (start_time and end_time and start_time <
+                     last_modified_date < end_time)  # both defined, between
             ):
                 if return_key:
                     yield item
@@ -512,7 +511,7 @@ class S3Client(FileSystem):
         except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
-        for k, v in six.iteritems(config):
+        for k, v in config.items():
             try:
                 config[k] = int(v)
             except ValueError:
