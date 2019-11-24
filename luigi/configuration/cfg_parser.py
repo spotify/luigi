@@ -33,8 +33,14 @@ import os
 import re
 import warnings
 
-from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-from configparser import Interpolation, BasicInterpolation
+from configparser import (
+    ConfigParser,
+    NoOptionError,
+    NoSectionError,
+    InterpolationError,
+    Interpolation,
+    BasicInterpolation,
+)
 
 from .base_parser import BaseParser
 
