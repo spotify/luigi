@@ -19,7 +19,6 @@ from __future__ import print_function
 from helpers import unittest
 
 from luigi.mock import MockTarget, MockFileSystem
-from luigi import six
 from luigi.format import Nop
 
 
@@ -122,8 +121,5 @@ class TestImportMockFile(unittest.TestCase):
 
     def test_mockfile(self):
         from luigi.mock import MockFile
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
-                self.assertTrue(isinstance(MockFile('foo'), MockTarget))
-        else:
+        with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
             self.assertTrue(isinstance(MockFile('foo'), MockTarget))

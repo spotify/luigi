@@ -34,6 +34,7 @@ import random
 import re
 import shutil
 import signal
+
 try:
     from StringIO import StringIO
 except ImportError:
@@ -44,7 +45,6 @@ import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
-from luigi import six
 
 from luigi import configuration
 import luigi
@@ -53,9 +53,6 @@ import luigi.contrib.gcs
 import luigi.contrib.hdfs
 import luigi.contrib.s3
 from luigi.contrib import mrrunner
-
-if six.PY2:
-    from itertools import imap as map
 
 try:
     # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
@@ -66,7 +63,6 @@ except ImportError:
 logger = logging.getLogger('luigi-interface')
 
 _attached_packages = []
-
 
 TRACKING_RE = re.compile(r'(tracking url|the url to track the job):\s+(?P<url>.+)$')
 
@@ -284,7 +280,8 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
     def track_process(arglist, tracking_url_callback, env=None):
         # Dump stdout to a temp file, poll stderr and log it
         temp_stdout = tempfile.TemporaryFile('w+t')
-        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env, close_fds=True, universal_newlines=True)
+        proc = subprocess.Popen(arglist, stdout=temp_stdout, stderr=subprocess.PIPE, env=env, close_fds=True,
+                                universal_newlines=True)
 
         # We parse the output to try to find the tracking URL.
         # This URL is useful for fetching the logs of the job.
@@ -371,7 +368,8 @@ def fetch_task_failures(tracking_url):
     b = mechanize.Browser()
     b.open(failures_url, timeout=timeout)
     links = list(b.links(text_regex='Last 4KB'))  # For some reason text_regex='All' doesn't work... no idea why
-    links = random.sample(links, min(10, len(links)))  # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
+    links = random.sample(links, min(10, len(
+        links)))  # Fetch a random subset of all failed tasks, so not to be biased towards the early fails
     error_text = []
     for link in links:
         task_url = link.url.replace('&start=-4097', '&start=-100000')  # Increase the offset
@@ -408,6 +406,7 @@ class HadoopJobRunner(JobRunner):
                  end_job_with_atomic_move_dir=True, archives=None):
         def get(x, default):
             return x is not None and x or default
+
         self.streaming_jar = streaming_jar
         self.modules = get(modules, [])
         self.streaming_args = get(streaming_args, [])
@@ -515,7 +514,7 @@ class HadoopJobRunner(JobRunner):
 
         jobconfs = job.jobconfs()
 
-        for k, v in six.iteritems(self.jobconfs):
+        for k, v in self.jobconfs.items():
             jobconfs.append('%s=%s' % (k, v))
 
         for conf in jobconfs:
@@ -894,7 +893,7 @@ class JobTask(BaseHadoopJobTask):
         """
         Increments any unflushed counter values.
         """
-        for key, count in six.iteritems(self._counter_dict):
+        for key, count in self._counter_dict.items():
             if count == 0:
                 continue
             args = list(key) + [count]
@@ -1033,13 +1032,15 @@ class JobTask(BaseHadoopJobTask):
         """
         self.init_hadoop()
         self.init_reducer()
-        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer, self.final_reducer)
+        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.reducer,
+                                     self.final_reducer)
         self.writer(outputs, stdout)
 
     def run_combiner(self, stdin=sys.stdin, stdout=sys.stdout):
         self.init_hadoop()
         self.init_combiner()
-        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner, self.final_combiner)
+        outputs = self._reduce_input(self.internal_reader((line[:-1] for line in stdin)), self.combiner,
+                                     self.final_combiner)
         self.internal_writer(outputs, stdout)
 
     def internal_reader(self, input_stream):

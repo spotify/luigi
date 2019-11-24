@@ -90,15 +90,15 @@ import itertools
 
 import luigi
 
-from luigi import six
-
 logger = logging.getLogger('luigi-interface')
 
 try:
     import elasticsearch
+
     if elasticsearch.__version__ < (1, 0, 0):
-        logger.warning("This module works with elasticsearch 1.0.0 "
-                       "or newer only.")
+        logger.warning(
+            "This module works with elasticsearch 1.0.0 or newer only."
+        )
     from elasticsearch.helpers import bulk
     from elasticsearch.connection import Urllib3HttpConnection
 
@@ -176,10 +176,10 @@ class ElasticsearchTarget(luigi.Target):
         self.create_marker_index()
         self.es.index(index=self.marker_index, doc_type=self.marker_doc_type,
                       id=self.marker_index_document_id(), body={
-                          'update_id': self.update_id,
-                          'target_index': self.index,
-                          'target_doc_type': self.doc_type,
-                          'date': datetime.datetime.now()})
+                'update_id': self.update_id,
+                'target_index': self.index,
+                'target_doc_type': self.doc_type,
+                'date': datetime.datetime.now()})
         self.es.indices.flush(index=self.marker_index)
         self.ensure_hist_size()
 
@@ -356,7 +356,7 @@ class CopyToIndex(luigi.Task):
             for line in fobj:
                 yield line
 
-# everything below will rarely have to be overridden
+    # everything below will rarely have to be overridden
 
     def _docs(self):
         """
@@ -366,7 +366,7 @@ class CopyToIndex(luigi.Task):
         iterdocs = iter(self.docs())
         first = next(iterdocs)
         needs_parsing = False
-        if isinstance(first, six.string_types):
+        if isinstance(first, str):
             needs_parsing = True
         elif isinstance(first, dict):
             pass

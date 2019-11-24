@@ -19,7 +19,6 @@
 These are the unit tests for the BigQueryLoadAvro class.
 """
 
-import six
 import unittest
 import avro
 import avro.schema
@@ -49,7 +48,4 @@ class BigQueryAvroTest(unittest.TestCase):
         # otherwise AttributeError is thrown
 
     def _parse_schema(self, schema_json):
-        if six.PY2:
-            return avro.schema.parse(schema_json)
-        else:
-            return avro.schema.Parse(schema_json)
+        return avro.schema.Parse(schema_json)
