@@ -177,8 +177,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         except (NoOptionError, NoSectionError):
             if default is LuigiConfigParser.NO_DEFAULT:
                 raise
-            if expected_type is not None and default is not None and \
-                    not isinstance(default, expected_type):
+            if expected_type is not None and default is not None and not isinstance(default, expected_type):
                 raise
             return default
 
