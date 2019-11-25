@@ -30,6 +30,8 @@ sudo: false
 # https://github.com/travis-ci/travis-ci/issues/9815
 matrix:
   include:
+    - env: TOXENV=flake8
+    - env: TOXENV=docs
 
     - python: 3.6
       env: TOXENV=py36-core
