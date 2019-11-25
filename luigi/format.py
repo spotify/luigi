@@ -20,11 +20,7 @@ import subprocess
 import io
 import os
 import re
-import locale
 import tempfile
-import warnings
-
-from luigi import six
 
 
 class FileWrapper(object):
