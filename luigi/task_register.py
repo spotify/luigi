@@ -20,7 +20,6 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 
 import abc
 
-from luigi import six
 import logging
 logger = logging.getLogger('luigi-interface')
 
@@ -189,7 +188,7 @@ class Register(abc.ABCMeta):
 
         :return: a generator of tuples (TODO: we should make this more elegant)
         """
-        for task_name, task_cls in six.iteritems(cls._get_reg()):
+        for task_name, task_cls in cls._get_reg().items():
             if task_cls == cls.AMBIGUOUS_CLASS:
                 continue
             for param_name, param_obj in task_cls.get_params():

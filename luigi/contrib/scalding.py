@@ -302,7 +302,7 @@ class ScaldingJobTask(luigi.contrib.hadoop.BaseHadoopJobTask):
         Returns an array of args to pass to the job.
         """
         arglist = []
-        for k, v in six.iteritems(self.requires_hadoop()):
+        for k, v in self.requires_hadoop().items():
             arglist.append('--' + k)
             arglist.extend([t.output().path for t in flatten(v)])
         arglist.extend(['--output', self.output()])

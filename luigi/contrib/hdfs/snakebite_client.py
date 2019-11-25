@@ -62,10 +62,10 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         config = hdfs_config.hdfs()
         if self.pid != os.getpid() or not self._bite:
             client_kwargs = dict(filter(
-                lambda k_v: k_v[1] is not None and k_v[1] != '', six.iteritems({
+                lambda k_v: k_v[1] is not None and k_v[1] != '', {
                     'hadoop_version': config.client_version,
                     'effective_user': config.effective_user,
-                })
+                }.items()
             ))
             if config.snakebite_autoconfig:
                 """

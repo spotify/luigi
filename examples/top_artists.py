@@ -132,7 +132,7 @@ class AggregateArtists(luigi.Task):
                     artist_count[artist] += 1
 
         with self.output().open('w') as out_file:
-            for artist, count in six.iteritems(artist_count):
+            for artist, count in artist_count.items():
                 out_file.write('{}\t{}\n'.format(artist, count))
 
 

@@ -263,13 +263,13 @@ class TaskProcess(multiprocessing.Process):
     @contextlib.contextmanager
     def _forward_attributes(self):
         # forward configured attributes to the task
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+        for reporter_attr, task_attr in self.forward_reporter_attributes.items():
             setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
         try:
             yield self
         finally:
             # reset attributes again
-            for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+            for reporter_attr, task_attr in self.forward_reporter_attributes.items():
                 setattr(self.task, task_attr, None)
 
 
@@ -1037,7 +1037,7 @@ class Worker(object):
 
         :return:
         """
-        for task_id, p in six.iteritems(self._running_tasks):
+        for task_id, p in self._running_tasks.items():
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Task {} died unexpectedly with exit code {}'.format(task_id, p.exitcode)
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
