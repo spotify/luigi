@@ -40,6 +40,8 @@ matrix:
       if: env(DROPBOX_APP_TOKEN) is present
     - python: 3.6
       env: TOXENV=py36-unixsocket
+    - python: 3.6
+      env: TOXENV=py36-postgres
 
     - python: 3.7
       dist: xenial
@@ -66,6 +68,8 @@ matrix:
       dist: xenial
       sudo: true
       env: TOXENV=py37-azureblob
+    - python: 3.7
+      env: TOXENV=py37-postgres
 
 cache:
   directories:
