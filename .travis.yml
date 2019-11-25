@@ -33,6 +33,7 @@ matrix:
     - env: TOXENV=flake8
     - env: TOXENV=docs
 
+
     - python: 3.6
       env: TOXENV=py36-core
     - python: 3.6
