@@ -21,7 +21,6 @@ from hdfs.ext.kerberos import KerberosClient
 from nose.plugins.attrib import attr
 
 from helpers import with_config
-from contrib.hdfs_test import HdfsTargetTestMixin
 from luigi.contrib.hdfs import WebHdfsClient
 
 
