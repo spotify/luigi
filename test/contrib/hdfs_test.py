@@ -15,23 +15,14 @@
 # limitations under the License.
 #
 
-import functools
 import re
-from helpers import unittest
 import random
-import threading
 import pickle
 
-import helpers
 import luigi
-import mock
 import luigi.format
 from luigi.contrib import hdfs
 from luigi import six
-from luigi.contrib.hdfs.hadoopcli_clients import HdfsClient
-from luigi.contrib.hdfs.format import HdfsAtomicWriteError, HdfsReadPipe
-from luigi.contrib.target import CascadingClient
-from nose.plugins.attrib import attr
 import luigi.contrib.hdfs.clients
 
 from target_test import FileSystemTargetTestMixin

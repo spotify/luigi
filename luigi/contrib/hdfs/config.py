@@ -23,8 +23,6 @@ You can configure what client by setting the "client" config under the "hdfs" se
 import random
 import luigi
 import luigi.configuration
-from luigi import six
-import warnings
 import os
 import getpass
 
@@ -78,6 +76,7 @@ def get_configured_hdfs_client():
     compatibility when 'client' isn't configured.
     """
     return hdfs().client
+
 
 def tmppath(path=None, include_unix_username=True):
     """

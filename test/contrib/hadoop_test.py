@@ -34,7 +34,6 @@ from nose.plugins.attrib import attr
 luigi.notifications.DEBUG = True
 
 
-
 class OutputMixin(luigi.Task):
     use_hdfs = luigi.BoolParameter(default=False)
 
