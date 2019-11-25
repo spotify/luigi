@@ -33,7 +33,7 @@ import tempfile
 import io
 
 import luigi
-import luigi.file
+import luigi.local_target
 import luigi.format
 import luigi.target
 from luigi.format import FileWrapper
