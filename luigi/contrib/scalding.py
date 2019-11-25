@@ -21,8 +21,6 @@ import re
 import subprocess
 import warnings
 
-from luigi import six
-
 import luigi.configuration
 import luigi.contrib.hadoop
 import luigi.contrib.hadoop_jar

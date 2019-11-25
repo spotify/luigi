@@ -19,8 +19,6 @@ from __future__ import print_function
 
 from collections import defaultdict
 
-from luigi import six
-
 import luigi
 from luigi.contrib.ssh import RemoteContext, RemoteTarget
 from luigi.mock import MockTarget

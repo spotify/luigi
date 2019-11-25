@@ -31,8 +31,6 @@ import subprocess
 import sys
 import tempfile
 
-from luigi import six
-
 import luigi
 from luigi import configuration
 

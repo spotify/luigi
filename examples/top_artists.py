@@ -19,8 +19,6 @@ import random
 from collections import defaultdict
 from heapq import nlargest
 
-from luigi import six
-
 import luigi
 import luigi.contrib.hdfs
 import luigi.contrib.postgres

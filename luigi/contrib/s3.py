@@ -41,8 +41,6 @@ try:
 except ImportError:
     from configparser import NoSectionError
 
-from luigi import six
-
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
