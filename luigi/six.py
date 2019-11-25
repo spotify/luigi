@@ -37,6 +37,11 @@ PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 PY34 = sys.version_info[0:2] >= (3, 4)
 
+
+class SixUsageException(Exception):
+    pass
+
+
 if PY3:
     string_types = str,
     integer_types = int,
@@ -575,7 +580,7 @@ if PY3:
         return iter(d.keys(**kw))
 
     def itervalues(d, **kw):
-        return iter(d.values(**kw))
+        raise SixUsageException()
 
     def iteritems(d, **kw):
         return iter(d.items(**kw))
@@ -593,7 +598,7 @@ else:
         return d.iterkeys(**kw)
 
     def itervalues(d, **kw):
-        return d.itervalues(**kw)
+        raise SixUsageException()
 
     def iteritems(d, **kw):
         return d.iteritems(**kw)
