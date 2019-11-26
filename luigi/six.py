@@ -37,6 +37,11 @@ PY2 = sys.version_info[0] == 2
 PY3 = sys.version_info[0] == 3
 PY34 = sys.version_info[0:2] >= (3, 4)
 
+
+class SixUsageException(Exception):
+    pass
+
+
 if PY3:
     string_types = str,
     integer_types = int,
@@ -810,6 +815,7 @@ def with_metaclass(meta, *bases):
 
 
 def add_metaclass(metaclass):
+    raise SixUsageException()
     """Class decorator for creating a class with a metaclass."""
     def wrapper(cls):
         orig_vars = cls.__dict__.copy()
