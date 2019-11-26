@@ -122,8 +122,5 @@ class TestImportMockFile(unittest.TestCase):
 
     def test_mockfile(self):
         from luigi.mock import MockFile
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
-                self.assertTrue(isinstance(MockFile('foo'), MockTarget))
-        else:
+        with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
             self.assertTrue(isinstance(MockFile('foo'), MockTarget))

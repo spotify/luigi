@@ -79,8 +79,7 @@ class URLLibFetcher(object):
         if url.username:
             # base64 encoding of username:password
             auth = base64.b64encode(six.b('{}:{}'.format(url.username, url.password or '')))
-            if six.PY3:
-                auth = auth.decode('utf-8')
+            auth = auth.decode('utf-8')
 
             # update full_url and create a request object with the auth header set
             full_url = url._replace(netloc=url.netloc.split('@', 1)[-1]).geturl()

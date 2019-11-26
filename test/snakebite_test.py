@@ -26,8 +26,7 @@ import luigi.target
 from luigi import six
 from nose.plugins.attrib import attr
 
-if six.PY3:
-    raise unittest.SkipTest("snakebite doesn't work on Python 3 yet.")
+raise unittest.SkipTest("snakebite doesn't work on Python 3 yet.")
 
 try:
     from luigi.contrib.hdfs import SnakebiteHdfsClient

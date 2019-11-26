@@ -117,16 +117,15 @@ class TestOpenerTarget(unittest.TestCase):
                                          bar='true')
 
     def test_binary_support(self):
-        '''Make sure keyword arguments are preserved through the OpenerTarget
+        """
+        Make sure keyword arguments are preserved through the OpenerTarget
+        """
+        # Verify we can't normally write binary data
+        fp = OpenerTarget("mock://file.txt").open('w')
+        self.assertRaises(TypeError, fp.write, b'\x07\x08\x07')
 
-        '''
-        if six.PY3:
-            # Verify we can't normally write binary data
-            fp = OpenerTarget("mock://file.txt").open('w')
-            self.assertRaises(TypeError, fp.write, b'\x07\x08\x07')
-
-            # Verify the format is passed to the target and write binary data
-            fp = OpenerTarget("mock://file.txt",
-                              format=luigi.format.MixedUnicodeBytes).open('w')
-            fp.write(b'\x07\x08\x07')
-            fp.close()
+        # Verify the format is passed to the target and write binary data
+        fp = OpenerTarget("mock://file.txt",
+                          format=luigi.format.MixedUnicodeBytes).open('w')
+        fp.write(b'\x07\x08\x07')
+        fp.close()
