@@ -24,7 +24,6 @@ from luigi import six
 import luigi.target
 
 
-@six.add_metaclass(abc.ABCMeta)
 class HdfsFileSystem(luigi.target.FileSystem):
     """
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
