@@ -20,7 +20,6 @@ Module containing abstract class about hdfs clients.
 """
 
 import abc
-from luigi import six
 import luigi.target
 
 
