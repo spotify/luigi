@@ -17,7 +17,6 @@
 
 import doctest
 import pickle
-import six
 import warnings
 
 from helpers import unittest, LuigiTestCase

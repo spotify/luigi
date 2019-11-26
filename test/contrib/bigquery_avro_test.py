@@ -19,7 +19,6 @@
 These are the unit tests for the BigQueryLoadAvro class.
 """
 
-import six
 import unittest
 import avro
 import avro.schema

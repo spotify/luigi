@@ -23,7 +23,6 @@ You can configure what client by setting the "client" config under the "hdfs" se
 import random
 import luigi
 import luigi.configuration
-from luigi import six
 import warnings
 import os
 import getpass

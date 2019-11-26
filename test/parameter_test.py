@@ -28,7 +28,6 @@ import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
-from luigi import six
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -999,6 +998,7 @@ class OverrideEnvStuff(LuigiTestCase):
     def testOverrideSchedulerPort(self):
         with self.assertWarnsRegex(DeprecationWarning, r'default-scheduler-port is deprecated'):
             env_params = luigi.interface.core()
+            self.assertEqual(env_params.scheduler_port, 6543)
 
     @with_config({"core": {"scheduler-port": '6544'}})
     def testOverrideSchedulerPort2(self):

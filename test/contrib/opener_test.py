@@ -1,7 +1,6 @@
 import luigi
 import mock
 import random
-import six
 import unittest
 
 from luigi.contrib.opener import OpenerTarget, NoOpenerError

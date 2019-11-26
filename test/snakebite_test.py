@@ -23,7 +23,6 @@ import time
 import unittest
 
 import luigi.target
-from luigi import six
 from nose.plugins.attrib import attr
 
 raise unittest.SkipTest("snakebite doesn't work on Python 3 yet.")

@@ -19,7 +19,6 @@ from __future__ import print_function
 from helpers import unittest
 
 from luigi.mock import MockTarget, MockFileSystem
-from luigi import six
 from luigi.format import Nop
 
 

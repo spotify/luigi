@@ -20,7 +20,6 @@ from helpers import unittest, in_parse
 
 import luigi
 import luigi.interface
-from luigi import six
 
 
 class DateTask(luigi.Task):

@@ -28,10 +28,8 @@ import mock
 import luigi.format
 from luigi.contrib import hdfs
 from luigi import six
-from luigi.contrib.hdfs import SnakebiteHdfsClient
 from luigi.contrib.hdfs.hadoopcli_clients import HdfsClient
 from luigi.contrib.hdfs.format import HdfsAtomicWriteError, HdfsReadPipe
-from luigi.contrib.target import CascadingClient
 from minicluster import MiniClusterTestCase
 from nose.plugins.attrib import attr
 import luigi.contrib.hdfs.clients
@@ -854,4 +852,3 @@ class _MiscOperationsMixin(object):
 class TestCliMisc(MiniClusterTestCase, _MiscOperationsMixin):
     def get_client(self):
         return luigi.contrib.hdfs.create_hadoopcli_client()
-
