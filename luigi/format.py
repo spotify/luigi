@@ -481,3 +481,4 @@ Bzip2 = Bzip2Format()
 
 def get_default_format():
     return Text
+
