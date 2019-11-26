@@ -501,7 +501,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
 
     def assertRegexpMatches(self, text, expected_regexp, msg=None):
         """Python 2.7 backport."""
-        if isinstance(expected_regexp, six.string_types):
+        if isinstance(expected_regexp, str):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(text):
             msg = msg or "Regexp didn't match"

@@ -279,7 +279,7 @@ class Parameter(object):
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if self.__class__ != Parameter:
             return
-        if not isinstance(param_value, six.string_types):
+        if not isinstance(param_value, str):
             warnings.warn('Parameter "{}" with value "{}" is not of type string.'.format(param_name, param_value))
 
     def normalize(self, x):
@@ -342,7 +342,7 @@ class OptionalParameter(Parameter):
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if self.__class__ != OptionalParameter:
             return
-        if not isinstance(param_value, six.string_types) and param_value is not None:
+        if not isinstance(param_value, str) and param_value is not None:
             warnings.warn('OptionalParameter "{}" with value "{}" is not of type string or None.'.format(
                 param_name, param_value))
 
