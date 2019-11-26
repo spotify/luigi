@@ -51,7 +51,7 @@ class SnakebiteHdfsClient(hdfs_abstract_client.HdfsFileSystem):
             return path
         # TODO: Should this be:
         # isinstance(path, (six.text_type, six.binary_type))?
-        if isinstance(path, six.string_types):
+        if isinstance(path, str):
             return [path, ]
         return [str(path), ]
 

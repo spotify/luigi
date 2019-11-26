@@ -285,7 +285,7 @@ class GCSClient(luigi.target.FileSystem):
 
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        assert isinstance(mimetype, six.string_types)
+        assert isinstance(mimetype, str)
         if not isinstance(contents, six.binary_type):
             contents = contents.encode("utf-8")
         media = http.MediaIoBaseUpload(six.BytesIO(contents), mimetype, resumable=bool(contents))

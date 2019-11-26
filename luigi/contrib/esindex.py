@@ -90,8 +90,6 @@ import itertools
 
 import luigi
 
-from luigi import six
-
 logger = logging.getLogger('luigi-interface')
 
 try:
@@ -366,7 +364,7 @@ class CopyToIndex(luigi.Task):
         iterdocs = iter(self.docs())
         first = next(iterdocs)
         needs_parsing = False
-        if isinstance(first, six.string_types):
+        if isinstance(first, str):
             needs_parsing = True
         elif isinstance(first, dict):
             pass
