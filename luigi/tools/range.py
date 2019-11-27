@@ -29,7 +29,6 @@ import itertools
 import functools
 import logging
 import warnings
-import operator
 import re
 import time
 from datetime import datetime, timedelta, date
@@ -529,8 +528,8 @@ def _constrain_glob(glob, paths, limit=5):
 
 
 def most_common(items):
-    [(k, _)] = Counter(items).most_common(1)
-    return k
+    [(element, counter)] = Counter(items).most_common(1)
+    return element, counter
 
 
 def _get_per_location_glob(tasks, outputs, regexes):
