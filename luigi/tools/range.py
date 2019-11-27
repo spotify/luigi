@@ -24,7 +24,7 @@ over and over and make no progress to more recent times. (See ``task_limit``
 and ``reverse`` parameters.)
 TODO foolproof against that kind of misuse?
 """
-
+from collections import Counter
 import itertools
 import functools
 import logging
@@ -529,14 +529,8 @@ def _constrain_glob(glob, paths, limit=5):
 
 
 def most_common(items):
-    """
-    Wanted functionality from Counters (new in Python 2.7).
-    """
-    counts = {}
-    for i in items:
-        counts.setdefault(i, 0)
-        counts[i] += 1
-    return max(counts.items(), key=operator.itemgetter(1))
+    [(k, _)] = Counter(items).most_common(1)
+    return k
 
 
 def _get_per_location_glob(tasks, outputs, regexes):
