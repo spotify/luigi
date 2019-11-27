@@ -24,7 +24,6 @@ import multiprocessing
 from io import BytesIO
 
 import sys
-import warnings
 
 from luigi import six
 from luigi import target
