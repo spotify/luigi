@@ -50,7 +50,7 @@ class LuigiJsonParser(BaseParser):
         for path in config_paths:
             if os.path.isfile(path):
                 with open(path, mode="r") as fp:
-                    self.data = self._update_data(self.data, json.load(path))
+                    self.data = self._update_data(self.data, json.load(fp))
 
         # freeze dict params
         for section, content in self.data.items():
