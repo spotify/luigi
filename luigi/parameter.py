@@ -22,6 +22,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 
 import abc
 import datetime
+import dateutil
 import warnings
 from enum import IntEnum
 import json
@@ -523,7 +524,7 @@ class PastDateParameter(DateParameter):
             return datetime.date.today()
 
         if self.timezone == self._UTC_TZ:
-            return datetime.datetime.now(pytz.utc).date()
+            return datetime.datetime.now(dateutil.tz.UTC).date()
 
         raise UnknownTimezoneException(
             'Unknown timezone {}. Possible timezones are {}'.format(

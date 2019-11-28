@@ -164,7 +164,6 @@ def _value(parameter):
     Previously Parameter exposed ``param_obj._value``. This is replacement for
     that so I don't need to rewrite all test cases.
     """
-
     class DummyLuigiTask(luigi.Task):
         param = parameter
 
