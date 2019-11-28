@@ -26,15 +26,7 @@ import warnings
 from enum import IntEnum
 import json
 from json import JSONEncoder
-from collections import OrderedDict
-import pytz
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
 import operator
-import functools
 from ast import literal_eval
 
 try:
@@ -47,6 +39,9 @@ from luigi import task_register
 from luigi import six
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
+
+from .freezing import recursively_freeze, FrozenOrderedDict
+
 
 _no_value = object()
 
@@ -379,8 +374,7 @@ class _DateParameterBase(Parameter):
         self.interval = interval
         self.start = start if start is not None else _UNIX_EPOCH.date()
 
-    @property
-    @abc.abstractmethod
+    @abc.abstractproperty
     def date_format(self):
         """
         Override me with a :py:meth:`~datetime.date.strftime` string.
@@ -556,16 +550,14 @@ class _DatetimeParameterBase(Parameter):
         self.interval = interval
         self.start = start if start is not None else _UNIX_EPOCH
 
-    @property
-    @abc.abstractmethod
+    @abc.abstractproperty
     def date_format(self):
         """
         Override me with a :py:meth:`~datetime.date.strftime` string.
         """
         pass
 
-    @property
-    @abc.abstractmethod
+    @abc.abstractproperty
     def _timedelta(self):
         """
         How to move one interval of this type forward (i.e. not counting self.interval).
@@ -944,57 +936,13 @@ class EnumParameter(Parameter):
         return e.name
 
 
-class _FrozenOrderedDict(Mapping):
-    """
-    It is an immutable wrapper around ordered dictionaries that implements the complete :py:class:`collections.Mapping`
-    interface. It can be used as a drop-in replacement for dictionaries where immutability and ordering are desired.
-    """
-
-    def __init__(self, *args, **kwargs):
-        self.__dict = OrderedDict(*args, **kwargs)
-        self.__hash = None
-
-    def __getitem__(self, key):
-        return self.__dict[key]
-
-    def __iter__(self):
-        return iter(self.__dict)
-
-    def __len__(self):
-        return len(self.__dict)
-
-    def __repr__(self):
-        return '<FrozenOrderedDict %s>' % repr(self.__dict)
-
-    def __hash__(self):
-        if self.__hash is None:
-            hashes = map(hash, self.items())
-            self.__hash = functools.reduce(operator.xor, hashes, 0)
-
-        return self.__hash
-
-    def get_wrapped(self):
-        return self.__dict
-
-
-def _recursively_freeze(value):
-    """
-    Recursively walks ``Mapping``s and ``list``s and converts them to ``_FrozenOrderedDict`` and ``tuples``, respectively.
-    """
-    if isinstance(value, Mapping):
-        return _FrozenOrderedDict(((k, _recursively_freeze(v)) for k, v in value.items()))
-    elif isinstance(value, list) or isinstance(value, tuple):
-        return tuple(_recursively_freeze(v) for v in value)
-    return value
-
-
 class _DictParamEncoder(JSONEncoder):
     """
-    JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~_FrozenOrderedDict` JSON serializable.
+    JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
     """
 
     def default(self, obj):
-        if isinstance(obj, _FrozenOrderedDict):
+        if isinstance(obj, FrozenOrderedDict):
             return obj.get_wrapped()
         return json.JSONEncoder.default(self, obj)
 
@@ -1034,11 +982,11 @@ class DictParameter(Parameter):
 
     def normalize(self, value):
         """
-        Ensure that dictionary parameter is converted to a _FrozenOrderedDict so it can be hashed.
+        Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
-        return _recursively_freeze(value)
+        return recursively_freeze(value)
 
-    def parse(self, s):
+    def parse(self, source):
         """
         Parses an immutable and ordered ``dict`` from a JSON string using standard JSON library.
 
@@ -1049,7 +997,10 @@ class DictParameter(Parameter):
 
         :param s: String to be parse
         """
-        return json.loads(s, object_pairs_hook=_FrozenOrderedDict)
+        # TOML based config convert params to python types itself.
+        if not isinstance(source, six.string_types):
+            return source
+        return json.loads(source, object_pairs_hook=FrozenOrderedDict)
 
     def serialize(self, x):
         return json.dumps(x, cls=_DictParamEncoder)
@@ -1093,7 +1044,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return _recursively_freeze(x)
+        return recursively_freeze(x)
 
     def parse(self, x):
         """
@@ -1102,7 +1053,7 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
-        return list(json.loads(x, object_pairs_hook=_FrozenOrderedDict))
+        return list(json.loads(x, object_pairs_hook=FrozenOrderedDict))
 
     def serialize(self, x):
         """
@@ -1165,7 +1116,7 @@ class TupleParameter(ListParameter):
         # ast.literal_eval(t_str) == t
         try:
             # loop required to parse tuple of tuples
-            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=_FrozenOrderedDict))
+            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
             return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
 
@@ -1290,8 +1241,7 @@ class ChoiceParameter(Parameter):
         else:
             self.description = ""
         self.description += (
-                "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}"
-        )
+            "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
 
     def parse(self, s):
         var = self._var_type(s)

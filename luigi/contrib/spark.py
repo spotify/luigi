@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import collections
 import logging
 import os
 import re
@@ -55,6 +56,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     # Only log stderr if spark fails (since stderr is normally quite verbose)
     always_log_stderr = False
+
     # Spark applications write its logs into stderr
     stream_for_searching_tracking_url = 'stderr'
 
@@ -72,6 +74,18 @@ class SparkSubmitTask(ExternalProgramTask):
 
         """
         return []
+
+    @property
+    def pyspark_python(self):
+        return None
+
+    @property
+    def pyspark_driver_python(self):
+        return None
+
+    @property
+    def hadoop_user_name(self):
+        return None
 
     @property
     def spark_version(self):
@@ -106,6 +120,15 @@ class SparkSubmitTask(ExternalProgramTask):
     @property
     def files(self):
         return self._list_config(configuration.get_config().get(self.spark_version, "files", None))
+
+    @property
+    def _conf(self):
+        conf = collections.OrderedDict(self.conf or {})
+        if self.pyspark_python:
+            conf['spark.pyspark.python'] = self.pyspark_python
+        if self.pyspark_driver_python:
+            conf['spark.pyspark.driver.python'] = self.pyspark_driver_python
+        return conf
 
     @property
     def conf(self):
@@ -170,9 +193,10 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def get_environment(self):
         env = os.environ.copy()
-        hadoop_conf_dir = self.hadoop_conf_dir
-        if hadoop_conf_dir:
-            env['HADOOP_CONF_DIR'] = hadoop_conf_dir
+        for prop in ('HADOOP_CONF_DIR', 'HADOOP_USER_NAME'):
+            var = getattr(self, prop.lower(), None)
+            if var:
+                env[prop] = var
         return env
 
     def program_environment(self):
@@ -192,7 +216,7 @@ class SparkSubmitTask(ExternalProgramTask):
         command += self._list_arg('--py-files', self.py_files)
         command += self._list_arg('--files', self.files)
         command += self._list_arg('--archives', self.archives)
-        command += self._dict_arg('--conf', self.conf)
+        command += self._dict_arg('--conf', self._conf)
         command += self._text_arg('--properties-file', self.properties_file)
         command += self._text_arg('--driver-memory', self.driver_memory)
         command += self._text_arg('--driver-java-options', self.driver_java_options)
