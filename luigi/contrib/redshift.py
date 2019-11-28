@@ -169,7 +169,8 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def copy_options(self):
         """
         Add extra copy options, for example:
@@ -526,14 +527,16 @@ class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
       configuration or environment variables.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def jsonpath(self):
         """
         Override the jsonpath schema location for the table.
         """
         return ''
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def copy_json_options(self):
         """
         Add extra copy options, for example:
@@ -622,19 +625,23 @@ class KillOpenRedshiftSessions(luigi.Task):
     # 30 seconds is usually fine; 60 is conservative
     connection_reset_wait_seconds = luigi.IntParameter(default=60)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def host(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def database(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def password(self):
         return None
 

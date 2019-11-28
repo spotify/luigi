@@ -16,7 +16,7 @@
 #
 
 import abc
-from abc import abstractmethod, abstractproperty, ABCMeta
+from abc import abstractmethod, ABCMeta
 import logging
 import json
 import os
@@ -38,75 +38,93 @@ class DataflowParamKeys(object):
     the Python implementation expects snake case.
 
     """
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def runner(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def project(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def zone(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def region(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def staging_location(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def temp_location(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def gcp_temp_location(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def num_workers(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def autoscaling_algorithm(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def max_num_workers(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def disk_size_gb(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def worker_machine_type(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def worker_disk_type(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def job_name(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def service_account(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def network(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def subnetwork(self):
         pass
 
-    @abstractproperty
+    @property
+    @abc.abstractmethod
     def labels(self):
         pass
 

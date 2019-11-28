@@ -274,7 +274,8 @@ class CopyToIndex(luigi.Task):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def index(self):
         """
         The target index.
