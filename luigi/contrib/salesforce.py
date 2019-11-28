@@ -34,10 +34,7 @@ try:
 except ImportError:
     logger.warning("This module requires the python package 'requests'.")
 
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
 
 def get_soql_fields(soql):

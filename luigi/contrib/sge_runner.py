@@ -34,10 +34,7 @@ return from SGETask.run()
 
 import os
 import sys
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import logging
 import tarfile
 

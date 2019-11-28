@@ -34,10 +34,7 @@ import logging
 import luigi
 import abc
 
-try:
-    from urlparse import urljoin
-except ImportError:
-    from urllib.parse import urljoin
+from urllib.parse import urljoin
 
 import json
 

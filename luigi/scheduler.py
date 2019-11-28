@@ -22,18 +22,12 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
-try:
-    from collections.abc import MutableSet
-except ImportError:
-    from collections import MutableSet
+from collections.abc import MutableSet
 import json
 
 from luigi.batch_notifier import BatchNotifier
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import functools
 import hashlib
 import itertools

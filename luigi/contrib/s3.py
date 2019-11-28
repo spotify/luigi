@@ -31,15 +31,9 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
-try:
-    from ConfigParser import NoSectionError
-except ImportError:
-    from configparser import NoSectionError
+from configparser import NoSectionError
 
 from luigi import six
 
