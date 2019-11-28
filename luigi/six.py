@@ -244,7 +244,6 @@ for attr in _moved_attributes:
     setattr(_MovedItems, attr.name, attr)
     if isinstance(attr, MovedModule):
         _importer._add_module(attr, "moves." + attr.name)
-del attr
 
 _MovedItems._moved_attributes = _moved_attributes
 
@@ -262,7 +261,6 @@ _urllib_parse_moved_attributes = [
 ]
 for attr in _urllib_parse_moved_attributes:
     setattr(Module_six_moves_urllib_parse, attr.name, attr)
-del attr
 
 Module_six_moves_urllib_parse._moved_attributes = _urllib_parse_moved_attributes
 
@@ -297,7 +295,6 @@ _urllib_request_moved_attributes = [
 ]
 for attr in _urllib_request_moved_attributes:
     setattr(Module_six_moves_urllib_request, attr.name, attr)
-del attr
 
 Module_six_moves_urllib_request._moved_attributes = _urllib_request_moved_attributes
 
@@ -315,7 +312,6 @@ _urllib_response_moved_attributes = [
 ]
 for attr in _urllib_response_moved_attributes:
     setattr(Module_six_moves_urllib_response, attr.name, attr)
-del attr
 
 Module_six_moves_urllib_response._moved_attributes = _urllib_response_moved_attributes
 
@@ -332,7 +328,6 @@ _urllib_robotparser_moved_attributes = [
 ]
 for attr in _urllib_robotparser_moved_attributes:
     setattr(Module_six_moves_urllib_robotparser, attr.name, attr)
-del attr
 
 Module_six_moves_urllib_robotparser._moved_attributes = _urllib_robotparser_moved_attributes
 
