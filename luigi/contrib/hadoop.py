@@ -22,8 +22,6 @@ to subclass :py:class:`luigi.contrib.hadoop.JobTask` and implement a
 an example of how to run a Hadoop job.
 """
 
-from __future__ import print_function
-
 import abc
 import datetime
 import glob
