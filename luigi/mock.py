@@ -25,7 +25,6 @@ from io import BytesIO
 
 import sys
 
-from luigi import six
 from luigi import target
 from luigi.format import get_default_format
 
