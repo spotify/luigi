@@ -24,7 +24,6 @@ from helpers import unittest, RunOnceTask
 import luigi
 import luigi.notifications
 import luigi.scheduler
-import luigi.six as six
 import luigi.worker
 
 luigi.notifications.DEBUG = True
