@@ -84,13 +84,7 @@ class ReadableWebHdfsFile(object):
 
     def __iter__(self):
         self.generator = self.readlines('\n')
-        has_next = True
-        while has_next:
-            try:
-                chunk = next(self.generator)
-                yield chunk
-            except StopIteration:
-                has_next = False
+        yield from self.generator
         self.close()
 
     def close(self):
