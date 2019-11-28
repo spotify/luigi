@@ -280,7 +280,6 @@ _urllib_error_moved_attributes = [
 ]
 for attr in _urllib_error_moved_attributes:
     setattr(Module_six_moves_urllib_error, attr.name, attr)
-del attr
 
 Module_six_moves_urllib_error._moved_attributes = _urllib_error_moved_attributes
 
