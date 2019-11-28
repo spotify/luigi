@@ -110,10 +110,10 @@ class BatchNotifier(object):
         lines = map(self._format_task, sorted(tasks, key=self._expl_key))
         if self._email_format == 'html':
             lines_joined = '\n<br>'.join(lines)
-            return f'<li>{lines}'
+            return f'<li>{lines_joined}'
         else:
             lines_joined = '\n  '.join(lines)
-            return f'- {lines}'
+            return f'- {lines_joined}'
 
     def _owners(self, owners):
         return self._default_owner | set(owners)
