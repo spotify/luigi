@@ -19,6 +19,7 @@ import os
 import warnings
 
 from .cfg_parser import LuigiConfigParser
+from .json_parser import LuigiJsonParser
 from .toml_parser import LuigiTomlParser
 
 
@@ -29,6 +30,7 @@ PARSERS = {
     'cfg': LuigiConfigParser,
     'conf': LuigiConfigParser,
     'ini': LuigiConfigParser,
+    'json': LuigiJsonParser,
     'toml': LuigiTomlParser,
 }
 

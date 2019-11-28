@@ -16,6 +16,7 @@
 #
 from .cfg_parser import LuigiConfigParser
 from .core import get_config, add_config_path
+from .json_parser import LuigiJsonParser
 from .toml_parser import LuigiTomlParser
 
 
@@ -23,5 +24,6 @@ __all__ = [
     'add_config_path',
     'get_config',
     'LuigiConfigParser',
+    'LuigiJsonParser',
     'LuigiTomlParser',
 ]
