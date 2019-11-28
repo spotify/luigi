@@ -1,5 +1,5 @@
 language: python
-python: 3.7
+python: 2.7
 dist: xenial
 
 services:
@@ -32,6 +32,13 @@ matrix:
   include:
     - env: TOXENV=flake8
     - env: TOXENV=docs
+    - env: TOXENV=py27-core
+    - env: TOXENV=py27-dropbox
+      if: env(DROPBOX_APP_TOKEN) is present
+    - env: TOXENV=py27-unixsocket
+    - env: TOXENV=py27-apache
+    - env: TOXENV=py27-aws
+    - env: TOXENV=py27-postgres
 
     - python: 3.6
       env: TOXENV=py36-core
