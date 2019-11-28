@@ -616,11 +616,6 @@ _add_doc(iterlists,
 
 
 if PY3:
-    def b(s):
-        return s.encode("latin-1")
-
-    def u(s):
-        return s
     unichr = chr
     import struct
     int2byte = struct.Struct(">B").pack
@@ -639,12 +634,6 @@ if PY3:
         _assertRaisesRegex = "assertRaisesRegex"
         _assertRegex = "assertRegex"
 else:
-    def b(s):
-        return s
-    # Workaround for standalone backslash
-
-    def u(s):
-        return unicode(s.replace(r'\\', r'\\\\'), "unicode_escape")
     unichr = unichr
     int2byte = chr
 
@@ -659,8 +648,6 @@ else:
     _assertCountEqual = "assertItemsEqual"
     _assertRaisesRegex = "assertRaisesRegexp"
     _assertRegex = "assertRegexpMatches"
-_add_doc(b, """Byte literal""")
-_add_doc(u, """Text literal""")
 
 
 def assertCountEqual(self, *args, **kwargs):

@@ -76,8 +76,8 @@ class BatchNotifier(object):
         elif self._config.batch_mode == 'family':
             return family
         elif self._config.batch_mode == 'unbatched_params':
-            param_str = six.u(', ').join(six.u('{}={}').format(*kv) for kv in six.iteritems(unbatched_args))
-            return six.u('{}({})').format(family, param_str)
+            param_str = ', '.join(f'{k}={v}' for k, v in six.iteritems(unbatched_args))
+            return f'{family}({param_str})'
         else:
             raise ValueError('Unknown batch mode for batch notifier: {}'.format(
                 self._config.batch_mode))
@@ -85,9 +85,10 @@ class BatchNotifier(object):
     def _format_expl(self, expl):
         lines = expl.rstrip().split('\n')[-self._config.error_lines:]
         if self._email_format == 'html':
-            return six.u('<pre>{}</pre>').format('\n'.join(lines))
+            lines = '\n'.join(lines)
+            return f'<pre>{lines}</pre>'
         else:
-            return six.u('\n{}').format(six.u('\n').join(map(six.u('      {}').format, lines)))
+            return '\n{}'.format('\n'.join(map('      {}'.format, lines)))
 
     def _expl_body(self, expls):
         lines = [self._format_expl(expl) for expl in expls]
@@ -102,15 +103,17 @@ class BatchNotifier(object):
             _plural_format('{} disable{}', disable_count),
             _plural_format('{} scheduling failure{}', scheduling_count),
         ]
-        count_str = six.u(', ').join(filter(None, counts))
-        return six.u('{} ({})').format(task, count_str)
+        count_str = ', '.join(filter(None, counts))
+        return f'{task} ({count_str})'
 
     def _format_tasks(self, tasks):
         lines = map(self._format_task, sorted(tasks, key=self._expl_key))
         if self._email_format == 'html':
-            return six.u('<li>{}').format(six.u('\n<br>').join(lines))
+            lines_joined = '\n<br>'.join(lines)
+            return f'<li>{lines}'
         else:
-            return six.u('- {}').format(six.u('\n  ').join(lines))
+            lines_joined = '\n  '.join(lines)
+            return f'- {lines}'
 
     def _owners(self, owners):
         return self._default_owner | set(owners)
@@ -163,9 +166,9 @@ class BatchNotifier(object):
         for tasks, msg in expl_groups:
             body_lines.append(self._format_tasks(tasks))
             body_lines.append(msg)
-        body = six.u('\n').join(filter(None, body_lines)).rstrip()
+        body = '\n'.join(filter(None, body_lines)).rstrip()
         if self._email_format == 'html':
-            return six.u('<ul>\n{}\n</ul>').format(body)
+            return f'<ul>\n{body}\n</ul>'
         else:
             return body
 
