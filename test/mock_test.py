@@ -115,11 +115,3 @@ class MockFileSystemTest(unittest.TestCase):
 
     def test_listdir(self):
         self.assertEqual(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))
-
-
-class TestImportMockFile(unittest.TestCase):
-
-    def test_mockfile(self):
-        from luigi.mock import MockFile
-        with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
-            self.assertTrue(isinstance(MockFile('foo'), MockTarget))
