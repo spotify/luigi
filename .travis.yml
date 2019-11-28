@@ -1,5 +1,5 @@
 language: python
-python: 3.7
+python: 2.7
 dist: xenial
 
 services:
@@ -32,6 +32,13 @@ matrix:
   include:
     - env: TOXENV=flake8
     - env: TOXENV=docs
+    - env: TOXENV=py27-core
+    - env: TOXENV=py27-dropbox
+      if: env(DROPBOX_APP_TOKEN) is present
+    - env: TOXENV=py27-unixsocket
+    - env: TOXENV=py27-apache
+    - env: TOXENV=py27-aws
+    - env: TOXENV=py27-postgres
 
     - python: 3.6
       env: TOXENV=py36-core
@@ -40,12 +47,6 @@ matrix:
       if: env(DROPBOX_APP_TOKEN) is present
     - python: 3.6
       env: TOXENV=py36-unixsocket
-    - python: 3.6
-      env: TOXENV=py36-postgres
-    - python: 3.6
-      dist: xenial
-      sudo: true
-      env: TOXENV=py36-apache
 
     - python: 3.7
       dist: xenial
@@ -72,8 +73,6 @@ matrix:
       dist: xenial
       sudo: true
       env: TOXENV=py37-azureblob
-    - python: 3.7
-      env: TOXENV=py37-postgres
 
 cache:
   directories:
@@ -100,7 +99,6 @@ script:
 branches:
   only:
     - master
-    - py2-deprecation
 
 notifications:
   email: false
