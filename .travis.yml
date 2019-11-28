@@ -99,7 +99,8 @@ script:
 
 branches:
   only:
-    - /.*/
+    - master
+    - py2-deprecation
 
 notifications:
   email: false
