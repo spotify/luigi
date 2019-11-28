@@ -264,7 +264,7 @@ class ExternalProgramTaskTest(unittest.TestCase):
     def test_tracking_url_context_works_correctly_when_logs_output_pattern_to_url_is_not_default(self):
 
         class _Task(TestEchoTask):
-            def logs_output_pattern_to_url(self, logs_output):
+            def build_tracking_url(self, logs_output):
                 return 'The {} is mine'.format(logs_output)
 
         test_val = Value('i', 0)

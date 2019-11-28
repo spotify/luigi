@@ -118,7 +118,7 @@ class ExternalProgramTask(luigi.Task):
         file_object.seek(0)
         return ''.join(map(lambda s: s.decode('utf-8'), file_object.readlines()))
 
-    def logs_output_pattern_to_url(self, logs_output):
+    def build_tracking_url(self, logs_output):
         return logs_output
 
     def run(self):
@@ -184,7 +184,7 @@ class ExternalProgramTask(luigi.Task):
                     match = re.search(pattern, new_line.decode('utf-8'))
                     if match:
                         self.set_tracking_url(
-                            self.logs_output_pattern_to_url(match.group(1))
+                            self.build_tracking_url(match.group(1))
                         )
                 else:
                     sleep(time_to_sleep)
