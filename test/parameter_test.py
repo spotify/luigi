@@ -339,7 +339,6 @@ class ParameterTest(LuigiTestCase):
 
     def test_local_insignificant_param(self):
         """ Ensure we have the same behavior as in before a78338c  """
-
         class MyTask(luigi.Task):
             # This could typically be "--num-threads=True"
             x = luigi.Parameter(significant=False)
@@ -1273,7 +1272,7 @@ class LocalParameters1304Test(LuigiTestCase):
             blah_arg = luigi.IntParameter()
 
         # The SystemExit is assumed to be thrown by argparse
-        self.assertRaises(SystemExit, self.run_locally_split,'RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --blah-arg 123')
+        self.assertRaises(SystemExit, self.run_locally_split, 'RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --blah-arg 123')
         self.assertTrue(self.run_locally_split('RangeDailyBase --of Blah --start 2015-01-01 --task-limit 1 --Blah-blah-arg 123'))
 
 
