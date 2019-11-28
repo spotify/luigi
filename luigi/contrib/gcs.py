@@ -31,7 +31,6 @@ except ImportError:
 from luigi.contrib import gcp
 import luigi.target
 from luigi import six
-from luigi.six.moves import xrange
 from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
@@ -71,7 +70,7 @@ def _wait_for_consistency(checker):
     This is necessary for e.g. create/delete where the operation might return,
     but won't be reflected for a bit.
     """
-    for _ in xrange(EVENTUAL_CONSISTENCY_MAX_SLEEPS):
+    for _ in range(EVENTUAL_CONSISTENCY_MAX_SLEEPS):
         if checker():
             return
 

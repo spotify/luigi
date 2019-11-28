@@ -27,9 +27,9 @@ import time
 import base64
 
 from luigi import six
-from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
-from luigi.six.moves.urllib.request import urlopen, Request
-from luigi.six.moves.urllib.error import URLError
+from urllib.parse import urljoin, urlencode, urlparse
+from urllib.request import urlopen, Request
+from urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS

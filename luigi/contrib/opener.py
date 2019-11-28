@@ -35,7 +35,7 @@ from luigi.local_target import LocalTarget
 from luigi.mock import MockTarget
 from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemException
-from six.moves.urllib.parse import urlsplit, parse_qs
+from urllib.parse import urlsplit, parse_qs
 
 __all__ = ['OpenerError',
            'NoOpenerError',
