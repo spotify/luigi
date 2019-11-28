@@ -514,9 +514,4 @@ MixedUnicodeBytes = MixedUnicodeBytesFormat()
 
 
 def get_default_format():
-    if six.PY3:
-        return Text
-    elif os.linesep == '\n':
-        return Nop
-    else:
-        return SysNewLine
+    return Text

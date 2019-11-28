@@ -33,14 +33,8 @@ import os
 import re
 import warnings
 
-# In python3 ConfigParser was renamed
-# https://stackoverflow.com/a/41202010
-try:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    Interpolation = object
-except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    from configparser import Interpolation, BasicInterpolation
+from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+from configparser import Interpolation, BasicInterpolation
 
 from .base_parser import BaseParser
 
@@ -130,17 +124,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         'client.cfg',  # Deprecated old-style local luigi config
         'luigi.cfg',
     ]
-    if hasattr(ConfigParser, "_interpolate"):
-        # Override ConfigParser._interpolate (Python 2)
-        def _interpolate(self, section, option, rawval, vars):
-            value = ConfigParser._interpolate(self, section, option, rawval, vars)
-            return EnvironmentInterpolation().before_get(
-                parser=self, section=section, option=option,
-                value=value, defaults=None,
-            )
-    else:
-        # Override ConfigParser._DEFAULT_INTERPOLATION (Python 3)
-        _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
+    _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
 
     @classmethod
     def reload(cls):
