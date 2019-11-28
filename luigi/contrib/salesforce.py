@@ -36,7 +36,6 @@ except ImportError:
     logger.warning("This module requires the python package 'requests'.")
 
 
-
 def get_soql_fields(soql):
     """
     Gets queried columns names.
