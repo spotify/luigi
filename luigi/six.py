@@ -517,8 +517,6 @@ else:
     _func_globals = "func_globals"
 
 
-
-
 try:
     callable = callable
 except NameError:
