@@ -523,7 +523,7 @@ class HadoopJobRunner(JobRunner):
 
         arglist += self.streaming_args
 
-        # Add additonal non-generic  per-job streaming args
+        # Add additional non-generic  per-job streaming args
         extra_streaming_args = job.extra_streaming_arguments()
         for (arg, value) in extra_streaming_args:
             if not arg.startswith('-'):  # safety first
