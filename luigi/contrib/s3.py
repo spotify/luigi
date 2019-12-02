@@ -20,8 +20,6 @@ Implementation of Simple Storage Service support.
 system operations. The `boto3` library is required to use S3 targets.
 """
 
-from __future__ import division
-
 import datetime
 import io
 import itertools
@@ -31,15 +29,9 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
-try:
-    from ConfigParser import NoSectionError
-except ImportError:
-    from configparser import NoSectionError
+from configparser import NoSectionError
 
 from luigi import six
 
@@ -126,7 +118,7 @@ class S3Client(FileSystem):
         aws_access_key_id = options.get('aws_access_key_id')
         aws_secret_access_key = options.get('aws_secret_access_key')
 
-        # Removing key args would break backwards compability
+        # Removing key args would break backwards compatibility
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
 

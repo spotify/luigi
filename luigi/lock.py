@@ -19,7 +19,6 @@ Locking functionality when launching things from the command line.
 Uses a pidfile.
 This prevents multiple identical workflows to be launched simultaneously.
 """
-from __future__ import print_function
 
 import errno
 import hashlib

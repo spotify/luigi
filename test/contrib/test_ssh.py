@@ -18,8 +18,6 @@
 Integration tests for ssh module.
 """
 
-from __future__ import print_function
-
 import os
 import random
 import socket
