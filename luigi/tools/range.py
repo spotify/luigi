@@ -118,7 +118,7 @@ class RangeBase(luigi.WrapperTask):
         """
         DONT USE. Will be deleted soon. Use ``self.of``!
         """
-        if isinstance(self.of, six.string_types):
+        if isinstance(self.of, str):
             warnings.warn('When using Range programatically, dont pass "of" param as string!')
             return Register.get_task_cls(self.of)
         return self.of
