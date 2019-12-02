@@ -25,8 +25,6 @@ contrib module. You can consider migrating to
 
 import logging
 
-from luigi import six
-
 from luigi.target import FileSystemTarget, AtomicLocalFile
 from luigi.format import get_default_format
 import luigi.contrib.hdfs
@@ -84,13 +82,7 @@ class ReadableWebHdfsFile(object):
 
     def __iter__(self):
         self.generator = self.readlines('\n')
-        has_next = True
-        while has_next:
-            try:
-                chunk = six.next(self.generator)
-                yield chunk
-            except StopIteration:
-                has_next = False
+        yield from self.generator
         self.close()
 
     def close(self):

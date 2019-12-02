@@ -3,10 +3,10 @@
 
 # Finds all tasks and task outputs on the dependency paths from the given downstream task T
 # up to the given source/upstream task S (optional). If the upstream task is not given,
-# all upstream tasks on all dependancy paths of T will be returned.
+# all upstream tasks on all dependency paths of T will be returned.
 
 # Terms:
-# if  the execution of Task T depends on the output of task S on a dependancy graph,
+# if  the execution of Task T depends on the output of task S on a dependency graph,
 #  T is called a downstream/sink task, S is called an upstream/source task.
 
 # This is useful and practical way to find all upstream tasks of task T.

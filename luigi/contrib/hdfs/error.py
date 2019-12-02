@@ -16,8 +16,7 @@
 #
 
 """
-The implementations of the hdfs clients. The hadoop cli client and the
-snakebite client.
+The implementations of the hdfs clients.
 """
 
 

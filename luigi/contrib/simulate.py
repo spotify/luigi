@@ -31,7 +31,7 @@ logger = logging.getLogger('luigi-interface')
 
 class RunAnywayTarget(luigi.Target):
     """
-    A target used to make a task run everytime it is called.
+    A target used to make a task run every time it is called.
 
     Usage:
 

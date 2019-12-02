@@ -26,10 +26,7 @@ other arguments are the ones returned by PySparkTask.app_options()
 
 """
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import logging
 import sys
 import os
