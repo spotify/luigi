@@ -34,10 +34,7 @@ import random
 import re
 import shutil
 import signal
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 import subprocess
 import sys
 import tempfile

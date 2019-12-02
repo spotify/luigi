@@ -20,10 +20,6 @@ It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
 
-try:
-    from itertools import imap as map
-except ImportError:
-    pass
 from contextlib import contextmanager
 import logging
 import traceback
