@@ -26,8 +26,6 @@ other arguments are the ones returned by PySparkTask.app_options()
 
 """
 
-from __future__ import print_function
-
 import pickle
 import logging
 import sys

@@ -23,8 +23,6 @@ contrib module. You can consider migrating to
 :class:`luigi.contrib.hdfs.webhdfs_client.WebHdfsClient`
 """
 
-from __future__ import absolute_import
-
 import logging
 
 from luigi.target import FileSystemTarget, AtomicLocalFile

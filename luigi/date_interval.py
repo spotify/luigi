@@ -31,8 +31,6 @@ Now, you can launch this from the command line using
 ``--date-interval 2014`` (for a year) and some other notations.
 """
 
-from __future__ import division
-
 from luigi import six
 
 import datetime
