@@ -282,7 +282,7 @@ class CopyToTable(rdbms.CopyToTable):
         )
 
     def copy(self, cursor, file):
-        if isinstance(self.columns[0], six.string_types):
+        if isinstance(self.columns[0], str):
             column_names = self.columns
         elif len(self.columns[0]) == 2:
             column_names = [c[0] for c in self.columns]
