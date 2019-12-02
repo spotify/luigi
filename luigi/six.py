@@ -624,7 +624,6 @@ if PY3:
     import io
     StringIO = io.StringIO
     BytesIO = io.BytesIO
-    _assertCountEqual = "assertCountEqual"
     if sys.version_info[1] <= 1:
         _assertRaisesRegex = "assertRaisesRegexp"
         _assertRegex = "assertRegexpMatches"
@@ -649,15 +648,12 @@ else:
     iterbytes = functools.partial(itertools.imap, ord)
     import StringIO
     StringIO = BytesIO = StringIO.StringIO
-    _assertCountEqual = "assertItemsEqual"
     _assertRaisesRegex = "assertRaisesRegexp"
     _assertRegex = "assertRegexpMatches"
 _add_doc(b, """Byte literal""")
 _add_doc(u, """Text literal""")
 
 
-def assertCountEqual(self, *args, **kwargs):
-    return getattr(self, _assertCountEqual)(*args, **kwargs)
 
 
 def assertRaisesRegex(self, *args, **kwargs):
