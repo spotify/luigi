@@ -17,8 +17,6 @@
 
 from helpers import unittest
 
-from luigi import six
-
 from helpers import with_config
 import luigi
 from luigi.db_task_history import DbTaskHistory

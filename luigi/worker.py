@@ -48,8 +48,6 @@ import time
 import traceback
 import types
 
-from luigi import six
-
 from luigi import notifications
 from luigi.event import Event
 from luigi.task_register import load_task
