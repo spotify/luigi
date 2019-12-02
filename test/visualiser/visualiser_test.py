@@ -3,8 +3,6 @@ Test the visualiser's javascript using PhantomJS.
 
 """
 
-from __future__ import print_function
-
 import os
 import luigi
 import subprocess
