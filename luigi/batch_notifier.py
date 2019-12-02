@@ -170,9 +170,9 @@ class BatchNotifier(object):
             return body
 
     def _send_email(self, fail_counts, disable_counts, scheduling_counts, fail_expls, owner):
-        num_failures = sum(six.itervalues(fail_counts))
-        num_disables = sum(six.itervalues(disable_counts))
-        num_scheduling_failures = sum(six.itervalues(scheduling_counts))
+        num_failures = sum(fail_counts.values())
+        num_disables = sum(disable_counts.values())
+        num_scheduling_failures = sum(scheduling_counts.values())
         subject_parts = [
             _plural_format('{} failure{}', num_failures),
             _plural_format('{} disable{}', num_disables),
