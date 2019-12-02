@@ -27,7 +27,7 @@ import sys
 
 from luigi import six
 from luigi import target
-from luigi.format import get_default_format, MixedUnicodeBytes
+from luigi.format import get_default_format
 
 
 class MockFileSystem(target.FileSystem):
@@ -106,14 +106,7 @@ class MockTarget(target.FileSystemTarget):
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
         self._mirror_on_stderr = mirror_on_stderr
         self.path = fn
-        if format is None:
-            format = get_default_format()
-
-        # Allow to write unicode in file for retrocompatibility
-        if six.PY2:
-            format = format >> MixedUnicodeBytes
-
-        self.format = format
+        self.format = format or get_default_format()
 
     def exists(self,):
         return self.path in self.fs.get_all_data()
