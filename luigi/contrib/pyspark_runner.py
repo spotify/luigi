@@ -28,10 +28,7 @@ other arguments are the ones returned by PySparkTask.app_options()
 
 from __future__ import print_function
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import logging
 import sys
 import os

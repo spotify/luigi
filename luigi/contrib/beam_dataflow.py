@@ -16,22 +16,20 @@
 #
 
 import abc
-from abc import abstractmethod, abstractproperty, ABCMeta
+from abc import abstractmethod, abstractproperty
 import logging
 import json
 import os
 import subprocess
 
 import luigi
-from luigi import six
 from luigi.contrib import bigquery, gcs
 from luigi.task import MixinNaiveBulkComplete
 
 logger = logging.getLogger('luigi-interface')
 
 
-@six.add_metaclass(abc.ABCMeta)
-class DataflowParamKeys(object):
+class DataflowParamKeys(metaclass=abc.ABCMeta):
     """
     Defines the naming conventions for Dataflow execution params.
     For example, the Java API expects param names in lower camel case, whereas
@@ -141,8 +139,7 @@ class _CmdLineRunner(object):
             raise subprocess.CalledProcessError(exit_code, cmd, output=output)
 
 
-@six.add_metaclass(ABCMeta)
-class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task):
+class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCMeta):
     """
     Luigi wrapper for a Dataflow job. Must be overridden for each Beam SDK
     with that SDK's dataflow_executable().

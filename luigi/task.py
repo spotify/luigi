@@ -20,10 +20,6 @@ It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
 
-try:
-    from itertools import imap as map
-except ImportError:
-    pass
 from contextlib import contextmanager
 import logging
 import traceback
@@ -147,8 +143,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
     pass
 
 
-@six.add_metaclass(Register)
-class Task(object):
+class Task(metaclass=Register):
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
 

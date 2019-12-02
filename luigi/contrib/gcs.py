@@ -23,10 +23,7 @@ import mimetypes
 import os
 import tempfile
 import time
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
 from luigi.contrib import gcp
 import luigi.target
