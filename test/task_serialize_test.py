@@ -25,8 +25,6 @@ We use the hypothesis package to do property-based tests.
 
 """
 
-from __future__ import print_function
-
 import string
 import luigi
 import json
