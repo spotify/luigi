@@ -40,7 +40,6 @@ import logging
 import luigi
 
 from luigi.local_target import LocalFileSystem
-from luigi import six
 
 logger = logging.getLogger('luigi-interface')
 
@@ -158,7 +157,7 @@ class DockerTask(luigi.Task):
         self.environment['LUIGI_TMP_DIR'] = self.container_tmp_dir
 
         # add additional volume binds specified by the user to the tmp_Dir bind
-        if isinstance(self.binds, six.string_types):
+        if isinstance(self.binds, str):
             self._binds.append(self.binds)
         elif isinstance(self.binds, list):
             self._binds.extend(self.binds)

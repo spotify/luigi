@@ -20,10 +20,6 @@ It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
 
-try:
-    from itertools import imap as map
-except ImportError:
-    pass
 from contextlib import contextmanager
 import logging
 import traceback
@@ -147,8 +143,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
     pass
 
 
-@six.add_metaclass(Register)
-class Task(object):
+class Task(metaclass=Register):
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
 
@@ -242,7 +237,7 @@ class Task(object):
         owner_email = self.owner_email
         if owner_email is None:
             return []
-        elif isinstance(owner_email, six.string_types):
+        elif isinstance(owner_email, str):
             return owner_email.split(',')
         else:
             return owner_email
@@ -875,7 +870,7 @@ def flatten(struct):
         for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
-    if isinstance(struct, six.string_types):
+    if isinstance(struct, str):
         return [struct]
 
     try:

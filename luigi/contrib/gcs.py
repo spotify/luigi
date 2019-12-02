@@ -23,10 +23,7 @@ import mimetypes
 import os
 import tempfile
 import time
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
 from luigi.contrib import gcp
 import luigi.target
@@ -285,8 +282,8 @@ class GCSClient(luigi.target.FileSystem):
 
     def put_string(self, contents, dest_path, mimetype=None):
         mimetype = mimetype or mimetypes.guess_type(dest_path)[0] or DEFAULT_MIMETYPE
-        assert isinstance(mimetype, six.string_types)
-        if not isinstance(contents, six.binary_type):
+        assert isinstance(mimetype, str)
+        if not isinstance(contents, bytes):
             contents = contents.encode("utf-8")
         media = http.MediaIoBaseUpload(six.BytesIO(contents), mimetype, resumable=bool(contents))
         self._do_put(media, dest_path)
