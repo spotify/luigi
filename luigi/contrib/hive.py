@@ -122,8 +122,7 @@ def _validate_partition(partition):
         raise ValueError('Unable to restore table/partition location')
 
 
-@six.add_metaclass(abc.ABCMeta)
-class HiveClient(object):  # interface
+class HiveClient(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def table_location(self, table, database='default', partition=None):
