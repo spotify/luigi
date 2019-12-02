@@ -1761,12 +1761,12 @@ class WorkerWaitJitterTest(unittest.TestCase):
 
         w = Worker()
         x = w._sleeper()
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 10.0)
         mock_sleep.assert_called_with(2.0)
 
         mock_random.return_value = 2.0
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 10.0)
         mock_sleep.assert_called_with(3.0)
 
@@ -1777,12 +1777,12 @@ class WorkerWaitJitterTest(unittest.TestCase):
         mock_random.return_value = 1.0
         w = Worker()
         x = w._sleeper()
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(2.0)
 
         mock_random.return_value = 3.3
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(4.3)
 

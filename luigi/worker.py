@@ -141,7 +141,7 @@ class TaskProcess(multiprocessing.Process):
         while True:
             try:
                 if next_send is None:
-                    requires = six.next(task_gen)
+                    requires = next(task_gen)
                 else:
                     requires = task_gen.send(next_send)
             except StopIteration:
@@ -1196,7 +1196,7 @@ class Worker(object):
                 if len(self._running_tasks) == 0:
                     self._idle_since = self._idle_since or datetime.datetime.now()
                     if self._keep_alive(get_work_response):
-                        six.next(sleeper)
+                        next(sleeper)
                         continue
                     else:
                         break
