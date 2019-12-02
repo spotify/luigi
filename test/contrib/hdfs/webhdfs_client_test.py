@@ -21,32 +21,7 @@ from hdfs.ext.kerberos import KerberosClient
 from nose.plugins.attrib import attr
 
 from helpers import with_config
-from webhdfs_minicluster import WebHdfsMiniClusterTestCase
-from contrib.hdfs_test import HdfsTargetTestMixin
 from luigi.contrib.hdfs import WebHdfsClient
-
-
-@attr('minicluster')
-class WebHdfsTargetTest(WebHdfsMiniClusterTestCase, HdfsTargetTestMixin):
-
-    def run(self, result=None):
-        conf = {'hdfs': {'client': 'webhdfs'},
-                'webhdfs': {'port': str(self.cluster.webhdfs_port)},
-                }
-        with_config(conf)(super(WebHdfsTargetTest, self).run)(result)
-
-    def test_actually_using_webhdfs(self):
-        self.assertTrue(isinstance(self.create_target().fs, WebHdfsClient))
-
-    # Here is a bunch of tests that are currently failing.  As should be
-    # mentioned in the WebHdfsClient docs, it is not yet feature complete.
-    test_slow_exists = None
-    test_glob_exists = None
-    test_with_close = None
-    test_with_exception = None
-
-    # This one fails when run together with the whole test suite
-    test_write_cleanup_no_close = None
 
 
 @attr('apache')
