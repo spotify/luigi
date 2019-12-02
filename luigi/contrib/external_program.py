@@ -119,6 +119,11 @@ class ExternalProgramTask(luigi.Task):
         return ''.join(map(lambda s: s.decode('utf-8'), file_object.readlines()))
 
     def build_tracking_url(self, logs_output):
+        """
+        This method is intended for transforming pattern match in logs to an URL
+        :param logs_output: Found match of `self.tracking_url_pattern`
+        :return: a tracking URL for the task
+        """
         return logs_output
 
     def run(self):
