@@ -237,7 +237,7 @@ class Task(metaclass=Register):
         owner_email = self.owner_email
         if owner_email is None:
             return []
-        elif isinstance(owner_email, six.string_types):
+        elif isinstance(owner_email, str):
             return owner_email.split(',')
         else:
             return owner_email
@@ -870,7 +870,7 @@ def flatten(struct):
         for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
-    if isinstance(struct, six.string_types):
+    if isinstance(struct, str):
         return [struct]
 
     try:
