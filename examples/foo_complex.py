@@ -23,7 +23,6 @@ You can run this example like this:
             $ luigi --module examples.foo_complex examples.Foo --workers 2 --local-scheduler
 
 """
-from __future__ import division
 import time
 import random
 

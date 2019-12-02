@@ -44,9 +44,6 @@ You can run this example like this:
 
             ===== Luigi Execution Summary =====
 """
-
-
-from __future__ import print_function
 import datetime
 
 import luigi
