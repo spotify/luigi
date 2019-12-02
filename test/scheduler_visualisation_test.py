@@ -24,7 +24,6 @@ from helpers import unittest, RunOnceTask
 import luigi
 import luigi.notifications
 import luigi.scheduler
-import luigi.six as six
 import luigi.worker
 
 luigi.notifications.DEBUG = True
@@ -168,7 +167,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         graph = self.scheduler.dep_graph(root_task.task_id)
         self.assertEqual(10, len(graph))
         expected_nodes = [LinearTask(i).task_id for i in range(100, 90, -1)]
-        six.assertCountEqual(self, expected_nodes, graph)
+        self.assertCountEqual(expected_nodes, graph)
 
     def test_large_inverse_graph_truncate(self):
         class LinearTask(luigi.Task):
@@ -189,7 +188,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         graph = self.scheduler.inverse_dep_graph(LinearTask(0).task_id)
         self.assertEqual(10, len(graph))
         expected_nodes = [LinearTask(i).task_id for i in range(10)]
-        six.assertCountEqual(self, expected_nodes, graph)
+        self.assertCountEqual(expected_nodes, graph)
 
     def test_truncate_graph_with_full_levels(self):
         class BinaryTreeTask(RunOnceTask):
@@ -207,7 +206,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         graph = self.scheduler.dep_graph(root_task.task_id)
         self.assertEqual(10, len(graph))
         expected_nodes = [BinaryTreeTask(i).task_id for i in range(1, 11)]
-        six.assertCountEqual(self, expected_nodes, graph)
+        self.assertCountEqual(expected_nodes, graph)
 
     def test_truncate_graph_with_multiple_depths(self):
         class LinearTask(luigi.Task):
@@ -231,7 +230,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
         expected_nodes = [LinearTask(i).task_id for i in range(100, 91, -1)] + \
                          [LinearTask(0).task_id]
         self.maxDiff = None
-        six.assertCountEqual(self, expected_nodes, graph)
+        self.assertCountEqual(expected_nodes, graph)
 
     def _assert_all_done(self, tasks):
         self._assert_all(tasks, u'DONE')

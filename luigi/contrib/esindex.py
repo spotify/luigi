@@ -169,7 +169,7 @@ class ElasticsearchTarget(luigi.Target):
         """
         Mark this update as complete.
 
-        The document id would be sufficent but,
+        The document id would be sufficient but,
         for documentation,
         we index the parameters `update_id`, `target_index`, `target_doc_type` and `date` as well.
         """

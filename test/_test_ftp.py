@@ -28,13 +28,9 @@ import os
 import shutil
 import sys
 from helpers import unittest
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import BytesIO
 
-    def StringIO(s):
-        return BytesIO(s.encode('utf8'))
+from io import StringIO
+
 
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 

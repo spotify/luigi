@@ -29,10 +29,7 @@ from json import JSONEncoder
 import operator
 from ast import literal_eval
 
-try:
-    from ConfigParser import NoOptionError, NoSectionError
-except ImportError:
-    from configparser import NoOptionError, NoSectionError
+from configparser import NoOptionError, NoSectionError
 
 from luigi import date_interval
 from luigi import task_register
