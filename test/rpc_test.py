@@ -29,6 +29,7 @@ import time
 import socket
 from multiprocessing import Process, Queue
 import requests
+from luigi import six
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -168,3 +169,45 @@ class RequestsFetcherTest(ServerTestBase):
         p.join()
 
         self.assertTrue(q.get(), 'the requests.Session should have changed in the new process')
+
+
+class URLLibFetcherTest(ServerTestBase):
+
+    def test_url_with_basic_auth(self):
+        fetcher = luigi.rpc.URLLibFetcher()
+
+        # without password
+        req = fetcher._create_request('http://user@localhost')
+        self.assertTrue(req.has_header('Authorization'))
+        self.assertEqual(req.get_header('Authorization'), 'Basic dXNlcjo=')
+        self.assertEqual(req.get_full_url(), 'http://localhost')
+
+        # empty password (same as above)
+        req = fetcher._create_request('http://user:@localhost')
+        self.assertTrue(req.has_header('Authorization'))
+        self.assertEqual(req.get_header('Authorization'), 'Basic dXNlcjo=')
+        self.assertEqual(req.get_full_url(), 'http://localhost')
+
+        # with password
+        req = fetcher._create_request('http://user:pass@localhost')
+        self.assertTrue(req.has_header('Authorization'))
+        self.assertEqual(req.get_header('Authorization'), 'Basic dXNlcjpwYXNz')
+        self.assertEqual(req.get_full_url(), 'http://localhost')
+
+    def test_url_without_basic_auth(self):
+        fetcher = luigi.rpc.URLLibFetcher()
+        req = fetcher._create_request('http://localhost')
+
+        self.assertFalse(req.has_header('Authorization'))
+        self.assertEqual(req.get_full_url(), 'http://localhost')
+
+    def test_body_encoding(self):
+        fetcher = luigi.rpc.URLLibFetcher()
+
+        # with body
+        req = fetcher._create_request('http://localhost', body={'foo': 'bar baz/test'})
+        self.assertEqual(req.data, six.b('foo=bar+baz%2Ftest'))
+
+        # without body
+        req = fetcher._create_request('http://localhost')
+        self.assertIsNone(req.data)

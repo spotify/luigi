@@ -22,18 +22,12 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
-try:
-    from collections.abc import MutableSet
-except ImportError:
-    from collections import MutableSet
+from collections.abc import MutableSet
 import json
 
 from luigi.batch_notifier import BatchNotifier
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 import functools
 import hashlib
 import itertools
@@ -445,7 +439,7 @@ class Worker(object):
 
 class SimpleTaskState(object):
     """
-    Keep track of the current state and handle persistance.
+    Keep track of the current state and handle persistence.
 
     The point of this class is to enable other ways to keep state, eg. by using a database
     These will be implemented by creating an abstract base class that this and other classes
@@ -490,16 +484,16 @@ class SimpleTaskState(object):
 
             self.set_state(state)
             self._status_tasks = collections.defaultdict(dict)
-            for task in six.itervalues(self._tasks):
+            for task in self._tasks.values():
                 self._status_tasks[task.status][task.id] = task
         else:
             logger.info("No prior state file exists at %s. Starting with empty state", self._state_path)
 
     def get_active_tasks(self):
-        return six.itervalues(self._tasks)
+        return self._tasks.values()
 
     def get_active_tasks_by_status(self, *statuses):
-        return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status]) for status in statuses)
+        return itertools.chain.from_iterable(self._status_tasks[status].values() for status in statuses)
 
     def get_active_task_count_for_status(self, status):
         if status:
@@ -645,7 +639,7 @@ class SimpleTaskState(object):
             self._status_tasks[task_obj.status].pop(task)
 
     def get_active_workers(self, last_active_lt=None, last_get_work_gt=None):
-        for worker in six.itervalues(self._active_workers):
+        for worker in self._active_workers.values():
             if last_active_lt is not None and worker.last_active >= last_active_lt:
                 continue
             last_get_work = worker.last_get_work

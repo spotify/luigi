@@ -16,8 +16,7 @@
 #
 
 """
-The implementations of the hdfs clients. The hadoop cli client and the
-snakebite client.
+The implementations of the hdfs clients.
 """
 
 
@@ -38,7 +37,7 @@ logger = logging.getLogger('luigi-interface')
 
 def create_hadoopcli_client():
     """
-    Given that we want one of the hadoop cli clients (unlike snakebite),
+    Given that we want one of the hadoop cli clients,
     this one will return the right one.
     """
     version = hdfs_config.get_configured_hadoop_version()

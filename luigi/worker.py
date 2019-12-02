@@ -40,10 +40,7 @@ import subprocess
 import sys
 import contextlib
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+import queue as Queue
 import random
 import socket
 import threading
@@ -64,10 +61,7 @@ from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
 from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -147,7 +141,7 @@ class TaskProcess(multiprocessing.Process):
         while True:
             try:
                 if next_send is None:
-                    requires = six.next(task_gen)
+                    requires = next(task_gen)
                 else:
                     requires = task_gen.send(next_send)
             except StopIteration:
@@ -1202,7 +1196,7 @@ class Worker(object):
                 if len(self._running_tasks) == 0:
                     self._idle_since = self._idle_since or datetime.datetime.now()
                     if self._keep_alive(get_work_response):
-                        six.next(sleeper)
+                        next(sleeper)
                         continue
                     else:
                         break

@@ -20,8 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from __future__ import absolute_import
-
 import functools
 import itertools
 import operator
@@ -518,14 +516,6 @@ else:
 
 
 try:
-    advance_iterator = next
-except NameError:
-    def advance_iterator(it):
-        return it.next()
-next = advance_iterator
-
-
-try:
     callable = callable
 except NameError:
     def callable(obj):
@@ -574,9 +564,6 @@ if PY3:
     def iterkeys(d, **kw):
         return iter(d.keys(**kw))
 
-    def itervalues(d, **kw):
-        return iter(d.values(**kw))
-
     def iterlists(d, **kw):
         return iter(d.lists(**kw))
 
@@ -589,9 +576,6 @@ else:
     def iterkeys(d, **kw):
         return d.iterkeys(**kw)
 
-    def itervalues(d, **kw):
-        return d.itervalues(**kw)
-
     def iterlists(d, **kw):
         return d.iterlists(**kw)
 
@@ -602,7 +586,6 @@ else:
     viewitems = operator.methodcaller("viewitems")
 
 _add_doc(iterkeys, "Return an iterator over the keys of a dictionary.")
-_add_doc(itervalues, "Return an iterator over the values of a dictionary.")
 _add_doc(iterlists,
          "Return an iterator over the (key, [values]) pairs of a dictionary.")
 
@@ -623,7 +606,6 @@ if PY3:
     import io
     StringIO = io.StringIO
     BytesIO = io.BytesIO
-    _assertCountEqual = "assertCountEqual"
     if sys.version_info[1] <= 1:
         _assertRaisesRegex = "assertRaisesRegexp"
         _assertRegex = "assertRegexpMatches"
@@ -648,15 +630,12 @@ else:
     iterbytes = functools.partial(itertools.imap, ord)
     import StringIO
     StringIO = BytesIO = StringIO.StringIO
-    _assertCountEqual = "assertItemsEqual"
     _assertRaisesRegex = "assertRaisesRegexp"
     _assertRegex = "assertRegexpMatches"
 _add_doc(b, """Byte literal""")
 _add_doc(u, """Text literal""")
 
 
-def assertCountEqual(self, *args, **kwargs):
-    return getattr(self, _assertCountEqual)(*args, **kwargs)
 
 
 def assertRaisesRegex(self, *args, **kwargs):
@@ -799,22 +778,6 @@ def with_metaclass(meta, *bases):
         def __new__(cls, name, this_bases, d):
             return meta(name, bases, d)
     return type.__new__(metaclass, 'temporary_class', (), {})
-
-
-def add_metaclass(metaclass):
-    """Class decorator for creating a class with a metaclass."""
-    def wrapper(cls):
-        orig_vars = cls.__dict__.copy()
-        slots = orig_vars.get('__slots__')
-        if slots is not None:
-            if isinstance(slots, str):
-                slots = [slots]
-            for slots_var in slots:
-                orig_vars.pop(slots_var)
-        orig_vars.pop('__dict__', None)
-        orig_vars.pop('__weakref__', None)
-        return metaclass(cls.__name__, cls.__bases__, orig_vars)
-    return wrapper
 
 
 def python_2_unicode_compatible(klass):
