@@ -143,8 +143,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
     pass
 
 
-@six.add_metaclass(Register)
-class Task(object):
+class Task(metaclass=Register):
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
 

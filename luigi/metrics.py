@@ -1,7 +1,6 @@
 import abc
 
 from enum import Enum
-from luigi import six
 
 
 class MetricsCollectors(Enum):
@@ -24,8 +23,7 @@ class MetricsCollectors(Enum):
             raise ValueError("MetricsCollectors value ' {0} ' isn't supported", which)
 
 
-@six.add_metaclass(abc.ABCMeta)
-class MetricsCollector(object):
+class MetricsCollector(metaclass=abc.ABCMeta):
     """Abstractable MetricsCollector base class that can be replace by tool
     specific implementation.
     """
