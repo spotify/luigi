@@ -22,7 +22,6 @@ import pickle
 import luigi
 import luigi.format
 from luigi.contrib import hdfs
-from luigi import six
 import luigi.contrib.hdfs.clients
 
 from target_test import FileSystemTargetTestMixin
