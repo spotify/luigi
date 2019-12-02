@@ -25,7 +25,6 @@ from luigi import notifications
 from luigi.notifications import generate_email
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-from luigi import six
 import luigi
 
 
