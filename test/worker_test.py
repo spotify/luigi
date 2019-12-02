@@ -38,7 +38,6 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi.rpc import RPCError
-from luigi import six
 from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
