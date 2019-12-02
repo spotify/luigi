@@ -574,9 +574,6 @@ if PY3:
     def iterkeys(d, **kw):
         return iter(d.keys(**kw))
 
-    def itervalues(d, **kw):
-        return iter(d.values(**kw))
-
     def iteritems(d, **kw):
         return iter(d.items(**kw))
 
@@ -592,9 +589,6 @@ else:
     def iterkeys(d, **kw):
         return d.iterkeys(**kw)
 
-    def itervalues(d, **kw):
-        return d.itervalues(**kw)
-
     def iteritems(d, **kw):
         return d.iteritems(**kw)
 
@@ -608,7 +602,6 @@ else:
     viewitems = operator.methodcaller("viewitems")
 
 _add_doc(iterkeys, "Return an iterator over the keys of a dictionary.")
-_add_doc(itervalues, "Return an iterator over the values of a dictionary.")
 _add_doc(iteritems,
          "Return an iterator over the (key, value) pairs of a dictionary.")
 _add_doc(iterlists,
