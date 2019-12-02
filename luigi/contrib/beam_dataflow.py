@@ -235,7 +235,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
             raise ValueError("dataflow_params must be of type DataflowParamKeys")
         super(BeamDataflowJobTask, self).__init__()
 
-    @abstractmethod
+    @abc.abstractmethod
     def dataflow_executable(self):
         """
         Command representing the Dataflow executable to be run.
