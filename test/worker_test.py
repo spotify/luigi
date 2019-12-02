@@ -1482,6 +1482,23 @@ class HangTheWorkerTask(luigi.Task):
 
 class MultipleWorkersTest(unittest.TestCase):
 
+    @unittest.skip('Always skip. There are many intermittent failures')
+    def test_multiple_workers(self):
+        # Test using multiple workers
+        # Also test generating classes dynamically since this may reflect issues with
+        # various platform and how multiprocessing is implemented. If it's using os.fork
+        # under the hood it should be fine, but dynamic classses can't be pickled, so
+        # other implementations of multiprocessing (using spawn etc) may fail
+        class MyDynamicTask(luigi.Task):
+            x = luigi.Parameter()
+
+            def run(self):
+                time.sleep(0.1)
+
+        t0 = time.time()
+        luigi.build([MyDynamicTask(i) for i in range(100)], workers=100, local_scheduler=True)
+        self.assertTrue(time.time() < t0 + 5.0)  # should ideally take exactly 0.1s, but definitely less than 10.0
+
     def test_zero_workers(self):
         d = DummyTask()
         luigi.build([d], workers=0, local_scheduler=True)
