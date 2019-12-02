@@ -28,7 +28,6 @@ import inspect
 
 import pickle
 
-from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask
 from luigi import configuration
 
@@ -234,11 +233,11 @@ class SparkSubmitTask(ExternalProgramTask):
         return [self.app] + self.app_options()
 
     def _list_config(self, config):
-        if config and isinstance(config, six.string_types):
+        if config and isinstance(config, str):
             return list(map(lambda x: x.strip(), config.split(',')))
 
     def _dict_config(self, config):
-        if config and isinstance(config, six.string_types):
+        if config and isinstance(config, str):
             return dict(map(lambda i: i.split('=', 1), config.split('|')))
 
     def _text_arg(self, name, value):

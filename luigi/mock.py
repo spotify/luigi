@@ -25,7 +25,6 @@ from io import BytesIO
 
 import sys
 
-from luigi import six
 from luigi import target
 from luigi.format import get_default_format
 
@@ -139,7 +138,7 @@ class MockTarget(target.FileSystemTarget):
                 if mock_target._mirror_on_stderr:
                     if self._write_line:
                         sys.stderr.write(fn + ": ")
-                    if six.binary_type:
+                    if bytes:
                         sys.stderr.write(data.decode('utf8'))
                     else:
                         sys.stderr.write(data)

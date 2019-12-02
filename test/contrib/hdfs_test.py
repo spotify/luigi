@@ -22,7 +22,6 @@ import pickle
 import luigi
 import luigi.format
 from luigi.contrib import hdfs
-from luigi import six
 import luigi.contrib.hdfs.clients
 
 from target_test import FileSystemTargetTestMixin
@@ -171,7 +170,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
 
     def assertRegexpMatches(self, text, expected_regexp, msg=None):
         """Python 2.7 backport."""
-        if isinstance(expected_regexp, six.string_types):
+        if isinstance(expected_regexp, str):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(text):
             msg = msg or "Regexp didn't match"
