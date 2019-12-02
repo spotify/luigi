@@ -25,12 +25,7 @@ import os.path
 
 from luigi.configuration import get_config, LuigiConfigParser
 
-# In python3 ConfigParser was renamed
-# https://stackoverflow.com/a/41202010
-try:
-    from ConfigParser import NoSectionError
-except ImportError:
-    from configparser import NoSectionError
+from configparser import NoSectionError
 
 
 class BaseLogging(object):
