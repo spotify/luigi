@@ -19,9 +19,6 @@
 A luigi file system client that wraps around the hdfs-library (a webhdfs
 client)
 
-This is a sensible fast alternative to snakebite. In particular for python3
-users, where snakebite is not supported at the time of writing (dec 2015).
-
 Note. This wrapper client is not feature complete yet. As with most software
 the authors only implement the features they need.  If you need to wrap more of
 the file system operations, please do and contribute back.

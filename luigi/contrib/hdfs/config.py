@@ -17,14 +17,12 @@
 
 """
 You can configure what client by setting the "client" config under the "hdfs" section in the configuration, or using the ``--hdfs-client`` command line option.
-"hadoopcli" is the slowest, but should work out of the box. "snakebite" is the fastest, but requires Snakebite to be installed.
+"hadoopcli" is the slowest, but should work out of the box.
 """
 
 import random
 import luigi
 import luigi.configuration
-from luigi import six
-import warnings
 import os
 import getpass
 
@@ -33,12 +31,6 @@ from urllib.parse import urlparse, urlunparse
 
 class hdfs(luigi.Config):
     client_version = luigi.IntParameter(default=None)
-    effective_user = luigi.OptionalParameter(
-        default=os.getenv('HADOOP_USER_NAME'),
-        description="Optionally specifies the effective user for snakebite. "
-                    "If not set the environment variable HADOOP_USER_NAME is "
-                    "used, else USER")
-    snakebite_autoconfig = luigi.BoolParameter(default=False)
     namenode_host = luigi.OptionalParameter(default=None)
     namenode_port = luigi.IntParameter(default=None)
     client = luigi.Parameter(default='hadoopcli')
@@ -52,7 +44,7 @@ class hadoopcli(luigi.Config):
     command = luigi.Parameter(default="hadoop",
                               config_path=dict(section="hadoop", name="command"),
                               description='The hadoop command, will run split() on it, '
-                              'so you can pass something like "hadoop --param"')
+                                          'so you can pass something like "hadoop --param"')
     version = luigi.Parameter(default="cdh4",
                               config_path=dict(section="hadoop", name="version"),
                               description='Can also be cdh3 or apache1')
@@ -80,20 +72,7 @@ def get_configured_hdfs_client():
     the [hdfs] section. It will return the client that retains backwards
     compatibility when 'client' isn't configured.
     """
-    config = hdfs()
-    custom = config.client
-    conf_usinf_snakebite = [
-        "snakebite_with_hadoopcli_fallback",
-        "snakebite",
-    ]
-    if six.PY3 and (custom in conf_usinf_snakebite):
-        warnings.warn(
-            "snakebite client not compatible with python3 at the moment"
-            "falling back on hadoopcli",
-            stacklevel=2
-        )
-        return "hadoopcli"
-    return custom
+    return hdfs().client
 
 
 def tmppath(path=None, include_unix_username=True):
