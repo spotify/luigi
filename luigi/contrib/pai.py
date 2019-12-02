@@ -253,7 +253,7 @@ class PaiTask(luigi.Task):
     def __init__(self, *args, **kwargs):
         """
         :param pai_url: The rest server url of PAI clusters, default is 'http://127.0.0.1:9186'.
-        :param token: The toke used to auth the rest server of PAI.
+        :param token: The token used to auth the rest server of PAI.
         """
         super(PaiTask, self).__init__(*args, **kwargs)
         self.__init_token()

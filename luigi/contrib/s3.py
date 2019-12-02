@@ -126,7 +126,7 @@ class S3Client(FileSystem):
         aws_access_key_id = options.get('aws_access_key_id')
         aws_secret_access_key = options.get('aws_secret_access_key')
 
-        # Removing key args would break backwards compability
+        # Removing key args would break backwards compatibility
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
 
