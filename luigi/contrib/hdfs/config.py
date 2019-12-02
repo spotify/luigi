@@ -28,10 +28,7 @@ import warnings
 import os
 import getpass
 
-try:
-    from urlparse import urlparse, urlunparse
-except ImportError:
-    from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse, urlunparse
 
 
 class hdfs(luigi.Config):

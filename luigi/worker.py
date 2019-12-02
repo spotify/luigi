@@ -40,10 +40,7 @@ import subprocess
 import sys
 import contextlib
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+import queue as Queue
 import random
 import socket
 import threading
@@ -64,10 +61,7 @@ from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
 from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 
 logger = logging.getLogger('luigi-interface')
 
