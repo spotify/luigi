@@ -737,7 +737,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
 
     Usage:
     Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
-    Optionally, override the `autocommit` atribute to run the query in autocommit mode - this is necessary to run VACUUM for example.
+    Optionally, override the `autocommit` attribute to run the query in autocommit mode - this is necessary to run VACUUM for example.
     Override the `run` method if your use case requires some action with the query result.
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
     To customize the query signature as recorded in the database marker table, override the `update_id` property.

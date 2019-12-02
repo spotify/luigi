@@ -46,7 +46,7 @@ Example configuration section in luigi.cfg::
     scalding-home: /usr/share/scalding
 
     # provided dependencies, e.g. jars required for compiling but not executing
-    # scalding jobs. Currently requred jars:
+    # scalding jobs. Currently required jars:
     # org.apache.hadoop/hadoop-core/0.20.2
     # org.slf4j/slf4j-log4j12/1.6.6
     # log4j/log4j/1.2.15

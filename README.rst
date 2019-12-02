@@ -156,6 +156,7 @@ or held presentations about Luigi:
 * `Uppsala University <http://pharmb.io>`_ `(tutorial) <http://uppnex.se/twiki/do/view/Courses/EinfraMPS2015/Luigi.html>`_   / `(presentation, 2015) <https://www.youtube.com/watch?v=f26PqSXZdWM>`_ / `(slides, 2015) <https://www.slideshare.net/SamuelLampa/building-workflows-with-spotifys-luigi>`_ / `(poster, 2015) <https://pharmb.io/poster/2015-sciluigi/>`_ / `(paper, 2016) <https://doi.org/10.1186/s13321-016-0179-6>`_ / `(project) <https://github.com/pharmbio/sciluigi>`_
 * `GIPHY <https://giphy.com/>`_ `(blog, 2019) <https://engineering.giphy.com/luigi-the-10x-plumber-containerizing-scaling-luigi-in-kubernetes/>`__
 * `xtream <https://xtreamers.io/>`__ `(blog, 2019) <https://towardsdatascience.com/lessons-from-a-real-machine-learning-project-part-1-from-jupyter-to-luigi-bdfd0b050ca5>`__
+* `CIAN <https://cian.ru/>`__ `(presentation, 2019) <https://www.highload.ru/moscow/2019/abstracts/6030>`__
 
 Some more companies are using Luigi but haven't had a chance yet to write about it:
 

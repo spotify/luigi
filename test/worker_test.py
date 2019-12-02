@@ -993,7 +993,7 @@ class WorkerDisabledTest(LuigiTestCase):
     def _test_stop_getting_new_work_build(self, sch, worker):
         """
         I got motivated to create this test case when I saw that the
-        execution_summary crashed after my first attemted solution.
+        execution_summary crashed after my first attempted solution.
         """
         class KillWorkerTask(luigi.Task):
             did_actually_run = False

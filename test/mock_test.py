@@ -19,7 +19,6 @@ from __future__ import print_function
 from helpers import unittest
 
 from luigi.mock import MockTarget, MockFileSystem
-from luigi import six
 from luigi.format import Nop
 
 
@@ -116,14 +115,3 @@ class MockFileSystemTest(unittest.TestCase):
 
     def test_listdir(self):
         self.assertEqual(sorted([self.path, self.path2]), sorted(self.fs.listdir("/tmp")))
-
-
-class TestImportMockFile(unittest.TestCase):
-
-    def test_mockfile(self):
-        from luigi.mock import MockFile
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'MockFile has been renamed MockTarget'):
-                self.assertTrue(isinstance(MockFile('foo'), MockTarget))
-        else:
-            self.assertTrue(isinstance(MockFile('foo'), MockTarget))

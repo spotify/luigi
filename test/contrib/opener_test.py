@@ -6,7 +6,7 @@ import unittest
 
 from luigi.contrib.opener import OpenerTarget, NoOpenerError
 from luigi.mock import MockTarget
-from luigi.file import LocalTarget
+from luigi.local_target import LocalTarget
 
 from nose.plugins.attrib import attr
 
@@ -79,8 +79,8 @@ class TestOpenerTarget(unittest.TestCase):
         target.open('w').close()
         self.assertTrue(LocalTarget.fs.exists(self.local_file))
 
-    @mock.patch('luigi.file.LocalTarget.__init__')
-    @mock.patch('luigi.file.LocalTarget.__del__')
+    @mock.patch('luigi.local_target.LocalTarget.__init__')
+    @mock.patch('luigi.local_target.LocalTarget.__del__')
     def test_local_tmp_target(self, lt_del_patch, lt_init_patch):
         '''Verify local target url with query string
 
