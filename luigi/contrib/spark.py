@@ -26,10 +26,7 @@ import importlib
 import tarfile
 import inspect
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 
 from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask
