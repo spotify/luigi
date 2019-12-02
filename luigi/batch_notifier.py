@@ -85,8 +85,8 @@ class BatchNotifier(object):
     def _format_expl(self, expl):
         lines = expl.rstrip().split('\n')[-self._config.error_lines:]
         if self._email_format == 'html':
-            lines = '\n'.join(lines)
-            return f'<pre>{lines}</pre>'
+            lines_joined = '\n'.join(lines)
+            return f'<pre>{lines_joined}</pre>'
         else:
             return '\n{}'.format('\n'.join(map('      {}'.format, lines)))
 
