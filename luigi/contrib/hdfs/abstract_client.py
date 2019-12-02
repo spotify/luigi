@@ -20,12 +20,10 @@ Module containing abstract class about hdfs clients.
 """
 
 import abc
-from luigi import six
 import luigi.target
 
 
-@six.add_metaclass(abc.ABCMeta)
-class HdfsFileSystem(luigi.target.FileSystem):
+class HdfsFileSystem(luigi.target.FileSystem, metaclass=abc.ABCMeta):
     """
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
     """
