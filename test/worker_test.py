@@ -38,7 +38,6 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi.rpc import RPCError
-from luigi import six
 from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
@@ -1484,9 +1483,6 @@ class HangTheWorkerTask(luigi.Task):
 class MultipleWorkersTest(unittest.TestCase):
 
     @unittest.skip('Always skip. There are many intermittent failures')
-    # This pass under python3 when run as `nosetests test/worker_test.py`
-    # but not as `nosetests test`. Probably some side effect on previous tests
-    @unittest.skipIf(six.PY3, 'This test fail on python3 when run with tox.')
     def test_multiple_workers(self):
         # Test using multiple workers
         # Also test generating classes dynamically since this may reflect issues with

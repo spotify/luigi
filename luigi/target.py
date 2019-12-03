@@ -215,7 +215,8 @@ class FileSystemTarget(Target):
         # cast to str to allow path to be objects like pathlib.PosixPath and py._path.local.LocalPath
         self.path = str(path)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def fs(self):
         """
         The :py:class:`FileSystem` associated with this FileSystemTarget.

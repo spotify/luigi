@@ -27,9 +27,9 @@ import time
 import base64
 
 from luigi import six
-from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
-from luigi.six.moves.urllib.request import urlopen, Request
-from luigi.six.moves.urllib.error import URLError
+from urllib.parse import urljoin, urlencode, urlparse
+from urllib.request import urlopen, Request
+from urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS
@@ -79,8 +79,6 @@ class URLLibFetcher(object):
         if url.username:
             # base64 encoding of username:password
             auth = base64.b64encode('{}:{}'.format(url.username, url.password or '').encode('utf-8'))
-            if six.PY3:
-                auth = auth.decode('utf-8')
 
             # update full_url and create a request object with the auth header set
             full_url = url._replace(netloc=url.netloc.split('@', 1)[-1]).geturl()
