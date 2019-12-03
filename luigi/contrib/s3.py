@@ -33,8 +33,6 @@ from urllib.parse import urlsplit
 
 from configparser import NoSectionError
 
-from luigi import six
-
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
@@ -504,7 +502,7 @@ class S3Client(FileSystem):
         except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
-        for k, v in six.iteritems(config):
+        for k, v in config.items():
             try:
                 config[k] = int(v)
             except ValueError:
