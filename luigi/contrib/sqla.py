@@ -284,11 +284,13 @@ class CopyToTable(luigi.Task):
     echo = False
     connect_args = {}
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def connection_string(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def table(self):
         return None
 
