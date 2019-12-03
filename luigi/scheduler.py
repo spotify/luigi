@@ -911,7 +911,7 @@ class Scheduler(object):
             if batched_params:
                 unbatched_params = {
                     param: value
-                    for param, value in six.iteritems(task.params)
+                    for param, value in task.params.items()
                     if param not in batched_params
                 }
             else:
@@ -965,7 +965,7 @@ class Scheduler(object):
         if batched_params:
             unbatched_params = {
                 param: value
-                for param, value in six.iteritems(params)
+                for param, value in params.items()
                 if param not in batched_params
             }
         else:
@@ -1046,7 +1046,7 @@ class Scheduler(object):
 
     def _generate_retry_policy(self, task_retry_policy_dict):
         retry_policy_dict = self._config._get_retry_policy()._asdict()
-        retry_policy_dict.update({k: v for k, v in six.iteritems(task_retry_policy_dict) if v is not None})
+        retry_policy_dict.update({k: v for k, v in task_retry_policy_dict.items() if v is not None})
         return RetryPolicy(**retry_policy_dict)
 
     def _has_resources(self, needed_resources, used_resources):
@@ -1054,7 +1054,7 @@ class Scheduler(object):
             return True
 
         available_resources = self._resources or {}
-        for resource, amount in six.iteritems(needed_resources):
+        for resource, amount in needed_resources.items():
             if amount + used_resources[resource] > available_resources.get(resource, 1):
                 return False
         return True
@@ -1065,7 +1065,7 @@ class Scheduler(object):
             for task in self._state.get_active_tasks_by_status(RUNNING):
                 resources_running = getattr(task, "resources_running", task.resources)
                 if resources_running:
-                    for resource, amount in six.iteritems(resources_running):
+                    for resource, amount in resources_running.items():
                         used_resources[resource] += amount
         return used_resources
 
@@ -1214,7 +1214,7 @@ class Scheduler(object):
 
             if task.status == RUNNING and (task.worker_running in greedy_workers):
                 greedy_workers[task.worker_running] -= 1
-                for resource, amount in six.iteritems((getattr(task, 'resources_running', task.resources) or {})):
+                for resource, amount in (getattr(task, 'resources_running', task.resources) or {}).items():
                     greedy_resources[resource] += amount
 
             if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
@@ -1243,7 +1243,7 @@ class Scheduler(object):
                             greedy_workers[task_worker] -= 1
 
                             # keep track of the resources used in greedy scheduling
-                            for resource, amount in six.iteritems((task.resources or {})):
+                            for resource, amount in (task.resources or {}).items():
                                 greedy_resources[resource] += amount
 
                             break
@@ -1528,12 +1528,12 @@ class Scheduler(object):
                 name=resource,
                 num_total=r_dict['total'],
                 num_used=r_dict['used']
-            ) for resource, r_dict in six.iteritems(self.resources())]
+            ) for resource, r_dict in self.resources().items()]
         if self._resources is not None:
             consumers = collections.defaultdict(dict)
             for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.status == RUNNING and task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+                    for resource, amount in task.resources.items():
                         consumers[resource][task.id] = self._serialize_task(task.id, include_deps=False)
             for resource in resources:
                 tasks = consumers[resource['name']]
@@ -1545,7 +1545,7 @@ class Scheduler(object):
         ''' get total resources and available ones '''
         used_resources = self._used_resources()
         ret = collections.defaultdict(dict)
-        for resource, total in six.iteritems(self._resources):
+        for resource, total in self._resources.items():
             ret[resource]['total'] = total
             if resource in used_resources:
                 ret[resource]['used'] = used_resources[resource]
@@ -1628,7 +1628,7 @@ class Scheduler(object):
                 return
 
             def decrease(resources, decrease_resources):
-                for resource, decrease_amount in six.iteritems(decrease_resources):
+                for resource, decrease_amount in decrease_resources.items():
                     if decrease_amount > 0 and resource in resources:
                         resources[resource] = max(0, resources[resource] - decrease_amount)
 

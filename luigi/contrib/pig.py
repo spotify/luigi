@@ -31,8 +31,6 @@ import subprocess
 import sys
 import tempfile
 
-from luigi import six
-
 import luigi
 from luigi import configuration
 
@@ -104,15 +102,15 @@ class PigJobTask(luigi.Task):
 
         with tempfile.NamedTemporaryFile() as param_file, tempfile.NamedTemporaryFile() as prop_file:
             if self.pig_parameters():
-                items = six.iteritems(self.pig_parameters())
+                items = self.pig_parameters().items()
                 param_file.writelines(line(k, v) for (k, v) in items)
                 param_file.flush()
                 opts.append('-param_file')
                 opts.append(param_file.name)
 
             if self.pig_properties():
-                items = six.iteritems(self.pig_properties())
-                prop_file.writelines(line(k, v) for (k, v) in items)
+                items = self.pig_properties().items()
+                prop_file.writelines(line(k, v) for k, v in items)
                 prop_file.flush()
                 opts.append('-propertyFile')
                 opts.append(prop_file.name)
@@ -130,7 +128,7 @@ class PigJobTask(luigi.Task):
         temp_stdout = tempfile.TemporaryFile('wb')
         env = os.environ.copy()
         env['PIG_HOME'] = self.pig_home()
-        for k, v in six.iteritems(self.pig_env_vars()):
+        for k, v in self.pig_env_vars().items():
             env[k] = v
 
         proc = subprocess.Popen(cmd, shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
