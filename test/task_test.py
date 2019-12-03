@@ -17,7 +17,6 @@
 
 import doctest
 import pickle
-import six
 import warnings
 
 from helpers import unittest, LuigiTestCase
@@ -137,23 +136,22 @@ class TaskTest(unittest.TestCase):
             DummyTask(**DUMMY_TASK_OK_PARAMS)
         self.assertEqual(len(w), 0, msg='No warning should be raised when correct parameter types are used')
 
-    if six.PY3:  # assertWarnsRegex was introduced in Python 3.2
-        def test_warn_on_non_str_param(self):
-            params = dict(**DUMMY_TASK_OK_PARAMS)
-            params['param'] = 42
-            with self.assertWarnsRegex(UserWarning, 'Parameter "param" with value "42" is not of type string.'):
-                DummyTask(**params)
+    def test_warn_on_non_str_param(self):
+        params = dict(**DUMMY_TASK_OK_PARAMS)
+        params['param'] = 42
+        with self.assertWarnsRegex(UserWarning, 'Parameter "param" with value "42" is not of type string.'):
+            DummyTask(**params)
 
-        def test_warn_on_non_timedelta_param(self):
-            params = dict(**DUMMY_TASK_OK_PARAMS)
+    def test_warn_on_non_timedelta_param(self):
+        params = dict(**DUMMY_TASK_OK_PARAMS)
 
-            class MockTimedelta(object):
-                days = 1
-                seconds = 1
+        class MockTimedelta(object):
+            days = 1
+            seconds = 1
 
-            params['timedelta_param'] = MockTimedelta()
-            with self.assertWarnsRegex(UserWarning, 'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
-                DummyTask(**params)
+        params['timedelta_param'] = MockTimedelta()
+        with self.assertWarnsRegex(UserWarning, 'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
+            DummyTask(**params)
 
 
 class ExternalizeTaskTest(LuigiTestCase):

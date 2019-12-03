@@ -4,7 +4,7 @@ import argparse
 import json
 from collections import defaultdict
 
-from luigi.six.moves.urllib.request import urlopen
+from urllib.request import urlopen
 
 
 class LuigiGrep(object):

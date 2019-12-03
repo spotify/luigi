@@ -237,7 +237,7 @@ class Task(metaclass=Register):
         owner_email = self.owner_email
         if owner_email is None:
             return []
-        elif isinstance(owner_email, six.string_types):
+        elif isinstance(owner_email, str):
             return owner_email.split(',')
         else:
             return owner_email
@@ -792,10 +792,7 @@ def externalize(taskclass_or_taskobject):
 
         externalize(MyTask)  # BAD: This does nothing (as after luigi 2.4.0)
     """
-    # Seems like with python < 3.3 copy.copy can't copy classes
-    # and objects with specified metaclass http://bugs.python.org/issue11480
-    compatible_copy = copy.copy if six.PY3 else copy.deepcopy
-    copied_value = compatible_copy(taskclass_or_taskobject)
+    copied_value = copy.copy(taskclass_or_taskobject)
     if copied_value is taskclass_or_taskobject:
         # Assume it's a class
         clazz = taskclass_or_taskobject
@@ -870,7 +867,7 @@ def flatten(struct):
         for _, result in struct.items():
             flat += flatten(result)
         return flat
-    if isinstance(struct, six.string_types):
+    if isinstance(struct, str):
         return [struct]
 
     try:
