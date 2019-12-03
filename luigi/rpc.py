@@ -26,7 +26,6 @@ import socket
 import time
 import base64
 
-from luigi import six
 from urllib.parse import urljoin, urlencode, urlparse
 from urllib.request import urlopen, Request
 from urllib.error import URLError
