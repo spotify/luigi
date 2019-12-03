@@ -33,7 +33,6 @@ from configparser import NoOptionError, NoSectionError
 
 from luigi import date_interval
 from luigi import task_register
-from luigi import six
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
@@ -757,7 +756,7 @@ class TimeDeltaParameter(Parameter):
         if re_match and any(re_match.groups()):
             kwargs = {}
             has_val = False
-            for k, v in six.iteritems(re_match.groupdict(default="0")):
+            for k, v in re_match.groupdict(default="0").items():
                 val = int(v)
                 if val > -1:
                     has_val = True

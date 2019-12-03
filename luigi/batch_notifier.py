@@ -76,7 +76,7 @@ class BatchNotifier(object):
         elif self._config.batch_mode == 'family':
             return family
         elif self._config.batch_mode == 'unbatched_params':
-            param_str = six.u(', ').join(six.u('{}={}').format(*kv) for kv in six.iteritems(unbatched_args))
+            param_str = six.u(', ').join(six.u('{}={}').format(*kv) for kv in unbatched_args.items())
             return six.u('{}({})').format(family, param_str)
         else:
             raise ValueError('Unknown batch mode for batch notifier: {}'.format(
@@ -136,12 +136,12 @@ class BatchNotifier(object):
 
     def _task_expl_groups(self, expls):
         if not self._config.group_by_error_messages:
-            return [((task,), msg) for task, msg in six.iteritems(expls)]
+            return [((task,), msg) for task, msg in expls.items()]
 
         groups = collections.defaultdict(list)
-        for task, msg in six.iteritems(expls):
+        for task, msg in expls.items():
             groups[msg].append(task)
-        return [(tasks, msg) for msg, tasks in six.iteritems(groups)]
+        return [(tasks, msg) for msg, tasks in groups.items()]
 
     def _expls_key(self, expls_tuple):
         expls = expls_tuple[0]
@@ -156,7 +156,7 @@ class BatchNotifier(object):
     def _email_body(self, fail_counts, disable_counts, scheduling_counts, fail_expls):
         expls = {
             (name, fail_count, disable_counts[name], scheduling_counts[name]): self._expl_body(fail_expls[name])
-            for name, fail_count in six.iteritems(fail_counts)
+            for name, fail_count in fail_counts.items()
         }
         expl_groups = sorted(self._task_expl_groups(expls), key=self._expls_key)
         body_lines = []
@@ -188,7 +188,7 @@ class BatchNotifier(object):
 
     def send_email(self):
         try:
-            for owner, failures in six.iteritems(self._fail_counts):
+            for owner, failures in self._fail_counts.items():
                 self._send_email(
                     fail_counts=failures,
                     disable_counts=self._disabled_counts[owner],

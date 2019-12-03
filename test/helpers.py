@@ -25,7 +25,6 @@ import luigi
 import luigi.task_register
 import luigi.cmdline_parser
 from luigi.cmdline_parser import CmdlineParser
-from luigi import six
 import os
 
 import unittest
@@ -114,9 +113,9 @@ class with_config(object):
             luigi.configuration.LuigiConfigParser._instance = new_conf
             orig_dict = {k: dict(orig_conf.items(k)) for k in orig_conf.sections()}
             new_dict = self._make_dict(orig_dict)
-            for (section, settings) in six.iteritems(new_dict):
+            for section, settings in new_dict.items():
                 new_conf.add_section(section)
-                for (name, value) in six.iteritems(settings):
+                for name, value in settings.items():
                     new_conf.set(section, name, value)
             try:
                 return fun(*args, **kwargs)
