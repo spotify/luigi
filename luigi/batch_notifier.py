@@ -76,8 +76,8 @@ class BatchNotifier(object):
         elif self._config.batch_mode == 'family':
             return family
         elif self._config.batch_mode == 'unbatched_params':
-            param_str = ', '.join(f'{k}={v}' for k, v in six.iteritems(unbatched_args))
-            return f'{family}({param_str})'
+            param_str = ', '.join('{}={}'.format(k, v) for k, v in six.iteritems(unbatched_args))
+            return '{}({})'.format(family, param_str)
         else:
             raise ValueError('Unknown batch mode for batch notifier: {}'.format(
                 self._config.batch_mode))
@@ -85,8 +85,7 @@ class BatchNotifier(object):
     def _format_expl(self, expl):
         lines = expl.rstrip().split('\n')[-self._config.error_lines:]
         if self._email_format == 'html':
-            lines_joined = '\n'.join(lines)
-            return f'<pre>{lines_joined}</pre>'
+            return '<pre>{}</pre>'.format('\n'.join(lines))
         else:
             return '\n{}'.format('\n'.join(map('      {}'.format, lines)))
 
@@ -104,16 +103,14 @@ class BatchNotifier(object):
             _plural_format('{} scheduling failure{}', scheduling_count),
         ]
         count_str = ', '.join(filter(None, counts))
-        return f'{task} ({count_str})'
+        return '{} ({})'.format(task, count_str)
 
     def _format_tasks(self, tasks):
         lines = map(self._format_task, sorted(tasks, key=self._expl_key))
         if self._email_format == 'html':
-            lines_joined = '\n<br>'.join(lines)
-            return f'<li>{lines_joined}'
+            return '<li>{}'.format('\n<br>'.join(lines))
         else:
-            lines_joined = '\n  '.join(lines)
-            return f'- {lines_joined}'
+            return '- {}'.format('\n  '.join(lines))
 
     def _owners(self, owners):
         return self._default_owner | set(owners)
@@ -168,7 +165,7 @@ class BatchNotifier(object):
             body_lines.append(msg)
         body = '\n'.join(filter(None, body_lines)).rstrip()
         if self._email_format == 'html':
-            return f'<ul>\n{body}\n</ul>'
+            return '<ul>\n{}\n</ul>'.format(body)
         else:
             return body
 

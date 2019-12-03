@@ -36,7 +36,7 @@ class HiveTest(unittest.TestCase):
     def mock_hive_cmd(self, args, check_return=True):
         self.last_hive_cmd = args
         self.count += 1
-        return f'statement{self.count}'
+        return 'statement{}'.format(self.count)
 
     def setUp(self):
         self.run_hive_cmd_saved = luigi.contrib.hive.run_hive
