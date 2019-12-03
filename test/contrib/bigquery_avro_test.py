@@ -19,7 +19,6 @@
 These are the unit tests for the BigQueryLoadAvro class.
 """
 
-import six
 import unittest
 import avro
 import avro.schema
@@ -41,15 +40,9 @@ class BigQueryAvroTest(unittest.TestCase):
             ]
         }
         """
-        avro_schema = self._parse_schema(schema_json)
+        avro_schema = avro.schema.Parse(schema_json)
         reader = avro.io.DatumReader(avro_schema, avro_schema)
         actual_schema = BigQueryLoadAvro._get_writer_schema(reader)
         self.assertEqual(actual_schema, avro_schema,
                          "writer(s) avro_schema attribute not found")
         # otherwise AttributeError is thrown
-
-    def _parse_schema(self, schema_json):
-        if six.PY2:
-            return avro.schema.parse(schema_json)
-        else:
-            return avro.schema.Parse(schema_json)
