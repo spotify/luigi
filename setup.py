@@ -47,9 +47,8 @@ else:
     install_requires.append('python-daemon')
 
 # Tornado >=5 requires updated ssl module so we only allow it for recent enough
-# versions of python (3.4+ and 2.7.9+).
-if sys.version_info[:2] >= (3, 4) or (sys.version_info[:2] == (2, 7) and
-                                      sys.version_info[2] >= 9):
+# versions of python (3.4+).
+if sys.version_info[:2] >= (3, 4):
     install_requires.append('tornado>=4.0,<6')
 else:
     install_requires.append('tornado>=4.0,<5')
@@ -112,7 +111,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
