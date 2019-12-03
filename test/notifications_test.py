@@ -25,7 +25,6 @@ from luigi import notifications
 from luigi.notifications import generate_email
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-from luigi import six
 import luigi
 
 
@@ -149,8 +148,8 @@ class ExceptionFormatTest(unittest.TestCase):
     def test_generate_unicode_email(self):
         generate_email(
             sender='test@example.com',
-            subject=six.u('sübjéct'),
-            message=six.u("你好"),
+            subject='sübjéct',
+            message="你好",
             recipients=['receiver@example.com'],
             image_png=None,
         )
