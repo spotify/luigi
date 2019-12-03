@@ -8,7 +8,6 @@ from datetime import datetime
 import time
 
 import luigi
-from luigi import six
 from luigi.notifications import send_email, email
 import luigi.parameter
 

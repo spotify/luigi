@@ -21,7 +21,6 @@ import sys
 import tempfile
 from helpers import unittest
 
-from luigi import six
 import luigi.contrib.hive
 import mock
 from luigi import LocalTarget
