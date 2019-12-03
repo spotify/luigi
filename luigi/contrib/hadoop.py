@@ -49,9 +49,6 @@ import luigi.contrib.hdfs
 import luigi.contrib.s3
 from luigi.contrib import mrrunner
 
-if six.PY2:
-    from itertools import imap as map
-
 try:
     # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
     import ujson as json

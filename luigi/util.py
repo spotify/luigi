@@ -220,13 +220,9 @@ time. Brilliant!
 import datetime
 import logging
 
-from luigi import six
-
 from luigi import task
 from luigi import parameter
 
-if six.PY3:
-    xrange = range
 
 logger = logging.getLogger('luigi-interface')
 
@@ -459,7 +455,7 @@ def previous(task):
 
 def get_previous_completed(task, max_steps=10):
     prev = task
-    for _ in xrange(max_steps):
+    for _ in range(max_steps):
         prev = previous(prev)
         logger.debug("Checking if %s is complete", prev)
         if prev.complete():
