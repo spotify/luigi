@@ -357,7 +357,8 @@ class _DateParameterBase(Parameter):
         self.interval = interval
         self.start = start if start is not None else _UNIX_EPOCH.date()
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def date_format(self):
         """
         Override me with a :py:meth:`~datetime.date.strftime` string.
@@ -501,14 +502,16 @@ class _DatetimeParameterBase(Parameter):
         self.interval = interval
         self.start = start if start is not None else _UNIX_EPOCH
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def date_format(self):
         """
         Override me with a :py:meth:`~datetime.date.strftime` string.
         """
         pass
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def _timedelta(self):
         """
         How to move one interval of this type forward (i.e. not counting self.interval).

@@ -181,17 +181,20 @@ class OpenPai(luigi.Config):
 class PaiTask(luigi.Task):
     __POLL_TIME = 5
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def name(self):
         """Name for the job, need to be unique, required"""
         return 'SklearnExample'
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def image(self):
         """URL pointing to the Docker image for all tasks in the job, required"""
         return 'openpai/pai.example.sklearn'
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def tasks(self):
         """List of taskRole, one task role at least, required"""
         return []
