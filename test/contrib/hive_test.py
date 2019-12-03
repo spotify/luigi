@@ -21,7 +21,6 @@ import sys
 import tempfile
 from helpers import unittest
 
-from luigi import six
 import luigi.contrib.hive
 import mock
 from luigi import LocalTarget
@@ -36,7 +35,7 @@ class HiveTest(unittest.TestCase):
     def mock_hive_cmd(self, args, check_return=True):
         self.last_hive_cmd = args
         self.count += 1
-        return six.u("statement{0}".format(self.count))
+        return 'statement{}'.format(self.count)
 
     def setUp(self):
         self.run_hive_cmd_saved = luigi.contrib.hive.run_hive
@@ -271,7 +270,7 @@ class HiveCommandClientTest(unittest.TestCase):
         # I'm testing this again to check the return codes
         # I didn't want to tear up all the existing tests to change how run_hive is mocked
         comm = mock.Mock(name='communicate_mock')
-        comm.return_value = six.b("some return stuff"), ""
+        comm.return_value = b'some return stuff', ''
 
         preturn = mock.Mock(name='open_mock')
         preturn.returncode = 0
@@ -284,7 +283,7 @@ class HiveCommandClientTest(unittest.TestCase):
         preturn.returncode = 17
         self.assertRaises(luigi.contrib.hive.HiveCommandError, luigi.contrib.hive.run_hive, ["blah", "blah"])
 
-        comm.return_value = six.b(""), "some stderr stuff"
+        comm.return_value = b'', 'some stderr stuff'
         returned = luigi.contrib.hive.run_hive(["blah", "blah"], False)
         self.assertEqual("", returned)
 
