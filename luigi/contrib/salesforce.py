@@ -105,7 +105,8 @@ class salesforce(luigi.Config):
 
 
 class QuerySalesforce(Task):
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def object_name(self):
         """
         Override to return the SF object we are querying.
@@ -126,7 +127,8 @@ class QuerySalesforce(Task):
         """Override to specify the sandbox name if it is intended to be used."""
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def soql(self):
         """Override to return the raw string SOQL or the path to it."""
         return None
