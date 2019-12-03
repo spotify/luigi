@@ -27,7 +27,7 @@ import luigi.server
 import luigi.cmdline
 from luigi.configuration import get_config
 from luigi.scheduler import Scheduler
-from luigi.six.moves.urllib.parse import (
+from urllib.parse import (
     urlencode, ParseResult, quote as urlquote
 )
 
