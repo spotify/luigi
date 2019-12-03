@@ -792,10 +792,7 @@ def externalize(taskclass_or_taskobject):
 
         externalize(MyTask)  # BAD: This does nothing (as after luigi 2.4.0)
     """
-    # Seems like with python < 3.3 copy.copy can't copy classes
-    # and objects with specified metaclass http://bugs.python.org/issue11480
-    compatible_copy = copy.copy if six.PY3 else copy.deepcopy
-    copied_value = compatible_copy(taskclass_or_taskobject)
+    copied_value = copy.copy(taskclass_or_taskobject)
     if copied_value is taskclass_or_taskobject:
         # Assume it's a class
         clazz = taskclass_or_taskobject
