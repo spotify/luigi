@@ -40,6 +40,7 @@ from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget
 from luigi.task import Register, flatten_output
 
+
 logger = logging.getLogger('luigi-interface')
 
 
