@@ -442,12 +442,12 @@ class TestHiveTaskArgs(TestHiveTask):
         f_idx = arglist.index('-f')
         self.assertEqual(arglist[f_idx + 1], f_name)
 
-        hivevars = ['{}={}'.format(k, v) for k, v in six.iteritems(task.hivevars())]
+        hivevars = ['{}={}'.format(k, v) for k, v in task.hivevars().items()]
         for var in hivevars:
             idx = arglist.index(var)
             self.assertEqual(arglist[idx - 1], '--hivevar')
 
-        hiveconfs = ['{}={}'.format(k, v) for k, v in six.iteritems(task.hiveconfs())]
+        hiveconfs = ['{}={}'.format(k, v) for k, v in task.hiveconfs().items()]
         for conf in hiveconfs:
             idx = arglist.index(conf)
             self.assertEqual(arglist[idx - 1], '--hiveconf')

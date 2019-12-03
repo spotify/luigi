@@ -26,8 +26,6 @@ import sys
 import tempfile
 import warnings
 
-from luigi import six
-
 import luigi
 import luigi.contrib.hadoop
 from luigi.contrib.hdfs import get_autoconfig_client
@@ -191,7 +189,7 @@ class HiveCommandClient(HiveClient):
         Turns a dict into the a Hive partition specification string.
         """
         return ','.join(["`{0}`='{1}'".format(k, v) for (k, v) in
-                         sorted(six.iteritems(partition), key=operator.itemgetter(0))])
+                         sorted(partition.items(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
@@ -246,7 +244,7 @@ class MetastoreClient(HiveClient):
             return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
 
     def partition_spec(self, partition):
-        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(six.iteritems(partition), key=operator.itemgetter(0)))
+        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0)))
 
 
 class HiveThriftContext(object):
@@ -321,7 +319,7 @@ class WarehouseHiveClient(HiveClient):
     def partition_spec(self, partition):
         _validate_partition(partition)
         return '/'.join([
-            '{}={}'.format(k, v) for (k, v) in six.iteritems(partition or {})
+            '{}={}'.format(k, v) for (k, v) in (partition or {}).items()
         ])
 
 
@@ -440,11 +438,11 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                 arglist += ['-i', rcfile]
         hiveconfs = job.hiveconfs()
         if hiveconfs:
-            for k, v in six.iteritems(hiveconfs):
+            for k, v in hiveconfs.items():
                 arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
         hivevars = job.hivevars()
         if hivevars:
-            for k, v in six.iteritems(hivevars):
+            for k, v in hivevars.items():
                 arglist += ['--hivevar', '{0}={1}'.format(k, v)]
         logger.info(arglist)
         return arglist

@@ -17,8 +17,6 @@
 
 from helpers import unittest
 
-from luigi import six
-
 from helpers import with_config
 import luigi
 from luigi.db_task_history import DbTaskHistory
@@ -77,7 +75,7 @@ class DbTaskHistoryTest(unittest.TestCase):
             self.assertEqual(len(records), 1)
             [record] = records
             self.assertEqual(task.task_family, record.name)
-            for param_name, param_value in six.iteritems(task.param_kwargs):
+            for param_name, param_value in task.param_kwargs.items():
                 self.assertTrue(param_name in record.parameters)
                 self.assertEqual(str(param_value), record.parameters[param_name].value)
 
