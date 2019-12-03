@@ -30,14 +30,13 @@ from luigi.batch_notifier import BatchNotifier
 import pickle
 import functools
 import hashlib
+import inspect
 import itertools
 import logging
 import os
 import re
 import time
 import uuid
-
-from luigi import six
 
 from luigi import configuration
 from luigi import notifications
@@ -96,12 +95,15 @@ def rpc_method(**request_args):
     def _rpc_method(fn):
         # If request args are passed, return this function again for use as
         # the decorator function with the request args attached.
-        fn_args = six.getargspec(fn)
+        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(fn)
+        if kwonlyargs or ann:
+            raise ValueError("Function has keyword-only parameters or annotations"
+                             ", use getfullargspec() API which can support them")
+        (first_arg, *all_args) = args
 
-        assert not fn_args.varargs
-        assert fn_args.args[0] == 'self'
-        all_args = fn_args.args[1:]
-        defaults = dict(zip(reversed(all_args), reversed(fn_args.defaults or ())))
+        assert not varargs
+        assert first_arg == 'self'
+        defaults = dict(zip(reversed(all_args), reversed(defaults or ())))
         required_args = frozenset(arg for arg in all_args if arg not in defaults)
         fn_name = fn.__name__
 
