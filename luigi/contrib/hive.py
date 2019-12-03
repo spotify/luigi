@@ -34,9 +34,6 @@ from luigi.contrib.hdfs import get_autoconfig_client
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
-if six.PY3:
-    unicode = str
-
 logger = logging.getLogger('luigi-interface')
 
 
@@ -460,7 +457,7 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
         self.prepare_outputs(job)
         with tempfile.NamedTemporaryFile() as f:
             query = job.query()
-            if isinstance(query, unicode):
+            if isinstance(query, str):
                 query = query.encode('utf8')
             f.write(query)
             f.flush()
