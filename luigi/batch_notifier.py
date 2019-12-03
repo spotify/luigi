@@ -7,6 +7,7 @@ import collections
 from datetime import datetime
 import time
 
+
 import luigi
 from luigi.notifications import send_email, email
 import luigi.parameter
