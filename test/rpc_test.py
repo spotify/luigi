@@ -205,7 +205,7 @@ class URLLibFetcherTest(ServerTestBase):
 
         # with body
         req = fetcher._create_request('http://localhost', body={'foo': 'bar baz/test'})
-        self.assertEqual(req.data, 'foo=bar+baz%2Ftest'.encode("latin-1"))
+        self.assertEqual(req.data, b'foo=bar+baz%2Ftest')
 
         # without body
         req = fetcher._create_request('http://localhost')

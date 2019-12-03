@@ -270,7 +270,7 @@ class HiveCommandClientTest(unittest.TestCase):
         # I'm testing this again to check the return codes
         # I didn't want to tear up all the existing tests to change how run_hive is mocked
         comm = mock.Mock(name='communicate_mock')
-        comm.return_value = "some return stuff".encode("latin-1"), ""
+        comm.return_value = b'some return stuff', ''
 
         preturn = mock.Mock(name='open_mock')
         preturn.returncode = 0
@@ -283,7 +283,7 @@ class HiveCommandClientTest(unittest.TestCase):
         preturn.returncode = 17
         self.assertRaises(luigi.contrib.hive.HiveCommandError, luigi.contrib.hive.run_hive, ["blah", "blah"])
 
-        comm.return_value = "".encode("latin-1"), "some stderr stuff"
+        comm.return_value = b'', 'some stderr stuff'
         returned = luigi.contrib.hive.run_hive(["blah", "blah"], False)
         self.assertEqual("", returned)
 
