@@ -169,7 +169,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
             job.run()
         except ExternalProgramRunError as e:
             self.assertEqual(e.err, 'spark test error')
-            self.assertIn('spark test error', six.text_type(e))
+            self.assertIn('spark test error', str(e))
             self.assertIn(call.info('Program stderr:\nspark test error'),
                           logger.mock_calls)
         else:
