@@ -394,9 +394,9 @@ class Worker(object):
         num_self_tasks = len(self.tasks)
         num_state_tasks = sum(len(state._status_tasks[status]) for status in statuses)
         if num_self_tasks < num_state_tasks:
-            return six.moves.filter(lambda task: task.status in statuses, self.tasks)
+            return filter(lambda task: task.status in statuses, self.tasks)
         else:
-            return six.moves.filter(lambda task: self.id in task.workers, state.get_active_tasks_by_status(*statuses))
+            return filter(lambda task: self.id in task.workers, state.get_active_tasks_by_status(*statuses))
 
     def is_trivial_worker(self, state):
         """
