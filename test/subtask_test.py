@@ -24,7 +24,8 @@ import luigi
 class AbstractTask(luigi.Task):
     k = luigi.IntParameter()
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def foo(self):
         raise NotImplementedError
 

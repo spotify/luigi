@@ -162,23 +162,28 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
         * `port`
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def host(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def database(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def password(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def table(self):
         return None
 
@@ -287,7 +292,8 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         * `output`
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def host(self):
         """
         Host of the RDBMS. Implementation should support `hostname:port`
@@ -302,23 +308,28 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def database(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def password(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def table(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def query(self):
         return None
 
