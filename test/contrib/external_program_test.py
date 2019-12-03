@@ -261,6 +261,31 @@ class ExternalProgramTaskTest(unittest.TestCase):
                 proc.wait()
         self.assertEqual(test_val.value, 1)
 
+    def test_tracking_url_context_works_correctly_when_logs_output_pattern_to_url_is_not_default(self):
+
+        class _Task(TestEchoTask):
+            def build_tracking_url(self, logs_output):
+                return 'The {} is mine'.format(logs_output)
+
+        test_val = Value('i', 0)
+
+        def fake_set_tracking_url(val, url):
+            if url == "The world is mine":
+                val.value += 1
+
+        task = _Task(
+            capture_output=False,
+            stream_for_searching_tracking_url='stdout',
+            tracking_url_pattern=r"Hello, (.*)!"
+        )
+
+        test_args = list(map(str, task.program_args()))
+
+        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+            with task._proc_with_tracking_url_context(proc_args=test_args, proc_kwargs={}) as proc:
+                proc.wait()
+        self.assertEqual(test_val.value, 1)
+
 
 class TestExternalPythonProgramTask(ExternalPythonProgramTask):
     virtualenv = '/path/to/venv'
