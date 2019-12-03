@@ -26,8 +26,6 @@ import sys
 import tempfile
 import warnings
 
-from luigi import six
-
 import luigi
 import luigi.contrib.hadoop
 from luigi.contrib.hdfs import get_autoconfig_client

@@ -39,7 +39,6 @@ import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
-from luigi import six
 
 from luigi import configuration
 import luigi

@@ -35,8 +35,6 @@ from datetime import datetime, timedelta, date
 
 from dateutil.relativedelta import relativedelta
 
-from luigi import six
-
 import luigi
 from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget

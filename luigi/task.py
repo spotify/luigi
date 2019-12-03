@@ -31,7 +31,6 @@ import copy
 import functools
 
 import luigi
-from luigi import six
 
 from luigi import parameter
 from luigi.task_register import Register

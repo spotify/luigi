@@ -33,7 +33,6 @@ from configparser import NoOptionError, NoSectionError
 
 from luigi import date_interval
 from luigi import task_register
-from luigi import six
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
