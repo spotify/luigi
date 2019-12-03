@@ -78,7 +78,7 @@ class URLLibFetcher(object):
         url = urlparse(full_url)
         if url.username:
             # base64 encoding of username:password
-            auth = base64.b64encode(f'{url.username}:{url.password or ""}'.encode("utf-8"))
+            auth = base64.b64encode('{}:{}'.format(url.username, url.password or '').encode('utf-8'))
             if six.PY3:
                 auth = auth.decode('utf-8')
 
