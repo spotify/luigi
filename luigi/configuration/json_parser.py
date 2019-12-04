@@ -99,4 +99,4 @@ class LuigiJsonParser(BaseParser):
         # TODO: Handle raw and vars in case somebody expects it to work.
         if section is None:
             return self.data.items()
-        self.data.get(section, {}).items()
+        self.data[section].items()
