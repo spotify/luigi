@@ -32,6 +32,7 @@ class LuigiJsonParser(BaseParser):
         '/etc/luigi/luigi.json',
         'luigi.json',
     ]
+    _defaults = {}
 
     @staticmethod
     def _update_data(data, new_data):
@@ -90,3 +91,6 @@ class LuigiJsonParser(BaseParser):
 
     def __getitem__(self, name):
         return self.data[name]
+
+    def defaults(self):
+        return self._defaults
