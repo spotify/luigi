@@ -94,3 +94,6 @@ class LuigiJsonParser(BaseParser):
 
     def defaults(self):
         return self._defaults
+
+    def items(self, section=_UNSET, raw=False, vars=None):
+        self.data.get(section, {}).items()
