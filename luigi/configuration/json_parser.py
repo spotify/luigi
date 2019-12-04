@@ -22,7 +22,6 @@ import json
 from .base_parser import BaseParser
 from ..freezing import recursively_freeze
 
-_UNSET=object()
 
 class LuigiJsonParser(BaseParser):
     NO_DEFAULT = object()
@@ -96,5 +95,8 @@ class LuigiJsonParser(BaseParser):
     def defaults(self):
         return self._defaults
 
-    def items(self, section=_UNSET, raw=False, vars=None):
+    def items(self, section=None, raw=False, vars=None):
+        # TODO: Handle raw and vars in case somebody expects it to work.
+        if section is None:
+            return self.data.items()
         self.data.get(section, {}).items()
