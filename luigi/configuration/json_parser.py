@@ -22,6 +22,7 @@ import json
 from .base_parser import BaseParser
 from ..freezing import recursively_freeze
 
+_UNSET=object()
 
 class LuigiJsonParser(BaseParser):
     NO_DEFAULT = object()
