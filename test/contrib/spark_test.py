@@ -21,7 +21,6 @@ import sys
 import pickle
 import luigi
 import luigi.contrib.hdfs
-from luigi import six
 from luigi.mock import MockTarget
 from helpers import with_config, temporary_unloaded_module
 from luigi.contrib.external_program import ExternalProgramRunError
