@@ -25,7 +25,6 @@ from multiprocessing import Value
 from helpers import unittest
 import luigi
 import luigi.contrib.hdfs
-from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
