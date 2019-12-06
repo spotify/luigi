@@ -118,6 +118,14 @@ class ExternalProgramTask(luigi.Task):
         file_object.seek(0)
         return ''.join(map(lambda s: s.decode('utf-8'), file_object.readlines()))
 
+    def build_tracking_url(self, logs_output):
+        """
+        This method is intended for transforming pattern match in logs to an URL
+        :param logs_output: Found match of `self.tracking_url_pattern`
+        :return: a tracking URL for the task
+        """
+        return logs_output
+
     def run(self):
         args = list(map(str, self.program_args()))
 
@@ -180,7 +188,9 @@ class ExternalProgramTask(luigi.Task):
                         file_to_write.write(new_line)
                     match = re.search(pattern, new_line.decode('utf-8'))
                     if match:
-                        self.set_tracking_url(match.group(1))
+                        self.set_tracking_url(
+                            self.build_tracking_url(match.group(1))
+                        )
                 else:
                     sleep(time_to_sleep)
 

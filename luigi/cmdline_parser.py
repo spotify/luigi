@@ -75,7 +75,7 @@ class CmdlineParser(object):
             # Check that what we believe to be the task is correctly spelled
             Register.get_task_cls(root_task)
         known_args = parser.parse_args(args=cmdline_args)
-        self.known_args = known_args  # Also publically expose parsed arguments
+        self.known_args = known_args  # Also publicly expose parsed arguments
 
     @staticmethod
     def _build_parser(root_task=None, help_all=False):
