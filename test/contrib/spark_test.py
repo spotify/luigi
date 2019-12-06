@@ -30,10 +30,9 @@ from mock import mock, patch, call, MagicMock
 from functools import partial
 from multiprocessing import Value
 from subprocess import Popen
+from io import BytesIO
 
 from nose.plugins.attrib import attr
-
-BytesIO = six.BytesIO
 
 
 def poll_generator():

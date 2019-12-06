@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from io import BytesIO
 import os
 import shutil
 import subprocess
@@ -31,8 +32,6 @@ from mock import patch, call
 from subprocess import Popen
 import mock
 from nose.plugins.attrib import attr
-
-BytesIO = six.BytesIO
 
 
 def poll_generator():
