@@ -99,7 +99,7 @@ class ExternalProgramTaskTest(unittest.TestCase):
             job.run()
         except ExternalProgramRunError as e:
             self.assertEqual(e.err, 'stderr')
-            self.assertIn('STDERR: stderr', six.text_type(e))
+            self.assertIn('STDERR: stderr', str(e))
             self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
         else:
             self.fail('Should have thrown ExternalProgramRunError')
