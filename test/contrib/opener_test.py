@@ -1,12 +1,11 @@
-import luigi
-import mock
 import random
 import unittest
 
-from luigi.contrib.opener import OpenerTarget, NoOpenerError
-from luigi.mock import MockTarget
+import luigi
+import mock
+from luigi.contrib.opener import NoOpenerError, OpenerTarget
 from luigi.local_target import LocalTarget
-
+from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 
 

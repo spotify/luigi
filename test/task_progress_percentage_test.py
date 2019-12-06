@@ -15,11 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase
-
 import luigi
 import luigi.scheduler
 import luigi.worker
+from helpers import LuigiTestCase
 
 
 class TaskProgressPercentageTest(LuigiTestCase):

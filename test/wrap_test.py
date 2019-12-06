@@ -16,10 +16,10 @@
 #
 
 import datetime
-from helpers import unittest
 
 import luigi
 import luigi.notifications
+from helpers import unittest
 from luigi.mock import MockTarget
 from luigi.util import inherits
 

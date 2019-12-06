@@ -145,8 +145,9 @@ import collections
 import datetime
 import itertools
 import logging
-import luigi
 import os
+
+import luigi
 import sqlalchemy
 
 

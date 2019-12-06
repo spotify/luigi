@@ -15,24 +15,25 @@
 # limitations under the License.
 #
 import functools
-import os
 import multiprocessing
+import os
 import shutil
 import signal
-import time
 import tempfile
-from helpers import unittest, skipOnTravis
-import luigi.rpc
-import luigi.server
-import luigi.cmdline
-from luigi.configuration import get_config
-from luigi.scheduler import Scheduler
-from urllib.parse import (
-    urlencode, ParseResult, quote as urlquote
-)
+import time
+from urllib.parse import ParseResult
+from urllib.parse import quote as urlquote
+from urllib.parse import urlencode
 
 import tornado.ioloop
 from tornado.testing import AsyncHTTPTestCase
+
+import luigi.cmdline
+import luigi.rpc
+import luigi.server
+from helpers import skipOnTravis, unittest
+from luigi.configuration import get_config
+from luigi.scheduler import Scheduler
 from nose.plugins.attrib import attr
 
 try:

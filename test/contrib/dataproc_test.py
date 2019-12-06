@@ -3,7 +3,12 @@
 This test requires credentials that can access GCS & access to a bucket below.
 Follow the directions in the gcloud tools to set up local credentials.
 """
+import os
+import time
 import unittest
+
+import luigi
+from nose.plugins.attrib import attr
 
 try:
     import google.auth
@@ -16,10 +21,6 @@ try:
 except ImportError:
     raise unittest.SkipTest('Unable to load google cloud dependencies')
 
-import luigi
-import os
-import time
-from nose.plugins.attrib import attr
 
 # In order to run this test, you should set these to your GCS project.
 # Unfortunately there's no mock

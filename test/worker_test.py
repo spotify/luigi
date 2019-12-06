@@ -25,20 +25,18 @@ import tempfile
 import threading
 import time
 
-import psutil
-from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
-                     temporary_unloaded_module)
-
 import luigi.notifications
 import luigi.task_register
 import luigi.worker
 import mock
-from luigi import ExternalTask, RemoteScheduler, Task, Event
-from luigi.mock import MockTarget, MockFileSystem
+import psutil
+from helpers import LuigiTestCase, skipOnTravis, temporary_unloaded_module, unittest, with_config
+from luigi import Event, ExternalTask, RemoteScheduler, Task
+from luigi.cmdline import luigi_run
+from luigi.mock import MockFileSystem, MockTarget
+from luigi.rpc import RPCError
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-from luigi.rpc import RPCError
-from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
 

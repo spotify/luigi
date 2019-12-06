@@ -16,10 +16,10 @@
 #
 
 import logging
-from helpers import unittest
 
 import luigi.notifications
 import luigi.worker
+from helpers import unittest
 from luigi import Parameter, RemoteScheduler, Task
 from luigi.worker import Worker
 from mock import Mock

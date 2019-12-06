@@ -24,7 +24,7 @@ import errno
 import hashlib
 import os
 import sys
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 
 def getpcmd(pid):

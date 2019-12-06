@@ -66,6 +66,7 @@ import string
 import time
 
 import luigi
+
 logger = logging.getLogger(__name__)
 
 try:

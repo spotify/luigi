@@ -1,5 +1,4 @@
 import abc
-
 from enum import Enum
 
 

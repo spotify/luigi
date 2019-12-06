@@ -16,10 +16,9 @@
 #
 import os
 
+from helpers import LuigiTestCase, with_config
 from luigi.configuration import LuigiConfigParser, get_config
 from luigi.configuration.cfg_parser import InterpolationMissingEnvvarError
-
-from helpers import LuigiTestCase, with_config
 
 
 class ConfigParserTest(LuigiTestCase):

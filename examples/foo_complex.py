@@ -23,8 +23,8 @@ You can run this example like this:
             $ luigi --module examples.foo_complex examples.Foo --workers 2 --local-scheduler
 
 """
-import time
 import random
+import time
 
 import luigi
 

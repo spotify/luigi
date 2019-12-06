@@ -15,16 +15,16 @@
 # limitations under the License.
 #
 
+import json
 import os
 import sys
-import json
 import unittest
 
 import luigi
-import luigi.format
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
 import luigi.contrib.mrrunner
+import luigi.format
 import luigi.notifications
 import mock
 from luigi.mock import MockTarget

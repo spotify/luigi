@@ -26,10 +26,10 @@ other arguments are the ones returned by PySparkTask.app_options()
 
 """
 
-import pickle
 import logging
-import sys
 import os
+import pickle
+import sys
 
 # this prevents the modules in the directory of this script from shadowing global packages
 sys.path.append(sys.path.pop(0))

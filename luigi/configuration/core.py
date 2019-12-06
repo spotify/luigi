@@ -21,7 +21,6 @@ import warnings
 from .cfg_parser import LuigiConfigParser
 from .toml_parser import LuigiTomlParser
 
-
 logger = logging.getLogger('luigi-interface')
 
 

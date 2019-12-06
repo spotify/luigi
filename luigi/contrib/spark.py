@@ -16,20 +16,19 @@
 #
 
 import collections
+import importlib
+import inspect
 import logging
 import os
-import re
-import sys
-import tempfile
-import shutil
-import importlib
-import tarfile
-import inspect
-
 import pickle
+import re
+import shutil
+import sys
+import tarfile
+import tempfile
 
-from luigi.contrib.external_program import ExternalProgramTask
 from luigi import configuration
+from luigi.contrib.external_program import ExternalProgramTask
 
 logger = logging.getLogger('luigi-interface')
 

@@ -18,8 +18,11 @@
    limitations under the License.
 """
 
+import logging
 import os
 import sys
+import tarfile
+
 try:
     # Dill is used for handling pickling and unpickling if there is a deference
     # in server setups between the LSF submission node and the nodes in the
@@ -27,8 +30,6 @@ try:
     import dill as pickle
 except ImportError:
     import pickle
-import logging
-import tarfile
 
 
 def do_work_on_compute_node(work_dir):

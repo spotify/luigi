@@ -1,5 +1,5 @@
-from prometheus_client import CollectorRegistry, Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from luigi.metrics import MetricsCollector
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Gauge, generate_latest
 
 
 class PrometheusMetricsCollector(MetricsCollector):

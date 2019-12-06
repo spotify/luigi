@@ -15,15 +15,14 @@
 # limitations under the License.
 #
 
-import re
-import random
 import pickle
+import random
+import re
 
 import luigi
+import luigi.contrib.hdfs.clients
 import luigi.format
 from luigi.contrib import hdfs
-import luigi.contrib.hdfs.clients
-
 from target_test import FileSystemTargetTestMixin
 
 

@@ -17,8 +17,9 @@
 
 # pylint: disable=F0401
 from time import sleep
-from helpers import unittest
 
+from helpers import unittest
+from luigi.contrib.redis_store import RedisTarget
 from nose.plugins.attrib import attr
 
 try:
@@ -26,7 +27,6 @@ try:
 except ImportError:
     raise unittest.SkipTest('Unable to load redis module')
 
-from luigi.contrib.redis_store import RedisTarget
 
 HOST = 'localhost'
 PORT = 6379

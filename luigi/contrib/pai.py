@@ -29,14 +29,13 @@ Requires:
 
 Written and maintained by Liu, Dongqing (@liudongqing).
 """
-import time
-import logging
-import luigi
 import abc
-
+import json
+import logging
+import time
 from urllib.parse import urljoin
 
-import json
+import luigi
 
 logger = logging.getLogger('luigi-interface')
 

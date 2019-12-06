@@ -16,10 +16,10 @@
 #
 
 import datetime
-from helpers import unittest, in_parse
 
 import luigi
 import luigi.interface
+from helpers import in_parse, unittest
 
 
 class DateTask(luigi.Task):

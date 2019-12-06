@@ -19,8 +19,8 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 """
 
 import abc
-
 import logging
+
 logger = logging.getLogger('luigi-interface')
 
 

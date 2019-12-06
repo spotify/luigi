@@ -21,10 +21,9 @@ These are the unit tests for the BigQuery-luigi binding.
 
 
 import luigi
+from helpers import unittest
 from luigi.contrib import bigquery
 from luigi.contrib.gcs import GCSTarget
-
-from helpers import unittest
 from mock import MagicMock
 from nose.plugins.attrib import attr
 

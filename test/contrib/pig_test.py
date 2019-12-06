@@ -22,7 +22,6 @@ import luigi
 from helpers import unittest
 from luigi.contrib.pig import PigJobError, PigJobTask
 from mock import patch
-
 from nose.plugins.attrib import attr
 
 

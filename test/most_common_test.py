@@ -16,7 +16,6 @@
 #
 
 from helpers import unittest
-
 from luigi.tools.range import most_common
 
 

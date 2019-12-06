@@ -19,6 +19,9 @@ You will need a ``tox --version`` of at least 2.0.
 
 .. code:: bash
 
+    # First make sure all imports are organized properly
+    tox -e isort
+
     # These commands are pretty fast and will tell if you've
     # broken something major:
     tox -e flake8

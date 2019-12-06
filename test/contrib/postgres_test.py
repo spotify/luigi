@@ -13,11 +13,12 @@
 # the License.
 
 import datetime
+
 import luigi
 import luigi.contrib.postgres
-from luigi.tools.range import RangeDaily
-from helpers import unittest
 import mock
+from helpers import unittest
+from luigi.tools.range import RangeDaily
 from nose.plugins.attrib import attr
 
 

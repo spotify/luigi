@@ -15,18 +15,17 @@
 # limitations under the License.
 #
 
+import os
 import pickle
+import shutil
 import tempfile
 import time
-import os
-import shutil
 from multiprocessing import Process
-from helpers import unittest
 
+import luigi.configuration
 import luigi.scheduler
 import luigi.server
-import luigi.configuration
-from helpers import with_config
+from helpers import unittest, with_config
 from luigi.target import FileAlreadyExists
 
 

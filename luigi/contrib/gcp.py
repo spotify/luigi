@@ -2,6 +2,7 @@
 Common code for GCP (google cloud services) integration
 """
 import logging
+
 logger = logging.getLogger('luigi-interface')
 
 try:

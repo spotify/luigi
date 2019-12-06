@@ -5,10 +5,9 @@ import unittest
 import uuid
 from datetime import datetime
 
-from nose.plugins.attrib import attr
-
 import luigi
 from luigi.format import NopFormat
+from nose.plugins.attrib import attr
 
 try:
     import dropbox

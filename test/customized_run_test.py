@@ -17,13 +17,13 @@
 
 import logging
 import time
-from helpers import unittest
 
 import luigi
 import luigi.contrib.hadoop
 import luigi.rpc
 import luigi.scheduler
 import luigi.worker
+from helpers import unittest
 
 
 class DummyTask(luigi.Task):

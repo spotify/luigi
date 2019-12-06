@@ -22,22 +22,18 @@ See :ref:`Parameter` for more info on how to define parameters.
 
 import abc
 import datetime
-import warnings
-from enum import IntEnum
 import json
-from json import JSONEncoder
 import operator
+import warnings
 from ast import literal_eval
-
 from configparser import NoOptionError, NoSectionError
+from enum import IntEnum
+from json import JSONEncoder
 
-from luigi import date_interval
-from luigi import task_register
-from luigi import configuration
+from luigi import configuration, date_interval, task_register
 from luigi.cmdline_parser import CmdlineParser
 
-from .freezing import recursively_freeze, FrozenOrderedDict
-
+from .freezing import FrozenOrderedDict, recursively_freeze
 
 _no_value = object()
 

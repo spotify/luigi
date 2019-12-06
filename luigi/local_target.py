@@ -19,16 +19,16 @@
 :class:`LocalTarget` provides a concrete implementation of a :py:class:`~luigi.target.Target` class that uses files on the local file system
 """
 
+import errno
+import io
 import os
 import random
 import shutil
 import tempfile
-import io
 import warnings
-import errno
 
 from luigi.format import FileWrapper, get_default_format
-from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
+from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemTarget, MissingParentDirectory, NotADirectory
 
 
 class atomic_file(AtomicLocalFile):

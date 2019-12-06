@@ -17,10 +17,10 @@
 
 import datetime
 import decimal
-from helpers import unittest
 
 import luigi
 import luigi.notifications
+from helpers import unittest
 from luigi.mock import MockTarget
 
 luigi.notifications.DEBUG = True

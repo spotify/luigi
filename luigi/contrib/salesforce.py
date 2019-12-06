@@ -14,15 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import time
 import abc
+import csv
 import logging
+import re
+import tempfile
+import time
 import warnings
 import xml.etree.ElementTree as ET
 from collections import OrderedDict
-import re
-import csv
-import tempfile
 from urllib.parse import urlsplit
 
 import luigi

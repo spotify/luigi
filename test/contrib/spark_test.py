@@ -15,22 +15,22 @@
 # limitations under the License.
 #
 
-import unittest
 import os
-import sys
 import pickle
-import luigi
-import luigi.contrib.hdfs
-from luigi.mock import MockTarget
-from helpers import with_config, temporary_unloaded_module
-from luigi.contrib.external_program import ExternalProgramRunError
-from luigi.contrib.spark import SparkSubmitTask, PySparkTask
-from mock import mock, patch, call, MagicMock
+import sys
+import unittest
 from functools import partial
+from io import BytesIO
 from multiprocessing import Value
 from subprocess import Popen
-from io import BytesIO
 
+import luigi
+import luigi.contrib.hdfs
+from helpers import temporary_unloaded_module, with_config
+from luigi.contrib.external_program import ExternalProgramRunError
+from luigi.contrib.spark import PySparkTask, SparkSubmitTask
+from luigi.mock import MockTarget
+from mock import MagicMock, call, mock, patch
 from nose.plugins.attrib import attr
 
 

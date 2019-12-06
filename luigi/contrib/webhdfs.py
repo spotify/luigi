@@ -25,9 +25,9 @@ contrib module. You can consider migrating to
 
 import logging
 
-from luigi.target import FileSystemTarget, AtomicLocalFile
-from luigi.format import get_default_format
 import luigi.contrib.hdfs
+from luigi.format import get_default_format
+from luigi.target import AtomicLocalFile, FileSystemTarget
 
 logger = logging.getLogger("luigi-interface")
 

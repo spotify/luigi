@@ -16,10 +16,10 @@
 #
 
 import datetime
-from helpers import unittest
 
 import luigi
 import luigi.date_interval
+from helpers import unittest
 from luigi.util import get_previous_completed, previous
 
 

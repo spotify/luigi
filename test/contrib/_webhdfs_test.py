@@ -16,10 +16,9 @@
 #
 
 import os
+
 from helpers import unittest
-
 from luigi.contrib import webhdfs
-
 from nose.plugins.attrib import attr
 
 

@@ -12,13 +12,14 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
-import sys
-import os
 import datetime
-import sphinx.environment
+import os
+import sys
+
 from docutils.utils import get_source_line
 from pkg_resources import get_distribution
 
+import sphinx.environment
 
 try:
     import luigi

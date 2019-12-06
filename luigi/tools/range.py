@@ -24,14 +24,14 @@ over and over and make no progress to more recent times. (See ``task_limit``
 and ``reverse`` parameters.)
 TODO foolproof against that kind of misuse?
 """
-from collections import Counter
-import itertools
 import functools
+import itertools
 import logging
-import warnings
 import re
 import time
-from datetime import datetime, timedelta, date
+import warnings
+from collections import Counter
+from datetime import date, datetime, timedelta
 
 from dateutil.relativedelta import relativedelta
 
@@ -39,7 +39,6 @@ import luigi
 from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget
 from luigi.task import Register, flatten_output
-
 
 logger = logging.getLogger('luigi-interface')
 

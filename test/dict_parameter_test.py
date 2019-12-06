@@ -15,12 +15,12 @@
 # limitations under the License.
 #
 
-from helpers import unittest, in_parse
+import collections
+import json
 
 import luigi
 import luigi.interface
-import json
-import collections
+from helpers import in_parse, unittest
 
 
 class DictParameterTask(luigi.Task):

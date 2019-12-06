@@ -1,14 +1,11 @@
-import mock
 import os
-
 import unittest
 
+import mock
 from luigi import Parameter
 from luigi.contrib import mrrunner
-
 from luigi.contrib.hadoop import HadoopJobRunner, JobTask
 from luigi.contrib.hdfs import HdfsTarget
-
 from nose.plugins.attrib import attr
 
 

@@ -18,38 +18,18 @@
 Package containing core luigi functionality.
 """
 
+from luigi import configuration, event, interface, local_target, parameter, rpc, target, task
 from luigi.__meta__ import __version__
-
-from luigi import task
-from luigi.task import Task, Config, ExternalTask, WrapperTask, namespace, auto_namespace
-
-from luigi import target
-from luigi.target import Target
-
-from luigi import local_target
-from luigi.local_target import LocalTarget
-
-from luigi import rpc
-from luigi.rpc import RemoteScheduler, RPCError
-from luigi import parameter
-from luigi.parameter import (
-    Parameter,
-    DateParameter, MonthParameter, YearParameter, DateHourParameter, DateMinuteParameter, DateSecondParameter,
-    DateIntervalParameter, TimeDeltaParameter,
-    IntParameter, FloatParameter, BoolParameter,
-    TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter,
-    NumericalParameter, ChoiceParameter, OptionalParameter
-)
-
-from luigi import configuration
-
-from luigi import interface
-from luigi.interface import run, build
-from luigi.execution_summary import LuigiStatusCode
-
-from luigi import event
 from luigi.event import Event
-
+from luigi.execution_summary import LuigiStatusCode
+from luigi.interface import build, run
+from luigi.local_target import LocalTarget
+from luigi.parameter import (BoolParameter, ChoiceParameter, DateHourParameter, DateIntervalParameter, DateMinuteParameter, DateParameter, DateSecondParameter,
+                             DictParameter, EnumParameter, FloatParameter, IntParameter, ListParameter, MonthParameter, NumericalParameter, OptionalParameter,
+                             Parameter, TaskParameter, TimeDeltaParameter, TupleParameter, YearParameter)
+from luigi.rpc import RemoteScheduler, RPCError
+from luigi.target import Target
+from luigi.task import Config, ExternalTask, Task, WrapperTask, auto_namespace, namespace
 
 __all__ = [
     'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',

@@ -15,9 +15,8 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi
+from helpers import unittest
 
 
 class ChoiceParameterTest(unittest.TestCase):

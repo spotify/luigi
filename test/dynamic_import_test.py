@@ -15,10 +15,9 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase, temporary_unloaded_module
-
 import luigi
 import luigi.interface
+from helpers import LuigiTestCase, temporary_unloaded_module
 
 CONTENTS = b'''
 import luigi

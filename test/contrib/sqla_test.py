@@ -26,10 +26,10 @@ import unittest
 
 import luigi
 import sqlalchemy
+from helpers import skipOnTravis
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
-from helpers import skipOnTravis
 
 
 class BaseTask(luigi.Task):

@@ -15,10 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from operator import le, lt
 
 import luigi
-from operator import le, lt
+from helpers import unittest
 
 
 class NumericalParameterTest(unittest.TestCase):

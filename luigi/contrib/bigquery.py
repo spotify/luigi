@@ -17,8 +17,9 @@
 
 import collections
 import logging
-import luigi.target
 import time
+
+import luigi.target
 from luigi.contrib import gcp
 
 logger = logging.getLogger('luigi-interface')

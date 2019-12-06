@@ -20,21 +20,20 @@ It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
 
-from contextlib import contextmanager
-import logging
-import traceback
-import warnings
-import json
-import hashlib
-import re
 import copy
 import functools
+import hashlib
+import json
+import logging
+import re
+import traceback
+import warnings
+from contextlib import contextmanager
 
 import luigi
-
 from luigi import parameter
-from luigi.task_register import Register
 from luigi.parameter import ParameterVisibility
+from luigi.task_register import Register
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')

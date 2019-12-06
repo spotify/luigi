@@ -29,20 +29,20 @@ ways between versions. The exception is the exception types and the
 """
 
 import collections
+import contextlib
 import datetime
 import getpass
 import importlib
+import json
 import logging
 import multiprocessing
 import os
-import signal
-import subprocess
-import sys
-import contextlib
-
 import queue as Queue
 import random
+import signal
 import socket
+import subprocess
+import sys
 import threading
 import time
 import traceback
@@ -50,16 +50,12 @@ import types
 
 from luigi import notifications
 from luigi.event import Event
-from luigi.task_register import load_task
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
-from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
-from luigi.target import Target
-from luigi.task import Task, flatten, getpaths, Config
-from luigi.task_register import TaskClassException
-from luigi.task_status import RUNNING
 from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
-
-import json
+from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED, RetryPolicy, Scheduler
+from luigi.target import Target
+from luigi.task import Config, Task, flatten, getpaths
+from luigi.task_register import TaskClassException, load_task
+from luigi.task_status import RUNNING
 
 logger = logging.getLogger('luigi-interface')
 

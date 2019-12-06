@@ -32,20 +32,20 @@ import random
 import re
 import shutil
 import signal
-from io import StringIO
 import subprocess
 import sys
 import tempfile
 import warnings
 from hashlib import md5
+from io import StringIO
 from itertools import groupby
 
-from luigi import configuration
 import luigi
-import luigi.task
 import luigi.contrib.gcs
 import luigi.contrib.hdfs
 import luigi.contrib.s3
+import luigi.task
+from luigi import configuration
 from luigi.contrib import mrrunner
 
 try:

@@ -25,7 +25,7 @@ from contextlib import contextmanager
 from functools import wraps
 
 import luigi.format
-from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
+from luigi.target import AtomicLocalFile, FileSystem, FileSystemTarget
 
 logger = logging.getLogger('luigi-interface')
 

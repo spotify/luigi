@@ -27,18 +27,17 @@ Be aware that normal ftp does not provide secure communication.
 
 import datetime
 import ftplib
+import io
+import logging
 import os
 import random
 import tempfile
-import io
 
 import luigi
-import luigi.local_target
 import luigi.format
+import luigi.local_target
 import luigi.target
 from luigi.format import FileWrapper
-
-import logging
 
 logger = logging.getLogger('luigi-interface')
 

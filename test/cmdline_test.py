@@ -15,16 +15,16 @@
 # limitations under the License.
 #
 
-import mock
 import os
 import subprocess
-from helpers import unittest
 
 import luigi
 import luigi.cmdline
-from luigi.setup_logging import DaemonLogging, InterfaceLogging
+import mock
+from helpers import unittest
 from luigi.configuration import LuigiTomlParser, get_config
 from luigi.mock import MockTarget
+from luigi.setup_logging import DaemonLogging, InterfaceLogging
 
 
 class SomeTask(luigi.Task):

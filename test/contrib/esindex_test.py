@@ -34,13 +34,12 @@ Example running tests against port 9201 with basic auth:
 import collections
 import datetime
 import os
-from helpers import unittest
 
 import elasticsearch
 import luigi
 from elasticsearch.connection import Urllib3HttpConnection
+from helpers import unittest
 from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
-
 from nose.plugins.attrib import attr
 
 HOST = os.getenv('ESINDEX_TEST_HOST', 'localhost')

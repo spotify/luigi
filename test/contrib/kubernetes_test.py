@@ -30,12 +30,12 @@ hostname, and NOT to an IP address.
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
 
-import unittest
-import luigi
 import logging
+import unittest
+
+import luigi
 import mock
 from luigi.contrib.kubernetes import KubernetesJobTask
-
 from nose.plugins.attrib import attr
 
 logger = logging.getLogger('luigi-interface')

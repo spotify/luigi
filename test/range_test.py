@@ -17,15 +17,13 @@
 
 import datetime
 import fnmatch
-from helpers import unittest, LuigiTestCase
 
 import luigi
 import mock
-from luigi.mock import MockTarget, MockFileSystem
-from luigi.tools.range import (RangeDaily, RangeDailyBase, RangeEvent,
-                               RangeHourly, RangeHourlyBase,
-                               RangeByMinutes, RangeByMinutesBase,
-                               _constrain_glob, _get_filesystems_and_globs, RangeMonthly)
+from helpers import LuigiTestCase, unittest
+from luigi.mock import MockFileSystem, MockTarget
+from luigi.tools.range import (RangeByMinutes, RangeByMinutesBase, RangeDaily, RangeDailyBase, RangeEvent, RangeHourly, RangeHourlyBase, RangeMonthly,
+                               _constrain_glob, _get_filesystems_and_globs)
 
 
 class CommonDateMinuteTask(luigi.Task):

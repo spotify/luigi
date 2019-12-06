@@ -1,10 +1,9 @@
 from helpers import unittest
-from nose.plugins.attrib import attr
-from prometheus_client import CONTENT_TYPE_LATEST
-
 from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
 from luigi.metrics import MetricsCollectors
 from luigi.scheduler import Scheduler
+from nose.plugins.attrib import attr
+from prometheus_client import CONTENT_TYPE_LATEST
 
 try:
     from unittest import mock

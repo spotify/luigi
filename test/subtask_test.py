@@ -16,9 +16,9 @@
 #
 
 import abc
-from helpers import unittest
 
 import luigi
+from helpers import unittest
 
 
 class AbstractTask(luigi.Task):

@@ -25,11 +25,11 @@ We use the hypothesis package to do property-based tests.
 
 """
 
-import string
-import luigi
 import json
+import string
 
 import hypothesis as hyp
+import luigi
 from hypothesis.extra.datetime import datetimes as hyp_datetimes
 
 _no_value = luigi.parameter._no_value

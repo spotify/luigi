@@ -15,11 +15,8 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi.contrib.batch as batch
-from helpers import skipOnTravis
-
+from helpers import skipOnTravis, unittest
 from nose.plugins.attrib import attr
 
 try:

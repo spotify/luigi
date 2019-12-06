@@ -16,13 +16,13 @@
 #
 
 import itertools
-import mock
 import time
-from helpers import unittest
-from nose.plugins.attrib import attr
+
 import luigi.notifications
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
-    UNKNOWN, RUNNING, BATCH_RUNNING, UPSTREAM_RUNNING, Scheduler
+import mock
+from helpers import unittest
+from luigi.scheduler import BATCH_RUNNING, DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN, UPSTREAM_RUNNING, Scheduler
+from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'

@@ -15,15 +15,15 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase, RunOnceTask, with_config
+import datetime
+import threading
+from enum import Enum
 
 import luigi
-import luigi.worker
 import luigi.execution_summary
-import threading
-import datetime
+import luigi.worker
 import mock
-from enum import Enum
+from helpers import LuigiTestCase, RunOnceTask, with_config
 
 
 class ExecutionSummaryTest(LuigiTestCase):

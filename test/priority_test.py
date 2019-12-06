@@ -15,10 +15,9 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi
 import luigi.notifications
+from helpers import unittest
 
 luigi.notifications.DEBUG = True
 

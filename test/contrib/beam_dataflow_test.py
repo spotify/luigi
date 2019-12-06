@@ -16,12 +16,13 @@
 #
 
 import json
-import luigi
-from luigi.contrib import beam_dataflow, bigquery, gcs
-from luigi import local_target
-import mock
-from mock import MagicMock, patch
 import unittest
+
+import luigi
+import mock
+from luigi import local_target
+from luigi.contrib import beam_dataflow, bigquery, gcs
+from mock import MagicMock, patch
 
 
 class TestDataflowParamKeys(beam_dataflow.DataflowParamKeys):

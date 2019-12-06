@@ -18,10 +18,9 @@ import unittest
 
 from hdfs import InsecureClient
 from hdfs.ext.kerberos import KerberosClient
-from nose.plugins.attrib import attr
-
 from helpers import with_config
 from luigi.contrib.hdfs import WebHdfsClient
+from nose.plugins.attrib import attr
 
 
 @attr('apache')

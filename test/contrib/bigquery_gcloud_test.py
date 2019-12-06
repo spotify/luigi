@@ -24,23 +24,22 @@ Follow the directions in the gcloud tools to set up local credentials.
 
 import json
 import os
-
-import luigi
 import unittest
+
+import avro.schema
+import luigi
+from avro.datafile import DataFileWriter
+from avro.io import DatumWriter
+from luigi.contrib import bigquery, bigquery_avro, gcs
+from luigi.contrib.gcs import GCSTarget
+from nose.plugins.attrib import attr
 
 try:
     import googleapiclient.errors
     import google.auth
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
-from luigi.contrib import bigquery, bigquery_avro, gcs
-import avro.schema
-from avro.datafile import DataFileWriter
-from avro.io import DatumWriter
-from luigi.contrib.gcs import GCSTarget
 
-from nose.plugins.attrib import attr
-from helpers import unittest
 
 # In order to run this test, you should set your GCS/BigQuery project/bucket.
 # Unfortunately there's no mock

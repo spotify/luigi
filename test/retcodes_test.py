@@ -14,10 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from helpers import LuigiTestCase, with_config
-import mock
 import luigi
 import luigi.scheduler
+import mock
+from helpers import LuigiTestCase, with_config
 from luigi.cmdline import luigi_run
 
 

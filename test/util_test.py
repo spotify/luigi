@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from helpers import LuigiTestCase, RunOnceTask
-
 import luigi
 import luigi.task
+from helpers import LuigiTestCase, RunOnceTask
 from luigi.util import inherits, requires
 
 

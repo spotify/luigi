@@ -18,12 +18,12 @@
 import os
 import tempfile
 import time
-from helpers import unittest, RunOnceTask
 
 import luigi
 import luigi.notifications
 import luigi.scheduler
 import luigi.worker
+from helpers import RunOnceTask, unittest
 
 luigi.notifications.DEBUG = True
 

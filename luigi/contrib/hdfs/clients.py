@@ -22,8 +22,8 @@ import logging
 import threading
 
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
+from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 
 logger = logging.getLogger('luigi-interface')
 

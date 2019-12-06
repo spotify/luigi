@@ -15,16 +15,15 @@
 # limitations under the License.
 #
 
-from collections import OrderedDict
 import os
 import sys
 import tempfile
-from helpers import unittest
+from collections import OrderedDict
 
 import luigi.contrib.hive
 import mock
+from helpers import unittest
 from luigi import LocalTarget
-
 from nose.plugins.attrib import attr
 
 

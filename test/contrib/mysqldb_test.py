@@ -1,12 +1,9 @@
-from luigi.tools.range import RangeDaily
-
-import mock
+import datetime
 
 import luigi.contrib.mysqldb
-
-import datetime
+import mock
 from helpers import unittest
-
+from luigi.tools.range import RangeDaily
 from nose.plugins.attrib import attr
 
 

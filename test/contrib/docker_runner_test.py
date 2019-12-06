@@ -27,14 +27,13 @@ Requires:
 Written and maintained by Andrea Pierleoni (@apierleoni).
 Contributions by Eliseo Papa (@elipapa)
 """
+import logging
 import tempfile
-from helpers import unittest
 from tempfile import NamedTemporaryFile
 
 import luigi
-import logging
+from helpers import unittest
 from luigi.contrib.docker_runner import DockerTask
-
 from nose.plugins.attrib import attr
 
 logger = logging.getLogger('luigi-interface')

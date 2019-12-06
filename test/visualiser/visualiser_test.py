@@ -4,14 +4,15 @@ Test the visualiser's javascript using PhantomJS.
 """
 
 import os
-import luigi
 import subprocess
 import sys
-import unittest
-import time
 import threading
+import time
+import unittest
 
+import luigi
 from selenium import webdriver
+from server_test import ServerTestBase  # noqa
 
 here = os.path.dirname(__file__)
 
@@ -19,7 +20,6 @@ here = os.path.dirname(__file__)
 # This seems to be necessary because the `test` directory has no __init__.py but
 # adding one makes other tests fail.
 sys.path.append(os.path.join(here, '..'))
-from server_test import ServerTestBase  # noqa
 
 TEST_TIMEOUT = 40
 

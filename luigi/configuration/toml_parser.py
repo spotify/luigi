@@ -16,13 +16,13 @@
 #
 import os.path
 
+from ..freezing import recursively_freeze
+from .base_parser import BaseParser
+
 try:
     import toml
 except ImportError:
     toml = False
-
-from .base_parser import BaseParser
-from ..freezing import recursively_freeze
 
 
 class LuigiTomlParser(BaseParser):

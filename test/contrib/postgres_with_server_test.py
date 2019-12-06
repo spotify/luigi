@@ -16,12 +16,11 @@
 #
 import os
 
-from helpers import unittest
-from nose.plugins.attrib import attr
-
 import luigi
 import luigi.notifications
+from helpers import unittest
 from luigi.contrib import postgres
+from nose.plugins.attrib import attr
 
 """
 Typical use cases that should be tested:

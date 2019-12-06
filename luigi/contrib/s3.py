@@ -27,16 +27,14 @@ import logging
 import os
 import os.path
 import warnings
-from multiprocessing.pool import ThreadPool
-
-from urllib.parse import urlsplit
-
 from configparser import NoSectionError
+from multiprocessing.pool import ThreadPool
+from urllib.parse import urlsplit
 
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, MissingParentDirectory
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')

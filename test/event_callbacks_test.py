@@ -15,11 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi
+from helpers import unittest
 from luigi import Event, Task, build
-from luigi.mock import MockTarget, MockFileSystem
+from luigi.mock import MockFileSystem, MockTarget
 from luigi.task import flatten
 from mock import patch
 

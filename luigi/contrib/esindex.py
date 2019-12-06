@@ -84,9 +84,9 @@ There are a two luigi `luigi.cfg` configuration options:
 import abc
 import datetime
 import hashlib
+import itertools
 import json
 import logging
-import itertools
 
 import luigi
 

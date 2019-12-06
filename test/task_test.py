@@ -15,17 +15,16 @@
 # limitations under the License.
 #
 
+import collections
 import doctest
 import pickle
 import warnings
-
-from helpers import unittest, LuigiTestCase
 from datetime import datetime, timedelta
 
 import luigi
 import luigi.task
 import luigi.util
-import collections
+from helpers import LuigiTestCase, unittest
 from luigi.task_register import load_task
 
 

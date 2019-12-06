@@ -18,7 +18,6 @@
 import logging
 
 import luigi
-
 from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')

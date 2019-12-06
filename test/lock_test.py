@@ -18,12 +18,12 @@
 import os
 import subprocess
 import tempfile
-import mock
-from helpers import unittest
 
 import luigi
 import luigi.lock
 import luigi.notifications
+import mock
+from helpers import unittest
 
 luigi.notifications.DEBUG = True
 

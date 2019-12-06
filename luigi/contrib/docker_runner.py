@@ -35,10 +35,10 @@ Requires:
 Written and maintained by Andrea Pierleoni (@apierleoni).
 Contributions by Eliseo Papa (@elipapa).
 """
-from tempfile import mkdtemp
 import logging
-import luigi
+from tempfile import mkdtemp
 
+import luigi
 from luigi.local_target import LocalFileSystem
 
 logger = logging.getLogger('luigi-interface')

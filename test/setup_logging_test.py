@@ -1,6 +1,6 @@
-from luigi.setup_logging import DaemonLogging, InterfaceLogging
-from luigi.configuration import LuigiTomlParser, LuigiConfigParser, get_config
 from helpers import unittest
+from luigi.configuration import LuigiConfigParser, LuigiTomlParser, get_config
+from luigi.setup_logging import DaemonLogging, InterfaceLogging
 
 
 class TestDaemonLogging(unittest.TestCase):

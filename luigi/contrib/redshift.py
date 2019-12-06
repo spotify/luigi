@@ -18,12 +18,11 @@
 import abc
 import json
 import logging
-import time
 import os
+import time
 
 import luigi
-from luigi.contrib import postgres
-from luigi.contrib import rdbms
+from luigi.contrib import postgres, rdbms
 from luigi.contrib.s3 import S3PathTask, S3Target
 
 logger = logging.getLogger('luigi-interface')

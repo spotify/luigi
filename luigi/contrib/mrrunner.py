@@ -27,9 +27,9 @@ This module contains the main() method which will be used to run the
 mapper, combiner, or reducer on the Hadoop nodes.
 """
 
-import pickle
 import logging
 import os
+import pickle
 import sys
 import tarfile
 import traceback

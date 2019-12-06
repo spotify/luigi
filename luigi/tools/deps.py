@@ -36,16 +36,17 @@
 # [--upstream-family MyUpstreamTask]
 #
 
+import collections
+import sys
+
 import luigi.interface
-from luigi.contrib.ssh import RemoteTarget
+from luigi import parameter
+from luigi.cmdline_parser import CmdlineParser
 from luigi.contrib.postgres import PostgresTarget
 from luigi.contrib.s3 import S3Target
+from luigi.contrib.ssh import RemoteTarget
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
-from luigi import parameter
-import sys
-from luigi.cmdline_parser import CmdlineParser
-import collections
 
 
 def get_task_requires(task):

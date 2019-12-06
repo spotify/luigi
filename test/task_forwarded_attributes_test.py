@@ -15,12 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase, RunOnceTask
-
 import luigi
 import luigi.scheduler
 import luigi.worker
-
+from helpers import LuigiTestCase, RunOnceTask
 
 FORWARDED_ATTRIBUTES = set(luigi.worker.TaskProcess.forward_reporter_attributes.values())
 

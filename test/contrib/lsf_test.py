@@ -23,17 +23,16 @@ Test runner for the LSF wrapper. The test is based on the one used for the SGE
 wrappers
 """
 
-import subprocess
+import logging
 import os
 import os.path
-from glob import glob
+import subprocess
 import unittest
-import logging
-from mock import patch
+from glob import glob
 
 import luigi
 from luigi.contrib.lsf import LSFJobTask
-
+from mock import patch
 from nose.plugins.attrib import attr
 
 DEFAULT_HOME = ''

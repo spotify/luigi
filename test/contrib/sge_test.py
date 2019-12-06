@@ -15,17 +15,16 @@
 # limitations under the License.
 #
 
-import subprocess
+import logging
 import os
 import os.path
-from glob import glob
+import subprocess
 import unittest
-import logging
-from mock import patch
+from glob import glob
 
 import luigi
 from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
-
+from mock import patch
 from nose.plugins.attrib import attr
 
 DEFAULT_HOME = '/home'

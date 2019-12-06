@@ -14,21 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import socket
+import time
+from multiprocessing import Process, Queue
+
+import luigi.rpc
+import luigi.server
+import requests
+import scheduler_api_test
 from helpers import unittest, with_config
+from luigi.scheduler import Scheduler
+from server_test import ServerTestBase
+
 try:
     from unittest import mock
 except ImportError:
     import mock
-
-import luigi.rpc
-from luigi.scheduler import Scheduler
-import scheduler_api_test
-import luigi.server
-from server_test import ServerTestBase
-import time
-import socket
-from multiprocessing import Process, Queue
-import requests
 
 
 class RemoteSchedulerTest(unittest.TestCase):

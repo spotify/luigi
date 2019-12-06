@@ -17,9 +17,7 @@
 
 
 from helpers import unittest
-
 from luigi.contrib.mongodb import MongoCellTarget, MongoRangeTarget
-
 from nose.plugins.attrib import attr
 
 HOST = 'localhost'

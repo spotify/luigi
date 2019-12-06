@@ -16,16 +16,15 @@
 #
 
 import datetime
-
-from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
-from datetime import timedelta
 import enum
-import mock
+from datetime import timedelta
 
 import luigi
 import luigi.date_interval
 import luigi.interface
 import luigi.notifications
+import mock
+from helpers import LuigiTestCase, RunOnceTask, in_parse, parsing, with_config
 from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
 from worker_test import email_patch

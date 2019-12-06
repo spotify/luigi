@@ -18,8 +18,8 @@
 import random
 
 import luigi
-import luigi.format
 import luigi.contrib.hdfs
+import luigi.format
 from luigi.contrib.spark import SparkSubmitTask
 
 

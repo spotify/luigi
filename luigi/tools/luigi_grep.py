@@ -3,7 +3,6 @@
 import argparse
 import json
 from collections import defaultdict
-
 from urllib.request import urlopen
 
 

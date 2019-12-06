@@ -15,11 +15,12 @@
 # limitations under the License.
 #
 
+import threading
+
+import luigi
 from helpers import LuigiTestCase
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-import luigi
-import threading
 
 
 class WorkerKeepAliveUpstreamTest(LuigiTestCase):

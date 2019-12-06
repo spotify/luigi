@@ -21,10 +21,9 @@ Integration tests for azureblob module.
 import os
 import unittest
 
-from nose.plugins.attrib import attr
-
 import luigi
 from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
+from nose.plugins.attrib import attr
 
 account_name = os.environ.get("ACCOUNT_NAME")
 account_key = os.environ.get("ACCOUNT_KEY")

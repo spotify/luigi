@@ -15,13 +15,13 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-import luigi
-from luigi.contrib.simulate import RunAnywayTarget
-
-from multiprocessing import Process
 import os
 import tempfile
+from multiprocessing import Process
+
+import luigi
+from helpers import unittest
+from luigi.contrib.simulate import RunAnywayTarget
 
 
 def temp_dir():

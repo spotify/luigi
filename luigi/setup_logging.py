@@ -22,10 +22,9 @@ workers via command line arguments and options from config files.
 import logging
 import logging.config
 import os.path
-
-from luigi.configuration import get_config, LuigiConfigParser
-
 from configparser import NoSectionError
+
+from luigi.configuration import LuigiConfigParser, get_config
 
 
 class BaseLogging(object):

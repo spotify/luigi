@@ -15,10 +15,9 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi
 import luigi.interface
+from helpers import unittest
 from luigi.mock import MockTarget
 
 # Calculates Fibonacci numbers :)

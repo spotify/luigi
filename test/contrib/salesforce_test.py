@@ -20,14 +20,13 @@
 Unit test for the Salesforce contrib package
 """
 
-from luigi.contrib.salesforce import SalesforceAPI, QuerySalesforce
-
-from helpers import unittest
-import mock
-from luigi.mock import MockTarget
-from luigi.six import PY3
 import re
 
+import mock
+from helpers import unittest
+from luigi.contrib.salesforce import QuerySalesforce, SalesforceAPI
+from luigi.mock import MockTarget
+from luigi.six import PY3
 from nose.plugins.attrib import attr
 
 

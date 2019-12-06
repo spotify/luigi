@@ -1,7 +1,6 @@
 import unittest
 
 import luigi.metrics as metrics
-
 from luigi.contrib.datadog_metric import DatadogMetricsCollector
 from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
 

@@ -15,12 +15,11 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import luigi
-import luigi.worker
 import luigi.date_interval
 import luigi.notifications
+import luigi.worker
+from helpers import unittest
 
 luigi.notifications.DEBUG = True
 

@@ -21,10 +21,10 @@ an `execution summary
 at the end of luigi invocations.
 """
 
-import textwrap
 import collections
-import functools
 import enum
+import functools
+import textwrap
 
 import luigi
 

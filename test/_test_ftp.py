@@ -27,11 +27,9 @@ import ftplib
 import os
 import shutil
 import sys
-from helpers import unittest
-
 from io import StringIO
 
-
+from helpers import unittest
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
 # dumb files

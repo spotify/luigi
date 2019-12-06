@@ -22,14 +22,13 @@ Tests for OpenPAI wrapper for Luigi.
 
 Written and maintained by Liu, Dongqing (@liudongqing).
 """
-from helpers import unittest
-import responses
-
-import time
-import luigi
 import logging
-from luigi.contrib.pai import PaiTask
-from luigi.contrib.pai import TaskRole
+import time
+
+import luigi
+import responses
+from helpers import unittest
+from luigi.contrib.pai import PaiTask, TaskRole
 
 logging.basicConfig(level=logging.DEBUG)
 

@@ -32,8 +32,8 @@ import socket
 import sys
 import textwrap
 
-import luigi.task
 import luigi.parameter
+import luigi.task
 
 logger = logging.getLogger("luigi-interface")
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()

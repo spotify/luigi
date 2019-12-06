@@ -20,9 +20,10 @@ when you in a programmatic way need to know if luigi actually finished the
 given task, and if not why.
 """
 
-import luigi
-import sys
 import logging
+import sys
+
+import luigi
 from luigi import IntParameter
 from luigi.setup_logging import InterfaceLogging
 

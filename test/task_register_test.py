@@ -14,13 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from helpers import LuigiTestCase
-
 import luigi
-from luigi.task_register import (Register,
-                                 TaskClassNotFoundException,
-                                 TaskClassAmbigiousException,
-                                 )
+from helpers import LuigiTestCase
+from luigi.task_register import Register, TaskClassAmbigiousException, TaskClassNotFoundException
 
 
 class TaskRegisterTest(LuigiTestCase):

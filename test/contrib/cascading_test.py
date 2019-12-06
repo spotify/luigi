@@ -15,12 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
-from nose.plugins.attrib import attr
-
 import luigi.target
+from helpers import unittest
 from luigi.contrib.target import CascadingClient
+from nose.plugins.attrib import attr
 
 
 @attr('contrib')

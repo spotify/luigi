@@ -16,9 +16,9 @@
 #
 
 import datetime
-from helpers import LuigiTestCase, in_parse
 
 import luigi
+from helpers import LuigiTestCase, in_parse
 from luigi.parameter import DateIntervalParameter as DI
 
 

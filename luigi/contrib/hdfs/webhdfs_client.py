@@ -25,12 +25,13 @@ the file system operations, please do and contribute back.
 """
 
 
-from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
-import luigi.contrib.target
 import logging
 import os
 import warnings
+
+import luigi.contrib.target
+from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
+from luigi.contrib.hdfs import config as hdfs_config
 
 logger = logging.getLogger('luigi-interface')
 

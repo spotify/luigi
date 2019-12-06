@@ -19,16 +19,15 @@ Implementation of the REST interface between the workers and the server.
 rpc.py implements the client side of it, server.py implements the server side.
 See :doc:`/central_scheduler` for more info.
 """
-import os
+import base64
 import json
 import logging
+import os
 import socket
 import time
-import base64
-
-from urllib.parse import urljoin, urlencode, urlparse
-from urllib.request import urlopen, Request
 from urllib.error import URLError
+from urllib.parse import urlencode, urljoin, urlparse
+from urllib.request import Request, urlopen
 
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS

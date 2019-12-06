@@ -15,16 +15,15 @@
 # limitations under the License.
 #
 
-import luigi
-from luigi.contrib import scalding
-
-import mock
 import os
 import random
 import shutil
 import tempfile
 import unittest
 
+import luigi
+import mock
+from luigi.contrib import scalding
 from nose.plugins.attrib import attr
 
 

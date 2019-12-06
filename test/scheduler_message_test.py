@@ -16,14 +16,13 @@
 #
 
 import os
-import time
 import tempfile
-
-from helpers import LuigiTestCase, RunOnceTask
+import time
 
 import luigi
 import luigi.scheduler
 import luigi.worker
+from helpers import LuigiTestCase, RunOnceTask
 
 
 def fast_worker(scheduler, **kwargs):

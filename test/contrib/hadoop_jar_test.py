@@ -15,12 +15,13 @@
 # limitations under the License.
 #
 
-import luigi
-import tempfile
 import shlex
+import tempfile
+
+import luigi
 from helpers import unittest
 from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask, fix_paths
-from mock import patch, Mock
+from mock import Mock, patch
 from nose.plugins.attrib import attr
 
 

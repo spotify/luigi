@@ -4,9 +4,9 @@ Please, do not use it outside of Luigi codebase itself.
 """
 
 
-from collections import OrderedDict, Mapping
-import operator
 import functools
+import operator
+from collections import Mapping, OrderedDict
 
 
 class FrozenOrderedDict(Mapping):

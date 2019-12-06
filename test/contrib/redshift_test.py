@@ -16,16 +16,14 @@ import json
 import os
 import sys
 
-import mock
-from moto import mock_s3
-
 import luigi
 import luigi.contrib.redshift
 import luigi.notifications
+import mock
 from helpers import unittest, with_config
 from luigi.contrib import redshift
 from luigi.contrib.s3 import S3Client
-
+from moto import mock_s3
 from nose.plugins.attrib import attr
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):

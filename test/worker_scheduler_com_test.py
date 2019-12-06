@@ -15,18 +15,17 @@
 # limitations under the License.
 #
 
-import os
-import time
-import threading
-import tempfile
-import shutil
 import contextlib
+import os
+import shutil
+import tempfile
+import threading
+import time
 
 import luigi
+from helpers import LuigiTestCase
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-
-from helpers import LuigiTestCase
 
 
 class WorkerSchedulerCommunicationTest(LuigiTestCase):

@@ -23,11 +23,11 @@ import mimetypes
 import os
 import tempfile
 import time
-from urllib.parse import urlsplit
 from io import BytesIO
+from urllib.parse import urlsplit
 
-from luigi.contrib import gcp
 import luigi.target
+from luigi.contrib import gcp
 from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
