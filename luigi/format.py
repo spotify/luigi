@@ -24,8 +24,6 @@ import locale
 import tempfile
 import warnings
 
-from luigi import six
-
 
 class FileWrapper(object):
     """
@@ -334,7 +332,7 @@ class MixedUnicodeBytesWrapper(BaseWrapper):
         self._stream.writelines((self._convert(line) for line in lines))
 
     def _convert(self, b):
-        if isinstance(b, six.text_type):
+        if isinstance(b, str):
             b = b.encode(self.encoding)
             warnings.warn('Writing unicode to byte stream', stacklevel=2)
         return b

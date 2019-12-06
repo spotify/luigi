@@ -38,13 +38,11 @@ PY34 = sys.version_info[0:2] >= (3, 4)
 if PY3:
     integer_types = int,
     class_types = type,
-    text_type = str
 
     MAXSIZE = sys.maxsize
 else:
     integer_types = (int, long)
     class_types = (type, types.ClassType)
-    text_type = unicode
 
     if sys.platform.startswith("java"):
         # Jython always uses 32 bits.
