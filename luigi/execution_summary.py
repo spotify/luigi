@@ -29,8 +29,8 @@ import textwrap
 import luigi
 
 
-class execution_summary(luigi.Config):
-    summary_length = luigi.IntParameter(default=5)
+class execution_summary(luigi.task.Config):
+    summary_length = luigi.parameter.IntParameter(default=5)
 
 
 class LuigiStatusCode(enum.Enum):

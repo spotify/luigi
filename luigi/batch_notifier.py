@@ -12,7 +12,7 @@ import luigi.parameter
 from luigi.notifications import email, send_email
 
 
-class batch_email(luigi.Config):
+class batch_email(luigi.task.Config):
     email_interval = luigi.parameter.IntParameter(
         default=60, description='Number of minutes between e-mail sends (default: 60)')
     batch_mode = luigi.parameter.ChoiceParameter(
