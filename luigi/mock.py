@@ -24,7 +24,6 @@ import multiprocessing
 from io import BytesIO
 
 import sys
-import warnings
 
 from luigi import six
 from luigi import target
@@ -188,9 +187,3 @@ class MockTarget(target.FileSystemTarget):
             return wrapper
         else:
             return self.format.pipe_reader(Buffer(self.fs.get_all_data()[fn]))
-
-
-class MockFile(MockTarget):
-    def __init__(self, *args, **kwargs):
-        warnings.warn("MockFile has been renamed MockTarget", DeprecationWarning, stacklevel=2)
-        super(MockFile, self).__init__(*args, **kwargs)
