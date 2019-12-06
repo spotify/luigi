@@ -24,10 +24,10 @@ import os
 import tempfile
 import time
 from urllib.parse import urlsplit
+from io import BytesIO
 
 from luigi.contrib import gcp
 import luigi.target
-from luigi import six
 from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
@@ -284,7 +284,7 @@ class GCSClient(luigi.target.FileSystem):
         assert isinstance(mimetype, str)
         if not isinstance(contents, bytes):
             contents = contents.encode("utf-8")
-        media = http.MediaIoBaseUpload(six.BytesIO(contents), mimetype, resumable=bool(contents))
+        media = http.MediaIoBaseUpload(BytesIO(contents), mimetype, resumable=bool(contents))
         self._do_put(media, dest_path)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):

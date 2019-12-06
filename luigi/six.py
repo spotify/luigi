@@ -458,7 +458,6 @@ if PY3:
     iterbytes = iter
     import io
     StringIO = io.StringIO
-    BytesIO = io.BytesIO
     if sys.version_info[1] <= 1:
         _assertRaisesRegex = "assertRaisesRegexp"
         _assertRegex = "assertRegexpMatches"
@@ -476,7 +475,7 @@ else:
         return ord(buf[i])
     iterbytes = functools.partial(itertools.imap, ord)
     import StringIO
-    StringIO = BytesIO = StringIO.StringIO
+    StringIO = StringIO.StringIO
     _assertRaisesRegex = "assertRaisesRegexp"
     _assertRegex = "assertRegexpMatches"
 
