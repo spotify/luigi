@@ -38,13 +38,11 @@ PY34 = sys.version_info[0:2] >= (3, 4)
 if PY3:
     integer_types = int,
     class_types = type,
-    text_type = str
 
     MAXSIZE = sys.maxsize
 else:
     integer_types = (int, long)
     class_types = (type, types.ClassType)
-    text_type = unicode
 
     if sys.platform.startswith("java"):
         # Jython always uses 32 bits.
@@ -391,8 +389,6 @@ if PY3:
     def get_unbound_function(unbound):
         return unbound
 
-    create_bound_method = types.MethodType
-
     def create_unbound_method(func, cls):
         return func
 
@@ -400,9 +396,6 @@ if PY3:
 else:
     def get_unbound_function(unbound):
         return unbound.im_func
-
-    def create_bound_method(func, obj):
-        return types.MethodType(func, obj, obj.__class__)
 
     def create_unbound_method(func, cls):
         return types.MethodType(func, None, cls)
@@ -465,7 +458,6 @@ if PY3:
     iterbytes = iter
     import io
     StringIO = io.StringIO
-    BytesIO = io.BytesIO
     if sys.version_info[1] <= 1:
         _assertRaisesRegex = "assertRaisesRegexp"
         _assertRegex = "assertRegexpMatches"
@@ -483,7 +475,7 @@ else:
         return ord(buf[i])
     iterbytes = functools.partial(itertools.imap, ord)
     import StringIO
-    StringIO = BytesIO = StringIO.StringIO
+    StringIO = StringIO.StringIO
     _assertRaisesRegex = "assertRaisesRegexp"
     _assertRegex = "assertRegexpMatches"
 

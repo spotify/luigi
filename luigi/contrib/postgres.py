@@ -24,8 +24,6 @@ import logging
 import re
 import tempfile
 
-from luigi import six
-
 import luigi
 from luigi.contrib import rdbms
 
@@ -261,7 +259,7 @@ class CopyToTable(rdbms.CopyToTable):
         if value in self.null_values:
             return r'\\N'
         else:
-            return default_escape(six.text_type(value))
+            return default_escape(str(value))
 
 # everything below will rarely have to be overridden
 
