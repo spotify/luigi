@@ -96,12 +96,8 @@ def rpc_method(**request_args):
         # If request args are passed, return this function again for use as
         # the decorator function with the request args attached.
         args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(fn)
-        if kwonlyargs or ann:
-            raise ValueError("Function has keyword-only parameters or annotations"
-                             ", use getfullargspec() API which can support them")
-        (first_arg, *all_args) = args
-
         assert not varargs
+        first_arg, *all_args = args
         assert first_arg == 'self'
         defaults = dict(zip(reversed(all_args), reversed(defaults or ())))
         required_args = frozenset(arg for arg in all_args if arg not in defaults)
