@@ -26,6 +26,8 @@ import tempfile
 import io
 import warnings
 import errno
+import pickle
+import json
 
 from luigi.format import FileWrapper, get_default_format
 from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
@@ -179,6 +181,30 @@ class LocalTarget(FileSystemTarget):
 
     def copy(self, new_path, raise_if_exists=False):
         self.fs.copy(self.path, new_path, raise_if_exists)
+
+    def read_text(self):
+        with open(self.path, "r") as f:
+            return f.read()
+
+    def read_json(self, **json_read_kw):
+        with open(self.path, "r") as f:
+            return json.load(f, **json_read_kw)
+
+    def read_pickle(self, **pickle_read_kw):
+        with open(self.path, "rb") as f:
+            return pickle.load(f, **pickle_read_kw)
+
+    def write_text(self, obj, mode="w"):
+        with open(self.path, mode) as f:
+            f.write(obj)
+
+    def write_json(self, obj, **json_dump_kw):
+        with open(self.path, "w") as f:
+            json.dump(obj, f, **json_dump_kw)
+
+    def write_pickle(self, obj, **pickle_dump_kw):
+        with open(self.path, "wb") as f:
+            pickle.dump(obj, f, **pickle_dump_kw)
 
     @property
     def fn(self):
