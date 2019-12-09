@@ -109,7 +109,7 @@ class TestPySparkSessionTask(PySparkTask):
         return MockTarget('output')
 
     def main(self, spark, *args):
-        spark.sql(self.input().path).saveAsTable(self.output().path)
+        spark.sql(self.input().path).write.saveAsTable(self.output().path)
 
 
 class MessyNamePySparkTask(TestPySparkTask):
@@ -357,7 +357,7 @@ class PySparkTaskTest(unittest.TestCase):
                     with_config({'spark': {'py-packages': task_module}})(job.run)()
 
             spark.sql.assert_called_with('input')
-            spark.sql.return_value.saveAsTable.assert_called_with('output')
+            spark.sql.return_value.write.saveAsTable.assert_called_with('output')
             spark.stop.assert_called_once_with()
 
     def test_pyspark_session_runner_use_spark_session_true_spark1(self):

@@ -84,7 +84,7 @@ class SparkSessionEntryPoint(SparkEntryPoint):
         from pyspark.sql import SparkSession
         self.spark = SparkSession \
             .builder \
-            .config(self.conf) \
+            .config(conf=self.conf) \
             .enableHiveSupport() \
             .getOrCreate()
 
