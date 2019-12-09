@@ -270,6 +270,33 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
             self.assertRaises(Exception, t.open, mode)
         print()
 
+    def test_read_text(self):
+        t = LocalTarget("tmp.txt", is_tmp=True)
+        t.write_text("test read text")
+        assert t.exists()
+        assert t.read_text() == "test read text"
+
+    def test_read_json(self):
+        t = LocalTarget("tmp.json", is_tmp=True)
+        t.write_json("test read json")
+        assert t.exists()
+        assert t.read_json() == "test read json"
+
+    def test_read_pickle(self):
+        t = LocalTarget("tmp.pickle", is_tmp=True)
+        t.write_pickle("test read pickle")
+        assert t.exists()
+        assert t.read_pickle() == "test read pickle"
+
+    def test_write_text(self):
+        self.test_read_text()
+
+    def test_write_json(self):
+        self.test_read_json()
+
+    def test_write_pickle(self):
+        self.test_read_pickle()
+
 
 class LocalTargetCreateDirectoriesTest(LocalTargetTest):
     path = '/tmp/%s/xyz/test.txt' % random.randint(0, 999999999)
