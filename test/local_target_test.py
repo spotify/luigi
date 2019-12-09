@@ -278,15 +278,19 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
 
     def test_read_json(self):
         t = LocalTarget("tmp.json", is_tmp=True)
-        t.write_json("test read json")
+        d = {"foo": "bar"}
+        t.write_json(d)
         assert t.exists()
-        assert t.read_json() == "test read json"
+        d_ = t.read_json()
+        assert "foo" in d_ and d_["foo"] == "bar"
 
     def test_read_pickle(self):
         t = LocalTarget("tmp.pickle", is_tmp=True)
-        t.write_pickle("test read pickle")
+        d = {"foo": "bar"}
+        t.write_pickle(d)
         assert t.exists()
-        assert t.read_pickle() == "test read pickle"
+        d_ = t.read_pickle()
+        assert "foo" in d_ and d_["foo"] == "bar"
 
     def test_write_text(self):
         self.test_read_text()
