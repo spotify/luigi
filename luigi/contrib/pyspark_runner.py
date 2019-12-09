@@ -109,9 +109,9 @@ class AbstractPySparkRunner(object):
         from pyspark import SparkConf
         conf = SparkConf()
         self.job.setup(conf)
-        with self._entry_point_class(conf) as (contact_point, sc):
+        with self._entry_point_class(conf) as (entry_point, sc):
             self.job.setup_remote(sc)
-            self.job.main(contact_point, *self.args)
+            self.job.main(entry_point, *self.args)
 
 
 def _pyspark_runner_with(name, entry_point_class):
