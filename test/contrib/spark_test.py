@@ -22,6 +22,7 @@ import pickle
 import luigi
 import luigi.contrib.hdfs
 from luigi import six
+from luigi.contrib.pyspark_runner import PySparkSessionRunner
 from luigi.mock import MockTarget
 from helpers import with_config, temporary_unloaded_module
 from luigi.contrib.external_program import ExternalProgramRunError
@@ -365,25 +366,12 @@ class PySparkTaskTest(unittest.TestCase):
         pyspark_sql = MagicMock()
         with patch.dict(sys.modules, {'pyspark': pyspark, 'pyspark.sql': pyspark_sql}):
             def mock_spark_submit(task):
-                from luigi.contrib.pyspark_runner import PySparkSessionRunner
-                PySparkSessionRunner(*task.app_command()[1:]).run()
-                # Check py-package exists
-                self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
-                # Check that main module containing the task exists.
-                run_path = os.path.dirname(task.app_command()[1])
-                self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
-                # Check that the python path contains the run_path
-                self.assertTrue(run_path in sys.path)
-                # Check if find_class finds the class for the correct module name.
-                with open(task.app_command()[1], 'rb') as fp:
-                    self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkSessionTask'))
+                self.assertRaises(RuntimeError, PySparkSessionRunner(*task.app_command()[1:]).run)
 
             with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
+                job = TestPySparkSessionTask()
                 with temporary_unloaded_module(b'') as task_module:
-                    def asser_raises():
-                        self.assertRaises(RuntimeError, TestPySparkSessionTask().run)
-                    with_config({'spark': {'py-packages': task_module}})(asser_raises)()
-
+                    with_config({'spark': {'py-packages': task_module}})(job.run)()
 
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_name_cleanup(self, proc):
