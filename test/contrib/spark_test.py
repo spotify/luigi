@@ -364,8 +364,26 @@ class PySparkTaskTest(unittest.TestCase):
         pyspark.__version__ = '1.6.3'
         pyspark_sql = MagicMock()
         with patch.dict(sys.modules, {'pyspark': pyspark, 'pyspark.sql': pyspark_sql}):
-            spark = pyspark_sql.SparkSession.builder.config.return_value.enableHiveSupport.return_value.getOrCreate.return_value
-            self.assertRaises(RuntimeError, TestPySparkSessionTask().run)
+            def mock_spark_submit(task):
+                from luigi.contrib.pyspark_runner import PySparkSessionRunner
+                PySparkSessionRunner(*task.app_command()[1:]).run()
+                # Check py-package exists
+                self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
+                # Check that main module containing the task exists.
+                run_path = os.path.dirname(task.app_command()[1])
+                self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
+                # Check that the python path contains the run_path
+                self.assertTrue(run_path in sys.path)
+                # Check if find_class finds the class for the correct module name.
+                with open(task.app_command()[1], 'rb') as fp:
+                    self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkSessionTask'))
+
+            with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
+                with temporary_unloaded_module(b'') as task_module:
+                    def asser_raises():
+                        self.assertRaises(RuntimeError, TestPySparkSessionTask().run)
+                    with_config({'spark': {'py-packages': task_module}})(asser_raises)()
+
 
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_name_cleanup(self, proc):

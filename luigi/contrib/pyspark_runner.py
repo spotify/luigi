@@ -70,8 +70,8 @@ class SparkSessionEntryPoint(SparkEntryPoint):
 
     def _check_major_spark_version(self):
         from pyspark import __version__ as spark_version
-        major_version, *_ = spark_version.split('.')
-        if int(major_version) < 2:
+        major_version = int(spark_version.split('.')[0])
+        if major_version < 2:
             raise RuntimeError(
                 '''
                 Apache Spark {} does not support SparkSession entrypoint.
@@ -82,13 +82,12 @@ class SparkSessionEntryPoint(SparkEntryPoint):
     def __enter__(self):
         self._check_major_spark_version()
         from pyspark.sql import SparkSession
-        self.spark = (
-            SparkSession
-                .builder
-                .config(self.conf)
-                .enableHiveSupport()
-                .getOrCreate()
-        )
+        self.spark = SparkSession \
+            .builder \
+            .config(self.conf) \
+            .enableHiveSupport() \
+            .getOrCreate()
+
         return self.spark, self.spark.sparkContext
 
     def __exit__(self, exc_type, exc_val, exc_tb):
