@@ -328,47 +328,44 @@ class PySparkTaskTest(unittest.TestCase):
         sc.textFile.return_value.saveAsTextFile.assert_called_with('output')
         sc.stop.assert_called_once_with()
 
-    @patch.dict('sys.modules', {'pyspark': MagicMock(), 'pyspark.sql': MagicMock(), 'pyspark.sql.SparkSession': MagicMock()})
-    @patch('pyspark.sql')
-    def test_pyspark_session_runner_use_spark_session_true(self, sql):
-        spark = sql.SparkSession.builder.config.return_value.enableHiveSupport.return_value.getOrCreate.return_value
-        sc = spark.sparkContext
-        from pyspark import sql as _sql
-        assert sql == _sql
-        from pyspark.sql import SparkSession
-        assert SparkSession == sql.SparkSession
-        assert (
-            SparkSession
-                .builder
-                .config()
-                .enableHiveSupport()
-                .getOrCreate()
-        ) == spark
+    def test_pyspark_session_runner_use_spark_session_true(self):
+        pyspark = MagicMock()
+        pyspark.__version__ = '2.1.0'
+        pyspark_sql = MagicMock()
+        with patch.dict(sys.modules, {'pyspark': pyspark, 'pyspark.sql': pyspark_sql}):
+            spark = pyspark_sql.SparkSession.builder.config.return_value.enableHiveSupport.return_value.getOrCreate.return_value
+            sc = spark.sparkContext
 
+            def mock_spark_submit(task):
+                from luigi.contrib.pyspark_runner import PySparkSessionRunner
+                PySparkSessionRunner(*task.app_command()[1:]).run()
+                # Check py-package exists
+                self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
+                # Check that main module containing the task exists.
+                run_path = os.path.dirname(task.app_command()[1])
+                self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
+                # Check that the python path contains the run_path
+                self.assertTrue(run_path in sys.path)
+                # Check if find_class finds the class for the correct module name.
+                with open(task.app_command()[1], 'rb') as fp:
+                    self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkSessionTask'))
 
+            with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
+                job = TestPySparkSessionTask()
+                with temporary_unloaded_module(b'') as task_module:
+                    with_config({'spark': {'py-packages': task_module}})(job.run)()
 
-        def mock_spark_submit(task):
-            from luigi.contrib.pyspark_runner import PySparkSessionRunner
-            PySparkSessionRunner(*task.app_command()[1:]).run()
-            # Check py-package exists
-            self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
-            # Check that main module containing the task exists.
-            run_path = os.path.dirname(task.app_command()[1])
-            self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
-            # Check that the python path contains the run_path
-            self.assertTrue(run_path in sys.path)
-            # Check if find_class finds the class for the correct module name.
-            with open(task.app_command()[1], 'rb') as fp:
-                self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkSessionTask'))
+            spark.sql.assert_called_with('input')
+            spark.sql.return_value.saveAsTable.assert_called_with('output')
+            spark.stop.assert_called_once_with()
 
-        with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
-            job = TestPySparkTask()
-            with temporary_unloaded_module(b'') as task_module:
-                with_config({'spark': {'py-packages': task_module}})(job.run)()
-
-        spark.table.assert_called_with('input')
-        sc.table.return_value.saveAsTable.assert_called_with('output')
-        spark.stop.assert_called_once_with()
+    def test_pyspark_session_runner_use_spark_session_true_spark1(self):
+        pyspark = MagicMock()
+        pyspark.__version__ = '1.6.3'
+        pyspark_sql = MagicMock()
+        with patch.dict(sys.modules, {'pyspark': pyspark, 'pyspark.sql': pyspark_sql}):
+            spark = pyspark_sql.SparkSession.builder.config.return_value.enableHiveSupport.return_value.getOrCreate.return_value
+            self.assertRaises(RuntimeError, TestPySparkSessionTask().run)
 
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_name_cleanup(self, proc):

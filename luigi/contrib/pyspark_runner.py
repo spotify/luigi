@@ -68,7 +68,19 @@ class SparkContextEntryPoint(SparkEntryPoint):
 class SparkSessionEntryPoint(SparkEntryPoint):
     spark = None
 
+    def _check_major_spark_version(self):
+        from pyspark import __version__ as spark_version
+        major_version, *_ = spark_version.split('.')
+        if int(major_version) < 2:
+            raise RuntimeError(
+                '''
+                Apache Spark {} does not support SparkSession entrypoint.
+                Try to set 'pyspark_runner.use_spark_session' to 'False' and switch to old-style syntax
+                '''.format(spark_version)
+            )
+
     def __enter__(self):
+        self._check_major_spark_version()
         from pyspark.sql import SparkSession
         self.spark = (
             SparkSession
