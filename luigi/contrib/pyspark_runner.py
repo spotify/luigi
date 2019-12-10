@@ -122,8 +122,12 @@ PySparkRunner = _pyspark_runner_with('PySparkRunner', SparkContextEntryPoint)
 PySparkSessionRunner = _pyspark_runner_with('PySparkSessionRunner', SparkSessionEntryPoint)
 
 
+def _use_spark_session():
+    return bool(configuration.get_config().get('pyspark_runner', "use_spark_session", False))
+
+
 def _get_runner_class():
-    if bool(configuration.get_config().get('pyspark_runner', "use_spark_session", False)):
+    if _use_spark_session():
         return PySparkSessionRunner
     return PySparkRunner
 
