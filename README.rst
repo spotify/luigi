@@ -188,6 +188,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Skyscanner <https://www.skyscanner.net/>`_
 * `Jodel <https://www.jodel.com/>`_
 * `Mekar <https://mekar.id/en/>`_
+* `M3 <https://corporate.m3.com/en/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
