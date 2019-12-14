@@ -844,7 +844,7 @@ apikey
 These parameters control the smtp server setup.
 
 host
-  Hostname for sending mail throug smtp. Defaults to localhost.
+  Hostname for sending mail through smtp. Defaults to localhost.
 
 local_hostname
   If specified, overrides the FQDN of localhost in the HELO/EHLO
