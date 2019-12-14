@@ -145,7 +145,7 @@ class TaskTest(unittest.TestCase):
     def test_warn_on_non_timedelta_param(self):
         params = dict(**DUMMY_TASK_OK_PARAMS)
 
-        class MockTimedelta(object):
+        class MockTimedelta:
             days = 1
             seconds = 1
 

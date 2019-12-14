@@ -25,7 +25,7 @@ import tempfile
 import warnings
 
 
-class FileWrapper(object):
+class FileWrapper:
     """
     Wrap `file` in a "real" so stuff can be added to it after creation.
     """
@@ -51,7 +51,7 @@ class FileWrapper(object):
         return iter(self._subpipe)
 
 
-class InputPipeProcessWrapper(object):
+class InputPipeProcessWrapper:
 
     def __init__(self, command, input_pipe=None):
         """
@@ -168,7 +168,7 @@ class InputPipeProcessWrapper(object):
         return False
 
 
-class OutputPipeProcessWrapper(object):
+class OutputPipeProcessWrapper:
     WRITES_BEFORE_FLUSH = 10000
 
     def __init__(self, command, output_pipe=None):
@@ -244,7 +244,7 @@ class OutputPipeProcessWrapper(object):
         return False
 
 
-class BaseWrapper(object):
+class BaseWrapper:
 
     def __init__(self, stream, *args, **kwargs):
         self._stream = stream
@@ -338,7 +338,7 @@ class MixedUnicodeBytesWrapper(BaseWrapper):
         return b
 
 
-class Format(object):
+class Format:
     """
     Interface for format specifications.
     """

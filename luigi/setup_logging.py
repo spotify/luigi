@@ -28,7 +28,7 @@ from luigi.configuration import get_config, LuigiConfigParser
 from configparser import NoSectionError
 
 
-class BaseLogging(object):
+class BaseLogging:
     config = get_config()
 
     @classmethod
