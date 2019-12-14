@@ -555,21 +555,3 @@ if sys.meta_path:
     del i, importer
 # Finally, add the importer to the meta path import hook.
 sys.meta_path.append(_importer)
-
-# luigi specific additions
-
-# When support for PY2 is dropped getargspec below can be dropped from six.py and
-# instead we should switch to using inspect.getfullargspec directly
-if PY3:
-    import inspect
-
-    def getargspec(func):
-        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(func)
-        if kwonlyargs or ann:
-            raise ValueError("Function has keyword-only parameters or annotations"
-                             ", use getfullargspec() API which can support them")
-        return inspect.ArgSpec(args, varargs, varkw, defaults)
-else:
-    import inspect
-
-    getargspec = inspect.getargspec
