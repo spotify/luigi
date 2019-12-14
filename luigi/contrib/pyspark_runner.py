@@ -42,7 +42,7 @@ from luigi import configuration
 sys.path.append(sys.path.pop(0))
 
 
-class SparkEntryPoint(object):
+class _SparkEntryPoint(object):
     def __init__(self, conf):
         self.conf = conf
 
@@ -53,7 +53,7 @@ class SparkEntryPoint(object):
         pass
 
 
-class SparkContextEntryPoint(SparkEntryPoint):
+class SparkContextEntryPoint(_SparkEntryPoint):
     sc = None
 
     def __enter__(self):
@@ -65,7 +65,7 @@ class SparkContextEntryPoint(SparkEntryPoint):
         self.sc.stop()
 
 
-class SparkSessionEntryPoint(SparkEntryPoint):
+class SparkSessionEntryPoint(_SparkEntryPoint):
     spark = None
 
     def _check_major_spark_version(self):
