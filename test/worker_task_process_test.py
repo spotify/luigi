@@ -25,7 +25,7 @@ class ContextManagedTaskProcessTest(LuigiTestCase):
 
     def _test_context_manager(self, force_multiprocessing):
         CONTEXT_MANAGER_MODULE = b'''
-class MyContextManager(object):
+class MyContextManager:
     def __init__(self, task_process):
         self.task = task_process.task
     def __enter__(self):

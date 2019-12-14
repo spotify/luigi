@@ -35,7 +35,7 @@ import os
 sys.path.append(sys.path.pop(0))
 
 
-class PySparkRunner(object):
+class PySparkRunner:
 
     def __init__(self, job, *args):
         # Append job directory to PYTHON_PATH to enable dynamic import

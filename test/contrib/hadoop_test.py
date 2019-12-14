@@ -186,7 +186,7 @@ def read_wordcount_output(p):
     return count
 
 
-class CommonTests(object):
+class CommonTests:
 
     @staticmethod
     def test_run(test_case):
@@ -358,7 +358,7 @@ class CreatePackagesArchive(unittest.TestCase):
         self._assert_package_subpackage(tar.return_value.add)
 
 
-class MockProcess(object):
+class MockProcess:
     def __init__(self, err_lines, returncode):
         err = ''.join(err_lines)
         self.__err_len = len(err)

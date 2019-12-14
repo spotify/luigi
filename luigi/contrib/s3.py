@@ -574,7 +574,7 @@ class AtomicS3File(AtomicLocalFile):
             self.tmp_path, self.path, **self.s3_options)
 
 
-class ReadableS3File(object):
+class ReadableS3File:
     def __init__(self, s3_key):
         self.s3_key = _StreamingBodyAdaptor(s3_key.get()['Body'])
         self.buffer = []

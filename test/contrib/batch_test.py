@@ -29,7 +29,7 @@ except ImportError:
     raise unittest.SkipTest('boto3 is not installed. BatchTasks require boto3')
 
 
-class MockBotoBatchClient(object):
+class MockBotoBatchClient:
 
     def describe_job_queues(self):
         return {
@@ -82,7 +82,7 @@ class MockBotoBatchClient(object):
         }
 
 
-class MockBotoLogsClient(object):
+class MockBotoLogsClient:
 
     def get_log_events(self, logGroupName='', logStreamName='', startFromHead=True):
         return {

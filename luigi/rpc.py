@@ -69,7 +69,7 @@ class RPCError(Exception):
         self.sub_exception = sub_exception
 
 
-class URLLibFetcher(object):
+class URLLibFetcher:
     raises = (URLError, socket.timeout)
 
     def _create_request(self, full_url, body=None):
@@ -97,7 +97,7 @@ class URLLibFetcher(object):
         return urlopen(req, timeout=timeout).read().decode('utf-8')
 
 
-class RequestsFetcher(object):
+class RequestsFetcher:
     def __init__(self, session):
         from requests import exceptions as requests_exceptions
         self.raises = requests_exceptions.RequestException
@@ -118,7 +118,7 @@ class RequestsFetcher(object):
         return resp.text
 
 
-class RemoteScheduler(object):
+class RemoteScheduler:
     """
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
