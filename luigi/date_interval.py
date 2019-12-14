@@ -35,7 +35,7 @@ import datetime
 import re
 
 
-class DateInterval(object):
+class DateInterval:
 
     """
     The :class:`DateInterval` is the base class with subclasses :class:`Date`, :class:`Week`, :class:`Month`, :class:`Year`, and :class:`Custom`.

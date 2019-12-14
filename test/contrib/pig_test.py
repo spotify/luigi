@@ -176,7 +176,7 @@ def _get_fake_Popen(arglist_result, return_code, *args, **kwargs):
     def Popen_fake(arglist, shell=None, stdout=None, stderr=None, env=None, close_fds=True):
         arglist_result.append(arglist)
 
-        class P(object):
+        class P:
             number_of_process_polls = 5
 
             def __init__(self):

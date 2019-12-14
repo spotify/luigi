@@ -52,7 +52,7 @@ def _plural_format(template, number, plural='s'):
     return template.format(number, '' if number == 1 else plural)
 
 
-class BatchNotifier(object):
+class BatchNotifier:
     def __init__(self, **kwargs):
         self._config = batch_email(**kwargs)
         self._fail_counts = collections.defaultdict(collections.Counter)

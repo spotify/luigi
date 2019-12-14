@@ -7,7 +7,7 @@ from collections import defaultdict
 from urllib.request import urlopen
 
 
-class LuigiGrep(object):
+class LuigiGrep:
 
     def __init__(self, host, port):
         self._host = host

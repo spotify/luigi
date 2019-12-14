@@ -176,7 +176,7 @@ def eval_contents(f):
         return eval(i.read())
 
 
-class ConsistentMockOutput(object):
+class ConsistentMockOutput:
 
     '''
     Computes output location and contents from the task and its parameters. Rids us of writing ad-hoc boilerplate output() et al.

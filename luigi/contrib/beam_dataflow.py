@@ -126,7 +126,7 @@ class DataflowParamKeys(metaclass=abc.ABCMeta):
         pass
 
 
-class _CmdLineRunner(object):
+class _CmdLineRunner:
     """
     Executes a given command line class in a subprocess, logging its output.
     If more complex monitoring/logging is desired, user can implement their

@@ -27,7 +27,7 @@ import luigi.task
 logger = logging.getLogger('luigi-interface')
 
 
-class _MetadataColumnsMixin(object):
+class _MetadataColumnsMixin:
     """Provide an additional behavior that adds columns and values to tables
 
     This mixin is used to provide an additional behavior that allow a task to
@@ -41,7 +41,7 @@ class _MetadataColumnsMixin(object):
 
         .. code:: python
 
-            class CommonMetaColumnsBehavior(object):
+            class CommonMetaColumnsBehavior:
                 def update_report_execution_date_query(self):
                     query = "UPDATE {0} " \
                             "SET date_param = DATE '{1}' " \

@@ -37,7 +37,7 @@ except ImportError:
     logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
 
-class MultiReplacer(object):
+class MultiReplacer:
     """
     Object for one-pass replace of multiple words
 

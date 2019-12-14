@@ -713,7 +713,7 @@ class Task(metaclass=Register):
             setattr(self, property_name, value)
 
 
-class MixinNaiveBulkComplete(object):
+class MixinNaiveBulkComplete:
     """
     Enables a Task to be efficiently scheduled with e.g. range tools, by providing a bulk_complete implementation which checks completeness in a loop.
 

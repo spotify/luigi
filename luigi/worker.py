@@ -285,7 +285,7 @@ class ContextManagedTaskProcess(TaskProcess):
             super(ContextManagedTaskProcess, self).run()
 
 
-class TaskStatusReporter(object):
+class TaskStatusReporter:
     """
     Reports task status information to the scheduler.
 
@@ -316,7 +316,7 @@ class TaskStatusReporter(object):
         self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
 
 
-class SchedulerMessage(object):
+class SchedulerMessage:
     """
     Message object that is build by the the :py:class:`Worker` when a message from the scheduler is
     received and passed to the message queue of a :py:class:`Task`.
@@ -342,7 +342,7 @@ class SchedulerMessage(object):
         self._scheduler.add_scheduler_message_response(self._task_id, self._message_id, response)
 
 
-class SingleProcessPool(object):
+class SingleProcessPool:
     """
     Dummy process pool for using a single processor.
 
@@ -383,7 +383,7 @@ class AsyncCompletionException(Exception):
         self.trace = trace
 
 
-class TracebackWrapper(object):
+class TracebackWrapper:
     """
     Class to wrap tracebacks so we can know they're not just strings.
     """
@@ -502,7 +502,7 @@ def rpc_message_callback(fn):
     return fn
 
 
-class Worker(object):
+class Worker:
     """
     Worker object communicates with a scheduler.
 
