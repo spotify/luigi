@@ -87,7 +87,7 @@ class DuplicateParameterException(ParameterException):
     pass
 
 
-class Parameter(object):
+class Parameter:
     """
     Parameter whose value is a ``str``, and a base class for other parameter types.
 

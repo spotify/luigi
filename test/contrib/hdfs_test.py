@@ -241,7 +241,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
             hdfs.HdfsFlagTarget("/home/file.txt")
 
 
-class _MiscOperationsMixin(object):
+class _MiscOperationsMixin:
 
     # TODO: chown/chmod/count should really be methods on HdfsTarget rather than the client!
 

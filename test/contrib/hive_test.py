@@ -66,7 +66,7 @@ class HiveTest(unittest.TestCase):
     def test_create_parent_dirs(self):
         dirname = "/tmp/hive_task_test_dir"
 
-        class FooHiveTask(object):
+        class FooHiveTask:
 
             def output(self):
                 return LocalTarget(os.path.join(dirname, "foo"))

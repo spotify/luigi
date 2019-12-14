@@ -227,7 +227,7 @@ class QuerySalesforce(Task):
         outfile.close()
 
 
-class SalesforceAPI(object):
+class SalesforceAPI:
     """
     Class used to interact with the SalesforceAPI.  Currently provides only the
     methods necessary for performing a bulk upload operation.
