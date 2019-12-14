@@ -62,7 +62,7 @@ class RemoteCalledProcessError(subprocess.CalledProcessError):
             self.cmd, self.host, self.returncode)
 
 
-class RemoteContext(object):
+class RemoteContext:
 
     def __init__(self, host, **kwargs):
         self.host = host

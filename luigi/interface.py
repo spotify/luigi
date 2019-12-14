@@ -113,7 +113,7 @@ class core(task.Config):
         always_in_help=True)
 
 
-class _WorkerSchedulerFactory(object):
+class _WorkerSchedulerFactory:
 
     def create_local_scheduler(self):
         return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)

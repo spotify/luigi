@@ -1000,7 +1000,7 @@ class WorkerDisabledTest(LuigiTestCase):
                 sch.disable_worker('my_worker_id')
                 KillWorkerTask.did_actually_run = True
 
-        class Factory(object):
+        class Factory:
             def create_local_scheduler(self, *args, **kwargs):
                 return sch
 

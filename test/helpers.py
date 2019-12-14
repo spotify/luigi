@@ -34,7 +34,7 @@ def skipOnTravis(reason):
     return unittest.skipIf(os.getenv('TRAVIS') == 'true', reason)
 
 
-class with_config(object):
+class with_config:
     """
     Decorator to override config settings for the length of a function.
 
@@ -177,7 +177,7 @@ class LuigiTestCase(unittest.TestCase):
         return self.run_locally(space_seperated_args.split(' '))
 
 
-class parsing(object):
+class parsing:
     """
     Convenient decorator for test cases to set the parsing environment.
     """

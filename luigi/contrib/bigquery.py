@@ -31,30 +31,30 @@ except ImportError:
                    'not installed. Any BigQuery task will fail')
 
 
-class CreateDisposition(object):
+class CreateDisposition:
     CREATE_IF_NEEDED = 'CREATE_IF_NEEDED'
     CREATE_NEVER = 'CREATE_NEVER'
 
 
-class WriteDisposition(object):
+class WriteDisposition:
     WRITE_TRUNCATE = 'WRITE_TRUNCATE'
     WRITE_APPEND = 'WRITE_APPEND'
     WRITE_EMPTY = 'WRITE_EMPTY'
 
 
-class QueryMode(object):
+class QueryMode:
     INTERACTIVE = 'INTERACTIVE'
     BATCH = 'BATCH'
 
 
-class SourceFormat(object):
+class SourceFormat:
     AVRO = 'AVRO'
     CSV = 'CSV'
     DATASTORE_BACKUP = 'DATASTORE_BACKUP'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
 
 
-class FieldDelimiter(object):
+class FieldDelimiter:
     """
     The separator for fields in a CSV file. The separator can be any ISO-8859-1 single-byte character.
     To use a character in the range 128-255, you must encode the character as UTF8.
@@ -71,23 +71,23 @@ class FieldDelimiter(object):
     PIPE = "|"
 
 
-class PrintHeader(object):
+class PrintHeader:
     TRUE = True
     FALSE = False
 
 
-class DestinationFormat(object):
+class DestinationFormat:
     AVRO = 'AVRO'
     CSV = 'CSV'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
 
 
-class Compression(object):
+class Compression:
     GZIP = 'GZIP'
     NONE = 'NONE'
 
 
-class Encoding(object):
+class Encoding:
     """
     [Optional] The character encoding of the data. The supported values are UTF-8 or ISO-8859-1. The default value is UTF-8.
 
@@ -112,7 +112,7 @@ class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id 
                self.dataset.dataset_id + "/" + self.table_id
 
 
-class BigQueryClient(object):
+class BigQueryClient:
     """A client for Google BigQuery.
 
     For details of how authentication and the descriptor work, see the
@@ -414,7 +414,7 @@ class BigQueryTarget(luigi.target.Target):
         return str(self.table)
 
 
-class MixinBigQueryBulkComplete(object):
+class MixinBigQueryBulkComplete:
     """
     Allows to efficiently check if a range of BigQueryTargets are complete.
     This enables scheduling tasks with luigi range tools.
