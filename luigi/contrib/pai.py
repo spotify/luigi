@@ -57,7 +57,7 @@ def slot_to_dict(o):
     return o_dict
 
 
-class PaiJob(object):
+class PaiJob:
     """
     The Open PAI job definition.
     Refer to here https://github.com/Microsoft/pai/blob/master/docs/job_tutorial.md
@@ -117,7 +117,7 @@ class PaiJob(object):
             raise TypeError('you must specify one task at least.')
 
 
-class Port(object):
+class Port:
     __slots__ = ('label', 'beginAt', 'portNumber')
 
     def __init__(self, label, begin_at=0, port_number=1):
@@ -133,7 +133,7 @@ class Port(object):
         self.portNumber = port_number
 
 
-class TaskRole(object):
+class TaskRole:
     __slots__ = (
         'name', 'taskNumber', 'cpuNumber', 'memoryMB', 'shmMB', 'gpuNumber', 'portList', 'command',
         'minFailedTaskCount', 'minSucceededTaskCount'

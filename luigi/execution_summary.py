@@ -61,7 +61,7 @@ class LuigiStatusCode(enum.Enum):
     MISSING_EXT = (":|", "there were missing external dependencies")
 
 
-class LuigiRunResult(object):
+class LuigiRunResult:
     """
     The result of a call to build/run when passing the detailed_summary=True argument.
 

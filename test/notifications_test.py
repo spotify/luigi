@@ -154,7 +154,7 @@ class ExceptionFormatTest(unittest.TestCase):
         )
 
 
-class NotificationFixture(object):
+class NotificationFixture:
     """
     Defines API and message fixture.
 

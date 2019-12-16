@@ -58,7 +58,7 @@ class WebHdfsTarget(FileSystemTarget):
         )
 
 
-class ReadableWebHdfsFile(object):
+class ReadableWebHdfsFile:
 
     def __init__(self, path, client):
         self.path = path

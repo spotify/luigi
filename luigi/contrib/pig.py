@@ -165,7 +165,7 @@ class PigJobTask(luigi.Task):
             raise PigJobError("Pig script failed with return value: %s" % (proc.returncode,), err=err)
 
 
-class PigRunContext(object):
+class PigRunContext:
     def __init__(self):
         self.job_id = None
 

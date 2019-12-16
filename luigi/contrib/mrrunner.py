@@ -35,7 +35,7 @@ import tarfile
 import traceback
 
 
-class Runner(object):
+class Runner:
     """
     Run the mapper, combiner, or reducer on hadoop nodes.
     """

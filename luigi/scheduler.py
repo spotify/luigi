@@ -24,6 +24,7 @@ See :doc:`/central_scheduler` for more info.
 import collections
 import functools
 import hashlib
+import inspect
 import itertools
 import json
 import logging
@@ -34,7 +35,7 @@ import time
 import uuid
 from collections.abc import MutableSet
 
-from luigi import configuration, notifications, parameter, six
+from luigi import configuration, notifications, parameter
 from luigi import task_history as history
 from luigi.batch_notifier import BatchNotifier
 from luigi.metrics import MetricsCollectors
@@ -88,12 +89,11 @@ def rpc_method(**request_args):
     def _rpc_method(fn):
         # If request args are passed, return this function again for use as
         # the decorator function with the request args attached.
-        fn_args = six.getargspec(fn)
-
-        assert not fn_args.varargs
-        assert fn_args.args[0] == 'self'
-        all_args = fn_args.args[1:]
-        defaults = dict(zip(reversed(all_args), reversed(fn_args.defaults or ())))
+        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(fn)
+        assert not varargs
+        first_arg, *all_args = args
+        assert first_arg == 'self'
+        defaults = dict(zip(reversed(all_args), reversed(defaults or ())))
         required_args = frozenset(arg for arg in all_args if arg not in defaults)
         fn_name = fn.__name__
 
@@ -150,7 +150,7 @@ class scheduler(Config):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
 
-class Failures(object):
+class Failures:
     """
     This class tracks the number of failures in a given time window.
 
@@ -272,7 +272,7 @@ class OrderedSet(MutableSet):
         return set(self) == set(other)
 
 
-class Task(object):
+class Task:
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, param_visibilities=None, accepts_messages=False, tracking_url=None, status_message=None,
                  progress_percentage=None, retry_policy='notoptional'):
@@ -351,7 +351,7 @@ class Task(object):
         return u'{}({})'.format(self.family, param_str)
 
 
-class Worker(object):
+class Worker:
     """
     Structure for tracking worker activity and keeping their references.
     """
@@ -429,7 +429,7 @@ class Worker(object):
         return self.id
 
 
-class SimpleTaskState(object):
+class SimpleTaskState:
     """
     Keep track of the current state and handle persistence.
 
@@ -677,7 +677,7 @@ class SimpleTaskState(object):
             self._metrics_collector.handle_task_failed(task)
 
 
-class Scheduler(object):
+class Scheduler:
     """
     Async scheduler that can handle multiple workers, etc.
 

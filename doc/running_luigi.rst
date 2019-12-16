@@ -93,7 +93,7 @@ which will return your worker and/or scheduler implementations:
         # some custom logic
 
 
-    class MyFactory(object):
+    class MyFactory:
       def create_local_scheduler(self):
           return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 

@@ -204,7 +204,7 @@ def flatten(sequence):
             yield item
 
 
-class HadoopRunContext(object):
+class HadoopRunContext:
 
     def __init__(self):
         self.job_id = None
@@ -382,7 +382,7 @@ def fetch_task_failures(tracking_url):
     return '\n'.join(error_text)
 
 
-class JobRunner(object):
+class JobRunner:
     run_job = NotImplemented
 
 

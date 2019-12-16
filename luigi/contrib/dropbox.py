@@ -190,7 +190,7 @@ class DropboxClient(FileSystem):
             return False
 
 
-class ReadableDropboxFile(object):
+class ReadableDropboxFile:
     def __init__(self, path, client):
         """
         Represents a file inside the Dropbox cloud which will be read

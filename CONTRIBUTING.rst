@@ -8,6 +8,7 @@ participating, you are expected to honor this code.
 Running the tests
 -----------------
 
+
 We are always happy to receive Pull Requests. When you open a PR, it will
 automatically build on Travis. So you're not strictly required to test the
 patch locally before submitting it.

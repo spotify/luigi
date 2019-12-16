@@ -57,7 +57,7 @@ class TargetTest(unittest.TestCase):
         GoodTarget()
 
 
-class FileSystemTargetTestMixin(object):
+class FileSystemTargetTestMixin:
     """All Target that take bytes (python2: str) should pass those
     tests. In addition, a test to verify the method `exists`should be added
     """

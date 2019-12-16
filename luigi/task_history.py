@@ -25,7 +25,7 @@ import logging
 logger = logging.getLogger('luigi-interface')
 
 
-class StoredTask(object):
+class StoredTask:
     """
     Interface for methods on TaskHistory
     """

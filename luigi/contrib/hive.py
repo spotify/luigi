@@ -247,7 +247,7 @@ class MetastoreClient(HiveClient):
         return "/".join("%s=%s" % (k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0)))
 
 
-class HiveThriftContext(object):
+class HiveThriftContext:
     """
     Context manager for hive metastore client.
     """

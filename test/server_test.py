@@ -350,7 +350,7 @@ class _ServerTest(unittest.TestCase):
 
 @attr('unixsocket')
 class UNIXServerTest(_ServerTest):
-    class ServerClient(object):
+    class ServerClient:
         def __init__(self):
             self.tempdir = tempfile.mkdtemp()
             self.unix_socket = os.path.join(self.tempdir, 'luigid.sock')
@@ -376,7 +376,7 @@ class UNIXServerTest(_ServerTest):
         shutil.rmtree(self.server_client.tempdir)
 
 
-class INETServerClient(object):
+class INETServerClient:
     def __init__(self):
         # Just some port
         self.port = 8083

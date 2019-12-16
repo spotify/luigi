@@ -49,7 +49,7 @@ else:
         MAXSIZE = int((1 << 31) - 1)
     else:
         # It's possible to have sizeof(long) != sizeof(Py_ssize_t).
-        class X(object):
+        class X:
 
             def __len__(self):
                 return 1 << 31
@@ -75,7 +75,7 @@ def _import_module(name):
     return sys.modules[name]
 
 
-class _LazyDescr(object):
+class _LazyDescr:
 
     def __init__(self, name):
         self.name = name
@@ -153,7 +153,7 @@ class MovedAttribute(_LazyDescr):
         return getattr(module, self.attr)
 
 
-class _SixMetaPathImporter(object):
+class _SixMetaPathImporter:
 
     """
     A meta path importer to import six.moves and its submodules.
@@ -400,7 +400,7 @@ else:
     def create_unbound_method(func, cls):
         return types.MethodType(func, None, cls)
 
-    class Iterator(object):
+    class Iterator:
 
         def next(self):
             return type(self).__next__(self)
@@ -555,21 +555,3 @@ if sys.meta_path:
     del i, importer
 # Finally, add the importer to the meta path import hook.
 sys.meta_path.append(_importer)
-
-# luigi specific additions
-
-# When support for PY2 is dropped getargspec below can be dropped from six.py and
-# instead we should switch to using inspect.getfullargspec directly
-if PY3:
-    import inspect
-
-    def getargspec(func):
-        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(func)
-        if kwonlyargs or ann:
-            raise ValueError("Function has keyword-only parameters or annotations"
-                             ", use getfullargspec() API which can support them")
-        return inspect.ArgSpec(args, varargs, varkw, defaults)
-else:
-    import inspect
-
-    getargspec = inspect.getargspec
