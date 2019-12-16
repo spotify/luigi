@@ -544,7 +544,7 @@ class Task(object):
         repr_parts = []
         param_objs = dict(params)
         for param_name, param_value in param_values:
-            if param_objs[param_name].significant and param_objs[param_name].visibility == ParameterVisibility.PUBLIC:
+            if param_objs[param_name].significant:
                 repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
 
         task_str = '{}({})'.format(self.get_task_family(), ', '.join(repr_parts))
