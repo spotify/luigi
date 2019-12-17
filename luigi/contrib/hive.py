@@ -469,34 +469,6 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
             return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
 
 
-class HiveTableTarget(luigi.Target):
-    """
-    exists returns true if the table exists.
-    """
-
-    def __init__(self, table, database='default', client=None):
-        self.database = database
-        self.table = table
-        self.client = client or get_default_client()
-
-    def exists(self):
-        logger.debug("Checking if Hive table '%s.%s' exists", self.database, self.table)
-        return self.client.table_exists(self.table, self.database)
-
-    @property
-    def path(self):
-        """
-        Returns the path to this table in HDFS.
-        """
-        location = self.client.table_location(self.table, self.database)
-        if not location:
-            raise Exception("Couldn't find location for table: {0}".format(str(self)))
-        return location
-
-    def open(self, mode):
-        return NotImplementedError("open() is not supported for HiveTableTarget")
-
-
 class HivePartitionTarget(luigi.Target):
     """
     exists returns true if the table's partition exists.
@@ -507,7 +479,6 @@ class HivePartitionTarget(luigi.Target):
         self.table = table
         self.partition = partition
         self.client = client or get_default_client()
-
         self.fail_missing_table = fail_missing_table
 
     def exists(self):
@@ -516,7 +487,7 @@ class HivePartitionTarget(luigi.Target):
                 "Checking Hive table '{d}.{t}' for partition {p}".format(
                     d=self.database,
                     t=self.table,
-                    p=str(self.partition)
+                    p=str(self.partition or {})
                 )
             )
 
@@ -543,14 +514,28 @@ class HivePartitionTarget(luigi.Target):
         return location
 
     def open(self, mode):
-        return NotImplementedError("open() is not supported for HivePartitionTarget")
+        return NotImplementedError("open() is not supported for {}".format(self.__class__.__name__))
+
+
+class HiveTableTarget(HivePartitionTarget):
+    """
+    exists returns true if the table exists.
+    """
+
+    def __init__(self, table, database='default', client=None):
+        super(HiveTableTarget, self).__init__(
+            table=table,
+            partition=None,
+            database=database,
+            fail_missing_table=True,
+            client=client,
+        )
 
 
 class ExternalHiveTask(luigi.ExternalTask):
     """
     External task that depends on a Hive table/partition.
     """
-
     database = luigi.Parameter(default='default')
     table = luigi.Parameter()
     partition = luigi.DictParameter(
@@ -559,14 +544,8 @@ class ExternalHiveTask(luigi.ExternalTask):
     )
 
     def output(self):
-        if self.partition:
-            return HivePartitionTarget(
-                database=self.database,
-                table=self.table,
-                partition=self.partition,
-            )
-        else:
-            return HiveTableTarget(
-                database=self.database,
-                table=self.table,
-            )
+        return HivePartitionTarget(
+            database=self.database,
+            table=self.table,
+            partition=self.partition,
+        )
