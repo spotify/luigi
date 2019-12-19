@@ -83,6 +83,15 @@ class KubernetesJobTask(luigi.Task):
         self.uu_name = "%s-%s-%s" % (self.name, now.strftime('%Y%m%d%H%M%S'), self.job_uuid[:16])
 
     @property
+    def annotations(self):
+        """
+        Return custom annotations for kubernetes job.
+        example::
+        ``{"key1": "value1", "key2": "value2"}``
+        """
+        return {}
+
+    @property
     def auth_method(self):
         """
         This can be set to ``kubeconfig`` or ``service-account``.
@@ -363,7 +372,8 @@ class KubernetesJobTask(luigi.Task):
                 "backoffLimit": self.backoff_limit,
                 "template": {
                     "metadata": {
-                        "name": self.uu_name
+                        "name": self.uu_name,
+                        "annotations": self.annotations
                     },
                     "spec": self.spec_schema
                 }
@@ -376,6 +386,8 @@ class KubernetesJobTask(luigi.Task):
                 self.active_deadline_seconds
         # Update user labels
         job_json['metadata']['labels'].update(self.labels)
+        # Update user annotations
+        job_json["spec"]["template"]["metadata"]["annotations"].update(self.annotations)
         # Add default restartPolicy if not specified
         if "restartPolicy" not in self.spec_schema:
             job_json["spec"]["template"]["spec"]["restartPolicy"] = "Never"
