@@ -84,7 +84,7 @@ def track_job(job_id):
     cmd = "bjobs -noheader -o stat {}".format(job_id)
     track_job_proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, shell=True)
-    status = track_job_proc.communicate()[0].strip('\n')
+    status = track_job_proc.communicate()[0].decode("utf-8").strip('\n')
     return status
 
 
@@ -206,15 +206,17 @@ class LSFJobTask(luigi.Task):
         """
         Dump instance to file.
         """
-        self.job_file = os.path.join(out_dir, 'job-instance.pickle')
-        if self.__module__ == '__main__':
-            dump_inst = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            dump_inst = dump_inst.replace('(c__main__', "(c" + module_name)
-            open(self.job_file, "w").write(dump_inst)
-
-        else:
-            pickle.dump(self, open(self.job_file, "w"))
+        with self.no_unpicklable_properties():
+            self.job_file = os.path.join(out_dir, 'job-instance.pickle')
+            if self.__module__ == '__main__':
+                d = pickle.dumps(self)
+                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
+                d = d.replace('(c__main__', "(c" + module_name)
+                with open(self.job_file, "w") as f:
+                    f.write(d)
+            else:
+                with open(self.job_file, "wb") as f:
+                    pickle.dump(self, f)
 
     def _run_job(self):
         """
@@ -243,6 +245,7 @@ class LSFJobTask(luigi.Task):
         # Find where the runner file is
         runner_path = os.path.abspath(lsf_runner.__file__)
 
+        args += ['python']
         args += [runner_path]
         args += [self.tmp_dir]
 
@@ -254,7 +257,7 @@ class LSFJobTask(luigi.Task):
         run_job_proc = subprocess.Popen(
             [str(a) for a in args],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.tmp_dir)
-        output = run_job_proc.communicate()[0]
+        output = run_job_proc.communicate()[0].decode("utf-8")
 
         # ASSUMPTION
         # The result will be of the format
