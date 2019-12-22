@@ -458,6 +458,11 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.EnumListParameter(enum=MyEnum)
         self.assertEqual(hash(Foo(args=(MyEnum.A, MyEnum.C)).args), hash(p.parse('A,C')))
 
+        class FooWithDefault(luigi.Task):
+            args = luigi.parameter.EnumListParameter(enum=MyEnum, default=[MyEnum.C])
+
+        self.assertEqual(FooWithDefault().args, p.parse('C'))
+
     def test_dict(self):
         class Foo(luigi.Task):
             args = luigi.parameter.DictParameter()

@@ -892,7 +892,9 @@ class EnumParameter(Parameter):
 
 class EnumListParameter(Parameter):
     """
-    A parameter whose value is a comma-separated list of :class:`~enum.Enum`.
+    A parameter whose value is a comma-separated list of :class:`~enum.Enum`. Values should come from the same enum.
+
+    Values are taken to be a list, i.e. order is preserved, duplicates may occur, and empty list is possible.
 
     In the task definition, use
 
