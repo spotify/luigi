@@ -7,5 +7,5 @@ Workflow mgmgt + task scheduling + dependency resolution.
 __author__ = 'The Luigi Authors'
 __contact__ = 'https://github.com/spotify/luigi'
 __license__ = 'Apache License 2.0'
-__version__ = '2.8.11'
+__version__ = '3.0.0b1'
 __status__ = 'Production'
