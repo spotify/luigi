@@ -471,10 +471,20 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
 
 class HivePartitionTarget(luigi.Target):
     """
-    exists returns true if the table's partition exists.
+    Target representing Hive table or Hive partition
     """
 
     def __init__(self, table, partition, database='default', fail_missing_table=True, client=None):
+        """
+        @param table: Table name
+        @type table: str
+        @param partition: partition specificaton in form of
+        dict of {"partition_column_1": "partition_value_1", "partition_column_2": "partition_value_2", ... }
+        If `partition` is `None` or `{}` then target is Hive nonpartitioned table
+        @param database: Database name
+        @param fail_missing_table: flag to ignore errors raised due to table nonexistence
+        @param client: `HiveCommandClient` instance. Default if `client is None`
+        """
         self.database = database
         self.table = table
         self.partition = partition
@@ -482,6 +492,9 @@ class HivePartitionTarget(luigi.Target):
         self.fail_missing_table = fail_missing_table
 
     def exists(self):
+        """
+        returns `True` if the partition/table exists
+        """
         try:
             logger.debug(
                 "Checking Hive table '{d}.{t}' for partition {p}".format(
@@ -513,13 +526,10 @@ class HivePartitionTarget(luigi.Target):
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
 
-    def open(self, mode):
-        return NotImplementedError("open() is not supported for {}".format(self.__class__.__name__))
-
 
 class HiveTableTarget(HivePartitionTarget):
     """
-    exists returns true if the table exists.
+    Target representing non-partitioned table
     """
 
     def __init__(self, table, database='default', client=None):
@@ -527,7 +537,7 @@ class HiveTableTarget(HivePartitionTarget):
             table=table,
             partition=None,
             database=database,
-            fail_missing_table=True,
+            fail_missing_table=False,
             client=client,
         )
 
