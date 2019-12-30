@@ -28,6 +28,8 @@ other arguments are the ones returned by PySparkTask.app_options()
 
 from __future__ import print_function
 
+import abc
+
 try:
     import cPickle as pickle
 except ImportError:
@@ -37,18 +39,22 @@ import sys
 import os
 
 from luigi import configuration
+from luigi import six
 
 # this prevents the modules in the directory of this script from shadowing global packages
 sys.path.append(sys.path.pop(0))
 
 
+@six.add_metaclass(abc.ABCMeta)
 class _SparkEntryPoint(object):
     def __init__(self, conf):
         self.conf = conf
 
+    @abc.abstractmethod
     def __enter__(self):
         pass
 
+    @abc.abstractmethod
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
@@ -109,7 +115,7 @@ class AbstractPySparkRunner(object):
         from pyspark import SparkConf
         conf = SparkConf()
         self.job.setup(conf)
-        with self._entry_point_class(conf) as (entry_point, sc):
+        with self._entry_point_class(conf=conf) as (entry_point, sc):
             self.job.setup_remote(sc)
             self.job.main(entry_point, *self.args)
 
