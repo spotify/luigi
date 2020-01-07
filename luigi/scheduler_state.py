@@ -376,7 +376,7 @@ class SqlSchedulerState(SchedulerState):
             self._metrics_collector.handle_task_failed(task)
 
 
-class SimpleTaskState(SchedulerState):
+class SimpleSchedulerState(SchedulerState):
     """
     Keep track of the current state and handle persistence using an in-memory dictionary.
     """

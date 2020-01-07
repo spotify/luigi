@@ -458,10 +458,10 @@ class Scheduler(object):
         """
         self._config = config or scheduler(**kwargs)
 
-        if self._config.use_mysql_state:
-            self._state = scheduler_state.MySqlTaskState(self._config.mysql_target)
+        if self._config.use_sql_state:
+            self._state = scheduler_state.SqlSchedulerState(self._config.sql_target)
         else:
-            self._state = scheduler_state.SimpleTaskState(self._config.state_path)
+            self._state = scheduler_state.SimpleSchedulerState(self._config.state_path)
 
         if task_history_impl:
             self._task_history = task_history_impl
