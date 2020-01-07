@@ -283,7 +283,7 @@ class SqlSchedulerState(SchedulerState):
 
     def __init__(self, mysql_target):
 
-        self.engine = create_engine(mysql_target, poolclass=NullPool)
+        self.engine = create_engine(mysql_target)
         Base.metadata.create_all(self.engine)
         self.session = sessionmaker(bind=self.engine)
 
