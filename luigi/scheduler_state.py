@@ -335,7 +335,7 @@ class SqlSchedulerState(SchedulerState):
     def persist_task(self, task):
         session = self.session()
         if self.has_task(task.id):
-            db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
+            db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
             db_task.status = task.status
             db_task.pickled = pickle.dumps(task)
         else:
