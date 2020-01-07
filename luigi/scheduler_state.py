@@ -192,11 +192,7 @@ class SchedulerState(object):
 
 class SqlSchedulerState(SchedulerState):
     """
-    Keep track of the current state and handle persistance.
-
-    The point of this class is to enable other ways to keep state, eg. by using a database
-    These will be implemented by creating an abstract base class that this and other classes
-    inherit from.
+    Keep track of the current state and handle persistance backed by a SQL task table.
     """
 
     class DBTask(Base):
@@ -360,13 +356,9 @@ class SqlSchedulerState(SchedulerState):
             self._metrics_collector.handle_task_failed(task)
 
 
-class SimpleTaskState(object):
+class SimpleTaskState(SchedulerState):
     """
-    Keep track of the current state and handle persistence.
-
-    The point of this class is to enable other ways to keep state, eg. by using a database
-    These will be implemented by creating an abstract base class that this and other classes
-    inherit from.
+    Keep track of the current state and handle persistence using an in-memory dictionary.
     """
 
     def __init__(self, state_path):

@@ -133,6 +133,9 @@ class scheduler(Config):
     worker_disconnect_delay = parameter.FloatParameter(default=60.0)
     state_path = parameter.Parameter(default='/var/lib/luigi-server/state.pickle')
 
+    use_sql_state = parameter.BoolParameter(default=False, description="Use experimental SQL db to back Luigi state")
+    sql_target = parameter.Parameter(default="", description="dialect://user:pass@host:port/db -- use with SQL state")
+
     batch_emails = parameter.BoolParameter(default=False, description="Send e-mails in batches rather than immediately")
 
     # Jobs are disabled if we see more than retry_count failures in disable_window seconds.
@@ -458,7 +461,11 @@ class Scheduler(object):
         :param task_history_impl: ignore config and use this object as the task history
         """
         self._config = config or scheduler(**kwargs)
-        self._state = SimpleTaskState(self._config.state_path)
+
+        if self._config.use_mysql_state:
+            self._state = MySqlTaskState(self._config.mysql_target)
+        else:
+            self._state = SimpleTaskState(self._config.state_path)
 
         if task_history_impl:
             self._task_history = task_history_impl
