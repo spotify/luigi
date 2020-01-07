@@ -716,6 +716,10 @@ class Scheduler(object):
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
 
+        # Need to call the state store here since we've modified the task
+        self._state.inactivate_tasks([task])
+        self._state.get_task(task_id, setdefault=task)
+
     @rpc_method()
     def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
         if not self._config.batch_emails:
@@ -1034,6 +1038,10 @@ class Scheduler(object):
             best_task.resources_running = best_task.resources.copy()
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
+
+            # Need to call the state store here since we've modified the task
+            self._state.inactivate_tasks([best_task])
+            self._state.get_task(best_task.id, setdefault=best_task)
 
             reply['task_id'] = best_task.id
             reply['task_family'] = best_task.family
