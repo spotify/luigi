@@ -266,21 +266,21 @@ class SchedulerState(object):
             worker.tasks.clear()
 
 
+class DBTask(Base):
+    """
+    Class representing a single Luigi task stored as a row in a database
+    """
+    __tablename__ = 'luigi_task_state'
+
+    task_id = Column(String(255), primary_key=True)
+    status = Column(String(100))
+    pickled = Column(String(10000))
+
+
 class SqlSchedulerState(SchedulerState):
     """
     Keep track of the current state and handle persistance backed by a SQL task table.
     """
-
-    class DBTask(Base):
-        """
-        Row representing a single
-        """
-        __tablename__ = 'luigi_task_state'
-
-        task_id = Column(String(255), primary_key=True)
-        status = Column(String(100))
-        pickled = Column(String(10000))
-
     def __init__(self, mysql_target):
 
         self.engine = create_engine(mysql_target)
