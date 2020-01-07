@@ -1114,8 +1114,10 @@ class Scheduler(object):
         running_tasks = []
 
         upstream_status_table = {}
+        all_tasks = {task.id: task for task in self._state.get_active_tasks()}
+
         for task in worker.get_tasks(self._state, RUNNING):
-            if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
+            if self._upstream_status(task.id, upstream_status_table, all_tasks) == UPSTREAM_DISABLED:
                 continue
             # Return a list of currently running tasks to the client,
             # makes it easier to troubleshoot
@@ -1126,7 +1128,7 @@ class Scheduler(object):
                 running_tasks.append(more_info)
 
         for task in worker.get_tasks(self._state, PENDING, FAILED):
-            if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
+            if self._upstream_status(task.id, upstream_status_table, all_tasks) == UPSTREAM_DISABLED:
                 continue
             num_pending += 1
             num_unique_pending += int(len(task.workers) == 1)
@@ -1295,15 +1297,15 @@ class Scheduler(object):
         worker = self._update_worker(worker_id)
         return {"rpc_messages": worker.fetch_rpc_messages()}
 
-    def _upstream_status(self, task_id, upstream_status_table):
+    def _upstream_status(self, task_id, upstream_status_table, all_tasks):
         if task_id in upstream_status_table:
             return upstream_status_table[task_id]
-        elif self._state.has_task(task_id):
+        elif task_id in all_tasks:
             task_stack = [task_id]
 
             while task_stack:
                 dep_id = task_stack.pop()
-                dep = self._state.get_task(dep_id)
+                dep = all_tasks[dep_id]
                 if dep:
                     if dep.status == DONE:
                         continue
@@ -1468,9 +1470,15 @@ class Scheduler(object):
             def filter_func(t):
                 return all(term in t.pretty_id for term in terms)
 
-        tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
-        for task in filter(filter_func, tasks):
-            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
+        all_tasks = self._state.get_active_tasks()
+        status_tasks = self._state.get_active_tasks_by_status(status) if status else all_tasks
+        task_dict = {task.id: task for task in all_tasks}
+
+        for task in filter(filter_func, status_tasks):
+            if (task.status != PENDING or
+                not upstream_status or
+                upstream_status == self._upstream_status(task.id, upstream_status_table, task_dict)
+            ):
                 serialized = self._serialize_task(task, include_deps=False)
                 result[task.id] = serialized
         if limit and len(result) > (max_shown_tasks or self._config.max_shown_tasks):
