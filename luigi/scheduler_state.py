@@ -115,9 +115,9 @@ class SchedulerState(object):
         """
         """
         if status:
-            return len(self.get_active_tasks_by_status(status))
+            return sum(1 for x in self.get_active_tasks_by_status(status))
         else:
-            return len(self.get_active_tasks())
+            return sum(1 for x in self.get_active_tasks())
 
     def get_batch_running_tasks(self, batch_id):
         """
@@ -130,7 +130,7 @@ class SchedulerState(object):
     def num_pending_tasks(self):
         """
         """
-        return len(self.get_active_tasks_by_status(PENDING, RUNNING))
+        return sum(1 for x in self.get_active_tasks_by_status(PENDING, RUNNING))
 
     def set_batch_running(self, task, batch_id, worker_id):
         """
@@ -255,8 +255,7 @@ class SqlSchedulerState(SchedulerState):
         session = self.session()
         db_res = session.query(DBTask).filter(DBTask.status.in_(statuses)).all()
         session.close()
-        res = [pickle.loads(t.pickled) for t in db_res]
-        return res
+        return (pickle.loads(t.pickled) for t in db_res)
 
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
         self._task_batchers.setdefault(worker_id, {})
