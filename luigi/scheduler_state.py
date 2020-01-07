@@ -345,9 +345,6 @@ class SqlSchedulerState(SchedulerState):
                 continue
             yield worker
 
-    def get_assistants(self, last_active_lt=None):
-        return filter(lambda w: w.assistant, self.get_active_workers(last_active_lt))
-
     def get_worker_ids(self):
         return self._active_workers.keys()  # only used for unit tests
 
@@ -359,19 +356,6 @@ class SqlSchedulerState(SchedulerState):
         for worker in delete_workers:
             self._active_workers.pop(worker)
         self._remove_workers_from_tasks(delete_workers)
-
-    def _remove_workers_from_tasks(self, workers, remove_stakeholders=True):
-        for task in self.get_active_tasks():
-            if remove_stakeholders:
-                task.stakeholders.difference_update(workers)
-            task.workers -= workers
-
-    def disable_workers(self, worker_ids):
-        self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
-        for worker_id in worker_ids:
-            worker = self.get_worker(worker_id)
-            worker.disabled = True
-            worker.tasks.clear()
 
     def update_metrics(self, task, config):
         if task.status == DISABLED:
@@ -440,31 +424,12 @@ class SimpleTaskState(object):
     def get_active_tasks_by_status(self, *statuses):
         return itertools.chain.from_iterable(six.itervalues(self._status_tasks[status]) for status in statuses)
 
-    def get_active_task_count_for_status(self, status):
-        if status:
-            return len(self._status_tasks[status])
-        else:
-            return len(self._tasks)
-
-    def get_batch_running_tasks(self, batch_id):
-        assert batch_id is not None
-        return [
-            task for task in self.get_active_tasks_by_status(BATCH_RUNNING)
-            if task.batch_id == batch_id
-        ]
-
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
         self._task_batchers.setdefault(worker_id, {})
         self._task_batchers[worker_id][family] = (batcher_args, max_batch_size)
 
     def get_batcher(self, worker_id, family):
         return self._task_batchers.get(worker_id, {}).get(family, (None, 1))
-
-    def num_pending_tasks(self):
-        """
-        Return how many tasks are PENDING + RUNNING. O(1).
-        """
-        return len(self._status_tasks[PENDING]) + len(self._status_tasks[RUNNING])
 
     def get_task(self, task_id, default=None, setdefault=None):
         if setdefault:
@@ -473,23 +438,6 @@ class SimpleTaskState(object):
             return task
         else:
             return self._tasks.get(task_id, default)
-
-    def has_task(self, task_id):
-        return task_id in self._tasks
-
-    def re_enable(self, task, config=None):
-        task.scheduler_disable_time = None
-        task.failures.clear()
-        if config:
-            self.set_status(task, FAILED, config)
-            task.failures.clear()
-
-    def set_batch_running(self, task, batch_id, worker_id):
-        self.set_status(task, BATCH_RUNNING)
-        task.batch_id = batch_id
-        task.worker_running = worker_id
-        task.resources_running = task.resources
-        task.time_running = time.time()
 
     def set_status(self, task, new_status, config=None):
         if new_status == FAILED:
@@ -544,37 +492,6 @@ class SimpleTaskState(object):
             if remove_on_failure:
                 task.remove = time.time()
 
-    def fail_dead_worker_task(self, task, config, assistants):
-        # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-        if task.status in (BATCH_RUNNING, RUNNING) and task.worker_running and task.worker_running not in task.stakeholders | assistants:
-            logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
-                        "FAILED with retry delay of %rs", task.id, task.worker_running,
-                        config.retry_delay)
-            task.worker_running = None
-            self.set_status(task, FAILED, config)
-            task.retry = time.time() + config.retry_delay
-
-    def update_status(self, task, config):
-        # Mark tasks with no remaining active stakeholders for deletion
-        if (not task.stakeholders) and (task.remove is None) and (task.status != RUNNING):
-            # We don't check for the RUNNING case, because that is already handled
-            # by the fail_dead_worker_task function.
-            logger.debug("Task %r has no stakeholders anymore -> might remove "
-                         "task in %s seconds", task.id, config.remove_delay)
-            task.remove = time.time() + config.remove_delay
-
-        # Re-enable task after the disable time expires
-        if task.status == DISABLED and task.scheduler_disable_time is not None:
-            if time.time() - task.scheduler_disable_time > config.disable_persist:
-                self.re_enable(task, config)
-
-        # Reset FAILED tasks to PENDING if max timeout is reached, and retry delay is >= 0
-        if task.status == FAILED and config.retry_delay >= 0 and task.retry < time.time():
-            self.set_status(task, PENDING, config)
-
-    def may_prune(self, task):
-        return task.remove and time.time() >= task.remove
-
     def inactivate_tasks(self, delete_tasks):
         # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
         # but with a pluggable state storage, you might very well want to keep some history of
@@ -593,9 +510,6 @@ class SimpleTaskState(object):
                 continue
             yield worker
 
-    def get_assistants(self, last_active_lt=None):
-        return filter(lambda w: w.assistant, self.get_active_workers(last_active_lt))
-
     def get_worker_ids(self):
         return self._active_workers.keys()  # only used for unit tests
 
@@ -607,19 +521,6 @@ class SimpleTaskState(object):
         for worker in delete_workers:
             self._active_workers.pop(worker)
         self._remove_workers_from_tasks(delete_workers)
-
-    def _remove_workers_from_tasks(self, workers, remove_stakeholders=True):
-        for task in self.get_active_tasks():
-            if remove_stakeholders:
-                task.stakeholders.difference_update(workers)
-            task.workers -= workers
-
-    def disable_workers(self, worker_ids):
-        self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
-        for worker_id in worker_ids:
-            worker = self.get_worker(worker_id)
-            worker.disabled = True
-            worker.tasks.clear()
 
     def update_metrics(self, task, config):
         if task.status == DISABLED:
