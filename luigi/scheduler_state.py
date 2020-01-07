@@ -454,8 +454,9 @@ class SimpleSchedulerState(SchedulerState):
     def persist_task(self, task):
         # remove the task from old status dict if it now has a new status
         for tasks in self._status_tasks:
-            if task.id in tasks:
-                log.info("Removing stale status {} task {}".format(task.status, task))
+            logger.info("tasks keys: {}".format(tasks.keys()))
+            if task.id in tasks.values():
+                logger.info("POPPIN {}".format(task))
                 tasks.pop(task.id)
         self._tasks[task.id] = task
         self._status_tasks[task.status][task.id] = task
@@ -464,9 +465,9 @@ class SimpleSchedulerState(SchedulerState):
         # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
         # but with a pluggable state storage, you might very well want to keep some history of
         # older tasks as well. That's why we call it "inactivate" (as in the verb)
-        for task in delete_tasks:
-            task_obj = self._tasks.pop(task)
-            self._status_tasks[task_obj.status].pop(task)
+        for task_id in delete_tasks:
+            task_obj = self._tasks.pop(task_id)
+            self._status_tasks[task_obj.status].pop(task_id)
 
     def get_active_workers(self, last_active_lt=None, last_get_work_gt=None):
         for worker in six.itervalues(self._active_workers):
