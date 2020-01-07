@@ -334,7 +334,12 @@ class SqlSchedulerState(SchedulerState):
 
     def persist_task(self, task):
         session = self.session()
-        db_task = DBTask(task_id=task.id, status=task.status, pickled=pickle.dumps(task))
+        if self.has_task(task.id):
+            db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
+            db_task.status = task.status
+            db_task.pickled = pickle.dumps(task)
+        else:
+            db_task = DBTask(task_id=task.id, status=task.status, pickled=pickle.dumps(task))
         session.add(db_task)
         session.commit()
         session.close()
@@ -453,11 +458,9 @@ class SimpleSchedulerState(SchedulerState):
 
     def persist_task(self, task):
         # remove the task from old status dict if it now has a new status
-        for key, val in self._status_tasks.items():
-            logger.info("tasks key: {}".format(key))
-            if task.id in val.keys():
-                logger.info("POPPIN {}".format(task))
-                val.pop(task.id)
+        for status, task_dict in self._status_tasks.items():
+            if task.id in task_dict.keys():
+                task_dict.pop(task.id)
         self._tasks[task.id] = task
         self._status_tasks[task.status][task.id] = task
 
