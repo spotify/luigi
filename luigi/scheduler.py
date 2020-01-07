@@ -44,7 +44,6 @@ from luigi import configuration
 from luigi import notifications
 from luigi import parameter
 from luigi import task_history as history
-from luigi import scheduler_state
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN, \
     BATCH_RUNNING
 from luigi.task import Config
@@ -457,6 +456,8 @@ class Scheduler(object):
         :param task_history_impl: ignore config and use this object as the task history
         """
         self._config = config or scheduler(**kwargs)
+
+        from luigi import scheduler_state # import here since it needs `Worker` from this file
 
         if self._config.use_sql_state:
             self._state = scheduler_state.SqlSchedulerState(self._config.sql_target)
