@@ -398,7 +398,7 @@ class Worker(object):
 
     def get_tasks(self, state, *statuses):
         num_self_tasks = len(self.tasks)
-        num_state_tasks = sum(len(state._status_tasks[status]) for status in statuses)
+        num_state_tasks = len(list(state.get_active_tasks_by_status(*statuses)))
         if num_self_tasks < num_state_tasks:
             return six.moves.filter(lambda task: task.status in statuses, self.tasks)
         else:
@@ -1227,8 +1227,7 @@ class Scheduler(object):
                 in_workers = (assistant and task.runnable) or worker_id in task.workers
                 if in_workers and self._has_resources(task.resources, used_resources):
                     best_task = task
-                    batch_param_names, max_batch_size = self._state.get_batcher(
-                        worker_id, task.family)
+                    batch_param_names, max_batch_size = self._state.get_batcher(worker_id, task.family)
                     if batch_param_names and task.is_batchable():
                         try:
                             batched_params = {
@@ -1324,9 +1323,7 @@ class Scheduler(object):
                         upstream_status_table[dep_id] = status
             return upstream_status_table[dep_id]
 
-    def _serialize_task(self, task_id, include_deps=True, deps=None):
-        task = self._state.get_task(task_id)
-
+    def _serialize_task(self, task, include_deps=True, deps=None):
         ret = {
             'display_name': task.pretty_id,
             'status': task.status,
@@ -1415,7 +1412,7 @@ class Scheduler(object):
                 deps = dep_func(task)
                 if not include_done:
                     deps = list(self._filter_done(deps))
-                serialized[task_id] = self._serialize_task(task_id, deps=deps)
+                serialized[task_id] = self._serialize_task(task, deps=deps)
                 for dep in sorted(deps):
                     if dep not in seen:
                         seen.add(dep)
@@ -1474,7 +1471,7 @@ class Scheduler(object):
         tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
         for task in filter(filter_func, tasks):
             if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
-                serialized = self._serialize_task(task.id, include_deps=False)
+                serialized = self._serialize_task(task, include_deps=False)
                 result[task.id] = serialized
         if limit and len(result) > (max_shown_tasks or self._config.max_shown_tasks):
             return {'num_tasks': len(result)}
@@ -1505,7 +1502,7 @@ class Scheduler(object):
             running = collections.defaultdict(dict)
             for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.worker_running:
-                    running[task.worker_running][task.id] = self._serialize_task(task.id, include_deps=False)
+                    running[task.worker_running][task.id] = self._serialize_task(task, include_deps=False)
 
             num_pending = collections.defaultdict(int)
             num_uniques = collections.defaultdict(int)
@@ -1540,7 +1537,7 @@ class Scheduler(object):
             for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.status == RUNNING and task.resources:
                     for resource, amount in six.iteritems(task.resources):
-                        consumers[resource][task.id] = self._serialize_task(task.id, include_deps=False)
+                        consumers[resource][task.id] = self._serialize_task(task, include_deps=False)
             for resource in resources:
                 tasks = consumers[resource['name']]
                 resource['num_consumer'] = len(tasks)
@@ -1571,7 +1568,7 @@ class Scheduler(object):
         result = collections.defaultdict(dict)
         for task in self._state.get_active_tasks():
             if task.id.find(task_str) != -1:
-                serialized = self._serialize_task(task.id, include_deps=False)
+                serialized = self._serialize_task(task, include_deps=False)
                 result[task.status][task.id] = serialized
         return result
 
@@ -1581,7 +1578,7 @@ class Scheduler(object):
         task = self._state.get_task(task_id)
         if task and task.status == DISABLED and task.scheduler_disable_time:
             self._state.re_enable(task, self._config)
-            serialized = self._serialize_task(task_id)
+            serialized = self._serialize_task(task)
         return serialized
 
     @rpc_method()
