@@ -147,6 +147,61 @@ class SchedulerState(object):
         """
         return self.get_task(task_id) is not None
 
+    def set_status(self, task, new_status, config=None):
+        """
+        """
+        if new_status == FAILED:
+            assert config is not None
+
+        if new_status == DISABLED and task.status in (RUNNING, BATCH_RUNNING):
+            return
+
+        remove_on_failure = task.batch_id is not None and not task.batchable
+
+        if task.status == DISABLED:
+            if new_status == DONE:
+                self.re_enable(task)
+
+            # don't allow workers to override a scheduler disable
+            elif task.scheduler_disable_time is not None and new_status != DISABLED:
+                return
+
+        if task.status == RUNNING and task.batch_id is not None and new_status != RUNNING:
+            for batch_task in self.get_batch_running_tasks(task.batch_id):
+                self.set_status(batch_task, new_status, config)
+                batch_task.batch_id = None
+            task.batch_id = None
+
+        if new_status == FAILED and task.status != DISABLED:
+            task.add_failure()
+            if task.has_excessive_failures():
+                task.scheduler_disable_time = time.time()
+                new_status = DISABLED
+                if not config.batch_emails:
+                    notifications.send_error_email(
+                        'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
+                        '{task} failed {failures} times in the last {window} seconds, so it is being '
+                        'disabled for {persist} seconds'.format(
+                            failures=task.retry_policy.retry_count,
+                            task=task.id,
+                            window=config.disable_window,
+                            persist=config.disable_persist,
+                        ))
+        elif new_status == DISABLED:
+            task.scheduler_disable_time = None
+
+        if new_status == FAILED:
+            task.retry = time.time() + config.retry_delay
+            if remove_on_failure:
+                task.remove = time.time()
+
+        if new_status != task.status:
+            task.status = new_status
+            task.updated = time.time()
+            self.update_metrics(task, config)
+
+        self.persist_task(task)
+
     def re_enable(self, task, config=None):
         """
         """
@@ -266,76 +321,24 @@ class SqlSchedulerState(SchedulerState):
         return self._task_batchers.get(worker_id, {}).get(family, (None, 1))
 
     def get_task(self, task_id, default=None, setdefault=None):
-        if self.has_task(task_id):
-            session = self.session()
-            db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
-            session.close()
-            return pickle.loads(db_task.pickled)
+        session = self.session()
+        db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
+        session.close()
+        if db_task:
+            res = pickle.loads(db_task.pickled)
         elif setdefault:
-            new_task = DBTask(task_id=task_id, status=setdefault.status, pickled=pickle.dumps(setdefault))
-            session = self.session()
-            session.add(new_task)
-            session.commit()
-            session.close()
-            return setdefault
+            res = self.persist_task(setdefault)
         else:
-            return default
+            res = default
+        return res
 
-    def set_status(self, task, new_status, config=None):
-        if new_status == FAILED:
-            assert config is not None
-
-        if new_status == DISABLED and task.status in (RUNNING, BATCH_RUNNING):
-            return
-
-        remove_on_failure = task.batch_id is not None and not task.batchable
-
-        if task.status == DISABLED:
-            if new_status == DONE:
-                self.re_enable(task)
-
-            # don't allow workers to override a scheduler disable
-            elif task.scheduler_disable_time is not None and new_status != DISABLED:
-                return
-
-        if task.status == RUNNING and task.batch_id is not None and new_status != RUNNING:
-            for batch_task in self.get_batch_running_tasks(task.batch_id):
-                self.set_status(batch_task, new_status, config)
-                batch_task.batch_id = None
-            task.batch_id = None
-
-        if new_status == FAILED and task.status != DISABLED:
-            task.add_failure()
-            if task.has_excessive_failures():
-                task.scheduler_disable_time = time.time()
-                new_status = DISABLED
-                if not config.batch_emails:
-                    notifications.send_error_email(
-                        'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
-                        '{task} failed {failures} times in the last {window} seconds, so it is being '
-                        'disabled for {persist} seconds'.format(
-                            failures=task.retry_policy.retry_count,
-                            task=task.id,
-                            window=config.disable_window,
-                            persist=config.disable_persist,
-                        ))
-        elif new_status == DISABLED:
-            task.scheduler_disable_time = None
-
-        if new_status != task.status:
-            session = self.session()
-            db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
-            db_task.status = new_status
-            session.commit()
-            session.close()
-            task.status = new_status
-            task.updated = time.time()
-            self.update_metrics(task, config)
-
-        if new_status == FAILED:
-            task.retry = time.time() + config.retry_delay
-            if remove_on_failure:
-                task.remove = time.time()
+    def persist_task(self, task):
+        session = self.session()
+        db_task = DBTask(task_id=task.id, status=task.status, pickled=pickle.dumps(task))
+        session.add(db_task)
+        session.commit()
+        session.close()
+        return task
 
     def inactivate_tasks(self, delete_tasks):
         # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
@@ -445,58 +448,13 @@ class SimpleSchedulerState(SchedulerState):
         else:
             return self._tasks.get(task_id, default)
 
-    def set_status(self, task, new_status, config=None):
-        if new_status == FAILED:
-            assert config is not None
-
-        if new_status == DISABLED and task.status in (RUNNING, BATCH_RUNNING):
-            return
-
-        remove_on_failure = task.batch_id is not None and not task.batchable
-
-        if task.status == DISABLED:
-            if new_status == DONE:
-                self.re_enable(task)
-
-            # don't allow workers to override a scheduler disable
-            elif task.scheduler_disable_time is not None and new_status != DISABLED:
-                return
-
-        if task.status == RUNNING and task.batch_id is not None and new_status != RUNNING:
-            for batch_task in self.get_batch_running_tasks(task.batch_id):
-                self.set_status(batch_task, new_status, config)
-                batch_task.batch_id = None
-            task.batch_id = None
-
-        if new_status == FAILED and task.status != DISABLED:
-            task.add_failure()
-            if task.has_excessive_failures():
-                task.scheduler_disable_time = time.time()
-                new_status = DISABLED
-                if not config.batch_emails:
-                    notifications.send_error_email(
-                        'Luigi Scheduler: DISABLED {task} due to excessive failures'.format(task=task.id),
-                        '{task} failed {failures} times in the last {window} seconds, so it is being '
-                        'disabled for {persist} seconds'.format(
-                            failures=task.retry_policy.retry_count,
-                            task=task.id,
-                            window=config.disable_window,
-                            persist=config.disable_persist,
-                        ))
-        elif new_status == DISABLED:
-            task.scheduler_disable_time = None
-
-        if new_status != task.status:
-            self._status_tasks[task.status].pop(task.id)
-            self._status_tasks[new_status][task.id] = task
-            task.status = new_status
-            task.updated = time.time()
-            self.update_metrics(task, config)
-
-        if new_status == FAILED:
-            task.retry = time.time() + config.retry_delay
-            if remove_on_failure:
-                task.remove = time.time()
+    def persist_task(self, task):
+        # remove the task from old status dict if it now has a new status
+        for tasks in self._status_tasks:
+            if task.id in tasks:
+                tasks.pop(task.id)
+        self._tasks[task.id] = task
+        self._status_tasks[task.status][task.id] = task
 
     def inactivate_tasks(self, delete_tasks):
         # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
