@@ -720,8 +720,7 @@ class Scheduler(object):
             task.runnable = runnable
 
         # Need to call the state store here since we've modified the task
-        self._state.inactivate_tasks([task])
-        self._state.get_task(task_id, setdefault=task)
+        self._state.persist_task(task)
 
     @rpc_method()
     def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
@@ -1043,8 +1042,7 @@ class Scheduler(object):
             self._update_task_history(best_task, RUNNING, host=host)
 
             # Need to call the state store here since we've modified the task
-            self._state.inactivate_tasks([best_task])
-            self._state.get_task(best_task.id, setdefault=best_task)
+            self._state.persist_task(task)
 
             reply['task_id'] = best_task.id
             reply['task_family'] = best_task.family
