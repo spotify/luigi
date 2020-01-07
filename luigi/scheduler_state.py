@@ -72,12 +72,6 @@ class SchedulerState(object):
         pass
 
     @abc.abstractmethod
-    def get_worker_ids(self):
-        """
-        """
-        pass
-
-    @abc.abstractmethod
     def get_worker(self, worker_id):
         """
         """
@@ -178,6 +172,9 @@ class SchedulerState(object):
 
     def get_assistants(self, last_active_lt=None):
         return filter(lambda w: w.assistant, self.get_active_workers(last_active_lt))
+
+    def get_worker_ids(self):
+        return [worker.id for worker in self.get_active_workers()]
 
     def _remove_workers_from_tasks(self, workers, remove_stakeholders=True):
         for task in self.get_active_tasks():
@@ -345,9 +342,6 @@ class SqlSchedulerState(SchedulerState):
                 continue
             yield worker
 
-    def get_worker_ids(self):
-        return self._active_workers.keys()  # only used for unit tests
-
     def get_worker(self, worker_id):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
 
@@ -509,9 +503,6 @@ class SimpleTaskState(object):
                             last_get_work is None or last_get_work <= last_get_work_gt):
                 continue
             yield worker
-
-    def get_worker_ids(self):
-        return self._active_workers.keys()  # only used for unit tests
 
     def get_worker(self, worker_id):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
