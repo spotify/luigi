@@ -455,6 +455,7 @@ class SimpleSchedulerState(SchedulerState):
         # remove the task from old status dict if it now has a new status
         for tasks in self._status_tasks:
             if task.id in tasks:
+                log.info("Removing stale status {} task {}".format(task.status, task))
                 tasks.pop(task.id)
         self._tasks[task.id] = task
         self._status_tasks[task.status][task.id] = task
