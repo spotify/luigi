@@ -453,11 +453,11 @@ class SimpleSchedulerState(SchedulerState):
 
     def persist_task(self, task):
         # remove the task from old status dict if it now has a new status
-        for tasks in self._status_tasks:
-            logger.info("tasks keys: {}".format(tasks.keys()))
-            if task.id in tasks.values():
+        for key, val in self._status_tasks.items():
+            logger.info("tasks key: {}".format(key))
+            if task.id in val.keys():
                 logger.info("POPPIN {}".format(task))
-                tasks.pop(task.id)
+                val.pop(task.id)
         self._tasks[task.id] = task
         self._status_tasks[task.status][task.id] = task
 
