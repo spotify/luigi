@@ -347,8 +347,11 @@ class SqlSchedulerState(SchedulerState):
         for task in delete_tasks:
             session = self.session()
             db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
-            session.delete(db_task)
-            session.commit()
+            if db_task:
+                session.delete(db_task)
+                session.commit()
+            else:
+                logger.warn("Tried to inactivate task that doesn't exist: {}".format(task))
             session.close()
 
     def get_active_workers(self, last_active_lt=None, last_get_work_gt=None):
