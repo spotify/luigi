@@ -44,6 +44,7 @@ from luigi import configuration
 from luigi import notifications
 from luigi import parameter
 from luigi import task_history as history
+from luigi import scheduler_state
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN, \
     BATCH_RUNNING
 from luigi.task import Config
@@ -458,9 +459,9 @@ class Scheduler(object):
         self._config = config or scheduler(**kwargs)
 
         if self._config.use_mysql_state:
-            self._state = MySqlTaskState(self._config.mysql_target)
+            self._state = scheduler_state.MySqlTaskState(self._config.mysql_target)
         else:
-            self._state = SimpleTaskState(self._config.state_path)
+            self._state = scheduler_state.SimpleTaskState(self._config.state_path)
 
         if task_history_impl:
             self._task_history = task_history_impl
