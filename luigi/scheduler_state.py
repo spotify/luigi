@@ -12,6 +12,7 @@ except ImportError:
 
 from luigi import six
 from luigi import notifications
+from luigi.scheduler import Worker
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, BATCH_RUNNING
 
 from sqlalchemy.ext.declarative import declarative_base
