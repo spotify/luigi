@@ -30,10 +30,6 @@ import json
 
 from luigi.batch_notifier import BatchNotifier
 
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 import functools
 import hashlib
 import itertools
@@ -44,7 +40,6 @@ import time
 import uuid
 
 from luigi import six
-
 from luigi import configuration
 from luigi import notifications
 from luigi import parameter
