@@ -327,19 +327,25 @@ class SqlSchedulerState(SchedulerState):
     def load(self):
         pass  # always persisted
 
+    def _try_unpickle(self, db_task):
+        try:
+            return pickle.loads(db_task.pickled)
+        except pickle.UnpicklingError:
+            logger.warning("Warning, unable to de-pickle task {}".format(db_task.task_id))
+
     @timeit
     def get_active_tasks(self):
         session = self.session()
         db_res = session.query(DBTask).all()
         session.close()
-        return (pickle.loads(t.pickled) for t in db_res)
+        return (_try_unpickle(t) for t in db_res)
 
     @timeit
     def get_active_tasks_by_status(self, *statuses):
         session = self.session()
         db_res = session.query(DBTask).filter(DBTask.status.in_(statuses)).all()
         session.close()
-        return (pickle.loads(t.pickled) for t in db_res)
+        return (_try_unpickle(t) for t in db_res)
 
     def set_batcher(self, worker_id, family, batcher_args, max_batch_size):
         self._task_batchers.setdefault(worker_id, {})
@@ -354,7 +360,7 @@ class SqlSchedulerState(SchedulerState):
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
         session.close()
         if db_task:
-            res = pickle.loads(db_task.pickled)
+            res = _try_unpickle(t)
         elif setdefault:
             res = self.persist_task(setdefault)
         else:
