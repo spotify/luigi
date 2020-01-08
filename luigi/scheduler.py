@@ -539,6 +539,7 @@ class Scheduler(object):
         If the task doesn't exist, a placeholder task is created to preserve priority when the task is later scheduled.
         """
         task.priority = prio = max(prio, task.priority)
+        self._state.persist_task(task)
         for dep in task.deps or []:
             t = self._state.get_task(dep)
             if t is not None and prio > t.priority:
@@ -1424,9 +1425,11 @@ class Scheduler(object):
                         resources[resource] = max(0, resources[resource] - decrease_amount)
 
             decrease(task.resources_running, decrease_resources)
+            self._state.persist_task(task)
             if task.batch_id is not None:
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     decrease(batch_task.resources_running, decrease_resources)
+                    self._state.persist_task(batch_task)
 
     @rpc_method()
     def get_running_task_resources(self, task_id):
