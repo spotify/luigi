@@ -47,12 +47,14 @@ class SchedulerState(object):
     @abc.abstractmethod
     def get_active_tasks(self):
         """
+        Gets a list of `scheduler.Task` obejcts, including all statuses
         """
         pass
 
     @abc.abstractmethod
     def get_active_tasks_by_status(self, *statuses):
         """
+        Gets a list of `scheduler.Task` objects, filtered to certain statuses
         """
         pass
 
@@ -71,30 +73,39 @@ class SchedulerState(object):
     @abc.abstractmethod
     def get_task(self, task_id, default=None, setdefault=None):
         """
+        Gets the task whose ID is == `task_id`
+        Given `setdefault`, it will create the task when it isn't found in the store
         """
         pass
 
     @abc.abstractmethod
     def persist_task(self, task):
         """
+        Persists the entire task to the store, under the key `task.id`
         """
         pass
 
     @abc.abstractmethod
     def inactivate_tasks(self, delete_tasks):
         """
+        The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
+        but with a pluggable state storage, you might very well want to keep some history of
+        older tasks as well. That's why we call it "inactivate" (as in the verb)
         """
         pass
 
     @abc.abstractmethod
     def get_active_workers(self, last_active_lt=None, last_get_work_gt=None):
         """
+        Gets a list of all active workers, filtered by `last_active_lt` and `last_get_work_gt`
+        if they are supplied
         """
         pass
 
     @abc.abstractmethod
     def get_worker(self, worker_id):
         """
+        Gets a `scheduler.Worker` object based on the ID of the worker
         """
         pass
 
@@ -346,9 +357,6 @@ class SqlSchedulerState(SchedulerState):
         return task
 
     def inactivate_tasks(self, delete_tasks):
-        # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
-        # but with a pluggable state storage, you might very well want to keep some history of
-        # older tasks as well. That's why we call it "inactivate" (as in the verb)
         for task in delete_tasks:
             session = self.session()
             db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
@@ -465,9 +473,6 @@ class SimpleSchedulerState(SchedulerState):
         self._status_tasks[task.status][task.id] = task
 
     def inactivate_tasks(self, delete_tasks):
-        # The terminology is a bit confusing: we used to "delete" tasks when they became inactive,
-        # but with a pluggable state storage, you might very well want to keep some history of
-        # older tasks as well. That's why we call it "inactivate" (as in the verb)
         for task_id in delete_tasks:
             task_obj = self._tasks.pop(task_id)
             self._status_tasks[task_obj.status].pop(task_id)
