@@ -1378,9 +1378,11 @@ class Scheduler(object):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
             task.status_message = status_message
+            self._state.persist_task(task)
             if task.status == RUNNING and task.batch_id is not None:
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.status_message = status_message
+                    self._state.persist_task(batch_task)
 
     @rpc_method()
     def get_task_status_message(self, task_id):
@@ -1395,9 +1397,11 @@ class Scheduler(object):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
             task.progress_percentage = progress_percentage
+            self._state.persist_task(task)
             if task.status == RUNNING and task.batch_id is not None:
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.progress_percentage = progress_percentage
+                    self._state.persist_task(batch_task)
 
     @rpc_method()
     def get_task_progress_percentage(self, task_id):
