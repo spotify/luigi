@@ -588,6 +588,7 @@ class Scheduler(object):
         * add additional workers/stakeholders
         * update priority when needed
         """
+        logger.info("Task we have at st 0: {}".format(task))
         assert worker is not None
         worker_id = worker
         worker = self._update_worker(worker_id)
@@ -657,6 +658,8 @@ class Scheduler(object):
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.expl = expl
 
+        logger.info("Task we have at st 1: {}".format(task))
+
         task_is_not_running = task.status not in (RUNNING, BATCH_RUNNING)
         task_started_a_run = status in (DONE, FAILED, RUNNING)
         running_on_this_worker = task.worker_running == worker_id
@@ -668,6 +671,8 @@ class Scheduler(object):
                 # (so checking for status != task.status woule lie)
                 self._update_task_history(task, status)
             self._state.set_status(task, PENDING if status == SUSPENDED else status, self._config)
+
+        logger.info("Task we have at st 2: {}".format(task))
 
         if status == FAILED and self._config.batch_emails:
             batched_params, _ = self._state.get_batcher(worker_id, family)
@@ -690,6 +695,8 @@ class Scheduler(object):
                 self._email_batcher.add_disable(
                     task.pretty_id, task.family, unbatched_params, owners)
 
+        logger.info("Task we have at st 3: {}".format(task))
+
         if deps is not None:
             task.deps = set(deps)
 
@@ -708,6 +715,8 @@ class Scheduler(object):
                 t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
                 t.stakeholders.add(worker_id)
 
+        logger.info("Task we have at st 4: {}".format(task))
+
         self._update_priority(task, priority, worker_id)
 
         # Because some tasks (non-dynamic dependencies) are `_make_task`ed
@@ -722,7 +731,7 @@ class Scheduler(object):
         # Need to call the state store here since we've modified the task
         self._state.persist_task(task)
 
-        logger.info("Task we have on hand: {}".format(task))
+        logger.info("Task we have at st 5: {}".format(task))
         logger.info("Task persisted in DB: {}".format(self._state.get_task(task.id)))
 
     @rpc_method()
