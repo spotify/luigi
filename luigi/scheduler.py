@@ -632,6 +632,7 @@ class Scheduler(object):
         if batch_id is not None:
             task.batch_id = batch_id
         if status == RUNNING and not task.worker_running:
+            logger.info("SETTING WORKER RUNNING: {}".format(worker_id))
             task.worker_running = worker_id
             if batch_id:
                 # copy resources_running of the first batch task
@@ -959,7 +960,9 @@ class Scheduler(object):
         if current_tasks is not None:
             ct_set = set(current_tasks)
             for task in sorted(self._state.get_active_tasks_by_status(RUNNING), key=self._rank):
+                logger.info("seen task {}, worker running {}".format(task, task,worker_running))
                 if task.worker_running == worker_id and task.id not in ct_set:
+                    logger.info("SET BEST TASK TO THAT ^")
                     best_task = task
 
         if current_tasks is not None:
@@ -1053,6 +1056,7 @@ class Scheduler(object):
             self.update_metrics_task_started(best_task)
             self._state.set_status(best_task, RUNNING, self._config)
             best_task.worker_running = worker_id
+            logger.info("SET BEST TASK WORKER RUNNING TO {}".format(worker_id))
             best_task.resources_running = best_task.resources.copy()
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
