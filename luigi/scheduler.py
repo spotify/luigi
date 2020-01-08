@@ -722,6 +722,9 @@ class Scheduler(object):
         # Need to call the state store here since we've modified the task
         self._state.persist_task(task)
 
+        logger.info("Task we have on hand: {}".format(task))
+        logger.info("Task persisted in DB: {}".format(self._state.get_task(task.id)))
+
     @rpc_method()
     def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
         if not self._config.batch_emails:
