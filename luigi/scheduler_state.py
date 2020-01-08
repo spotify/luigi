@@ -1,5 +1,6 @@
 import abc
 import collections
+import inspect
 import itertools
 import logging
 import os
@@ -156,6 +157,8 @@ class SchedulerState(object):
     def has_task(self, task_id):
         """
         """
+        calframe = inspect.getouterframes(inspect.currentframe(), 2)
+        logger.info('has_task called by {}'.format(calframe[1][3]))
         return self.get_task(task_id) is not None
 
     def set_status(self, task, new_status, config=None):
@@ -332,6 +335,8 @@ class SqlSchedulerState(SchedulerState):
         return self._task_batchers.get(worker_id, {}).get(family, (None, 1))
 
     def get_task(self, task_id, default=None, setdefault=None):
+        calframe = inspect.getouterframes(inspect.currentframe(), 2)
+        logger.info('get_task called by {}'.format(calframe[1][3]))
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
         session.close()
