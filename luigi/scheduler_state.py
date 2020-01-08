@@ -158,7 +158,7 @@ class SchedulerState(object):
         """
         """
         calframe = inspect.getouterframes(inspect.currentframe(), 2)
-        # logger.info('has_task called by {}'.format(calframe[1][3]))
+        logger.info('has_task called by {}'.format(calframe[1][3]))
         return self.get_task(task_id) is not None
 
     def set_status(self, task, new_status, config=None):
@@ -297,7 +297,7 @@ class SqlSchedulerState(SchedulerState):
     """
     def __init__(self, mysql_target):
 
-        self.engine = create_engine(mysql_target, echo=True)
+        self.engine = create_engine(mysql_target)
         Base.metadata.create_all(self.engine)
         self.session = sessionmaker(bind=self.engine)
 
@@ -336,7 +336,7 @@ class SqlSchedulerState(SchedulerState):
 
     def get_task(self, task_id, default=None, setdefault=None):
         calframe = inspect.getouterframes(inspect.currentframe(), 2)
-        # logger.info('get_task called by {}'.format(calframe[1][3]))
+        logger.info('get_task called by {}'.format(calframe[1][3]))
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
         session.close()
@@ -350,13 +350,13 @@ class SqlSchedulerState(SchedulerState):
 
     def persist_task(self, task):
         session = self.session()
-        if self.has_task(task.id):
-            db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
+        db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
+        if db_task:
             db_task.status = task.status
             db_task.pickled = pickle.dumps(task)
         else:
-            db_task = DBTask(task_id=task.id, status=task.status, pickled=pickle.dumps(task))
-        session.add(db_task)
+            new_task = DBTask(task_id=task.id, status=task.status, pickled=pickle.dumps(task))
+            session.add(new_task)
         session.commit()
         session.close()
         return task
