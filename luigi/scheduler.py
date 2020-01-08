@@ -847,11 +847,11 @@ class Scheduler(object):
 
         return task.priority, -task.time
 
-    def _schedulable(self, task):
+    def _schedulable(self, task, cached_tasks={}):
         if task.status != PENDING:
             return False
         for dep in task.deps:
-            dep_task = self._state.get_task(dep, default=None)
+            dep_task = cached_tasks.get(dep) or self._state.get_task(dep)
             if dep_task is None or dep_task.status != DONE:
                 return False
         return True
@@ -920,12 +920,8 @@ class Scheduler(object):
         # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
 
-        logger.info("GET WORK 1")
-
         if self._config.prune_on_get_work:
             self.prune()
-
-        logger.info("GET WORK 2")
 
         assert worker is not None
         worker_id = worker
@@ -942,12 +938,8 @@ class Scheduler(object):
                      }
             return reply
 
-        logger.info("GET WORK 3")
-
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
-
-        logger.info("GET WORK 4")
 
         batched_params, unbatched_params, batched_tasks, max_batch_size = None, None, [], 1
         best_task = None
@@ -956,8 +948,6 @@ class Scheduler(object):
             for task in sorted(self._state.get_active_tasks_by_status(RUNNING), key=self._rank):
                 if task.worker_running == worker_id and task.id not in ct_set:
                     best_task = task
-
-        logger.info("GET WORK 5")
 
         if current_tasks is not None:
             # batch running tasks that weren't claimed since the last get_work go back in the pool
@@ -981,15 +971,13 @@ class Scheduler(object):
                                   for worker in active_workers)
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
-
-        logger.info("GET WORK 6")
+        all_tasks = {task.id: task for task in self._state.get_active_tasks()}
 
         for task in tasks:
-            logger.info("GET WORK 6.5")
             if (best_task and batched_params and task.family == best_task.family and
                     len(batched_tasks) < max_batch_size and task.is_batchable() and all(
                     task.params.get(name) == value for name, value in unbatched_params.items()) and
-                    task.resources == best_task.resources and self._schedulable(task)):
+                    task.resources == best_task.resources and self._schedulable(task, cached_tasks=all_tasks)):
                 for name, params in batched_params.items():
                     params.append(task.params.get(name))
                 batched_tasks.append(task)
@@ -1001,12 +989,9 @@ class Scheduler(object):
                 for resource, amount in six.iteritems((getattr(task, 'resources_running', task.resources) or {})):
                     greedy_resources[resource] += amount
 
-            logger.info("GET WORK 7")
-
-            if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
+            if self._schedulable(task, cached_tasks=all_tasks) and self._has_resources(task.resources, greedy_resources):
                 in_workers = (assistant and task.runnable) or worker_id in task.workers
                 if in_workers and self._has_resources(task.resources, used_resources):
-                    logger.info("GET WORK 8")
                     best_task = task
                     batch_param_names, max_batch_size = self._state.get_batcher(worker_id, task.family)
                     if batch_param_names and task.is_batchable():
@@ -1022,7 +1007,6 @@ class Scheduler(object):
                         except KeyError:
                             batched_params, unbatched_params = None, None
                 else:
-                    logger.info("GET WORK 8")
                     workers = itertools.chain(task.workers, [worker_id]) if assistant else task.workers
                     for task_worker in workers:
                         if greedy_workers.get(task_worker, 0) > 0:
@@ -1036,8 +1020,6 @@ class Scheduler(object):
                             break
 
         reply = self.count_pending(worker_id)
-
-        logger.info("GET WORK 9")
 
         if len(batched_tasks) > 1:
             batch_string = '|'.join(task.id for task in batched_tasks)
@@ -1062,8 +1044,6 @@ class Scheduler(object):
             best_task.resources_running = best_task.resources.copy()
             best_task.time_running = time.time()
             self._update_task_history(best_task, RUNNING, host=host)
-
-            logger.info("GET WORK X")
 
             # Need to call the state store here since we've modified the task
             self._state.persist_task(best_task)
