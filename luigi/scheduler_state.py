@@ -367,9 +367,13 @@ class SqlSchedulerState(SchedulerState):
         db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
         if db_task:
             db_task.status = task.status
-            db_task.pickled = pickle.dumps(task)
+            db_task.pickled = pickle.dumps(task, protocol=2)
         else:
-            new_task = DBTask(task_id=task.id, status=task.status, pickled=pickle.dumps(task))
+            new_task = DBTask(
+                task_id=task.id,
+                status=task.status,
+                pickled=pickle.dumps(task, protocol=2)
+            )
             session.add(new_task)
         session.commit()
         session.close()
