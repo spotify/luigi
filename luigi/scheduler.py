@@ -34,14 +34,12 @@ import functools
 import hashlib
 import itertools
 import logging
-import os
 import re
 import time
 import uuid
 
 from luigi import six
 from luigi import configuration
-from luigi import notifications
 from luigi import parameter
 from luigi import task_history as history
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN, \
@@ -457,7 +455,7 @@ class Scheduler(object):
         """
         self._config = config or scheduler(**kwargs)
 
-        from luigi import scheduler_state # import here since it needs `Worker` from this file
+        from luigi import scheduler_state  # import here since it needs `Worker` from this file
 
         if self._config.use_sql_state:
             self._state = scheduler_state.SqlSchedulerState(self._config.sql_target)
@@ -1242,10 +1240,9 @@ class Scheduler(object):
         task_dict = {task.id: task for task in all_tasks}
 
         for task in filter(filter_func, status_tasks):
-            if (task.status != PENDING or
-                not upstream_status or
-                upstream_status == self._upstream_status(task.id, upstream_status_table, task_dict)
-            ):
+            if task.status != PENDING or \
+               not upstream_status or \
+               upstream_status == self._upstream_status(task.id, upstream_status_table, task_dict):
                 serialized = self._serialize_task(task, include_deps=False)
                 result[task.id] = serialized
         if limit and len(result) > (max_shown_tasks or self._config.max_shown_tasks):

@@ -16,7 +16,7 @@ from luigi.scheduler import Worker
 from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, BATCH_RUNNING
 
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Table, Column, Integer, String
+from sqlalchemy import Column, String
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -75,7 +75,7 @@ class SchedulerState(object):
         pass
 
     @abc.abstractmethod
-    def set_status(self, task, new_status, config=None):
+    def persist_task(self, task):
         """
         """
         pass
@@ -296,10 +296,10 @@ class SqlSchedulerState(SchedulerState):
         self._metrics_collector = None
 
     def dump(self):
-        pass # always persisted
+        pass  # always persisted
 
     def load(self):
-        pass # always persisted
+        pass  # always persisted
 
     def get_active_tasks(self):
         session = self.session()
