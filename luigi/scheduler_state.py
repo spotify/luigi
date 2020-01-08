@@ -332,6 +332,7 @@ class SqlSchedulerState(SchedulerState):
             return pickle.loads(db_task.pickled)
         except pickle.UnpicklingError:
             logger.warning("Warning, unable to de-pickle task {}".format(db_task.task_id))
+            return None
 
     @timeit
     def get_active_tasks(self):
@@ -360,7 +361,7 @@ class SqlSchedulerState(SchedulerState):
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
         session.close()
         if db_task:
-            res = self._try_unpickle(db_task.pickled)
+            res = self._try_unpickle(db_task)
         elif setdefault:
             res = self.persist_task(setdefault)
         else:
