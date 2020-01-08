@@ -25,21 +25,6 @@ Base = declarative_base()
 logger = logging.getLogger(__name__)
 
 
-def timeit(f):
-
-    def timed(*args, **kw):
-
-        ts = time.time()
-        result = f(*args, **kw)
-        te = time.time()
-
-        print 'func:%r args:[%r, %r] took: %2.4f sec' % \
-          (f.__name__, args, kw, te-ts)
-        return result
-
-    return timed
-
-
 @six.add_metaclass(abc.ABCMeta)
 class SchedulerState(object):
 
@@ -334,14 +319,12 @@ class SqlSchedulerState(SchedulerState):
             logger.warning("Warning, unable to de-pickle task {}".format(db_task.task_id))
             return None
 
-    @timeit
     def get_active_tasks(self):
         session = self.session()
         db_res = session.query(DBTask).all()
         session.close()
         return itertools.ifilter(lambda t: t, (self._try_unpickle(t) for t in db_res))
 
-    @timeit
     def get_active_tasks_by_status(self, *statuses):
         session = self.session()
         db_res = session.query(DBTask).filter(DBTask.status.in_(statuses)).all()
@@ -355,7 +338,6 @@ class SqlSchedulerState(SchedulerState):
     def get_batcher(self, worker_id, family):
         return self._task_batchers.get(worker_id, {}).get(family, (None, 1))
 
-    @timeit
     def get_task(self, task_id, default=None, setdefault=None):
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
@@ -368,7 +350,6 @@ class SqlSchedulerState(SchedulerState):
             res = default
         return res
 
-    @timeit
     def persist_task(self, task):
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
@@ -386,7 +367,6 @@ class SqlSchedulerState(SchedulerState):
         session.close()
         return task
 
-    @timeit
     def inactivate_tasks(self, delete_tasks):
         for task in delete_tasks:
             session = self.session()
