@@ -960,7 +960,7 @@ class Scheduler(object):
         if current_tasks is not None:
             ct_set = set(current_tasks)
             for task in sorted(self._state.get_active_tasks_by_status(RUNNING), key=self._rank):
-                logger.info("seen task {}, worker running {}".format(task, task,worker_running))
+                logger.info("seen task {}, worker running {}".format(task, task.worker_running))
                 if task.worker_running == worker_id and task.id not in ct_set:
                     logger.info("SET BEST TASK TO THAT ^")
                     best_task = task
