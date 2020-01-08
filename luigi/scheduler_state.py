@@ -158,7 +158,7 @@ class SchedulerState(object):
         """
         """
         calframe = inspect.getouterframes(inspect.currentframe(), 2)
-        logger.info('has_task called by {}'.format(calframe[1][3]))
+        # logger.info('has_task called by {}'.format(calframe[1][3]))
         return self.get_task(task_id) is not None
 
     def set_status(self, task, new_status, config=None):
@@ -297,7 +297,7 @@ class SqlSchedulerState(SchedulerState):
     """
     def __init__(self, mysql_target):
 
-        self.engine = create_engine(mysql_target)
+        self.engine = create_engine(mysql_target, echo=True)
         Base.metadata.create_all(self.engine)
         self.session = sessionmaker(bind=self.engine)
 
@@ -336,7 +336,7 @@ class SqlSchedulerState(SchedulerState):
 
     def get_task(self, task_id, default=None, setdefault=None):
         calframe = inspect.getouterframes(inspect.currentframe(), 2)
-        logger.info('get_task called by {}'.format(calframe[1][3]))
+        # logger.info('get_task called by {}'.format(calframe[1][3]))
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
         session.close()
