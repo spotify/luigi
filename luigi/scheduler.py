@@ -1062,7 +1062,7 @@ class Scheduler(object):
             self._update_task_history(best_task, RUNNING, host=host)
 
             # Need to call the state store here since we've modified the task
-            self._state.persist_task(task)
+            self._state.persist_task(best_task)
 
             reply['task_id'] = best_task.id
             reply['task_family'] = best_task.family
