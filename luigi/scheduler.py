@@ -716,6 +716,7 @@ class Scheduler(object):
             for dep in task.deps or []:
                 t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
                 t.stakeholders.add(worker_id)
+                self._state.persist_task(t)
 
         logger.info("Task we have at st 4: {}".format(task))
 
@@ -780,6 +781,7 @@ class Scheduler(object):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
             task.scheduler_message_responses[message_id] = response
+            self._state.persist_task(task)
 
     @rpc_method()
     def get_scheduler_message_response(self, task_id, message_id):
