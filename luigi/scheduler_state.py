@@ -360,7 +360,7 @@ class SqlSchedulerState(SchedulerState):
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
         session.close()
         if db_task:
-            res = self._try_unpickle(t)
+            res = self._try_unpickle(db_task.pickled)
         elif setdefault:
             res = self.persist_task(setdefault)
         else:
