@@ -588,7 +588,6 @@ class Scheduler(object):
         * add additional workers/stakeholders
         * update priority when needed
         """
-        logger.info("Task we have at st 0: {}".format(task))
         assert worker is not None
         worker_id = worker
         worker = self._update_worker(worker_id)
@@ -609,6 +608,8 @@ class Scheduler(object):
             _default_task = None
 
         task = self._state.get_task(task_id, setdefault=_default_task)
+
+        logger.info("Task we have at st 0: {}".format(task))
 
         if task is None or (task.status != RUNNING and not worker.enabled):
             return
