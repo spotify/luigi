@@ -918,8 +918,8 @@ class Scheduler(object):
         # TODO: remove tasks that can't be done, figure out if the worker has absolutely
         # nothing it can wait for
 
-        #if self._config.prune_on_get_work:
-            #self.prune()
+        if self._config.prune_on_get_work:
+            self.prune()
 
         assert worker is not None
         worker_id = worker
@@ -939,21 +939,17 @@ class Scheduler(object):
         if assistant:
             self.add_worker(worker_id, [('assistant', assistant)])
 
-        ALL_TASKS = self._state.get_active_tasks()
-        RUNNING_TASKS = filter(lambda t: t.status == RUNNING, ALL_TASKS)
-        R_OR_P_TASKS = filter(lambda t: t.status in (RUNNING, PENDING), ALL_TASKS)
-
         batched_params, unbatched_params, batched_tasks, max_batch_size = None, None, [], 1
         best_task = None
         if current_tasks is not None:
             ct_set = set(current_tasks)
-            for task in sorted(RUNNING_TASKS, key=self._rank):
+            for task in sorted(self._state.get_active_tasks_by_status(RUNNING), key=self._rank):
                 if task.worker_running == worker_id and task.id not in ct_set:
                     best_task = task
 
-        # if current_tasks is not None:
-        #     # batch running tasks that weren't claimed since the last get_work go back in the pool
-        #     self._reset_orphaned_batch_running_tasks(worker_id)
+        if current_tasks is not None:
+            # batch running tasks that weren't claimed since the last get_work go back in the pool
+            self._reset_orphaned_batch_running_tasks(worker_id)
 
         greedy_resources = collections.defaultdict(int)
 
@@ -965,7 +961,7 @@ class Scheduler(object):
             used_resources = collections.defaultdict(int)
             greedy_workers = dict()  # If there's no resources, then they can grab any task
         else:
-            relevant_tasks = R_OR_P_TASKS
+            relevant_tasks = self._state.get_active_tasks_by_status(PENDING, RUNNING)
             used_resources = self._used_resources()
             activity_limit = time.time() - self._config.worker_disconnect_delay
             active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
@@ -973,7 +969,7 @@ class Scheduler(object):
                                   for worker in active_workers)
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
-        all_tasks = {task.id: task for task in ALL_TASKS}
+        all_tasks = {task.id: task for task in self._state.get_active_tasks()}
 
         for task in tasks:
             if (best_task and batched_params and task.family == best_task.family and
