@@ -311,7 +311,7 @@ class SqlSchedulerState(SchedulerState):
 
         self.engine = create_engine(mysql_target)
         Base.metadata.create_all(self.engine)
-        self.session = sessionmaker(bind=self.engine)
+        self.session = sessionmaker(bind=self.engine, autocommit=True)
 
         # TODO 2020-01-07 make task batchers persisted to DB as well
         self._task_batchers = {}
