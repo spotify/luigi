@@ -25,21 +25,6 @@ Base = declarative_base()
 logger = logging.getLogger(__name__)
 
 
-def timeit(f):
-
-    def timed(*args, **kw):
-
-        ts = time.time()
-        result = f(*args, **kw)
-        te = time.time()
-
-        print 'func:%r args:[%r, %r] took: %2.4f sec' % \
-          (f.__name__, args, kw, te-ts)
-        return result
-
-    return timed
-
-
 @six.add_metaclass(abc.ABCMeta)
 class SchedulerState(object):
 
@@ -113,7 +98,7 @@ class SchedulerState(object):
     def get_active_workers(self, last_active_lt=None, last_get_work_gt=None):
         """
         Gets a list of all active workers, filtered by `last_active_lt` and `last_get_work_gt`
-        if they are supplied
+        (if they are supplied)
         """
         pass
 
@@ -127,6 +112,7 @@ class SchedulerState(object):
     @abc.abstractmethod
     def inactivate_workers(self, delete_workers):
         """
+        Sets a worker to inactive (see definition of "inactivate" above)
         """
         pass
 
@@ -140,6 +126,7 @@ class SchedulerState(object):
 
     def get_active_task_count_for_status(self, status):
         """
+        Gets the number of tasks from the central scheduler that have status `status`
         """
         if status:
             return sum(1 for x in self.get_active_tasks_by_status(status))
@@ -148,6 +135,7 @@ class SchedulerState(object):
 
     def get_batch_running_tasks(self, batch_id):
         """
+        Gets all batch-running tasks that have batch ID `batch_id`
         """
         return [
             task for task in self.get_active_tasks_by_status(BATCH_RUNNING)
@@ -156,6 +144,7 @@ class SchedulerState(object):
 
     def num_pending_tasks(self):
         """
+        Gets the total number of tasks that are either in a PENDING or RUNNING state
         """
         return sum(1 for x in self.get_active_tasks_by_status(PENDING, RUNNING))
 
@@ -246,7 +235,9 @@ class SchedulerState(object):
         """
         If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
         """
-        if task.status in (BATCH_RUNNING, RUNNING) and task.worker_running and task.worker_running not in task.stakeholders | assistants:
+        if task.status in (BATCH_RUNNING, RUNNING) and \
+           task.worker_running and \
+           task.worker_running not in task.stakeholders | assistants:
             logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
                         "FAILED with retry delay of %rs", task.id, task.worker_running,
                         config.retry_delay)
@@ -283,6 +274,7 @@ class SchedulerState(object):
             if remove_stakeholders:
                 task.stakeholders.difference_update(workers)
             task.workers -= workers
+            self.persist_task(task)
 
     def disable_workers(self, worker_ids):
         self._remove_workers_from_tasks(worker_ids, remove_stakeholders=False)
@@ -334,14 +326,12 @@ class SqlSchedulerState(SchedulerState):
             logger.warning("Warning, unable to de-pickle task {}".format(db_task.task_id))
             return None
 
-    @timeit
     def get_active_tasks(self):
         session = self.session()
         db_res = session.query(DBTask).all()
         session.close()
         return itertools.ifilter(lambda t: t, (self._try_unpickle(t) for t in db_res))
 
-    @timeit
     def get_active_tasks_by_status(self, *statuses):
         session = self.session()
         db_res = session.query(DBTask).filter(DBTask.status.in_(statuses)).all()
@@ -355,7 +345,6 @@ class SqlSchedulerState(SchedulerState):
     def get_batcher(self, worker_id, family):
         return self._task_batchers.get(worker_id, {}).get(family, (None, 1))
 
-    @timeit
     def get_task(self, task_id, default=None, setdefault=None):
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task_id).first()
@@ -368,7 +357,6 @@ class SqlSchedulerState(SchedulerState):
             res = default
         return res
 
-    @timeit
     def persist_task(self, task):
         session = self.session()
         db_task = session.query(DBTask).filter(DBTask.task_id == task.id).first()
@@ -386,7 +374,6 @@ class SqlSchedulerState(SchedulerState):
         session.close()
         return task
 
-    @timeit
     def inactivate_tasks(self, delete_tasks):
         for task in delete_tasks:
             session = self.session()
@@ -412,7 +399,6 @@ class SqlSchedulerState(SchedulerState):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
 
     def inactivate_workers(self, delete_workers):
-        # Mark workers as inactive
         for worker in delete_workers:
             self._active_workers.pop(worker)
         self._remove_workers_from_tasks(delete_workers)
@@ -522,7 +508,6 @@ class SimpleSchedulerState(SchedulerState):
         return self._active_workers.setdefault(worker_id, Worker(worker_id))
 
     def inactivate_workers(self, delete_workers):
-        # Mark workers as inactive
         for worker in delete_workers:
             self._active_workers.pop(worker)
         self._remove_workers_from_tasks(delete_workers)
