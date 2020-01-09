@@ -1070,7 +1070,7 @@ class Scheduler(object):
 
             while task_stack:
                 dep_id = task_stack.pop()
-                dep = all_tasks[dep_id]
+                dep = all_tasks.get(dep_id)
                 if dep:
                     if dep.status == DONE:
                         continue
