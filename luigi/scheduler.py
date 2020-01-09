@@ -940,8 +940,8 @@ class Scheduler(object):
             self.add_worker(worker_id, [('assistant', assistant)])
 
         ALL_TASKS = self._state.get_active_tasks()
-        RUNNING_TASKS = filter(lambda t: t.status == RUNNING, tasks)
-        R_OR_P_TASKS = filter(lambda t: t.status in (RUNNING, PENDING), tasks)
+        RUNNING_TASKS = filter(lambda t: t.status == RUNNING, ALL_TASKS)
+        R_OR_P_TASKS = filter(lambda t: t.status in (RUNNING, PENDING), ALL_TASKS)
 
         batched_params, unbatched_params, batched_tasks, max_batch_size = None, None, [], 1
         best_task = None
