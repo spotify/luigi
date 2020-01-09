@@ -845,11 +845,11 @@ class Scheduler(object):
 
         return task.priority, -task.time
 
-    def _schedulable(self, task, cached_tasks={}):
+    def _schedulable(self, task):
         if task.status != PENDING:
             return False
         for dep in task.deps:
-            dep_task = cached_tasks.get(dep) or self._state.get_task(dep)
+            dep_task = self._state.get_task(dep, default=None)
             if dep_task is None or dep_task.status != DONE:
                 return False
         return True
@@ -967,13 +967,12 @@ class Scheduler(object):
                                   for worker in active_workers)
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
-        all_tasks = {task.id: task for task in self._state.get_active_tasks()}
 
         for task in tasks:
             if (best_task and batched_params and task.family == best_task.family and
                     len(batched_tasks) < max_batch_size and task.is_batchable() and all(
                     task.params.get(name) == value for name, value in unbatched_params.items()) and
-                    task.resources == best_task.resources and self._schedulable(task, cached_tasks=all_tasks)):
+                    task.resources == best_task.resources and self._schedulable(task)):
                 for name, params in batched_params.items():
                     params.append(task.params.get(name))
                 batched_tasks.append(task)
@@ -985,7 +984,7 @@ class Scheduler(object):
                 for resource, amount in six.iteritems((getattr(task, 'resources_running', task.resources) or {})):
                     greedy_resources[resource] += amount
 
-            if self._schedulable(task, cached_tasks=all_tasks) and self._has_resources(task.resources, greedy_resources):
+            if self._schedulable(task) and self._has_resources(task.resources, greedy_resources):
                 in_workers = (assistant and task.runnable) or worker_id in task.workers
                 if in_workers and self._has_resources(task.resources, used_resources):
                     best_task = task
