@@ -316,7 +316,8 @@ class SqlSchedulerState(SchedulerState):
         try:
             return pickle.loads(db_task.pickled)
         except (pickle.UnpicklingError,EOFError) as e:
-            logger.warning("Warning, unable to de-pickle task {}".format(db_task.task_id))
+            logger.warning("Warning, unable to de-pickle task {}! Deleting".format(db_task.task_id))
+            self.inactivate_tasks([self.get_task(db_task.task_id)])
             return None
 
     def get_active_tasks(self):
