@@ -149,6 +149,7 @@ class NoopTask(luigi.Task):
 
 class MyEnum(enum.Enum):
     A = 1
+    C = 3
 
 
 def _value(parameter):
@@ -296,6 +297,19 @@ class ParameterTest(LuigiTestCase):
     def test_enum_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.EnumParameter())
 
+    def test_enum_list_param_valid(self):
+        p = luigi.parameter.EnumListParameter(enum=MyEnum)
+        self.assertEqual((), p.parse(''))
+        self.assertEqual((MyEnum.A,), p.parse('A'))
+        self.assertEqual((MyEnum.A, MyEnum.C), p.parse('A,C'))
+
+    def test_enum_list_param_invalid(self):
+        p = luigi.parameter.EnumListParameter(enum=MyEnum)
+        self.assertRaises(ValueError, lambda: p.parse('A,B'))
+
+    def test_enum_list_param_missing(self):
+        self.assertRaises(ParameterException, lambda: luigi.parameter.EnumListParameter())
+
     def test_list_serialize_parse(self):
         a = luigi.ListParameter()
         b_list = [1, 2, 3]
@@ -436,6 +450,18 @@ class TestParametersHashability(LuigiTestCase):
 
         p = luigi.parameter.EnumParameter(enum=MyEnum)
         self.assertEqual(hash(Foo(args=MyEnum.A).args), hash(p.parse('A')))
+
+    def test_enum_list(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.EnumListParameter(enum=MyEnum)
+
+        p = luigi.parameter.EnumListParameter(enum=MyEnum)
+        self.assertEqual(hash(Foo(args=(MyEnum.A, MyEnum.C)).args), hash(p.parse('A,C')))
+
+        class FooWithDefault(luigi.Task):
+            args = luigi.parameter.EnumListParameter(enum=MyEnum, default=[MyEnum.C])
+
+        self.assertEqual(FooWithDefault().args, p.parse('C'))
 
     def test_dict(self):
         class Foo(luigi.Task):
