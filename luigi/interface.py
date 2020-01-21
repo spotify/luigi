@@ -220,7 +220,8 @@ class PidLockAlreadyTakenExit(SystemExit):
 def run(*args, **kwargs):
     luigi_run_result = _run(*args, **kwargs)
     if kwargs.get('detailed_summary'):
-        return luigi_run_result
+        # return status code instead of entire class to keep interface similar (used to return bool)
+        return luigi_run_result.status_code_num
     else:
         return luigi_run_result.scheduling_succeeded
 
@@ -279,6 +280,7 @@ def build(tasks, worker_scheduler_factory=None, detailed_summary=False, **env_pa
     luigi_run_result = _schedule_and_run(tasks, worker_scheduler_factory,
         override_defaults=env_params)
     if detailed_summary:
-        return luigi_run_result
+        # return status code instead of entire class to keep interface similar (used to return bool)
+        return luigi_run_result.status_code_num
     else:
         return luigi_run_result.scheduling_succeeded

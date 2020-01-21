@@ -78,7 +78,7 @@ class InterfaceTest(LuigiTestCase):
     def test_interface_run_positive_path_with_detailed_summary_enabled(self):
         self.worker.add = Mock(side_effect=[True, True])
         self.worker.run = Mock(return_value=True)
-        self.assertTrue(self._run_interface(detailed_summary=True).scheduling_succeeded)
+        self.assertEqual(self._run_interface(detailed_summary=True), 0)
 
     def test_interface_run_with_add_failure(self):
         self.worker.add = Mock(side_effect=[True, False])
@@ -86,29 +86,18 @@ class InterfaceTest(LuigiTestCase):
 
         self.assertFalse(self._run_interface())
 
-    def test_interface_run_with_add_failure_with_detailed_summary_enabled(self):
-        self.worker.add = Mock(side_effect=[True, False])
-        self.worker.run = Mock(return_value=True)
-        self.assertFalse(self._run_interface(detailed_summary=True).scheduling_succeeded)
-
     def test_interface_run_with_run_failure(self):
         self.worker.add = Mock(side_effect=[True, True])
         self.worker.run = Mock(return_value=False)
 
         self.assertFalse(self._run_interface())
 
-    def test_interface_run_with_run_failure_with_detailed_summary_enabled(self):
-        self.worker.add = Mock(side_effect=[True, True])
-        self.worker.run = Mock(return_value=False)
-        self.assertFalse(self._run_interface(detailed_summary=True).scheduling_succeeded)
-
     @patch(_summary_dict_module_path())
     def test_that_status_is_success(self, fake_summary_dict):
         # Nothing in failed tasks so, should succeed
         fake_summary_dict.return_value = self._create_summary_dict_with()
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.SUCCESS)
-        self.assertEqual(luigi_run_result.status_code_num, 0)
+        self.assertEqual(luigi_run_result, 0)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_success_with_retry(self, fake_summary_dict):
@@ -117,8 +106,7 @@ class InterfaceTest(LuigiTestCase):
             'ever_failed': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.SUCCESS_WITH_RETRY)
-        self.assertEqual(luigi_run_result.status_code_num, 3)
+        self.assertEqual(luigi_run_result, 3)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_failed_when_there_is_one_failed_task(self, fake_summary_dict):
@@ -128,8 +116,7 @@ class InterfaceTest(LuigiTestCase):
             'failed': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.FAILED)
-        self.assertEqual(luigi_run_result.status_code_num, 4)
+        self.assertEqual(luigi_run_result, 4)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_failed_with_scheduling_failure(self, fake_summary_dict):
@@ -140,8 +127,7 @@ class InterfaceTest(LuigiTestCase):
             'scheduling_error': [self.task_b]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.FAILED_AND_SCHEDULING_FAILED)
-        self.assertEqual(luigi_run_result.status_code_num, 5)
+        self.assertEqual(luigi_run_result, 5)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_scheduling_failed_with_one_scheduling_error(self, fake_summary_dict):
@@ -150,8 +136,7 @@ class InterfaceTest(LuigiTestCase):
             'scheduling_error': [self.task_b]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.SCHEDULING_FAILED)
-        self.assertEqual(luigi_run_result.status_code_num, 6)
+        self.assertEqual(luigi_run_result, 6)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_not_run_with_one_task_not_run(self, fake_summary_dict):
@@ -160,8 +145,7 @@ class InterfaceTest(LuigiTestCase):
             'not_run': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.NOT_RUN)
-        self.assertEqual(luigi_run_result.status_code_num, 7)
+        self.assertEqual(luigi_run_result, 7)
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_missing_ext_with_one_task_with_missing_external_dependency(self, fake_summary_dict):
@@ -170,8 +154,7 @@ class InterfaceTest(LuigiTestCase):
             'still_pending_ext': [self.task_a]
         })
         luigi_run_result = self._run_interface(detailed_summary=True)
-        self.assertEqual(luigi_run_result.status, LuigiStatusCode.MISSING_EXT)
-        self.assertEqual(luigi_run_result.status_code_num, 8)
+        self.assertEqual(luigi_run_result, 8)
 
     def test_stops_worker_on_add_exception(self):
         worker = MagicMock()
