@@ -23,6 +23,7 @@ import luigi.notifications
 from luigi.interface import _WorkerSchedulerFactory
 from luigi.worker import Worker
 from luigi.interface import core
+from luigi.execution_summary import LuigiStatusCode
 
 from mock import Mock, patch, MagicMock
 from helpers import LuigiTestCase, with_config
@@ -46,11 +47,38 @@ class InterfaceTest(LuigiTestCase):
         self.task_a = NoOpTask("a")
         self.task_b = NoOpTask("b")
 
+    def _create_summary_dict_with(self, updates={}):
+        summary_dict = {
+            'completed': set(),
+            'already_done': set(),
+            'ever_failed': set(),
+            'failed': set(),
+            'scheduling_error': set(),
+            'still_pending_ext': set(),
+            'still_pending_not_ext': set(),
+            'run_by_other_worker': set(),
+            'upstream_failure': set(),
+            'upstream_missing_dependency': set(),
+            'upstream_run_by_other_worker': set(),
+            'upstream_scheduling_error': set(),
+            'not_run': set()
+        }
+        summary_dict.update(updates)
+        return summary_dict
+
+    def _summary_dict_module_path():
+        return 'luigi.execution_summary._summary_dict'
+
     def test_interface_run_positive_path(self):
         self.worker.add = Mock(side_effect=[True, True])
         self.worker.run = Mock(return_value=True)
 
         self.assertTrue(self._run_interface())
+
+    def test_interface_run_positive_path_with_detailed_summary_enabled(self):
+        self.worker.add = Mock(side_effect=[True, True])
+        self.worker.run = Mock(return_value=True)
+        self.assertEqual(self._run_interface(detailed_summary=True), 0)
 
     def test_interface_run_with_add_failure(self):
         self.worker.add = Mock(side_effect=[True, False])
@@ -63,6 +91,70 @@ class InterfaceTest(LuigiTestCase):
         self.worker.run = Mock(return_value=False)
 
         self.assertFalse(self._run_interface())
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_success(self, fake_summary_dict):
+        # Nothing in failed tasks so, should succeed
+        fake_summary_dict.return_value = self._create_summary_dict_with()
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 0)
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_success_with_retry(self, fake_summary_dict):
+        # Nothing in failed tasks (only an entry in ever_failed) so, should succeed with retry
+        fake_summary_dict.return_value = self._create_summary_dict_with({
+            'ever_failed': [self.task_a]
+        })
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 3)
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_failed_when_there_is_one_failed_task(self, fake_summary_dict):
+        # Should fail because a task failed
+        fake_summary_dict.return_value = self._create_summary_dict_with({
+            'ever_failed': [self.task_a],
+            'failed': [self.task_a]
+        })
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 4)
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_failed_with_scheduling_failure(self, fake_summary_dict):
+        # Failed task and also a scheduling error
+        fake_summary_dict.return_value = self._create_summary_dict_with({
+            'ever_failed': [self.task_a],
+            'failed': [self.task_a],
+            'scheduling_error': [self.task_b]
+        })
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 5)
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_scheduling_failed_with_one_scheduling_error(self, fake_summary_dict):
+        # Scheduling error for at least one task
+        fake_summary_dict.return_value = self._create_summary_dict_with({
+            'scheduling_error': [self.task_b]
+        })
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 6)
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_not_run_with_one_task_not_run(self, fake_summary_dict):
+        # At least one of the tasks was not run
+        fake_summary_dict.return_value = self._create_summary_dict_with({
+            'not_run': [self.task_a]
+        })
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 7)
+
+    @patch(_summary_dict_module_path())
+    def test_that_status_is_missing_ext_with_one_task_with_missing_external_dependency(self, fake_summary_dict):
+        # Missing external dependency for at least one task
+        fake_summary_dict.return_value = self._create_summary_dict_with({
+            'still_pending_ext': [self.task_a]
+        })
+        luigi_run_result = self._run_interface(detailed_summary=True)
+        self.assertEqual(luigi_run_result, 8)
 
     def test_stops_worker_on_add_exception(self):
         worker = MagicMock()
@@ -94,8 +186,10 @@ class InterfaceTest(LuigiTestCase):
         with patch.object(sys, 'argv', ['my_module.py', '--no-lock', '--my-param', 'my_value', '--local-scheduler']):
             luigi.run(main_task_cls=MyOtherTestTask)
 
-    def _run_interface(self):
-        return luigi.interface.build([self.task_a, self.task_b], worker_scheduler_factory=self.worker_scheduler_factory)
+    def _run_interface(self, **env_params):
+        return luigi.interface.build([self.task_a, self.task_b],
+            worker_scheduler_factory=self.worker_scheduler_factory,
+            **env_params)
 
 
 class CoreConfigTest(LuigiTestCase):
