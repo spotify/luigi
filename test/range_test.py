@@ -1186,7 +1186,6 @@ class RangeInstantiationTest(LuigiTestCase):
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
         self.assertEqual(expected_task, list(range_task._requires())[0])
 
-
     def test_param_name_with_mixinnaivebulkcomplete(self):
         class MyTask(MixinNaiveBulkComplete, luigi.Task):
             some_non_range_param = luigi.Parameter(default='woo')
@@ -1196,10 +1195,10 @@ class RangeInstantiationTest(LuigiTestCase):
                 return False
 
         range_task = RangeDaily(now=datetime_to_epoch(datetime.datetime(2015, 12, 2)),
-                                    of=MyTask,
-                                    start=datetime.date(2015, 12, 1),
-                                    stop=datetime.date(2015, 12, 2),
-                                    param_name='date_param')
+                                of=MyTask,
+                                start=datetime.date(2015, 12, 1),
+                                stop=datetime.date(2015, 12, 2),
+                                param_name='date_param')
         expected_task = MyTask('woo', datetime.date(2015, 12, 1))
         self.assertEqual(expected_task, list(range_task._requires())[0])
 

@@ -735,16 +735,17 @@ class WorkerTest(LuigiTestCase):
         for task in tasks:
             self.assertTrue(self.w.add(task))
         self.assertTrue(self.w.run())
-        
+
         for i, task in enumerate(tasks):
             self.assertTrue(task.complete())
             # only task number 9 should run
             self.assertFalse(task.has_run and task.value < 9)
             # only task number 9 should have more than default batched_params
             self.assertFalse(task.batched_params != {'value': [i]} and task.value < 9)
-        #Task number 9 should have batched_params of all tasks values
-        self.assertEquals(tasks[-1].batched_params, {'value' : list(range(10))})
-    
+
+        # Task number 9 should have batched_params of all tasks values
+        self.assertEquals(tasks[-1].batched_params, {'value': list(range(10))})
+
     def test_run_batch_jobs_which_overlap_subset_batch(self):
         completed = set()
 
@@ -785,7 +786,7 @@ class WorkerTest(LuigiTestCase):
 
         #Task number 9 should have batched_params of all remaining tasks
         self.assertEquals(tasks_batch_2[-1].batched_params, {'value' : list(range(5, 10))})
-    
+
     def test_run_batch_jobs_which_overlap_superset_batch(self):
         completed = set()
 
