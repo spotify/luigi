@@ -50,7 +50,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
 
 if sys.version_info < (3, 4):
-    install_requires.append('enum34>1.1.0')
+    install_requires.append('enum34>1.2.0')
 
 setup(
     name='luigi',
