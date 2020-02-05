@@ -131,7 +131,11 @@ class TaskProcess(multiprocessing.Process):
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.status_reporter = status_reporter
-        self.worker_timeout = task.worker_timeout or worker_timeout
+        self.worker_timeout = (
+            # Don't override task.worker_timeout when it is 0, only when it is None. This allows to
+            # override the default timeout for individual tasks (by setting it to 0).
+            worker_timeout if task.worker_timeout is None else task.worker_timeout
+        )
         self.timeout_time = time.time() + self.worker_timeout if self.worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
         self.check_unfulfilled_deps = check_unfulfilled_deps
