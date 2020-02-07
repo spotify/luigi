@@ -475,7 +475,7 @@ class GCSTarget(luigi.target.FileSystemTarget):
     def open(self, mode='r'):
         if mode == 'r':
             return self.format.pipe_reader(
-                FileWrapper(io.BufferedReader(self.fs.download(self.path))))
+                GCSFileWrapper(io.BufferedReader(self.fs.download(self.path))))
         elif mode == 'w':
             return self.format.pipe_writer(AtomicGCSFile(self.path, self.fs))
         else:
@@ -529,3 +529,7 @@ class GCSFlagTarget(GCSTarget):
     def exists(self):
         flag_target = self.path + self.flag
         return self.fs.exists(flag_target)
+
+
+class GCSFileWrapper(FileWrapper):
+    pass
