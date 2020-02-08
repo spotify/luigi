@@ -4,7 +4,11 @@ Please, do not use it outside of Luigi codebase itself.
 """
 
 
-from collections import OrderedDict, Mapping
+from collections import OrderedDict
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 import operator
 import functools
 
