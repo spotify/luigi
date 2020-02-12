@@ -30,6 +30,7 @@ ways between versions. The exception is the exception types and the
 
 import collections
 import datetime
+import errno
 import getpass
 import importlib
 import logging
@@ -248,9 +249,23 @@ class TaskProcess(multiprocessing.Process):
                 try:
                     child.terminate()
                 except psutil.NoSuchProcess:
+                    # Process is already gone, no one else has claimed this PID yet
                     continue
+                except OSError as exception:
+                    # Process is already gone, and someone else has claimed this PID
+                    if exception.errno == errno.EPERM:
+                        continue
+                    else:
+                        raise exception
         except psutil.NoSuchProcess:
+            # Process is already gone, no one else has claimed this PID yet
             return
+        except OSError as exception:
+            # Process is already gone, and someone else has claimed this PID
+            if exception.errno == errno.EPERM:
+                return
+            else:
+                raise exception
 
     def terminate(self):
         """Terminate this process and its subprocesses."""
