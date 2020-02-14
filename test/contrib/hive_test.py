@@ -460,7 +460,7 @@ class TestHiveTarget(unittest.TestCase):
         client = mock.Mock()
         target = luigi.contrib.hive.HiveTableTarget(database='db', table='foo', client=client)
         target.exists()
-        client.table_exists.assert_called_with('foo', 'db')
+        client.table_exists.assert_called_with('foo', 'db', None)
 
     def test_hive_partition_target(self):
         client = mock.Mock()
@@ -480,9 +480,10 @@ class ExternalHiveTaskTest(unittest.TestCase):
         output = _Task().output()
 
         # assert
-        assert isinstance(output, luigi.contrib.hive.HiveTableTarget)
+        assert isinstance(output, luigi.contrib.hive.HivePartitionTarget)
         assert output.database == 'schema1'
         assert output.table == 'table1'
+        assert output.partition == {}
 
     def test_partition_exists(self):
         # arrange

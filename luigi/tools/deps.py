@@ -47,7 +47,10 @@ from luigi.task import flatten
 from luigi import parameter
 import sys
 from luigi.cmdline_parser import CmdlineParser
-import collections
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 
 def get_task_requires(task):
@@ -118,7 +121,7 @@ def main():
 
         if isinstance(task_output, dict):
             output_descriptions = [get_task_output_description(output) for label, output in task_output.items()]
-        elif isinstance(task_output, collections.Iterable):
+        elif isinstance(task_output, Iterable):
             output_descriptions = [get_task_output_description(output) for output in task_output]
         else:
             output_descriptions = [get_task_output_description(task_output)]
