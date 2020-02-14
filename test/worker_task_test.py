@@ -20,7 +20,8 @@ import sys
 
 from helpers import LuigiTestCase, StringContaining
 import mock
-from psutil import Process
+from mock import patch
+from psutil import Process, NoSuchProcess
 from time import sleep
 
 import luigi
@@ -128,6 +129,113 @@ class TaskProcessTest(LuigiTestCase):
             sleep(0.01)
 
         [child] = parent.children()
+        task_process.terminate()
+        child.wait(timeout=1.0)  # wait for terminate to complete
+
+        self.assertFalse(parent.is_running())
+        self.assertFalse(child.is_running())
+
+    @patch('os.kill')
+    def test_no_such_process_is_ignored(self, os_kill_fn):
+        """
+        Process is already gone, no one else has claimed this PID yet should be OK
+        """
+        class HangingSubprocessTask(luigi.Task):
+            def run(self):
+                python = sys.executable
+                check_call([python, '-c', 'while True: pass'])
+
+        task = HangingSubprocessTask()
+        queue = mock.Mock()
+        worker_id = 1
+
+        task_process = TaskProcess(task, worker_id, queue, mock.Mock())
+        task_process.start()
+
+        os_kill_fn.side_effect = NoSuchProcess(task_process.pid, "TEST No such process")
+
+        parent = Process(task_process.pid)
+        while not parent.children():
+            # wait for child process to startup
+            sleep(0.01)
+
+        [child] = parent.children()
+        task_process.terminate()
+
+        # no errors!
+
+        os_kill_fn.side_effect = None # cleanup
+        task_process.terminate()
+        child.wait(timeout=1.0)  # wait for terminate to complete
+
+        self.assertFalse(parent.is_running())
+        self.assertFalse(child.is_running())
+
+    @patch('os.kill')
+    def test_operation_not_permitted_is_ignored(self, os_kill_fn):
+        """
+        Process is already gone, and someone else has claimed this PID should be OK
+        """
+        class HangingSubprocessTask(luigi.Task):
+            def run(self):
+                python = sys.executable
+                check_call([python, '-c', 'while True: pass'])
+
+        task = HangingSubprocessTask()
+        queue = mock.Mock()
+        worker_id = 1
+
+        task_process = TaskProcess(task, worker_id, queue, mock.Mock())
+        task_process.start()
+
+        os_kill_fn.side_effect = OSError(1, "TEST Operation not permitted")
+
+        parent = Process(task_process.pid)
+        while not parent.children():
+            # wait for child process to startup
+            sleep(0.01)
+
+        [child] = parent.children()
+        task_process.terminate()
+
+        # no errors!
+
+        os_kill_fn.side_effect = None # cleanup
+        task_process.terminate()
+        child.wait(timeout=1.0)  # wait for terminate to complete
+
+        self.assertFalse(parent.is_running())
+        self.assertFalse(child.is_running())
+
+    @patch('os.kill')
+    def test_other_exceptions_do_raise(self, os_kill_fn):
+        """
+        Any other type of OSError should raise an exception like normal
+        """
+        class HangingSubprocessTask(luigi.Task):
+            def run(self):
+                python = sys.executable
+                check_call([python, '-c', 'while True: pass'])
+
+        task = HangingSubprocessTask()
+        queue = mock.Mock()
+        worker_id = 1
+
+        task_process = TaskProcess(task, worker_id, queue, mock.Mock())
+        task_process.start()
+
+        os_kill_fn.side_effect = OSError(24, "TEST Too many open files")
+
+        parent = Process(task_process.pid)
+        while not parent.children():
+            # wait for child process to startup
+            sleep(0.01)
+
+        with self.assertRaises(OSError):
+            [child] = parent.children()
+            task_process.terminate()
+
+        os_kill_fn.side_effect = None # cleanup
         task_process.terminate()
         child.wait(timeout=1.0)  # wait for terminate to complete
 
