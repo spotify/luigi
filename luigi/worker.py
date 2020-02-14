@@ -270,10 +270,11 @@ class TaskProcess(multiprocessing.Process):
     def terminate(self):
         """Terminate this process and its subprocesses."""
         # default terminate() doesn't cleanup child processes, it orphans them.
-        try:
-            return self._recursive_terminate()
-        except ImportError:
-            return super(TaskProcess, self).terminate()
+        if super(TaskProcess, self).is_alive():
+            try:
+                return self._recursive_terminate()
+            except ImportError:
+                return super(TaskProcess, self).terminate()
 
     @contextlib.contextmanager
     def _forward_attributes(self):
