@@ -157,7 +157,7 @@ class TaskProcessTest(LuigiTestCase):
         with patch("os.kill", mock_kill):
 
             [child] = parent.children()
-            task_process.terminate() # no errors!
+            task_process.terminate()  # no errors!
 
         # ensure cleanup
         task_process.terminate()
@@ -187,7 +187,7 @@ class TaskProcessTest(LuigiTestCase):
         with patch("os.kill", mock_kill):
 
             [child] = parent.children()
-            task_process.terminate() # no errors
+            task_process.terminate()  # no errors
 
         # ensure cleanup
         task_process.terminate()
