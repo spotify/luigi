@@ -147,19 +147,17 @@ class TaskProcessTest(LuigiTestCase):
         task_process = TaskProcess(task, worker_id, queue, mock.Mock())
         task_process.start()
 
+        parent = Process(task_process.pid)
+        while not parent.children():
+            # wait for child process to startup
+            sleep(0.01)
+
         mock_kill = MagicMock(side_effect=NoSuchProcess(task_process.pid, "TEST No such process"))
 
         with patch("os.kill", mock_kill):
 
-            parent = Process(task_process.pid)
-            while not parent.children():
-                # wait for child process to startup
-                sleep(0.01)
-
             [child] = parent.children()
-            task_process.terminate()
-
-            # no errors!
+            task_process.terminate() # no errors!
 
         # ensure cleanup
         task_process.terminate()
@@ -179,19 +177,17 @@ class TaskProcessTest(LuigiTestCase):
         task_process = TaskProcess(task, worker_id, queue, mock.Mock())
         task_process.start()
 
+        parent = Process(task_process.pid)
+        while not parent.children():
+            # wait for child process to startup
+            sleep(0.01)
+
         mock_kill = MagicMock(side_effect=OSError(1, "TEST Operation not permitted"))
 
         with patch("os.kill", mock_kill):
 
-            parent = Process(task_process.pid)
-            while not parent.children():
-                # wait for child process to startup
-                sleep(0.01)
-
             [child] = parent.children()
-            task_process.terminate()
-
-            # no errors!
+            task_process.terminate() # no errors
 
         # ensure cleanup
         task_process.terminate()
@@ -211,14 +207,14 @@ class TaskProcessTest(LuigiTestCase):
         task_process = TaskProcess(task, worker_id, queue, mock.Mock())
         task_process.start()
 
+        parent = Process(task_process.pid)
+        while not parent.children():
+            # wait for child process to startup
+            sleep(0.01)
+
         mock_kill = MagicMock(side_effect=OSError(24, "TEST Too many open files"))
 
         with patch("os.kill", mock_kill):
-
-            parent = Process(task_process.pid)
-            while not parent.children():
-                # wait for child process to startup
-                sleep(0.01)
 
             with self.assertRaises(OSError):
                 [child] = parent.children()
