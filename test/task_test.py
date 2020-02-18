@@ -27,6 +27,8 @@ import luigi
 import luigi.task
 import luigi.util
 import collections
+
+from luigi.parameter import _FrozenOrderedDict
 from luigi.task_register import load_task
 
 
@@ -112,6 +114,7 @@ class TaskTest(unittest.TestCase):
         self.assertEqual(flatten('foo'), ['foo'])
         self.assertEqual(flatten(42), [42])
         self.assertEqual(flatten((len(i) for i in ["foo", "troll"])), [3, 5])
+        self.assertEqual(flatten(_FrozenOrderedDict({'a': 'foo', 'b': 'bar'})), ['foo', 'bar'])
         self.assertRaises(TypeError, flatten, (len(i) for i in ["foo", "troll", None]))
 
     def test_externalized_task_picklable(self):

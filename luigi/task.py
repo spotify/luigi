@@ -39,7 +39,7 @@ from luigi import six
 
 from luigi import parameter
 from luigi.task_register import Register
-from luigi.parameter import ParameterVisibility
+from luigi.parameter import ParameterVisibility, _FrozenOrderedDict
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -872,7 +872,7 @@ def flatten(struct):
     if struct is None:
         return []
     flat = []
-    if isinstance(struct, dict):
+    if isinstance(struct, dict) or isinstance(struct, _FrozenOrderedDict):
         for _, result in six.iteritems(struct):
             flat += flatten(result)
         return flat
