@@ -278,5 +278,5 @@ class PrestoTask(rdbms.Query):
             catalog=self.catalog,
             database=self.database,
             table=self.table,
-            partition=self.partition,
+            partition=self.partition
         )
