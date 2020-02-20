@@ -234,3 +234,7 @@ span.status-icon {
   background-color: rgb(0, 166, 90) !important;
   color: white !important;
 }
+
+.popover{
+    max-width: 100% !important; 
+}
