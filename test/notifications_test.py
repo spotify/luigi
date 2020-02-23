@@ -382,8 +382,8 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
             notifications.send_email_sns(*self.notification_args)
 
             SNS = res.return_value
-            SNS.Topic.assert_called_once_with(self.recipients[0])
-            SNS.Topic.return_value.publish.assert_called_once_with(
+            SNS.Topic.assert_has_calls(self.recipients)
+            SNS.Topic.return_value.publish.assert_called_with(
                 Subject=self.subject, Message=self.message)
 
     @with_config({})
