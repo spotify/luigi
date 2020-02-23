@@ -382,7 +382,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
             notifications.send_email_sns(*self.notification_args)
 
             SNS = res.return_value
-            self.assertEqual(SNS.Topic.call_count,len(self.recipients))
+            self.assertEqual(SNS.Topic.call_count, len(self.recipients))
             SNS.Topic.return_value.publish.assert_called_with(
                 Subject=self.subject, Message=self.message)
 
@@ -401,7 +401,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
                                          self.recipients, self.image_png)
 
             SNS = res.return_value
-            self.assertEqual(SNS.Topic.call_count,len(self.recipients))
+            self.assertEqual(SNS.Topic.call_count, len(self.recipients))
             called_subj = SNS.Topic.return_value.publish.call_args[1]['Subject']
             self.assertTrue(len(called_subj) <= 100,
                             "Subject can be max 100 chars long! Found {}.".format(len(called_subj)))
