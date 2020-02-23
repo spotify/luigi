@@ -260,7 +260,7 @@ def _email_disabled_reason():
         return None
 
 
-def send_email_sns(sender, subject, message, topic_ARN, image_png):
+def send_email_sns(sender, subject, message, topics_ARN, image_png):
     """
     Sends notification through AWS SNS. Takes Topic ARN from recipients.
 
@@ -273,18 +273,21 @@ def send_email_sns(sender, subject, message, topic_ARN, image_png):
     from boto3 import resource as boto3_resource
 
     sns = boto3_resource('sns')
-    topic = sns.Topic(topic_ARN[0])
 
-    # Subject is max 100 chars
-    if len(subject) > 100:
-        subject = subject[0:48] + '...' + subject[-49:]
+    for topic_ARN in topics_ARN:
+        
+        topic = sns.Topic(topic_ARN)
 
-    response = topic.publish(Subject=subject, Message=message)
+        # Subject is max 100 chars
+        if len(subject) > 100:
+            subject = subject[0:48] + '...' + subject[-49:]
 
-    logger.debug(("Message sent to SNS.\nMessageId: {},\nRequestId: {},\n"
-                 "HTTPSStatusCode: {}").format(response['MessageId'],
-                                               response['ResponseMetadata']['RequestId'],
-                                               response['ResponseMetadata']['HTTPStatusCode']))
+        response = topic.publish(Subject=subject, Message=message)
+
+        logger.debug(("Message sent to SNS.\nMessageId: {},\nRequestId: {},\n"
+                    "HTTPSStatusCode: {}").format(response['MessageId'],
+                                                response['ResponseMetadata']['RequestId'],
+                                                response['ResponseMetadata']['HTTPStatusCode']))
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
