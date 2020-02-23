@@ -275,7 +275,7 @@ def send_email_sns(sender, subject, message, topics_ARN, image_png):
     sns = boto3_resource('sns')
 
     for topic_ARN in topics_ARN:
-        
+
         topic = sns.Topic(topic_ARN)
 
         # Subject is max 100 chars
