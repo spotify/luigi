@@ -285,9 +285,9 @@ def send_email_sns(sender, subject, message, topics_ARN, image_png):
         response = topic.publish(Subject=subject, Message=message)
 
         logger.debug(("Message sent to SNS.\nMessageId: {},\nRequestId: {},\n"
-                    "HTTPSStatusCode: {}").format(response['MessageId'],
-                                                response['ResponseMetadata']['RequestId'],
-                                                response['ResponseMetadata']['HTTPStatusCode']))
+                     "HTTPSStatusCode: {}").format(response['MessageId'],
+                                                   response['ResponseMetadata']['RequestId'],
+                                                   response['ResponseMetadata']['HTTPStatusCode']))
 
 
 def send_email(subject, message, sender, recipients, image_png=None):
