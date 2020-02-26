@@ -32,9 +32,9 @@ class BaseParser:
         return cls._instance
 
     @classmethod
-    def add_config_path(cls, path):
+    def add_config_path(cls, path, encoding=None):
         cls._config_paths.append(path)
-        cls.reload()
+        cls.reload(encoding)
 
     @classmethod
     def reload(cls):

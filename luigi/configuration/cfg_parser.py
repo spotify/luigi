@@ -143,7 +143,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
 
     @classmethod
-    def reload(cls):
+    def reload(cls, encoding=None):
         # Warn about deprecated old-style config paths.
         deprecated_paths = [p for p in cls._config_paths if os.path.basename(p) == 'client.cfg' and os.path.exists(p)]
         if deprecated_paths:
@@ -151,7 +151,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
                           "Found: {paths!r}".format(paths=deprecated_paths),
                           DeprecationWarning)
 
-        return cls.instance().read(cls._config_paths)
+        return cls.instance().read(cls._config_paths, encoding=encoding)
 
     def _get_with_default(self, method, section, option, default, expected_type=None, **kwargs):
         """
