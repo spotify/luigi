@@ -36,11 +36,11 @@ import warnings
 # In python3 ConfigParser was renamed
 # https://stackoverflow.com/a/41202010
 try:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    Interpolation = object
-except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
     from configparser import Interpolation, BasicInterpolation
+except ImportError:
+    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+    Interpolation = object
 
 from .base_parser import BaseParser
 

@@ -37,9 +37,9 @@ except ImportError:
     from urllib.parse import urlsplit
 
 try:
-    from ConfigParser import NoSectionError
-except ImportError:
     from configparser import NoSectionError
+except ImportError:
+    from ConfigParser import NoSectionError
 
 from luigi import six
 
