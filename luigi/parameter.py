@@ -1007,6 +1007,8 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
+        if isinstance(x, list):
+            x = json.dumps(x)
         return list(json.loads(x, object_pairs_hook=FrozenOrderedDict))
 
     def serialize(self, x):
