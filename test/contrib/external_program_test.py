@@ -107,9 +107,18 @@ class ExternalProgramTaskTest(unittest.TestCase):
     @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
     @patch('luigi.contrib.external_program.subprocess.Popen')
     @patch.dict('os.environ', {'SECRET_TOKEN': '1l0v3ca75'}, clear=True)
+    def test_print_environment_on_failure_per_default(self, proc, file):
+        proc.return_value.returncode = 1
+        with self.assertRaisesRegex(ExternalProgramRunError, 'ENVIRONMENT:.*SECRET_TOKEN=\'1l0veca75\''):
+            job = TestExternalProgramTask()
+            job.run()
+
+    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch.dict('os.environ', {'SECRET_TOKEN': '1l0v3ca75'}, clear=True)
     def test_print_environment_on_failure_if_debug_environment(self, proc, file):
         proc.return_value.returncode = 1
-        with self.assertRaisesRegex(ExternalProgramRunError, 'ENVIRONMENT: SECRET_TOKEN=\'1l0veca75\''):
+        with self.assertRaisesRegex(ExternalProgramRunError, 'ENVIRONMENT:.*SECRET_TOKEN=\'1l0veca75\''):
             job = TestExternalProgramTask(debug_environment=True)
             job.run()
 
