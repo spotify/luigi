@@ -73,6 +73,9 @@ meta = {}
 with open("luigi/__meta__.py", "r") as f:
     exec(f.read(), meta)
 
+if os.environ.get('KUBERNETES_CLUSTER', None) == 'True':
+    install_requires.append('kubernetes==10.0.1')
+
 setup(
     name='luigi',
     version=meta['__version__'],
