@@ -401,6 +401,7 @@
                                 <li><a class="js-nav-link" href="#tab=graph" data-tab="dependencyGraph">Dependency Graph</a></li>
                                 <li><a class="js-nav-link" href="#tab=workers" data-tab="workerList">Workers</a></li>
                                 <li><a class="js-nav-link" href="#tab=resource" data-tab="resourceList">Resources</a></li>
+                                <li class="jobs-menu-item hidden"><a class="js-nav-link" href="#tab=jobs" data-tab="jobList">Jobs</a></li>
                             </ul>
                             <form class="navbar-form navbar-right" id="pause-form">
                             </form>
@@ -564,6 +565,17 @@
             <section id="workerList" class="container-fluid tab-pane active">
             </section>
             <section id="resourceList" class="tab-pane">
+            </section>
+            <section id="jobList" class="tab-pane hidden">
+                <table id="jobTable" class="table table-striped">
+                    <thead>
+                        <th>Name</th>
+                        <th>Last Scheduled Run</th>
+                        <th>Actions</th>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
             </section>
         </div> <!-- /.tab-content -->
         </div> <!-- /.content -->

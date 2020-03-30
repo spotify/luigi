@@ -607,6 +607,9 @@ kubeconfig_path
 max_retrials
   Maximum number of retrials in case of job failure.
 
+namespace
+	The name of the Kubernetes namespace
+
 .. _service-account: http://kubernetes.io/docs/user-guide/kubeconfig-file
 .. _kubeconfig: http://kubernetes.io/docs/user-guide/service-accounts
 .. _minikube: http://kubernetes.io/docs/getting-started-guides/minikube

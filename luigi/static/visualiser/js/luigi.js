@@ -213,5 +213,11 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getJobList = function(callback) {
+        jsonRPC(this.urlRoot + "/jobs", {}, function(response) {
+            callback(response.response);
+        });
+    };
+
     return LuigiAPI;
 })();
