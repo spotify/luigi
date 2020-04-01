@@ -1183,7 +1183,7 @@ function visualiserApp(luigi) {
         luigi.getJobList(function(jobs) {
             if(jobs.length > 0) {
                 $(".jobs-menu-item").removeClass("hidden");
-				$("#jobsList").removeClass("hidden");
+				$("#jobList").removeClass("hidden");
 
 				$.each(jobs, function(index, job) {
 
