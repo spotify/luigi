@@ -416,7 +416,7 @@ class Task(object):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if param_obj.has_task_value(task_family, param_name):
+                if param_obj.has_task_value(task_family, param_name, allow_default=False):
                     result[param_name] = param_obj.task_value(task_family, param_name)
 
         # Then use the defaults of parents for anything still not filled in
@@ -424,13 +424,16 @@ class Task(object):
         for parent in parents:
             for param_name, param_obj in params:
                 if param_name not in result:
-                    if param_obj.has_task_value(parent, param_name):
+                    if param_obj.has_task_value(parent, param_name, allow_default=False):
                         result[param_name] = param_obj.task_value(parent, param_name)
 
         # Only then check for missing values
         for param_name, param_obj in params:
             if param_name not in result:
-                raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
+                if param_obj.has_task_value(task_family, param_name, allow_default=True):
+                    result[param_name] = param_obj.task_value(task_family, param_name)
+                else:
+                    raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """

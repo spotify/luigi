@@ -198,15 +198,15 @@ class Parameter(object):
 
         return self.parse(value)
 
-    def _get_value(self, task_name, param_name):
-        for value, warn in self._value_iterator(task_name, param_name):
+    def _get_value(self, task_name, param_name, allow_default=True):
+        for value, warn in self._value_iterator(task_name, param_name, allow_default):
             if value != _no_value:
                 if warn:
                     warnings.warn(warn, DeprecationWarning)
                 return value
         return _no_value
 
-    def _value_iterator(self, task_name, param_name):
+    def _value_iterator(self, task_name, param_name, allow_default=True):
         """
         Yield the parameter values, with optional deprecation warning as second tuple value.
 
@@ -222,10 +222,13 @@ class Parameter(object):
             yield (self._get_value_from_config(self._config_path['section'], self._config_path['name']),
                    'The use of the configuration [{}] {} is deprecated. Please use [{}] {}'.format(
                        self._config_path['section'], self._config_path['name'], task_name, param_name))
-        yield (self._default, None)
+        if allow_default:
+            yield (self._default, None)
+        else:
+            yield (_no_value, None)
 
-    def has_task_value(self, task_name, param_name):
-        return self._get_value(task_name, param_name) != _no_value
+    def has_task_value(self, task_name, param_name, allow_default=True):
+        return self._get_value(task_name, param_name, allow_default) != _no_value
 
     def task_value(self, task_name, param_name):
         value = self._get_value(task_name, param_name)
