@@ -28,7 +28,7 @@ For more information about Kubernetes Jobs: http://kubernetes.io/docs/user-guide
 
 Requires:
 
-- pykube: ``pip install pykube``
+- pykube: ``pip install pykube-ng``
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
