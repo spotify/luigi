@@ -33,11 +33,12 @@ import logging
 import os
 import warnings
 
-from configparser import Interpolation
 try:
     from ConfigParser import ConfigParser, NoOptionError, NoSectionError
+    Interpolation = object
 except ImportError:
     from configparser import ConfigParser, NoOptionError, NoSectionError
+    from configparser import Interpolation
 
 
 class LuigiConfigParser(ConfigParser):
