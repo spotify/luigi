@@ -23,7 +23,6 @@ system operations. The `boto3` library is required to use S3 targets.
 from __future__ import division
 
 import datetime
-import io
 import itertools
 import logging
 import os
