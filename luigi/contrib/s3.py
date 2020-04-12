@@ -23,7 +23,6 @@ system operations. The `boto3` library is required to use S3 targets.
 from __future__ import division
 
 import datetime
-import io
 import itertools
 import logging
 import os
@@ -74,21 +73,6 @@ class FileNotFoundException(FileSystemException):
 
 class DeprecatedBotoClientException(Exception):
     pass
-
-
-class _StreamingBodyAdaptor(io.IOBase):
-    """
-    Adapter class wrapping botocore's StreamingBody to make a file like iterable
-    """
-
-    def __init__(self, streaming_body):
-        self.streaming_body = streaming_body
-
-    def read(self, size):
-        return self.streaming_body.read(size)
-
-    def close(self):
-        return self.streaming_body.close()
 
 
 class S3Client(FileSystem):
@@ -586,7 +570,7 @@ class AtomicS3File(AtomicLocalFile):
 
 class ReadableS3File(object):
     def __init__(self, s3_key):
-        self.s3_key = _StreamingBodyAdaptor(s3_key.get()['Body'])
+        self.s3_key = s3_key.get()['Body']
         self.buffer = []
         self.closed = False
         self.finished = False
