@@ -91,7 +91,7 @@ class TestK8STask(unittest.TestCase):
         self.assertTrue("failed" in job.obj["status"])
         time.sleep(10)
         self.assertTrue(
-            len(Pod.objects(kube_api).filter(selector="job-name={}".format(fail.uu_name)).response['items']) ==
+            len(Pod.objects(kube_api).filter(selector="job-name={}".format(fail.uu_name)).response['items']) >
             fail.max_retrials
         )
 
