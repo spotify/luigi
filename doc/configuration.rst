@@ -42,7 +42,7 @@ Example cfg config:
 
     [hadoop]
     version=cdh4
-    streaming-jar=/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
+    streaming_jar=/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar
 
     [core]
     scheduler_host=luigi-host.mycompany.foo
@@ -53,7 +53,7 @@ Example toml config:
 
     [hadoop]
     version = "cdh4"
-    streaming-jar = "/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar"
+    streaming_jar = "/usr/lib/hadoop-xyz/hadoop-streaming-xyz-123.jar"
 
     [core]
     scheduler_host = "luigi-host.mycompany.foo"
@@ -127,20 +127,20 @@ section and the parameters available within it.
 These parameters control core Luigi behavior, such as error e-mails and
 interactions between the worker and scheduler.
 
-autoload-range
-  .. versionadded:: 2.8.4
+autoload_range
+  .. versionadded:: 2.8.11
 
   If false, prevents range tasks from autoloading. They can still be loaded
   using ``--module luigi.tools.range``. Defaults to true. Setting this to true
   explicitly disables the deprecation warning.
 
-default-scheduler-host
+default_scheduler_host
   Hostname of the machine running the scheduler. Defaults to localhost.
 
-default-scheduler-port
+default_scheduler_port
   Port of the remote scheduler api process. Defaults to 8082.
 
-default-scheduler-url
+default_scheduler_url
   Full path to remote scheduler. Defaults to ``http://localhost:8082/``.
   For TLS support use the URL scheme: ``https``,
   example: ``https://luigi.example.com:443/``
@@ -149,11 +149,11 @@ default-scheduler-url
   non-standard URI scheme: ``http+unix``
   example: ``http+unix://%2Fvar%2Frun%2Fluigid%2Fluigid.sock/``
 
-hdfs-tmp-dir
+hdfs_tmp_dir
   Base directory in which to store temporary files on hdfs. Defaults to
   tempfile.gettempdir()
 
-history-filename
+history_filename
   If set, specifies a filename for Luigi to write stuff (currently just
   job id) to in mapreduce job's output directory. Useful in a
   configuration where no history is stored in the output directory by
@@ -195,19 +195,19 @@ parallel_scheduling
   scheduling, but requires that all tasks can be pickled.
   Defaults to false.
 
-parallel-scheduling-processes
+parallel_scheduling_processes
   The number of processes to use for parallel scheduling. If not specified
   the default number of processes will be the total number of CPUs available.
 
-rpc-connect-timeout
+rpc_connect_timeout
   Number of seconds to wait before timing out when making an API call.
   Defaults to 10.0
 
-rpc-retry-attempts
+rpc_retry_attempts
   The maximum number of retries to connect the central scheduler before giving up.
   Defaults to 3
 
-rpc-retry-wait
+rpc_retry_wait
   Number of seconds to wait before the next attempt will be started to
   connect to the central scheduler between two retry attempts.
   Defaults to 30
@@ -269,7 +269,7 @@ count_uniques
   If true, workers will only count unique pending jobs when deciding
   whether to stay alive. So if a worker can't get a job to run and other
   workers are waiting on all of its pending jobs, the worker will die.
-  worker-keep-alive must be true for this to have any effect. Defaults
+  ``worker_keep_alive`` must be ``true`` for this to have any effect. Defaults
   to false.
 
 keep_alive
@@ -294,7 +294,7 @@ timeout
 
   Number of seconds after which to kill a task which has been running
   for too long. This provides a default value for all tasks, which can
-  be overridden by setting the worker-timeout property in any task.
+  be overridden by setting the ``worker_timeout`` property in any task.
   Default value is 0, meaning no timeout.
 
 wait_interval
@@ -320,13 +320,13 @@ max_reschedules
   a dependent job. This defaults to 1.
 
 retry_external_tasks
-  If true, incomplete external tasks (i.e. tasks where the `run()` method is
+  If true, incomplete external tasks (i.e. tasks where the ``run()`` method is
   NotImplemented) will be retested for completion while Luigi is running.
   This means that if external dependencies are satisfied after a workflow has
   started, any tasks dependent on that resource will be eligible for running.
   Note: Every time the task remains incomplete, it will count as FAILED, so
-  normal retry logic applies (see: `retry_count` and `retry_delay`).
-  This setting works best with `worker-keep-alive: true`.
+  normal retry logic applies (see: ``retry_count`` and ``retry_delay``).
+  This setting works best with ``worker_keep_alive: true``.
   If false, external tasks will only be evaluated when Luigi is first invoked.
   In this case, Luigi will not check whether external dependencies are
   satisfied  while a workflow is in progress, so dependent tasks will remain
@@ -335,7 +335,7 @@ retry_external_tasks
 
 no_install_shutdown_handler
   By default, workers will stop requesting new work and finish running
-  pending tasks after receiving a `SIGUSR1` signal. This provides a hook
+  pending tasks after receiving a ``SIGUSR1`` signal. This provides a hook
   for gracefully shutting down workers that are in the process of running
   (potentially expensive) tasks. If set to true, Luigi will NOT install
   this shutdown hook on workers. Note this hook does not work on Windows
@@ -373,10 +373,10 @@ force_multiprocessing
 
 These parameters control use of elasticsearch
 
-marker-index
+marker_index
   Defaults to "update_log".
 
-marker-doc-type
+marker_doc_type
   Defaults to "entry".
 
 
@@ -385,7 +385,7 @@ marker-doc-type
 
 General parameters
 
-force-send
+force_send
   If true, e-mails are sent in all run configurations (even if stdout is
   connected to a tty device).  Defaults to False.
 
@@ -485,7 +485,7 @@ error_lines
   e-mail. This can be used to keep e-mails shorter while preserving the
   more useful information usually found near the bottom of stack traces.
   This can be set to 0 to include all lines. If you don't wish to see
-  error messages, instead set `error_messages` to 0.
+  error messages, instead set ``error_messages`` to 0.
   Defaults to 20.
 
 error_messages
@@ -501,7 +501,7 @@ group_by_error_messages
   task types to fail for the same reason. This can cause a lot of noise
   in the batch e-mails. This cuts down on the noise by listing items
   with identical error messages together. Error messages are compared
-  after limiting by `error_lines`.
+  after limiting by ``error_lines``.
   Defaults to true.
 
 
@@ -514,7 +514,7 @@ command
   Name of command for running hadoop from the command line. Defaults to
   "hadoop"
 
-python-executable
+python_executable
   Name of command for running python from the command line. Defaults to
   "python"
 
@@ -522,7 +522,7 @@ scheduler
   Type of scheduler to use when scheduling hadoop jobs. Can be "fair" or
   "capacity". Defaults to "fair".
 
-streaming-jar
+streaming_jar
   Path to your streaming jar. Must be specified to run streaming jobs.
 
 version
@@ -574,7 +574,7 @@ command
   Name of the command used to run hive on the command line. Defaults to
   "hive".
 
-hiverc-location
+hiverc_location
   Optional path to hive rc file.
 
 metastore_host
@@ -617,7 +617,7 @@ max_retrials
 
 Parameters controlling use of MySQL targets
 
-marker-table
+marker_table
   Table in which to store status of table updates. This table will be
   created if it doesn't already exist. Defaults to "table_updates".
 
@@ -627,11 +627,11 @@ marker-table
 
 Parameters controlling the use of Postgres targets
 
-local-tmp-dir
+local_tmp_dir
   Directory in which to temporarily store data before writing to
   postgres. Uses system default if not specified.
 
-marker-table
+marker_table
   Table in which to store status of table updates. This table will be
   created if it doesn't already exist. Defaults to "table_updates".
 
@@ -641,7 +641,7 @@ marker-table
 
 Parameters controlling the use of Redshift targets
 
-marker-table
+marker_table
   Table in which to store status of table updates. This table will be
   created if it doesn't already exist. Defaults to "table_updates".
 
@@ -725,19 +725,19 @@ by Luigi contributors.
 
 Parameters controlling running of scalding jobs
 
-scala-home
+scala_home
   Home directory for scala on your machine. Defaults to either
   SCALA_HOME or /usr/share/scala if SCALA_HOME is unset.
 
-scalding-home
+scalding_home
   Home directory for scalding on your machine. Defaults to either
   SCALDING_HOME or /usr/share/scalding if SCALDING_HOME is unset.
 
-scalding-provided
+scalding_provided
   Provided directory for scalding on your machine. Defaults to either
   SCALDING_HOME/provided or /usr/share/scalding/provided
 
-scalding-libjars
+scalding_libjars
   Libjars directory for scalding on your machine. Defaults to either
   SCALDING_HOME/libjars or /usr/share/scalding/libjars
 
@@ -755,26 +755,26 @@ batch_emails
   immediate batch e-mails.
   Defaults to false.
 
-disable-hard-timeout
+disable_hard_timeout
   Hard time limit after which tasks will be disabled by the server if
   they fail again, in seconds. It will disable the task if it fails
   **again** after this amount of time. E.g. if this was set to 600
   (i.e. 10 minutes), and the task first failed at 10:00am, the task would
   be disabled if it failed again any time after 10:10am. Note: This setting
-  does not consider the values of the `retry_count` or
-  `disable-window-seconds` settings.
+  does not consider the values of the ``retry_count`` or
+  ``disable_window_seconds`` settings.
 
 retry_count
-  Number of times a task can fail within disable-window-seconds before
+  Number of times a task can fail within ``disable_window_seconds`` before
   the scheduler will automatically disable it. If not set, the scheduler
   will not automatically disable jobs.
 
-disable-persist-seconds
+disable_persist_seconds
   Number of seconds for which an automatic scheduler disable lasts.
   Defaults to 86400 (1 day).
 
-disable-window-seconds
-  Number of seconds during which retry_count failures must
+disable_window_seconds
+  Number of seconds during which ``retry_count`` failures must
   occur in order for an automatic disable by the scheduler. The
   scheduler forgets about disables that have occurred longer ago than
   this amount of time. Defaults to 3600 (1 hour).
@@ -844,7 +844,7 @@ apikey
 These parameters control the smtp server setup.
 
 host
-  Hostname for sending mail throug smtp. Defaults to localhost.
+  Hostname for sending mail through smtp. Defaults to localhost.
 
 local_hostname
   If specified, overrides the FQDN of localhost in the HELO/EHLO
@@ -880,13 +880,13 @@ Parameters controlling the default execution of :py:class:`~luigi.contrib.spark.
    :py:class:`~luigi.contrib.spark.SparkJob`, :py:class:`~luigi.contrib.spark.Spark1xJob` and :py:class:`~luigi.contrib.spark.PySpark1xJob`
     are deprecated. Please use :py:class:`~luigi.contrib.spark.SparkSubmitTask` or :py:class:`~luigi.contrib.spark.PySparkTask`.
 
-spark-submit
-  Command to run in order to submit spark jobs. Default: spark-submit
+spark_submit
+  Command to run in order to submit spark jobs. Default: ``"spark-submit"``
 
 master
-  Master url to use for spark-submit. Example: local[*], spark://masterhost:7077. Default: Spark default (Prior to 1.1.1: yarn-client)
+  Master url to use for ``spark_submit``. Example: local[*], spark://masterhost:7077. Default: Spark default (Prior to 1.1.1: yarn-client)
 
-deploy-mode
+deploy_mode
     Whether to launch the driver programs locally ("client") or on one of the worker machines inside the cluster ("cluster"). Default: Spark default
 
 jars
@@ -895,8 +895,8 @@ jars
 packages
     Comma-separated list of packages to link to on the driver and executors
 
-py-files
-    Comma-separated list of .zip, .egg, or .py files to place on the PYTHONPATH for Python apps. Default: Spark default
+py_files
+    Comma-separated list of .zip, .egg, or .py files to place on the ``PYTHONPATH`` for Python apps. Default: Spark default
 
 files
     Comma-separated list of files to be placed in the working directory of each executor. Default: Spark default
@@ -904,27 +904,27 @@ files
 conf:
     Arbitrary Spark configuration property in the form Prop=Value|Prop2=Value2. Default: Spark default
 
-properties-file
+properties_file
     Path to a file from which to load extra properties. Default: Spark default
 
-driver-memory
+driver_memory
     Memory for driver (e.g. 1000M, 2G). Default: Spark default
 
-driver-java-options
+driver_java_options
     Extra Java options to pass to the driver. Default: Spark default
 
-driver-library-path
+driver_library_path
     Extra library path entries to pass to the driver. Default: Spark default
 
-driver-class-path
+driver_class_path
     Extra class path entries to pass to the driver. Default: Spark default
 
-executor-memory
+executor_memory
     Memory per executor (e.g. 1000M, 2G). Default: Spark default
 
 *Configuration for Spark submit jobs on Spark standalone with cluster deploy mode only:*
 
-driver-cores
+driver_cores
     Cores for driver. Default: Spark default
 
 supervise
@@ -932,30 +932,30 @@ supervise
 
 *Configuration for Spark submit jobs on Spark standalone and Mesos only:*
 
-total-executor-cores
+total_executor_cores
     Total cores for all executors. Default: Spark default
 
 *Configuration for Spark submit jobs on YARN only:*
 
-executor-cores
+executor_cores
     Number of cores per executor. Default: Spark default
 
 queue
     The YARN queue to submit to. Default: Spark default
 
-num-executors
+num_executors
     Number of executors to launch. Default: Spark default
 
 archives
     Comma separated list of archives to be extracted into the working directory of each executor. Default: Spark default
 
-hadoop-conf-dir
+hadoop_conf_dir
   Location of the hadoop conf dir. Sets HADOOP_CONF_DIR environment variable
   when running spark. Example: /etc/hadoop/conf
 
 *Extra configuration for PySparkTask jobs:*
 
-py-packages
+py_packages
     Comma-separated list of local packages (in your python path) to be distributed to the cluster.
 
 *Parameters controlling the execution of SparkJob jobs (deprecated):*
@@ -1024,7 +1024,7 @@ metric_namespace
 Per Task Retry-Policy
 ---------------------
 
-Luigi also supports defining retry-policy per task.
+Luigi also supports defining ``retry_policy`` per task.
 
 .. code-block:: python
 
@@ -1052,13 +1052,13 @@ Luigi also supports defining retry-policy per task.
 
 If none of retry-policy fields is defined per task, the field value will be **default** value which is defined in luigi config file.
 
-To make luigi sticks to the given retry-policy, be sure you run luigi worker with `keep_alive` config. Please check ``keep_alive`` config in :ref:`worker-config` section.
+To make luigi sticks to the given retry-policy, be sure you run luigi worker with ``keep_alive`` config. Please check ``keep_alive`` config in :ref:`worker-config` section.
 
 Retry-Policy Fields
 -------------------
 
 The fields below are in retry-policy and they can be defined per task.
 
-* retry_count
-* disable_hard_timeout
-* disable_window_seconds
+* ``retry_count``
+* ``disable_hard_timeout``
+* ``disable_window_seconds``

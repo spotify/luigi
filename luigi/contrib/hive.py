@@ -16,10 +16,13 @@
 #
 
 import abc
+import collections
 import logging
 import operator
 import os
+import re
 import subprocess
+import sys
 import tempfile
 import warnings
 
@@ -27,6 +30,7 @@ from luigi import six
 
 import luigi
 import luigi.contrib.hadoop
+from luigi.contrib.hdfs import get_autoconfig_client
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
@@ -51,6 +55,14 @@ def load_hive_cmd():
 
 def get_hive_syntax():
     return luigi.configuration.get_config().get('hive', 'release', 'cdh4')
+
+
+def get_hive_warehouse_location():
+    return luigi.configuration.get_config().get('hive', 'warehouse_location', '/user/hive/warehouse')
+
+
+def get_ignored_file_masks():
+    return luigi.configuration.get_config().get('hive', 'ignored_file_masks', None)
 
 
 def run_hive(args, check_return_code=True):
@@ -85,6 +97,29 @@ def run_hive_script(script):
     if not os.path.isfile(script):
         raise RuntimeError("Hive script: {0} does not exist.".format(script))
     return run_hive(['-f', script])
+
+
+def _is_ordered_dict(dikt):
+    if isinstance(dikt, collections.OrderedDict):
+        return True
+
+    if sys.version_info >= (3, 7):
+        return isinstance(dikt, dict)
+
+    return False
+
+
+def _validate_partition(partition):
+    """
+    If partition is set and its size is more than one and not ordered,
+    then we're unable to restore its path in the warehouse
+    """
+    if (
+            partition
+            and len(partition) > 1
+            and not _is_ordered_dict(partition)
+    ):
+        raise ValueError('Unable to restore table/partition location')
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -248,12 +283,60 @@ class HiveThriftContext(object):
         self.transport.close()
 
 
+class WarehouseHiveClient(HiveClient):
+    """
+    Client for managed tables that makes decision based on presence of directory in hdfs
+    """
+
+    def __init__(self, hdfs_client=None, warehouse_location=None):
+        self.hdfs_client = hdfs_client or get_autoconfig_client()
+        self.warehouse_location = warehouse_location or get_hive_warehouse_location()
+
+    def table_schema(self, table, database='default'):
+        return NotImplemented
+
+    def table_location(self, table, database='default', partition=None):
+        return os.path.join(
+            self.warehouse_location,
+            database + '.db',
+            table,
+            self.partition_spec(partition)
+        )
+
+    def table_exists(self, table, database='default', partition=None):
+        """
+        The table/partition is considered existing if corresponding path in hdfs exists
+        and contains file except those which match pattern set in  `ignored_file_masks`
+        """
+        path = self.table_location(table, database, partition)
+        if self.hdfs_client.exists(path):
+            ignored_files = get_ignored_file_masks()
+            if ignored_files is None:
+                return True
+
+            filenames = self.hdfs_client.listdir(path)
+            pattern = re.compile(ignored_files)
+            for filename in filenames:
+                if not pattern.match(filename):
+                    return True
+
+        return False
+
+    def partition_spec(self, partition):
+        _validate_partition(partition)
+        return '/'.join([
+            '{}={}'.format(k, v) for (k, v) in six.iteritems(partition or {})
+        ])
+
+
 def get_default_client():
     syntax = get_hive_syntax()
     if syntax == "apache":
         return ApacheHiveCommandClient()
     elif syntax == "metastore":
         return MetastoreClient()
+    elif syntax == 'warehouse':
+        return WarehouseHiveClient()
     else:
         return HiveCommandClient()
 
@@ -386,50 +469,41 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
             return luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url)
 
 
-class HiveTableTarget(luigi.Target):
-    """
-    exists returns true if the table exists.
-    """
-
-    def __init__(self, table, database='default', client=None):
-        self.database = database
-        self.table = table
-        self.client = client or get_default_client()
-
-    def exists(self):
-        logger.debug("Checking if Hive table '%s.%s' exists", self.database, self.table)
-        return self.client.table_exists(self.table, self.database)
-
-    @property
-    def path(self):
-        """
-        Returns the path to this table in HDFS.
-        """
-        location = self.client.table_location(self.table, self.database)
-        if not location:
-            raise Exception("Couldn't find location for table: {0}".format(str(self)))
-        return location
-
-    def open(self, mode):
-        return NotImplementedError("open() is not supported for HiveTableTarget")
-
-
 class HivePartitionTarget(luigi.Target):
     """
-    exists returns true if the table's partition exists.
+    Target representing Hive table or Hive partition
     """
 
     def __init__(self, table, partition, database='default', fail_missing_table=True, client=None):
+        """
+        @param table: Table name
+        @type table: str
+        @param partition: partition specificaton in form of
+        dict of {"partition_column_1": "partition_value_1", "partition_column_2": "partition_value_2", ... }
+        If `partition` is `None` or `{}` then target is Hive nonpartitioned table
+        @param database: Database name
+        @param fail_missing_table: flag to ignore errors raised due to table nonexistence
+        @param client: `HiveCommandClient` instance. Default if `client is None`
+        """
         self.database = database
         self.table = table
         self.partition = partition
         self.client = client or get_default_client()
-
         self.fail_missing_table = fail_missing_table
 
     def exists(self):
+        """
+        returns `True` if the partition/table exists
+        """
         try:
-            logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition)))
+            logger.debug(
+                "Checking Hive table '{d}.{t}' for partition {p}".format(
+                    d=self.database,
+                    t=self.table,
+                    p=str(self.partition or {})
+                )
+            )
+
             return self.client.table_exists(self.table, self.database, self.partition)
         except HiveCommandError:
             if self.fail_missing_table:
@@ -452,24 +526,36 @@ class HivePartitionTarget(luigi.Target):
             raise Exception("Couldn't find location for table: {0}".format(str(self)))
         return location
 
-    def open(self, mode):
-        return NotImplementedError("open() is not supported for HivePartitionTarget")
+
+class HiveTableTarget(HivePartitionTarget):
+    """
+    Target representing non-partitioned table
+    """
+
+    def __init__(self, table, database='default', client=None):
+        super(HiveTableTarget, self).__init__(
+            table=table,
+            partition=None,
+            database=database,
+            fail_missing_table=False,
+            client=client,
+        )
 
 
 class ExternalHiveTask(luigi.ExternalTask):
     """
     External task that depends on a Hive table/partition.
     """
-
     database = luigi.Parameter(default='default')
     table = luigi.Parameter()
-    partition = luigi.DictParameter(default={}, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
+    partition = luigi.DictParameter(
+        default={},
+        description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}'
+    )
 
     def output(self):
-        if len(self.partition) != 0:
-            assert self.partition, "partition required"
-            return HivePartitionTarget(table=self.table,
-                                       partition=self.partition,
-                                       database=self.database)
-        else:
-            return HiveTableTarget(self.table, self.database)
+        return HivePartitionTarget(
+            database=self.database,
+            table=self.table,
+            partition=self.partition,
+        )
