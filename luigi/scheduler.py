@@ -38,7 +38,6 @@ import logging
 import os
 import re
 import time
-import uuid
 
 from luigi import six
 
@@ -148,10 +147,6 @@ class scheduler(Config):
     record_task_history = parameter.BoolParameter(default=False)
 
     prune_on_get_work = parameter.BoolParameter(default=False)
-
-    pause_enabled = parameter.BoolParameter(default=True)
-
-    send_messages = parameter.BoolParameter(default=True)
 
     def _get_retry_policy(self):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
@@ -281,8 +276,8 @@ class OrderedSet(collections.MutableSet):
 
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
-                 params=None, accepts_messages=False, param_visibilities=None, tracking_url=None,
-                 status_message=None, progress_percentage=None, retry_policy='notoptional'):
+                 params=None, param_visibilities=None, tracking_url=None, status_message=None,
+                 progress_percentage=None, retry_policy='notoptional'):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -307,13 +302,11 @@ class Task(object):
         self.public_params = {}
         self.hidden_params = {}
         self.set_params(params)
-        self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
         self.failures = Failures(self.retry_policy.disable_window)
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.progress_percentage = progress_percentage
-        self.scheduler_message_responses = {}
         self.scheduler_disable_time = None
         self.runnable = False
         self.batchable = False
@@ -789,9 +782,9 @@ class Scheduler(object):
     @rpc_method()
     def add_task(self, task_id=None, status=PENDING, runnable=True,
                  deps=None, new_deps=None, expl=None, resources=None,
-                 priority=0, family='', module=None, params=None, accepts_messages=False,
-                 param_visibilities=None, assistant=False, tracking_url=None, worker=None,
-                 batchable=None, batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
+                 priority=0, family='', module=None, params=None, param_visibilities=None,
+                 assistant=False, tracking_url=None, worker=None, batchable=None,
+                 batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -813,8 +806,7 @@ class Scheduler(object):
         if worker.enabled:
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
-                priority=priority, family=family, module=module, params=params,
-                accepts_messages=accepts_messages, param_visibilities=param_visibilities
+                priority=priority, family=family, module=module, params=params, param_visibilities=param_visibilities
             )
         else:
             _default_task = None
@@ -829,7 +821,7 @@ class Scheduler(object):
             task.family = family
         if not getattr(task, 'module', None):
             task.module = module
-        if not getattr(task, 'param_visibilities', None):
+        if not task.param_visibilities:
             task.param_visibilities = _get_default(param_visibilities, {})
         if not task.params:
             task.set_params(params)
@@ -953,47 +945,16 @@ class Scheduler(object):
         self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
 
     @rpc_method()
-    def send_scheduler_message(self, worker, task, content):
-        if not self._config.send_messages:
-            return {"message_id": None}
-
-        message_id = str(uuid.uuid4())
-        self._state.get_worker(worker).add_rpc_message('dispatch_scheduler_message', task_id=task,
-                                                       message_id=message_id, content=content)
-
-        return {"message_id": message_id}
-
-    @rpc_method()
-    def add_scheduler_message_response(self, task_id, message_id, response):
-        if self._state.has_task(task_id):
-            task = self._state.get_task(task_id)
-            task.scheduler_message_responses[message_id] = response
-
-    @rpc_method()
-    def get_scheduler_message_response(self, task_id, message_id):
-        response = None
-        if self._state.has_task(task_id):
-            task = self._state.get_task(task_id)
-            response = task.scheduler_message_responses.pop(message_id, None)
-        return {"response": response}
-
-    @rpc_method()
-    def is_pause_enabled(self):
-        return {'enabled': self._config.pause_enabled}
-
-    @rpc_method()
     def is_paused(self):
         return {'paused': self._paused}
 
     @rpc_method()
     def pause(self):
-        if self._config.pause_enabled:
-            self._paused = True
+        self._paused = True
 
     @rpc_method()
     def unpause(self):
-        if self._config.pause_enabled:
-            self._paused = False
+        self._paused = False
 
     @rpc_method()
     def update_resources(self, **resources):
@@ -1314,8 +1275,6 @@ class Scheduler(object):
             ret['re_enable_able'] = task.scheduler_disable_time is not None
         if include_deps:
             ret['deps'] = list(task.deps if deps is None else deps)
-        if self._config.send_messages and task.status == RUNNING:
-            ret['accepts_messages'] = task.accepts_messages
         return ret
 
     @rpc_method()
