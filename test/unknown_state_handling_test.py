@@ -21,7 +21,6 @@ class FailInRequires(luigi.Task):
     def requires(self):
         print('failing')
         raise Exception
-        return [DummyRequires()]
 
     def run(self):
         print('running')
@@ -46,8 +45,14 @@ class FailInDepRun(luigi.Task):
 class UnknownStateTest(LuigiTestCase):
     def setUp(self):
         super(UnknownStateTest, self).setUp()
-        self.scheduler = luigi.scheduler.Scheduler(prune_on_get_work=False)
-        self.worker = luigi.worker.Worker(scheduler=self.scheduler)
+        self.scheduler = luigi.scheduler.Scheduler(
+            prune_on_get_work=False,
+            retry_count=1
+        )
+        self.worker = luigi.worker.Worker(
+            scheduler=self.scheduler, 
+            keep_alive=True
+        )
 
     def run_task(self, task):
         self.worker.add(task)  # schedule
