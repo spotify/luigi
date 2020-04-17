@@ -1047,9 +1047,19 @@ class Scheduler(object):
         for task in worker.get_tasks(self._state, PENDING, FAILED):
             if self._upstream_status(task.id, upstream_status_table) == UPSTREAM_DISABLED:
                 continue
-            num_pending += 1
-            num_unique_pending += int(len(task.workers) == 1)
-            num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
+            has_failed_dependency = False
+            for dep in task.deps:
+                dep_task = self._state.get_task(dep, default=None)
+                if dep_task.status == UNKNOWN:
+                    # consider this task as not pending since these dependencies have broken
+                    # requires. this means that they won't ever be retried and can't succeed at all
+                    has_failed_dependency = True
+                    break
+
+            if not has_failed_dependency:
+                num_pending += 1
+                num_unique_pending += int(len(task.workers) == 1)
+                num_pending_last_scheduled += int(task.workers.peek(last=True) == worker_id)
 
         return {
             'n_pending_tasks': num_pending,
