@@ -214,6 +214,7 @@
                         <th>Name</th>
                         <th>Priority</th>
                         <th>Resources</th>
+                        <th>Progress</th>
                         <th>Time</th>
                         <th>Actions</th>
                       </thead>
@@ -223,8 +224,17 @@
                         <td>{{displayName}}</td>
                         <td>{{priority}}</td>
                         <td>{{resources}}</td>
+                        <td>
+                          {{#progressPercentage}}
+                          <div class="progress">
+                            <div class="progress-bar taskProgressBar" role="progressbar" data-task-id="{{taskId}}" style="width: {{progressPercentage}}%" aria-valuenow="{{progressPercentage}}" aria-valuemin="0" aria-valuemax="100">{{progressPercentage}}%</div>
+                          </div>
+                          {{/progressPercentage}}
+                          {{^progressPercentage}}-{{/progressPercentage}}
+                        </td>
                         <td>{{displayTime}}</td>
-                        <td><a href="#tab=graph&taskId={{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
+                        <td>
+                          <a href="#tab=graph&taskId={{encodedTaskId}}" class="btn btn-info btn-xs" title="View graph" data-toggle="tooltip" data-action="drawGraph"><i class="fa fa-sitemap"/></a>
                           {{#trackingUrl}}<a target="_blank" href="{{trackingUrl}}" class="btn btn-primary btn-xs" title="Track Progress" data-toggle="tooltip"><i class="fa fa-eye"></i></a>{{/trackingUrl}}
                           {{#statusMessage}}<button class="btn btn-primary btn-xs statusMessage" title="Status message" data-toggle="tooltip" data-task-id="{{taskId}}" data-display-name="{{displayName}}"><i class="fa fa-comment"></i></button>{{/statusMessage}}
                           {{^statusMessage}}
