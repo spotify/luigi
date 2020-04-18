@@ -344,10 +344,10 @@ function visualiserApp(luigi) {
                         }
                     });
                     luigi.getTaskProgressPercentage(data.taskId, function(data) {
-                        // show or hide the progress bar container in the message model
+                        // show or hide the progress bar container in the message modal
                         $("#statusMessageModal .progress").toggle(data.progressPercentage !== null);
 
-                        // adjust the status of both progress bars (message model and worker list)
+                        // adjust the status of both progress bars (message modal and worker list)
                         var value = data.progressPercentage || 0;
                         var progressBars = $('#statusMessageModal .progress-bar, ' +
                             '.worker-table tbody .taskProgressBar[data-task-id="' + data.taskId + '"]');
