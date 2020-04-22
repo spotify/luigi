@@ -158,7 +158,8 @@ class PostgresTarget(luigi.Target):
             with connection.cursor() as cursor:
                 cursor.execute(
                     """INSERT INTO {marker_table} (update_id, target_table)
-                        VALUES (%s, %s)""".format(marker_table=self.marker_table),
+                            VALUES (%s, %s)
+                        """.format(marker_table=self.marker_table),
                     (self.update_id, self.table))
         else:
             with connection.cursor() as cursor:
