@@ -235,7 +235,8 @@ class FileSystemTarget(Target):
 
         :param str mode: the mode `r` opens the FileSystemTarget in read-only mode, whereas `w` will
                          open the FileSystemTarget in write mode. Subclasses can implement
-                         additional options.
+                         additional options. Using `b` is not supported; initialize with
+                         `format=Nop` instead.
         """
         pass
 

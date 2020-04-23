@@ -127,6 +127,31 @@ An example:
                                 )
                             )
 
+It's useful to note that if you're writing to a binary file, Luigi automatically
+strips the ``'b'`` flag due to how atomic writes/reads work. In order to write a binary
+file, such as a pickle file, you should instead use ``format=Nop`` when calling
+LocalTarget. Following the above example:
+
+.. code:: python
+
+    class GenerateWords(luigi.Task):
+
+        def output(self):
+            return luigi.LocalTarget('words.pckl', format=Nop)
+
+        def run(self):
+            import pickle
+
+            # write a dummy list of words to output file
+            words = [
+                    'apple',
+                    'banana',
+                    'grapefruit'
+                    ]
+
+            with self.output().open('w') as f:
+                pickle.dump(words, f)
+
 .. _Task.input:
 
 Task.input
