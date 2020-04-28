@@ -33,7 +33,6 @@ class MockPostgresCursor:
     should_raise = False
 
     def __init__(self, existing_update_ids):
-        super(MockPostgresCursor, self).__init__()
         self.existing = existing_update_ids
 
     def __enter__(self):
