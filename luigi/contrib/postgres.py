@@ -211,27 +211,30 @@ class PostgresTarget(luigi.Target):
         Using a separate connection since the transaction might have to be reset.
         """
         with self.connect() as connection:
-            with connection.cursor() as cursor:
-                if self.use_db_timestamps:
-                    sql = """ CREATE TABLE {marker_table} (
-                            update_id TEXT PRIMARY KEY,
-                            target_table TEXT,
-                            inserted TIMESTAMP DEFAULT NOW())
-                        """.format(marker_table=self.marker_table)
-                else:
-                    sql = """ CREATE TABLE {marker_table} (
-                            update_id TEXT PRIMARY KEY,
-                            target_table TEXT,
-                            inserted TIMESTAMP);
-                        """.format(marker_table=self.marker_table)
-
-                try:
-                    cursor.execute(sql)
-                except psycopg2.ProgrammingError as e:
-                    if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
-                        pass
+            try:
+                with connection.cursor() as cursor:
+                    if self.use_db_timestamps:
+                        sql = """ CREATE TABLE {marker_table} (
+                                update_id TEXT PRIMARY KEY,
+                                target_table TEXT,
+                                inserted TIMESTAMP DEFAULT NOW())
+                            """.format(marker_table=self.marker_table)
                     else:
-                        raise
+                        sql = """ CREATE TABLE {marker_table} (
+                                update_id TEXT PRIMARY KEY,
+                                target_table TEXT,
+                                inserted TIMESTAMP);
+                            """.format(marker_table=self.marker_table)
+
+                    try:
+                        cursor.execute(sql)
+                    except psycopg2.ProgrammingError as e:
+                        if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+                            pass
+                        else:
+                            raise
+            finally:
+                connection.close()
 
     def open(self, mode):
         raise NotImplementedError("Cannot open() PostgresTarget")
