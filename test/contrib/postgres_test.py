@@ -30,18 +30,23 @@ class MockPostgresCursor(mock.Mock):
     """
     Keeps state to simulate executing SELECT queries and fetching results.
     """
+    should_raise = False
+
     def __init__(self, existing_update_ids):
         super(MockPostgresCursor, self).__init__()
         self.existing = existing_update_ids
     
     def __enter__(self):
         self.is_active = True
+        self.was_activated = True
         return self
 
     def __exit__(self, *args):
         self.is_active = False
 
     def execute(self, query, params):
+        if self.should_raise:
+            raise Exception("This is a mock exception from %s" % self)
         if query.startswith('SELECT 1 FROM table_updates'):
             self.fetchone_result = (1, ) if params[0] in self.existing else None
         else:
@@ -136,6 +141,31 @@ class PostgresQueryTest(unittest.TestCase):
             'DummyPostgresQuery_2015_01_06_f91a47ec40',
         ])
         self.assertFalse(task.complete())
+
+    @mock.patch('psycopg2.connect')
+    def test_cursor_is_closed(self, mock_connect):
+        mock_cursor = MockPostgresCursor([
+            'DummyPostgresQuery_2015_01_03_838e32a989'
+        ])
+        mock_connect.return_value.cursor.return_value = mock_cursor
+        task = DummyPostgresQuery()
+        task.run()
+        self.assertTrue(task.complete())
+        self.assertTrue(mock_cursor.was_activated)
+        self.assertFalse(mock_cursor.is_active)
+
+    @mock.patch('psycopg2.connect')
+    def test_cursor_is_closed_after_error(self, mock_connect):
+        mock_cursor = MockPostgresCursor([
+            'DummyPostgresQuery_2015_01_03_838e32a989'
+        ])
+        mock_cursor.should_raise = True
+        mock_connect.return_value.cursor.return_value = mock_cursor
+        task = DummyPostgresQuery()
+        task.run()
+        self.assertFalse(task.complete())
+        self.assertTrue(mock_cursor.was_activated)
+        self.assertFalse(mock_cursor.is_active)
 
     def test_override_port(self):
         output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
