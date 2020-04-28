@@ -167,8 +167,9 @@ class PostgresTarget(luigi.Target):
                         """.format(marker_table=self.marker_table),
                         (self.update_id, self.table, datetime.datetime.now()))
         finally:
-            if connection_to_close:
-                connection_to_close.close()
+            #if connection_to_close:
+            #    connection_to_close.close()
+            pass  # Testing
 
     def exists(self, connection=None):
         if connection is None:
@@ -177,7 +178,8 @@ class PostgresTarget(luigi.Target):
                     connection.autocommit = True  # TODO: Do we really need this?
                     return self.exists(connection)
                 finally:
-                    connection.close()
+                    #connection.close()
+                    pass  # Testing
 
         with connection.cursor() as cursor:
             try:
