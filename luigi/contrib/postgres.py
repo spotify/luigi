@@ -144,31 +144,31 @@ class PostgresTarget(luigi.Target):
         and the connection reset.
         Then the marker table will be created.
         """
-        if connection is None:
-            # TODO: test this
-            with self.connect() as connection:
-                try:
-                    connection.autocommit = True  # if connection created here, we commit it here  # TODO: Do we really need this?
-                    return self.touch(connection)
-                finally:
-                    connection.close()
-
         self.create_marker_table()
 
-        if self.use_db_timestamps:
+        if connection is None:
+            # TODO: test this
+            connection = self.connect()
+            connection_to_close = connection
+            connection.autocommit = True  # if connection created here, we commit it here  # TODO: Do we really need this?
+
+        try:
             with connection.cursor() as cursor:
-                cursor.execute(
-                    """INSERT INTO {marker_table} (update_id, target_table)
-                       VALUES (%s, %s)
-                    """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table))
-        else:
-            with connection.cursor() as cursor:
-                cursor.execute(
-                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                       VALUES (%s, %s, %s);
-                    """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table, datetime.datetime.now()))
+                if self.use_db_timestamps:
+                    cursor.execute(
+                        """INSERT INTO {marker_table} (update_id, target_table)
+                        VALUES (%s, %s)
+                        """.format(marker_table=self.marker_table),
+                        (self.update_id, self.table))
+                else:
+                    cursor.execute(
+                        """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                        VALUES (%s, %s, %s);
+                        """.format(marker_table=self.marker_table),
+                        (self.update_id, self.table, datetime.datetime.now()))
+        finally:
+            if connection_to_close:
+                connection_to_close.close()
 
     def exists(self, connection=None):
         if connection is None:
