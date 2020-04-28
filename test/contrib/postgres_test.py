@@ -33,6 +33,13 @@ class MockPostgresCursor(mock.Mock):
     def __init__(self, existing_update_ids):
         super(MockPostgresCursor, self).__init__()
         self.existing = existing_update_ids
+    
+    def __enter__(self):
+        self.is_active = True
+        return self
+
+    def __exit__(self, *args):
+        self.is_active = False
 
     def execute(self, query, params):
         if query.startswith('SELECT 1 FROM table_updates'):
