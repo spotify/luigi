@@ -94,14 +94,21 @@ class DailyCopyToTableTest(unittest.TestCase):
         ]))
         self.assertFalse(task.complete())
 
+    @patch.object(DummyPostgresImporter, 'input')
     @mock.patch('psycopg2.connect')
-    def test_cursor_is_closed(self, mock_connect):
+    def test_cursor_is_closed(self, mock_connect, mock_input):
         mock_cursor = MockPostgresCursor([
             'DummyPostgresQuery_2015_01_03_838e32a989'
         ])
         mock_connect.return_value.cursor.return_value = mock_cursor
+        input_target = luigi.mock.MockTarget(str(self.task_id))
+        mock_input.return_value = input_target
+        with input_target.open('w') as input_data:
+            input_data.write('foo;42')
+
         task = DummyPostgresImporter(date=datetime.datetime(2020, 4, 28))
         task.run()
+
         self.assertTrue(task.complete())
         self.assertTrue(mock_cursor.was_activated)
         self.assertFalse(mock_cursor.is_active)
