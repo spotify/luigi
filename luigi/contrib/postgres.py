@@ -149,37 +149,28 @@ class PostgresTarget(luigi.Target):
         if connection is None:
             # TODO: test this
             connection = self.connect()
-            connection_to_close = connection
             connection.autocommit = True  # if connection created here, we commit it here  # TODO: Do we really need this?
+            # TODO: Close it again
 
-        try:
-            with connection.cursor() as cursor:
-                if self.use_db_timestamps:
-                    cursor.execute(
-                        """INSERT INTO {marker_table} (update_id, target_table)
-                        VALUES (%s, %s)
-                        """.format(marker_table=self.marker_table),
-                        (self.update_id, self.table))
-                else:
-                    cursor.execute(
-                        """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                        VALUES (%s, %s, %s);
-                        """.format(marker_table=self.marker_table),
-                        (self.update_id, self.table, datetime.datetime.now()))
-        finally:
-            #if connection_to_close:
-            #    connection_to_close.close()
-            pass  # Testing
+        with connection.cursor() as cursor:
+            if self.use_db_timestamps:
+                cursor.execute(
+                    """INSERT INTO {marker_table} (update_id, target_table)
+                    VALUES (%s, %s)
+                    """.format(marker_table=self.marker_table),
+                    (self.update_id, self.table))
+            else:
+                cursor.execute(
+                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                    VALUES (%s, %s, %s);
+                    """.format(marker_table=self.marker_table),
+                    (self.update_id, self.table, datetime.datetime.now()))
 
     def exists(self, connection=None):
         if connection is None:
-            with self.connect() as connection:
-                try:
-                    connection.autocommit = True  # TODO: Do we really need this?
-                    return self.exists(connection)
-                finally:
-                    #connection.close()
-                    pass  # Testing
+            connection = self.connect()
+            connection.autocommit = True  # TODO: Do we really need this?
+            # TODO: Close it again
 
         with connection.cursor() as cursor:
             try:
