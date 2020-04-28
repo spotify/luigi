@@ -171,7 +171,7 @@ class PostgresTarget(luigi.Target):
             connection = self.connect()
             connection.autocommit = True
         cursor = connection.cursor()
-        import warnings; warnings.warn(f"DEBUG: {cursor} ({cursor.__class__}) [{dir(cursor.__class__)}]")
+        import warnings; warnings.warn("DEBUG: %s (%s) [%s]" % (cursor, cursor.__class__, dir(cursor)))
         try:
             cursor.execute("""SELECT 1 FROM {marker_table}
                 WHERE update_id = %s
