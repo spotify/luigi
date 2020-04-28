@@ -149,43 +149,39 @@ class PostgresTarget(luigi.Target):
         if connection is None:
             # TODO: test this
             connection = self.connect()
-            connection.autocommit = True  # if connection created here, we commit it here  # TODO: Do we really need this?
-            # TODO: Close it again
+            connection.autocommit = True  # if connection created here, we commit it here
 
-        with connection.cursor() as cursor:
-            if self.use_db_timestamps:
-                cursor.execute(
-                    """INSERT INTO {marker_table} (update_id, target_table)
-                    VALUES (%s, %s)
+        if self.use_db_timestamps:
+            connection.cursor().execute(
+                """INSERT INTO {marker_table} (update_id, target_table)
+                   VALUES (%s, %s)
+                """.format(marker_table=self.marker_table),
+                (self.update_id, self.table))
+        else:
+            connection.cursor().execute(
+                """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                         VALUES (%s, %s, %s);
                     """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table))
-            else:
-                cursor.execute(
-                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                    VALUES (%s, %s, %s);
-                    """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table, datetime.datetime.now()))
+                (self.update_id, self.table,
+                 datetime.datetime.now()))
 
     def exists(self, connection=None):
         if connection is None:
             connection = self.connect()
-            connection.autocommit = True  # TODO: Do we really need this?
-            # TODO: Close it again
-
-        with connection.cursor() as cursor:
-            try:
-                cursor.execute(
-                    """SELECT 1 FROM {marker_table}
-                       WHERE update_id = %s
-                       LIMIT 1
-                    """.format(marker_table=self.marker_table),
-                    (self.update_id,))
-                row = cursor.fetchone()
-            except psycopg2.ProgrammingError as e:
-                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
-                    row = None
-                else:
-                    raise
+            connection.autocommit = True
+        cursor = connection.cursor()
+        try:
+            cursor.execute("""SELECT 1 FROM {marker_table}
+                WHERE update_id = %s
+                LIMIT 1""".format(marker_table=self.marker_table),
+                           (self.update_id,)
+                           )
+            row = cursor.fetchone()
+        except psycopg2.ProgrammingError as e:
+            if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
+                row = None
+            else:
+                raise
         return row is not None
 
     def connect(self):
@@ -207,26 +203,30 @@ class PostgresTarget(luigi.Target):
 
         Using a separate connection since the transaction might have to be reset.
         """
-        sql = """CREATE TABLE {marker_table} (
-            update_id TEXT PRIMARY KEY,
-            target_table TEXT,
-            inserted TIMESTAMP {default_value}
-        )""".format(
-            marker_table=self.marker_table,
-            default_value='DEFAULT NOW()' if self.use_db_timestamps else '')
-        with self.connect() as connection:
-            connection.autocommit = True  # TODO: Do we really need this?
-            try:
-                with connection.cursor() as cursor:
-                    try:
-                        cursor.execute(sql)
-                    except psycopg2.ProgrammingError as e:
-                        if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
-                            pass
-                        else:
-                            raise
-            finally:
-                connection.close()
+        connection = self.connect()
+        connection.autocommit = True
+        cursor = connection.cursor()
+        if self.use_db_timestamps:
+            sql = """ CREATE TABLE {marker_table} (
+                      update_id TEXT PRIMARY KEY,
+                      target_table TEXT,
+                      inserted TIMESTAMP DEFAULT NOW())
+                  """.format(marker_table=self.marker_table)
+        else:
+            sql = """ CREATE TABLE {marker_table} (
+                      update_id TEXT PRIMARY KEY,
+                      target_table TEXT,
+                      inserted TIMESTAMP);
+                  """.format(marker_table=self.marker_table)
+
+        try:
+            cursor.execute(sql)
+        except psycopg2.ProgrammingError as e:
+            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+                pass
+            else:
+                raise
+        connection.close()
 
     def open(self, mode):
         raise NotImplementedError("Cannot open() PostgresTarget")
@@ -301,51 +301,52 @@ class CopyToTable(rdbms.CopyToTable):
         if not (self.table and self.columns):
             raise Exception("table and columns need to be specified")
 
-        with self.output().connect() as connection:
+        connection = self.output().connect()
+        # transform all data generated by rows() using map_column and write data
+        # to a temporary file for import using postgres COPY
+        tmp_dir = luigi.configuration.get_config().get('postgres', 'local-tmp-dir', None)
+        tmp_file = tempfile.TemporaryFile(dir=tmp_dir)
+        n = 0
+        for row in self.rows():
+            n += 1
+            if n % 100000 == 0:
+                logger.info("Wrote %d lines", n)
+            rowstr = self.column_separator.join(self.map_column(val) for val in row)
+            rowstr += "\n"
+            tmp_file.write(rowstr.encode('utf-8'))
+
+        logger.info("Done writing, importing at %s", datetime.datetime.now())
+        tmp_file.seek(0)
+
+        # attempt to copy the data into postgres
+        # if it fails because the target table doesn't exist
+        # try to create it by running self.create_table
+        for attempt in range(2):
             try:
-                # transform all data generated by rows() using map_column and write data
-                # to a temporary file for import using postgres COPY
-                tmp_dir = luigi.configuration.get_config().get('postgres', 'local-tmp-dir', None)
-                tmp_file = tempfile.TemporaryFile(dir=tmp_dir)
-                n = 0
-                for row in self.rows():
-                    n += 1
-                    if n % 100000 == 0:
-                        logger.info("Wrote %d lines", n)
-                    rowstr = self.column_separator.join(self.map_column(val) for val in row)
-                    rowstr += "\n"
-                    tmp_file.write(rowstr.encode('utf-8'))
+                cursor = connection.cursor()
+                self.init_copy(connection)
+                self.copy(cursor, tmp_file)
+                self.post_copy(connection)
+                if self.enable_metadata_columns:
+                    self.post_copy_metacolumns(cursor)
+            except psycopg2.ProgrammingError as e:
+                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
+                    # if first attempt fails with "relation not found", try creating table
+                    logger.info("Creating table %s", self.table)
+                    connection.reset()
+                    self.create_table(connection)
+                else:
+                    raise
+            else:
+                break
 
-                logger.info("Done writing, importing at %s", datetime.datetime.now())
-                tmp_file.seek(0)
+        # mark as complete in same transaction
+        self.output().touch(connection)
 
-                # attempt to copy the data into postgres
-                # if it fails because the target table doesn't exist
-                # try to create it by running self.create_table
-                for attempt in range(2):
-                    try:
-                        with connection.cursor() as cursor:
-                            self.init_copy(connection)
-                            self.copy(cursor, tmp_file)
-                            self.post_copy(connection)
-                            if self.enable_metadata_columns:
-                                self.post_copy_metacolumns(cursor)
-                    except psycopg2.ProgrammingError as e:
-                        if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
-                            # if first attempt fails with "relation not found", try creating table
-                            logger.info("Creating table %s", self.table)
-                            connection.reset()
-                            self.create_table(connection)
-                        else:
-                            raise
-                    else:
-                        break
-
-                # mark as complete in same transaction
-                self.output().touch(connection)
-            finally:
-                connection.close()
-                tmp_file.close()
+        # commit and clean up
+        connection.commit()
+        connection.close()
+        tmp_file.close()
 
 
 class PostgresQuery(rdbms.Query):
@@ -363,19 +364,20 @@ class PostgresQuery(rdbms.Query):
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
     def run(self):
-        try:
-            connection = self.output().connect()
-            connection.autocommit = self.autocommit
-            with connection.cursor() as cursor:
-                sql = self.query
+        connection = self.output().connect()
+        connection.autocommit = self.autocommit
+        cursor = connection.cursor()
+        sql = self.query
 
-                logger.info('Executing query from task: {name}'.format(name=self.__class__))
-                cursor.execute(sql)
+        logger.info('Executing query from task: {name}'.format(name=self.__class__))
+        cursor.execute(sql)
 
-                # Update marker table
-                self.output().touch(connection)
-        finally:
-            connection.close()
+        # Update marker table
+        self.output().touch(connection)
+
+        # commit and close connection
+        connection.commit()
+        connection.close()
 
     def output(self):
         """
