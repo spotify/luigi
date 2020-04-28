@@ -26,7 +26,7 @@ def datetime_to_epoch(dt):
     return td.days * 86400 + td.seconds + td.microseconds / 1E6
 
 
-class MockPostgresCursor(mock.Mock):
+class MockPostgresCursor(Object):
     """
     Keeps state to simulate executing SELECT queries and fetching results.
     """
