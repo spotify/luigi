@@ -170,20 +170,20 @@ class PostgresTarget(luigi.Target):
         if connection is None:
             connection = self.connect()
             connection.autocommit = True
-        cursor = connection.cursor()
-        try:
-            cursor.execute("""SELECT 1 FROM {marker_table}
-                WHERE update_id = %s
-                LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,)
-                           )
-            row = cursor.fetchone()
-        except psycopg2.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
-                row = None
-            else:
-                raise
-        return row is not None
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute("""SELECT 1 FROM {marker_table}
+                    WHERE update_id = %s
+                    LIMIT 1""".format(marker_table=self.marker_table),
+                            (self.update_id,)
+                            )
+                row = cursor.fetchone()
+            except psycopg2.ProgrammingError as e:
+                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
+                    row = None
+                else:
+                    raise
+            return row is not None
 
     def connect(self):
         """
@@ -206,7 +206,6 @@ class PostgresTarget(luigi.Target):
         """
         connection = self.connect()
         connection.autocommit = True
-        cursor = connection.cursor()
         if self.use_db_timestamps:
             sql = """ CREATE TABLE {marker_table} (
                       update_id TEXT PRIMARY KEY,
@@ -220,13 +219,14 @@ class PostgresTarget(luigi.Target):
                       inserted TIMESTAMP);
                   """.format(marker_table=self.marker_table)
 
-        try:
-            cursor.execute(sql)
-        except psycopg2.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
-                pass
-            else:
-                raise
+        with connection.cursor() as cursor:
+            try:
+                cursor.execute(sql)
+            except psycopg2.ProgrammingError as e:
+                if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+                    pass
+                else:
+                    raise
         connection.close()
 
     def open(self, mode):
@@ -324,12 +324,12 @@ class CopyToTable(rdbms.CopyToTable):
         # try to create it by running self.create_table
         for attempt in range(2):
             try:
-                cursor = connection.cursor()
-                self.init_copy(connection)
-                self.copy(cursor, tmp_file)
-                self.post_copy(connection)
-                if self.enable_metadata_columns:
-                    self.post_copy_metacolumns(cursor)
+                with connection.cursor() as cursor:
+                    self.init_copy(connection)
+                    self.copy(cursor, tmp_file)
+                    self.post_copy(connection)
+                    if self.enable_metadata_columns:
+                        self.post_copy_metacolumns(cursor)
             except psycopg2.ProgrammingError as e:
                 if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
