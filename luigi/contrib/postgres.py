@@ -158,15 +158,15 @@ class PostgresTarget(luigi.Target):
             with connection.cursor() as cursor:
                 cursor.execute(
                     """INSERT INTO {marker_table} (update_id, target_table)
-                            VALUES (%s, %s)
-                        """.format(marker_table=self.marker_table),
+                       VALUES (%s, %s)
+                    """.format(marker_table=self.marker_table),
                     (self.update_id, self.table))
         else:
             with connection.cursor() as cursor:
                 cursor.execute(
                     """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                            VALUES (%s, %s, %s);
-                        """.format(marker_table=self.marker_table),
+                       VALUES (%s, %s, %s);
+                    """.format(marker_table=self.marker_table),
                     (self.update_id, self.table, datetime.datetime.now()))
 
     def exists(self, connection=None):
@@ -181,8 +181,8 @@ class PostgresTarget(luigi.Target):
             try:
                 cursor.execute(
                     """SELECT 1 FROM {marker_table}
-                        WHERE update_id = %s
-                        LIMIT 1
+                       WHERE update_id = %s
+                       LIMIT 1
                     """.format(marker_table=self.marker_table),
                     (self.update_id,))
                 row = cursor.fetchone()
@@ -216,16 +216,16 @@ class PostgresTarget(luigi.Target):
             try:
                 with connection.cursor() as cursor:
                     if self.use_db_timestamps:
-                        sql = """ CREATE TABLE {marker_table} (
-                                update_id TEXT PRIMARY KEY,
-                                target_table TEXT,
-                                inserted TIMESTAMP DEFAULT NOW())
+                        sql = """CREATE TABLE {marker_table} (
+                                     update_id TEXT PRIMARY KEY,
+                                     target_table TEXT,
+                                     inserted TIMESTAMP DEFAULT NOW())
                             """.format(marker_table=self.marker_table)
                     else:
-                        sql = """ CREATE TABLE {marker_table} (
-                                update_id TEXT PRIMARY KEY,
-                                target_table TEXT,
-                                inserted TIMESTAMP);
+                        sql = """CREATE TABLE {marker_table} (
+                                     update_id TEXT PRIMARY KEY,
+                                     target_table TEXT,
+                                     inserted TIMESTAMP);
                             """.format(marker_table=self.marker_table)
 
                     try:
