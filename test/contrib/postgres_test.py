@@ -101,7 +101,7 @@ class DailyCopyToTableTest(unittest.TestCase):
             'DummyPostgresQuery_2015_01_03_838e32a989'
         ])
         mock_connect.return_value.cursor.return_value = mock_cursor
-        input_target = luigi.mock.MockTarget(str(self.task_id))
+        input_target = luigi.mock.MockTarget(str(hash(self)))
         mock_input.return_value = input_target
         with input_target.open('w') as input_data:
             input_data.write('foo;42')
