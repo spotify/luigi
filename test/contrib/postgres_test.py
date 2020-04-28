@@ -35,7 +35,7 @@ class MockPostgresCursor(mock.Mock):
     def __init__(self, existing_update_ids):
         super(MockPostgresCursor, self).__init__()
         self.existing = existing_update_ids
-    
+
     def __enter__(self):
         self.is_active = True
         self.was_activated = True
@@ -94,7 +94,7 @@ class DailyCopyToTableTest(unittest.TestCase):
         ]))
         self.assertFalse(task.complete())
 
-    @patch.object(DummyPostgresImporter, 'input')
+    @mock.patch.object(DummyPostgresImporter, 'input')
     @mock.patch('psycopg2.connect')
     def test_cursor_is_closed(self, mock_connect, mock_input):
         mock_cursor = MockPostgresCursor([
