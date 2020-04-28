@@ -148,6 +148,7 @@ class PostgresTarget(luigi.Target):
             # TODO: test this
             with self.connect() as connection:
                 try:
+                    connection.autocommit = True  # if connection created here, we commit it here  # TODO: Do we really need this?
                     return self.touch(connection)
                 finally:
                     connection.close()
@@ -173,6 +174,7 @@ class PostgresTarget(luigi.Target):
         if connection is None:
             with self.connect() as connection:
                 try:
+                    connection.autocommit = True  # TODO: Do we really need this?
                     return self.exists(connection)
                 finally:
                     connection.close()
@@ -220,6 +222,7 @@ class PostgresTarget(luigi.Target):
             marker_table=self.marker_table,
             default_value='DEFAULT NOW()' if self.use_db_timestamps else '')
         with self.connect() as connection:
+            connection.autocommit = True  # TODO: Do we really need this?
             try:
                 with connection.cursor() as cursor:
                     try:
