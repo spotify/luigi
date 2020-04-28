@@ -148,7 +148,7 @@ class PostgresTarget(luigi.Target):
             # TODO: test this
             with self.connect() as connection:
                 try:
-                    self.touch(connection)
+                    return self.touch(connection)
                 finally:
                     connection.close()
 
@@ -212,22 +212,16 @@ class PostgresTarget(luigi.Target):
 
         Using a separate connection since the transaction might have to be reset.
         """
+        sql = """CREATE TABLE {marker_table} (
+            update_id TEXT PRIMARY KEY,
+            target_table TEXT,
+            inserted TIMESTAMP {default_value}
+        )""".format(
+            marker_table=self.marker_table,
+            default_value='DEFAULT NOW()' if self.use_db_timestamps else '')
         with self.connect() as connection:
             try:
                 with connection.cursor() as cursor:
-                    if self.use_db_timestamps:
-                        sql = """CREATE TABLE {marker_table} (
-                                     update_id TEXT PRIMARY KEY,
-                                     target_table TEXT,
-                                     inserted TIMESTAMP DEFAULT NOW())
-                            """.format(marker_table=self.marker_table)
-                    else:
-                        sql = """CREATE TABLE {marker_table} (
-                                     update_id TEXT PRIMARY KEY,
-                                     target_table TEXT,
-                                     inserted TIMESTAMP);
-                            """.format(marker_table=self.marker_table)
-
                     try:
                         cursor.execute(sql)
                     except psycopg2.ProgrammingError as e:
