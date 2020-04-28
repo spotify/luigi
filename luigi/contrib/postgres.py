@@ -171,7 +171,6 @@ class PostgresTarget(luigi.Target):
             connection = self.connect()
             connection.autocommit = True
         cursor = connection.cursor()
-        import warnings; warnings.warn("DEBUG: %s (%s) [%s]" % (cursor, cursor.__class__, dir(cursor)))
         try:
             with cursor:
                 cursor.execute("""SELECT 1 FROM {marker_table}
@@ -369,11 +368,11 @@ class PostgresQuery(rdbms.Query):
     def run(self):
         connection = self.output().connect()
         connection.autocommit = self.autocommit
-        cursor = connection.cursor()
-        sql = self.query
-
-        logger.info('Executing query from task: {name}'.format(name=self.__class__))
-        cursor.execute(sql)
+        
+        with connection.cursor() as cursor:
+            sql = self.query
+            logger.info('Executing query from task: {name}'.format(name=self.__class__))
+            cursor.execute(sql)
 
         # Update marker table
         self.output().touch(connection)
