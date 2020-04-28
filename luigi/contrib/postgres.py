@@ -170,20 +170,21 @@ class PostgresTarget(luigi.Target):
         if connection is None:
             connection = self.connect()
             connection.autocommit = True
-        with connection.cursor() as cursor:
-            try:
-                cursor.execute("""SELECT 1 FROM {marker_table}
-                    WHERE update_id = %s
-                    LIMIT 1""".format(marker_table=self.marker_table),
-                            (self.update_id,)
-                            )
-                row = cursor.fetchone()
-            except psycopg2.ProgrammingError as e:
-                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
-                    row = None
-                else:
-                    raise
-            return row is not None
+        cursor = connection.cursor()
+        print("%s (%s)", cursor, cursor.__class__)
+        try:
+            cursor.execute("""SELECT 1 FROM {marker_table}
+                WHERE update_id = %s
+                LIMIT 1""".format(marker_table=self.marker_table),
+                        (self.update_id,)
+                        )
+            row = cursor.fetchone()
+        except psycopg2.ProgrammingError as e:
+            if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
+                row = None
+            else:
+                raise
+        return row is not None
 
     def connect(self):
         """
