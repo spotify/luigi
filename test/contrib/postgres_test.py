@@ -117,7 +117,6 @@ class DailyCopyToTableTest(unittest.TestCase):
         task = DummyPostgresImporter(date=datetime.datetime(2020, 4, 28))
         task.run()
 
-        self.assertTrue(task.complete())
         self.assertTrue(mock_cursor.was_activated)
         self.assertFalse(mock_cursor.is_active)
 
@@ -195,9 +194,10 @@ class PostgresQueryTest(unittest.TestCase):
             'DummyPostgresQuery_2015_01_03_838e32a989'
         ])
         mock_connect.return_value.cursor.return_value = mock_cursor
+
         task = DummyPostgresQuery(date=datetime.datetime(2020, 4, 28))
         task.run()
-        self.assertTrue(task.complete())
+
         self.assertTrue(mock_cursor.was_activated)
         self.assertFalse(mock_cursor.is_active)
 
