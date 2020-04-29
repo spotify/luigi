@@ -62,7 +62,8 @@ class MockPostgresCursor(mock.Mock):
             self.fetchone_result = (1, ) if params and params[0] in self.existing else None
         else:
             self.fetchone_result = None
-        self.activations -= 1
+        if self.activations:
+            self.activations -= 1
 
     def fetchone(self):
         return self.fetchone_result
