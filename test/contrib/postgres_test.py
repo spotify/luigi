@@ -26,6 +26,10 @@ def datetime_to_epoch(dt):
     return td.days * 86400 + td.seconds + td.microseconds / 1E6
 
 
+class MockException(Exception):
+    pass
+
+
 class MockPostgresCursor(mock.Mock):
     """
     Keeps state to simulate executing SELECT queries and fetching results.
@@ -49,7 +53,7 @@ class MockPostgresCursor(mock.Mock):
 
     def execute(self, query, params = None):
         if self.should_raise:
-            raise Exception("This is a mock exception from %s" % self)
+            raise MockException("This is a mock exception from %s" % self)
         if query.startswith('SELECT 1 FROM table_updates'):
             self.fetchone_result = (1, ) if params and params[0] in self.existing else None
         else:
@@ -130,7 +134,7 @@ class DailyCopyToTableTest(unittest.TestCase):
             input_data.write('foo;42')
 
         task = DummyPostgresImporter(date=datetime.datetime(2020, 4, 28))
-        task.run()
+        self.assertRaises(MockException, task.run)
 
         self.assertFalse(task.complete())
         self.assertTrue(mock_cursor.was_activated)
@@ -203,8 +207,10 @@ class PostgresQueryTest(unittest.TestCase):
         ])
         mock_cursor.should_raise = True
         mock_connect.return_value.cursor.return_value = mock_cursor
+
         task = DummyPostgresQuery(date=datetime.datetime(2020, 4, 28))
-        task.run()
+        self.assertRaises(MockException, task.run)
+
         self.assertFalse(task.complete())
         self.assertTrue(mock_cursor.was_activated)
         self.assertFalse(mock_cursor.is_active)
