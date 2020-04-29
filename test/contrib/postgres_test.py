@@ -53,7 +53,8 @@ class MockPostgresCursor(mock.Mock):
         self.activations -= 1
 
     def execute(self, query, params = None):
-        self.activations += 1
+        if not self.activations:
+            self.activations += 1
         if self.should_raise_once:
             self.should_raise_once = False
             raise MockException("This is a mock exception from %s" % self)
