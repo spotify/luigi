@@ -35,6 +35,7 @@ class MockPostgresCursor(mock.Mock):
     Keeps state to simulate executing SELECT queries and fetching results.
     """
     should_raise_once = False
+    activations = 0
 
     def __init__(self, existing_update_ids):
         super(mock.Mock, self).__init__()
@@ -44,15 +45,15 @@ class MockPostgresCursor(mock.Mock):
         return mock.Mock(**kw)
 
     def __enter__(self):
-        self.is_active = True
+        self.activations += 1
         self.was_activated = True
         return self
 
     def __exit__(self, *args):
-        self.is_active = False
+        self.activations -= 1
 
     def execute(self, query, params = None):
-        self.is_active = True
+        self.activations += 1
         if self.should_raise_once:
             self.should_raise_once = False
             raise MockException("This is a mock exception from %s" % self)
@@ -60,6 +61,7 @@ class MockPostgresCursor(mock.Mock):
             self.fetchone_result = (1, ) if params and params[0] in self.existing else None
         else:
             self.fetchone_result = None
+        self.activations -= 1
 
     def fetchone(self):
         return self.fetchone_result
@@ -119,7 +121,7 @@ class DailyCopyToTableTest(unittest.TestCase):
         task.run()
 
         self.assertTrue(mock_cursor.was_activated)
-        self.assertFalse(mock_cursor.is_active)
+        self.assertFalse(mock_cursor.activations)
 
     @mock.patch.object(DummyPostgresImporter, 'input')
     @mock.patch('psycopg2.connect')
@@ -139,7 +141,7 @@ class DailyCopyToTableTest(unittest.TestCase):
 
         self.assertFalse(task.complete())
         self.assertTrue(mock_cursor.was_activated)
-        self.assertFalse(mock_cursor.is_active)
+        self.assertFalse(mock_cursor.activations)
 
 
 class DummyPostgresQuery(luigi.contrib.postgres.PostgresQuery):
@@ -200,7 +202,7 @@ class PostgresQueryTest(unittest.TestCase):
         task.run()
 
         self.assertTrue(mock_cursor.was_activated)
-        self.assertFalse(mock_cursor.is_active)
+        self.assertFalse(mock_cursor.activations)
 
     @mock.patch('psycopg2.connect')
     def test_cursor_is_closed_after_error(self, mock_connect):
@@ -215,7 +217,7 @@ class PostgresQueryTest(unittest.TestCase):
 
         self.assertFalse(task.complete())
         self.assertTrue(mock_cursor.was_activated)
-        self.assertFalse(mock_cursor.is_active)
+        self.assertFalse(mock_cursor.activations)
 
     def test_override_port(self):
         output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
