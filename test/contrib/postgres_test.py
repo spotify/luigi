@@ -26,18 +26,18 @@ def datetime_to_epoch(dt):
     return td.days * 86400 + td.seconds + td.microseconds / 1E6
 
 
-class MockPostgresCursor(Mock):
+class MockPostgresCursor(mock.Mock):
     """
     Keeps state to simulate executing SELECT queries and fetching results.
     """
     should_raise = False
 
     def __init__(self, existing_update_ids):
-        super(Mock, self).__init__()
+        super(mock.Mock, self).__init__()
         self.existing = existing_update_ids
 
     def _get_child_mock(self, **kw):
-        return Mock(**kw)
+        return mock.Mock(**kw)
 
     def __enter__(self):
         self.is_active = True
