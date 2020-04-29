@@ -47,11 +47,11 @@ class MockPostgresCursor(mock.Mock):
     def __exit__(self, *args):
         self.is_active = False
 
-    def execute(self, query, params):
+    def execute(self, query, params = None):
         if self.should_raise:
             raise Exception("This is a mock exception from %s" % self)
         if query.startswith('SELECT 1 FROM table_updates'):
-            self.fetchone_result = (1, ) if params[0] in self.existing else None
+            self.fetchone_result = (1, ) if params and params[0] in self.existing else None
         else:
             self.fetchone_result = None
 
