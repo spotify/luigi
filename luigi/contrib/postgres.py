@@ -151,20 +151,20 @@ class PostgresTarget(luigi.Target):
             connection = self.connect()
             connection.autocommit = True  # if connection created here, we commit it here
 
-        with connection.cursor() as cursor:
-            if self.use_db_timestamps:
-                cursor.execute(
-                    """INSERT INTO {marker_table} (update_id, target_table)
-                    VALUES (%s, %s)
+        #with connection.cursor() as cursor:  # disabled for testing the tests
+        if self.use_db_timestamps:
+            connection.cursor().execute(
+                """INSERT INTO {marker_table} (update_id, target_table)
+                VALUES (%s, %s)
+                """.format(marker_table=self.marker_table),
+                (self.update_id, self.table))
+        else:
+            connection.cursor().execute(
+                """INSERT INTO {marker_table} (update_id, target_table, inserted)
+                        VALUES (%s, %s, %s);
                     """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table))
-            else:
-                cursor.execute(
-                    """INSERT INTO {marker_table} (update_id, target_table, inserted)
-                            VALUES (%s, %s, %s);
-                        """.format(marker_table=self.marker_table),
-                    (self.update_id, self.table,
-                    datetime.datetime.now()))
+                (self.update_id, self.table,
+                datetime.datetime.now()))
 
     def exists(self, connection=None):
         if connection is None:
