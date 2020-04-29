@@ -34,7 +34,7 @@ class MockPostgresCursor(mock.Mock):
     """
     Keeps state to simulate executing SELECT queries and fetching results.
     """
-    should_raise = False
+    should_raise_once = False
 
     def __init__(self, existing_update_ids):
         super(mock.Mock, self).__init__()
@@ -52,7 +52,8 @@ class MockPostgresCursor(mock.Mock):
         self.is_active = False
 
     def execute(self, query, params = None):
-        if self.should_raise:
+        if self.should_raise_once:
+            self.should_raise_once = False
             raise MockException("This is a mock exception from %s" % self)
         if query.startswith('SELECT 1 FROM table_updates'):
             self.fetchone_result = (1, ) if params and params[0] in self.existing else None
@@ -126,7 +127,7 @@ class DailyCopyToTableTest(unittest.TestCase):
         mock_cursor = MockPostgresCursor([
             'DummyPostgresQuery_2015_01_03_838e32a989'
         ])
-        mock_cursor.should_raise = True
+        mock_cursor.should_raise_once = True
         mock_connect.return_value.cursor.return_value = mock_cursor
         input_target = luigi.mock.MockTarget(str(hash(self)))
         mock_input.return_value = input_target
@@ -205,7 +206,7 @@ class PostgresQueryTest(unittest.TestCase):
         mock_cursor = MockPostgresCursor([
             'DummyPostgresQuery_2015_01_03_838e32a989'
         ])
-        mock_cursor.should_raise = True
+        mock_cursor.should_raise_once = True
         mock_connect.return_value.cursor.return_value = mock_cursor
 
         task = DummyPostgresQuery(date=datetime.datetime(2020, 4, 28))
