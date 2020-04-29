@@ -55,6 +55,10 @@ class MockPostgresCursor(mock.Mock):
     def execute(self, query, params = None):
         if not self.activations:
             self.activations += 1
+            result = self.execute(query, params)
+            self.activations -= 1
+            return result
+
         if self.should_raise_once:
             self.should_raise_once = False
             raise MockException("This is a mock exception from %s" % self)
@@ -62,8 +66,6 @@ class MockPostgresCursor(mock.Mock):
             self.fetchone_result = (1, ) if params and params[0] in self.existing else None
         else:
             self.fetchone_result = None
-        if self.activations:
-            self.activations -= 1
 
     def fetchone(self):
         return self.fetchone_result
