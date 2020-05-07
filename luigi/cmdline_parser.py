@@ -60,6 +60,8 @@ class CmdlineParser(object):
         """
         Initialize cmd line args
         """
+        if '' not in sys.path:
+            sys.path.insert(0,'')
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
         self._attempt_load_module(known_args)
         # We have to parse again now. As the positionally first unrecognized
