@@ -134,7 +134,6 @@ or held presentations about Luigi:
 * `Foursquare <https://foursquare.com/>`_ `(presentation, 2013) <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`__
 * `Mortar Data (Datadog) <https://www.datadoghq.com/>`_ `(documentation / tutorial) <http://help.mortardata.com/technologies/luigi>`__
 * `Stripe <https://stripe.com/>`_ `(presentation, 2014) <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`__
-* `Asana <https://asana.com/>`_ `(blog, 2014) <https://eng.asana.com/2014/11/stable-accessible-data-infrastructure-startup/>`__
 * `Buffer <https://buffer.com/>`_ `(blog, 2014) <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`__
 * `SeatGeek <https://seatgeek.com/>`_ `(blog, 2015) <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`__
 * `Treasure Data <https://www.treasuredata.com/>`_ `(blog, 2015) <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`__
