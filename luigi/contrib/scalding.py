@@ -131,11 +131,11 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         job_name = os.path.splitext(os.path.basename(source))[0]
         package = None
         job_class = None
-        for l in open(source).readlines():
-            p = re.search(r'package\s+([^\s\(]+)', l)
+        for line in open(source).readlines():
+            p = re.search(r'package\s+([^\s\(]+)', line)
             if p:
                 package = p.groups()[0]
-            p = re.search(r'class\s+([^\s\(]+).*extends\s+.*Job', l)
+            p = re.search(r'class\s+([^\s\(]+).*extends\s+.*Job', line)
             if p:
                 job_class = p.groups()[0]
                 if job_class == job_name:
