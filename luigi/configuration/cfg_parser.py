@@ -182,6 +182,28 @@ class LuigiConfigParser(BaseParser, ConfigParser):
                 raise
             return default
 
+    def has_option(self, section, option):
+        """modified has_option
+        Check for the existence of a given option in a given section. If the
+        specified 'section' is None or an empty string, DEFAULT is assumed. If
+        the specified 'section' does not exist, returns False.
+        """
+
+        # Underscore-style is the recommended configuration style
+        option = option.replace('-', '_')
+        if ConfigParser.has_option(self, section, option):
+            return True
+
+        # Support dash-style option names (with deprecation warning).
+        option_alias = option.replace('_', '-')
+        if ConfigParser.has_option(self, section, option_alias):
+            warn = 'Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.'.format(
+                s=section, o=option_alias, u=option)
+            warnings.warn(warn, DeprecationWarning)
+            return True
+
+        return False
+
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
         return self._get_with_default(ConfigParser.get, section, option, default, **kwargs)
 

@@ -192,7 +192,7 @@ class FileSystem(object):
 
 class FileSystemTarget(Target):
     """
-    Base class for FileSystem Targets like :class:`~luigi.file.LocalTarget` and :class:`~luigi.contrib.hdfs.HdfsTarget`.
+    Base class for FileSystem Targets like :class:`~luigi.local_target.LocalTarget` and :class:`~luigi.contrib.hdfs.HdfsTarget`.
 
     A FileSystemTarget has an associated :py:class:`FileSystem` to which certain operations can be
     delegated. By default, :py:meth:`exists` and :py:meth:`remove` are delegated to the
@@ -213,7 +213,7 @@ class FileSystemTarget(Target):
         """
         Initializes a FileSystemTarget instance.
 
-        :param str path: the path associated with this FileSystemTarget.
+        :param path: the path associated with this FileSystemTarget.
         """
         # cast to str to allow path to be objects like pathlib.PosixPath and py._path.local.LocalPath
         self.path = str(path)
@@ -235,7 +235,8 @@ class FileSystemTarget(Target):
 
         :param str mode: the mode `r` opens the FileSystemTarget in read-only mode, whereas `w` will
                          open the FileSystemTarget in write mode. Subclasses can implement
-                         additional options.
+                         additional options. Using `b` is not supported; initialize with
+                         `format=Nop` instead.
         """
         pass
 
@@ -316,7 +317,7 @@ class AtomicLocalFile(io.BufferedWriter):
     moving it to its final destination.
 
     This class is just for the writing part of the Target. See
-    :class:`luigi.file.LocalTarget` for example
+    :class:`luigi.local_target.LocalTarget` for example
     """
 
     def __init__(self, path):

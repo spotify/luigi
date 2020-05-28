@@ -70,6 +70,9 @@ class TestSparkSubmitTask(SparkSubmitTask):
     num_executors = 2
     archives = ["archive1", "archive2"]
     app = "file"
+    pyspark_python = '/a/b/c'
+    pyspark_driver_python = '/b/c/d'
+    hadoop_user_name = 'luigiuser'
 
     def app_options(self):
         return ["arg1", "arg2"]
@@ -97,11 +100,27 @@ class TestPySparkTask(PySparkTask):
         sc.textFile(self.input().path).saveAsTextFile(self.output().path)
 
 
+class TestPySparkSessionTask(PySparkTask):
+    def input(self):
+        return MockTarget('input')
+
+    def output(self):
+        return MockTarget('output')
+
+    def main(self, spark, *args):
+        spark.sql(self.input().path).write.saveAsTable(self.output().path)
+
+
+class MessyNamePySparkTask(TestPySparkTask):
+    name = 'AppName(a,b,c,1:2,3/4)'
+
+
 @attr('apache')
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
-    @with_config({'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path', 'deploy-mode': 'client'}})
+    @with_config(
+        {'spark': {'spark-submit': ss, 'master': "yarn-client", 'hadoop-conf-dir': 'path', 'deploy-mode': 'client'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
         setup_run_process(proc)
@@ -112,9 +131,13 @@ class SparkSubmitTaskTest(unittest.TestCase):
                          ['ss-stub', '--master', 'yarn-client', '--deploy-mode', 'client', '--name', 'AppName',
                           '--class', 'org.test.MyClass', '--jars', 'jars/my.jar', '--py-files', 'file1.py,file2.py',
                           '--files', 'file1,file2', '--archives', 'archive1,archive2', '--conf', 'Prop=Value',
-                          '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G', '--driver-java-options', '-Xopt',
-                          '--driver-library-path', 'library/path', '--driver-class-path', 'class/path', '--executor-memory', '8G',
-                          '--driver-cores', '8', '--supervise', '--total-executor-cores', '150', '--executor-cores', '10',
+                          '--conf', 'spark.pyspark.python=/a/b/c', '--conf', 'spark.pyspark.driver.python=/b/c/d',
+                          '--properties-file', 'conf/spark-defaults.conf', '--driver-memory', '4G',
+                          '--driver-java-options', '-Xopt',
+                          '--driver-library-path', 'library/path', '--driver-class-path', 'class/path',
+                          '--executor-memory', '8G',
+                          '--driver-cores', '8', '--supervise', '--total-executor-cores', '150', '--executor-cores',
+                          '10',
                           '--queue', 'queue', '--num-executors', '2', 'file', 'arg1', 'arg2'])
 
     @with_config({'spark': {'hadoop-conf-dir': 'path'}})
@@ -124,11 +147,18 @@ class SparkSubmitTaskTest(unittest.TestCase):
         job = TestSparkSubmitTask()
         job.run()
 
+        assert job._conf == {
+            'Prop': 'Value',
+            'spark.pyspark.python': '/a/b/c',
+            'spark.pyspark.driver.python': '/b/c/d'
+        }
+        assert job.program_environment()['HADOOP_USER_NAME'] == 'luigiuser'
         self.assertIn('HADOOP_CONF_DIR', proc.call_args[1]['env'])
         self.assertEqual(proc.call_args[1]['env']['HADOOP_CONF_DIR'], 'path')
 
-    @with_config({'spark': {'spark-submit': ss, 'master': 'spark://host:7077', 'conf': 'prop1=val1', 'jars': 'jar1.jar,jar2.jar',
-                            'files': 'file1,file2', 'py-files': 'file1.py,file2.py', 'archives': 'archive1'}})
+    @with_config(
+        {'spark': {'spark-submit': ss, 'master': 'spark://host:7077', 'conf': 'prop1=val1', 'jars': 'jar1.jar,jar2.jar',
+                   'files': 'file1,file2', 'py-files': 'file1.py,file2.py', 'archives': 'archive1'}})
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_defaults(self, proc):
         proc.return_value.returncode = 0
@@ -198,7 +228,8 @@ class SparkSubmitTaskTest(unittest.TestCase):
                 val.value += 1
 
         def Popen_wrap(args, **kwargs):
-            return Popen('>&2 echo "INFO SparkUI: Bound SparkUI to 0.0.0.0, and started at http://10.66.76.155:4040"', shell=True, **kwargs)
+            return Popen('>&2 echo "INFO SparkUI: Bound SparkUI to 0.0.0.0, and started at http://10.66.76.155:4040"',
+                         shell=True, **kwargs)
 
         task = TestSparkSubmitTask()
         with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
@@ -235,7 +266,9 @@ class PySparkTaskTest(unittest.TestCase):
         job = TestPySparkTask()
         job.run()
         proc_arg_list = proc.call_args[0][0]
-        self.assertEqual(proc_arg_list[0:7], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name', 'TestPySparkTask'])
+        self.assertEqual(proc_arg_list[0:7],
+                         ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name',
+                          'TestPySparkTask'])
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
 
@@ -247,7 +280,9 @@ class PySparkTaskTest(unittest.TestCase):
         luigi.build([job], local_scheduler=True)
         self.assertEqual(proc.call_count, 1)
         proc_arg_list = proc.call_args[0][0]
-        self.assertEqual(proc_arg_list[0:7], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name', 'TestPySparkTask'])
+        self.assertEqual(proc_arg_list[0:7],
+                         ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'client', '--name',
+                          'TestPySparkTask'])
         self.assertTrue(os.path.exists(proc_arg_list[7]))
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
 
@@ -258,7 +293,9 @@ class PySparkTaskTest(unittest.TestCase):
         job = TestPySparkTask()
         job.run()
         proc_arg_list = proc.call_args[0][0]
-        self.assertEqual(proc_arg_list[0:8], ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'cluster', '--name', 'TestPySparkTask', '--files'])
+        self.assertEqual(proc_arg_list[0:8],
+                         ['ss-stub', '--master', 'spark://host:7077', '--deploy-mode', 'cluster', '--name',
+                          'TestPySparkTask', '--files'])
         self.assertTrue(proc_arg_list[8].endswith('TestPySparkTask.pickle'))
         self.assertTrue(os.path.exists(proc_arg_list[9]))
         self.assertEqual('TestPySparkTask.pickle', proc_arg_list[10])
@@ -266,7 +303,7 @@ class PySparkTaskTest(unittest.TestCase):
     @patch.dict('sys.modules', {'pyspark': MagicMock()})
     @patch('pyspark.SparkContext')
     def test_pyspark_runner(self, spark_context):
-        sc = spark_context.return_value.__enter__.return_value
+        sc = spark_context.return_value
 
         def mock_spark_submit(task):
             from luigi.contrib.pyspark_runner import PySparkRunner
@@ -289,3 +326,56 @@ class PySparkTaskTest(unittest.TestCase):
 
         sc.textFile.assert_called_with('input')
         sc.textFile.return_value.saveAsTextFile.assert_called_with('output')
+        sc.stop.assert_called_once_with()
+
+    def test_pyspark_session_runner_use_spark_session_true(self):
+        pyspark = MagicMock()
+        pyspark.__version__ = '2.1.0'
+        pyspark_sql = MagicMock()
+        with patch.dict(sys.modules, {'pyspark': pyspark, 'pyspark.sql': pyspark_sql}):
+            spark = pyspark_sql.SparkSession.builder.config.return_value.enableHiveSupport.return_value.getOrCreate.return_value
+            sc = spark.sparkContext
+
+            def mock_spark_submit(task):
+                from luigi.contrib.pyspark_runner import PySparkSessionRunner
+                PySparkSessionRunner(*task.app_command()[1:]).run()
+                # Check py-package exists
+                self.assertTrue(os.path.exists(sc.addPyFile.call_args[0][0]))
+                # Check that main module containing the task exists.
+                run_path = os.path.dirname(task.app_command()[1])
+                self.assertTrue(os.path.exists(os.path.join(run_path, os.path.basename(__file__))))
+                # Check that the python path contains the run_path
+                self.assertTrue(run_path in sys.path)
+                # Check if find_class finds the class for the correct module name.
+                with open(task.app_command()[1], 'rb') as fp:
+                    self.assertTrue(pickle.Unpickler(fp).find_class('spark_test', 'TestPySparkSessionTask'))
+
+            with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
+                job = TestPySparkSessionTask()
+                with temporary_unloaded_module(b'') as task_module:
+                    with_config({'spark': {'py-packages': task_module}})(job.run)()
+
+            spark.sql.assert_called_with('input')
+            spark.sql.return_value.write.saveAsTable.assert_called_with('output')
+            spark.stop.assert_called_once_with()
+
+    def test_pyspark_session_runner_use_spark_session_true_spark1(self):
+        pyspark = MagicMock()
+        pyspark.__version__ = '1.6.3'
+        pyspark_sql = MagicMock()
+        with patch.dict(sys.modules, {'pyspark': pyspark, 'pyspark.sql': pyspark_sql}):
+            def mock_spark_submit(task):
+                from luigi.contrib.pyspark_runner import PySparkSessionRunner
+                self.assertRaises(RuntimeError, PySparkSessionRunner(*task.app_command()[1:]).run)
+
+            with patch.object(SparkSubmitTask, 'run', mock_spark_submit):
+                job = TestPySparkSessionTask()
+                with temporary_unloaded_module(b'') as task_module:
+                    with_config({'spark': {'py-packages': task_module}})(job.run)()
+
+    @patch('luigi.contrib.external_program.subprocess.Popen')
+    def test_name_cleanup(self, proc):
+        setup_run_process(proc)
+        job = MessyNamePySparkTask()
+        job.run()
+        assert 'AppName_a_b_c_1_2_3_4_' in job.run_path

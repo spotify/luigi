@@ -28,7 +28,7 @@ For more information about Kubernetes Jobs: http://kubernetes.io/docs/user-guide
 
 Requires:
 
-- pykube: ``pip install pykube``
+- pykube: ``pip install pykube-ng``
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
@@ -66,6 +66,7 @@ class kubernetes(luigi.Config):
 
 class KubernetesJobTask(luigi.Task):
     __DEFAULT_POLL_INTERVAL = 5  # see __track_job
+    __DEFAULT_POD_CREATION_INTERVAL = 5
     _kubernetes_config = None  # Needs to be loaded at runtime
 
     def _init_kubernetes(self):
@@ -213,10 +214,15 @@ class KubernetesJobTask(luigi.Task):
         """How often to poll Kubernetes for job status, in seconds."""
         return self.__DEFAULT_POLL_INTERVAL
 
+    @property
+    def pod_creation_wait_interal(self):
+        """Delay for initial pod creation for just submitted job in seconds"""
+        return self.__DEFAULT_POD_CREATION_INTERVAL
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
-            time.sleep(self.__DEFAULT_POLL_INTERVAL)
+            time.sleep(self.poll_interval)
             self.__logger.debug("Waiting for Kubernetes job " + self.uu_name + " to start")
         self.__print_kubectl_hints()
 
@@ -261,8 +267,8 @@ class KubernetesJobTask(luigi.Task):
             logs = pod.logs(timestamps=True).strip()
             self.__logger.info("Fetching logs from " + pod.name)
             if len(logs) > 0:
-                for l in logs.split('\n'):
-                    self.__logger.info(l)
+                for line in logs.split('\n'):
+                    self.__logger.info(line)
 
     def __print_kubectl_hints(self):
         self.__logger.info("To stream Pod logs, use:")
@@ -276,6 +282,12 @@ class KubernetesJobTask(luigi.Task):
 
         # Verify that the pod started
         pods = self.__get_pods()
+        if not pods:
+            self.__logger.debug(
+                'No pods found for %s, waiting for cluster state to match the job definition' % self.uu_name
+            )
+            time.sleep(self.pod_creation_wait_interal)
+            pods = self.__get_pods()
 
         assert len(pods) > 0, "No pod scheduled by " + self.uu_name
         for pod in pods:

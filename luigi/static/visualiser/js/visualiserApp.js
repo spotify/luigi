@@ -344,15 +344,16 @@ function visualiserApp(luigi) {
                         }
                     });
                     luigi.getTaskProgressPercentage(data.taskId, function(data) {
-                        if (data.progressPercentage === null)
-                            $("#statusMessageModal .progress").hide();
-                        else {
-                            $("#statusMessageModal .progress").show();
-                            $("#statusMessageModal .progress-bar")
-                                .attr('aria-valuenow', data.progressPercentage)
-                                .text(data.progressPercentage + '%')
-                                .css({'width': data.progressPercentage + '%'});
-                        }
+                        // show or hide the progress bar container in the message modal
+                        $("#statusMessageModal .progress").toggle(data.progressPercentage !== null);
+
+                        // adjust the status of both progress bars (message modal and worker list)
+                        var value = data.progressPercentage || 0;
+                        var progressBars = $('#statusMessageModal .progress-bar, ' +
+                            '.worker-table tbody .taskProgressBar[data-task-id="' + data.taskId + '"]');
+                        progressBars.attr('aria-valuenow', value)
+                            .text(value + '%')
+                            .css({'width': value + '%'});
                     });
                 }
             },
