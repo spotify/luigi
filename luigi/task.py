@@ -219,11 +219,16 @@ class Task(object):
         return None
 
     @property
-    def disable_window_seconds(self):
+    def disable_window(self):
         """
-        Override this positive integer to have different ``disable_window_seconds`` at task level.
+        Override this positive integer to have different ``disable_window`` at task level.
         Check :ref:`scheduler-config`
         """
+        return self.disable_window_seconds
+
+    @property
+    def disable_window_seconds(self):
+        warnings.warn("Use of `disable_window_seconds` has been deprecated, use `disable_window` instead", DeprecationWarning)
         return None
 
     @property
