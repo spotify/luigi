@@ -882,8 +882,8 @@ class WorkerKeepAliveTests(LuigiTestCase):
             time.sleep(0.1)
 
             try:
-                self.assertEqual(first_should_live, t1.isAlive())
-                self.assertEqual(second_should_live, t2.isAlive())
+                self.assertEqual(first_should_live, t1.is_alive())
+                self.assertEqual(second_should_live, t2.is_alive())
 
             finally:
                 # mark the task done so the worker threads will die
