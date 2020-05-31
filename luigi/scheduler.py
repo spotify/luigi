@@ -164,53 +164,6 @@ class scheduler(Config):
         return RetryPolicy(self.retry_count, self.disable_hard_timeout, self.disable_window)
 
 
-class Failures(object):
-    """
-    This class tracks the number of failures in a given time window.
-
-    Failures added are marked with the current timestamp, and this class counts
-    the number of failures in a sliding time window ending at the present.
-    """
-
-    def __init__(self, window):
-        """
-        Initialize with the given window.
-
-        :param window: how long to track failures for, as a float (number of seconds).
-        """
-        self.window = window
-        self.failures = collections.deque()
-        self.first_failure_time = None
-
-    def add_failure(self):
-        """
-        Add a failure event with the current timestamp.
-        """
-        failure_time = time.time()
-
-        if not self.first_failure_time:
-            self.first_failure_time = failure_time
-
-        self.failures.append(failure_time)
-
-    def num_failures(self):
-        """
-        Return the number of failures in the window.
-        """
-        min_time = time.time() - self.window
-
-        while self.failures and self.failures[0] < min_time:
-            self.failures.popleft()
-
-        return len(self.failures)
-
-    def clear(self):
-        """
-        Clear the failure queue.
-        """
-        self.failures.clear()
-
-
 def _get_default(x, default):
     if x is not None:
         return x
@@ -287,6 +240,7 @@ class OrderedSet(MutableSet):
 
 
 class Task(object):
+
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, param_visibilities=None, accepts_messages=False, tracking_url=None, status_message=None,
                  progress_percentage=None, retry_policy='notoptional'):
@@ -316,7 +270,9 @@ class Task(object):
         self.set_params(params)
         self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
-        self.failures = Failures(self.retry_policy.disable_window)
+        # self.failures = Task.Failures(self.retry_policy.disable_window)
+        self.failures = collections.deque()
+        self.first_failure_time = None
         self.tracking_url = tracking_url
         self.status_message = status_message
         self.progress_percentage = progress_percentage
@@ -345,19 +301,45 @@ class Task(object):
             return False
 
     def add_failure(self):
-        self.failures.add_failure()
+        """
+        Add a failure event with the current timestamp.
+        """
+        failure_time = time.time()
+
+        if not self.first_failure_time:
+            self.first_failure_time = failure_time
+
+        self.failures.append(failure_time)
+
+    def num_failures(self):
+        """
+        Return the number of failures in the window.
+        """
+        min_time = time.time() - self.retry_policy.disable_window
+
+        while self.failures and self.failures[0] < min_time:
+            self.failures.popleft()
+
+        return len(self.failures)
 
     def has_excessive_failures(self):
-        if self.failures.first_failure_time is not None:
-            if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
+        if self.first_failure_time is not None:
+            if time.time() >= self.first_failure_time + self.retry_policy.disable_hard_timeout:
                 return True
 
-        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(), self.retry_policy.retry_count)
-        if self.failures.num_failures() >= self.retry_policy.retry_count:
+        logger.debug('%s task num failures is %s and limit is %s', self.id, self.num_failures(), self.retry_policy.retry_count)
+        if self.num_failures() >= self.retry_policy.retry_count:
             logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.retry_policy.retry_count)
             return True
 
         return False
+
+    def clear_failures(self):
+        """
+        Clear the failures history
+        """
+        self.failures.clear()
+        self.first_failure_time = None
 
     @property
     def pretty_id(self):
@@ -540,10 +522,10 @@ class SimpleTaskState(object):
 
     def re_enable(self, task, config=None):
         task.scheduler_disable_time = None
-        task.failures.clear()
+        task.clear_failures()
         if config:
             self.set_status(task, FAILED, config)
-            task.failures.clear()
+            task.clear_failures()
 
     def set_batch_running(self, task, batch_id, worker_id):
         self.set_status(task, BATCH_RUNNING)
@@ -587,7 +569,7 @@ class SimpleTaskState(object):
                         'disabled for {persist} seconds'.format(
                             failures=task.retry_policy.retry_count,
                             task=task.id,
-                            window=config.disable_window,
+                            window=task.retry_policy.disable_window,
                             persist=config.disable_persist,
                         ))
         elif new_status == DISABLED:

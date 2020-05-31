@@ -1850,42 +1850,42 @@ class SchedulerApiTest(unittest.TestCase):
     def test_task_first_failure_time(self):
         self.sch.add_task(worker=WORKER, task_id='A')
         test_task = self.sch._state.get_task('A')
-        self.assertIsNone(test_task.failures.first_failure_time)
+        self.assertIsNone(test_task.first_failure_time)
 
         time_before_failure = time.time()
         test_task.add_failure()
         time_after_failure = time.time()
 
         self.assertLessEqual(time_before_failure,
-                             test_task.failures.first_failure_time)
+                             test_task.first_failure_time)
         self.assertGreaterEqual(time_after_failure,
-                                test_task.failures.first_failure_time)
+                                test_task.first_failure_time)
 
     def test_task_first_failure_time_remains_constant(self):
         self.sch.add_task(worker=WORKER, task_id='A')
         test_task = self.sch._state.get_task('A')
-        self.assertIsNone(test_task.failures.first_failure_time)
+        self.assertIsNone(test_task.first_failure_time)
 
         test_task.add_failure()
-        first_failure_time = test_task.failures.first_failure_time
+        first_failure_time = test_task.first_failure_time
 
         test_task.add_failure()
-        self.assertEqual(first_failure_time, test_task.failures.first_failure_time)
+        self.assertEqual(first_failure_time, test_task.first_failure_time)
 
     def test_task_has_excessive_failures(self):
         self.sch.add_task(worker=WORKER, task_id='A')
         test_task = self.sch._state.get_task('A')
-        self.assertIsNone(test_task.failures.first_failure_time)
+        self.assertIsNone(test_task.first_failure_time)
 
         self.assertFalse(test_task.has_excessive_failures())
 
         test_task.add_failure()
         self.assertFalse(test_task.has_excessive_failures())
 
-        fake_failure_time = (test_task.failures.first_failure_time -
+        fake_failure_time = (test_task.first_failure_time -
                              2 * 60 * 60)
 
-        test_task.failures.first_failure_time = fake_failure_time
+        test_task.first_failure_time = fake_failure_time
         self.assertTrue(test_task.has_excessive_failures())
 
     def test_quadratic_behavior(self):
