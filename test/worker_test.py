@@ -2193,6 +2193,7 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
         sch = Scheduler(retry_delay=0.1, retry_count=2, prune_on_get_work=True, disable_window=2)
         with Worker(scheduler=sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w:
             self.assertTrue(w.add(t))
+            # Worker.run return False even if a task failed first but eventually succeeded.
             self.assertFalse(w.run())
 
             self.assertEqual(3, t.retry_index)
