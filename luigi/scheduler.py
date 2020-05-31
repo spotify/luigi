@@ -270,7 +270,6 @@ class Task(object):
         self.set_params(params)
         self.accepts_messages = accepts_messages
         self.retry_policy = retry_policy
-        # self.failures = Task.Failures(self.retry_policy.disable_window)
         self.failures = collections.deque()
         self.first_failure_time = None
         self.tracking_url = tracking_url
