@@ -36,8 +36,6 @@
 # [--upstream-family MyUpstreamTask]
 #
 
-
-from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
 from luigi.contrib.postgres import PostgresTarget

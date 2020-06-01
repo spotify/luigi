@@ -85,7 +85,7 @@ def _random_id():
     return 'batch-job-' + ''.join(random.sample(string.ascii_lowercase, 8))
 
 
-class BatchClient(object):
+class BatchClient:
 
     def __init__(self, poll_time=POLL_TIME):
         self.poll_time = poll_time

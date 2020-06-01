@@ -22,8 +22,6 @@ to subclass :py:class:`luigi.contrib.hadoop.JobTask` and implement a
 an example of how to run a Hadoop job.
 """
 
-from __future__ import print_function
-
 import abc
 import datetime
 import glob
@@ -34,17 +32,13 @@ import random
 import re
 import shutil
 import signal
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 import subprocess
 import sys
 import tempfile
 import warnings
 from hashlib import md5
 from itertools import groupby
-from luigi import six
 
 from luigi import configuration
 import luigi
@@ -53,9 +47,6 @@ import luigi.contrib.gcs
 import luigi.contrib.hdfs
 import luigi.contrib.s3
 from luigi.contrib import mrrunner
-
-if six.PY2:
-    from itertools import imap as map
 
 try:
     # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
@@ -213,7 +204,7 @@ def flatten(sequence):
             yield item
 
 
-class HadoopRunContext(object):
+class HadoopRunContext:
 
     def __init__(self):
         self.job_id = None
@@ -391,7 +382,7 @@ def fetch_task_failures(tracking_url):
     return '\n'.join(error_text)
 
 
-class JobRunner(object):
+class JobRunner:
     run_job = NotImplemented
 
 
@@ -515,7 +506,7 @@ class HadoopJobRunner(JobRunner):
 
         jobconfs = job.jobconfs()
 
-        for k, v in six.iteritems(self.jobconfs):
+        for k, v in self.jobconfs.items():
             jobconfs.append('%s=%s' % (k, v))
 
         for conf in jobconfs:
@@ -894,7 +885,7 @@ class JobTask(BaseHadoopJobTask):
         """
         Increments any unflushed counter values.
         """
-        for key, count in six.iteritems(self._counter_dict):
+        for key, count in self._counter_dict.items():
             if count == 0:
                 continue
             args = list(key) + [count]

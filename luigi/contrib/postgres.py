@@ -24,8 +24,6 @@ import logging
 import re
 import tempfile
 
-from luigi import six
-
 import luigi
 from luigi.contrib import rdbms
 
@@ -39,7 +37,7 @@ except ImportError:
     logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
 
-class MultiReplacer(object):
+class MultiReplacer:
     """
     Object for one-pass replace of multiple words
 
@@ -261,7 +259,7 @@ class CopyToTable(rdbms.CopyToTable):
         if value in self.null_values:
             return r'\\N'
         else:
-            return default_escape(six.text_type(value))
+            return default_escape(str(value))
 
 # everything below will rarely have to be overridden
 
@@ -282,7 +280,7 @@ class CopyToTable(rdbms.CopyToTable):
         )
 
     def copy(self, cursor, file):
-        if isinstance(self.columns[0], six.string_types):
+        if isinstance(self.columns[0], str):
             column_names = self.columns
         elif len(self.columns[0]) == 2:
             column_names = [c[0] for c in self.columns]

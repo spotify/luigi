@@ -23,11 +23,7 @@ contrib module. You can consider migrating to
 :class:`luigi.contrib.hdfs.webhdfs_client.WebHdfsClient`
 """
 
-from __future__ import absolute_import
-
 import logging
-
-from luigi import six
 
 from luigi.target import FileSystemTarget, AtomicLocalFile
 from luigi.format import get_default_format
@@ -62,7 +58,7 @@ class WebHdfsTarget(FileSystemTarget):
         )
 
 
-class ReadableWebHdfsFile(object):
+class ReadableWebHdfsFile:
 
     def __init__(self, path, client):
         self.path = path
@@ -86,13 +82,7 @@ class ReadableWebHdfsFile(object):
 
     def __iter__(self):
         self.generator = self.readlines('\n')
-        has_next = True
-        while has_next:
-            try:
-                chunk = six.next(self.generator)
-                yield chunk
-            except StopIteration:
-                has_next = False
+        yield from self.generator
         self.close()
 
     def close(self):

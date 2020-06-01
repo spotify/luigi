@@ -24,17 +24,12 @@ import shutil
 import tempfile
 import unittest
 
-from luigi import six
-
 import luigi
 import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
 from nose.plugins.attrib import attr
 from helpers import skipOnTravis
-
-if six.PY3:
-    unicode = str
 
 
 class BaseTask(luigi.Task):
@@ -149,7 +144,7 @@ class TestSQLA(unittest.TestCase):
             result = conn.execute(s).fetchall()
             for i in range(len(BaseTask.TASK_LIST)):
                 given = BaseTask.TASK_LIST[i].strip("\n").split("\t")
-                given = (unicode(given[0]), unicode(given[1]))
+                given = (str(given[0]), str(given[1]))
                 self.assertEqual(given, tuple(result[i]))
 
     def test_rows(self):

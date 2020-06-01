@@ -21,7 +21,6 @@ import sys
 import tempfile
 from helpers import unittest
 
-from luigi import six
 import luigi.contrib.hive
 import mock
 from luigi import LocalTarget
@@ -36,7 +35,7 @@ class HiveTest(unittest.TestCase):
     def mock_hive_cmd(self, args, check_return=True):
         self.last_hive_cmd = args
         self.count += 1
-        return six.u("statement{0}".format(self.count))
+        return 'statement{}'.format(self.count)
 
     def setUp(self):
         self.run_hive_cmd_saved = luigi.contrib.hive.run_hive
@@ -67,7 +66,7 @@ class HiveTest(unittest.TestCase):
     def test_create_parent_dirs(self):
         dirname = "/tmp/hive_task_test_dir"
 
-        class FooHiveTask(object):
+        class FooHiveTask:
 
             def output(self):
                 return LocalTarget(os.path.join(dirname, "foo"))
@@ -271,7 +270,7 @@ class HiveCommandClientTest(unittest.TestCase):
         # I'm testing this again to check the return codes
         # I didn't want to tear up all the existing tests to change how run_hive is mocked
         comm = mock.Mock(name='communicate_mock')
-        comm.return_value = six.b("some return stuff"), ""
+        comm.return_value = b'some return stuff', ''
 
         preturn = mock.Mock(name='open_mock')
         preturn.returncode = 0
@@ -284,7 +283,7 @@ class HiveCommandClientTest(unittest.TestCase):
         preturn.returncode = 17
         self.assertRaises(luigi.contrib.hive.HiveCommandError, luigi.contrib.hive.run_hive, ["blah", "blah"])
 
-        comm.return_value = six.b(""), "some stderr stuff"
+        comm.return_value = b'', 'some stderr stuff'
         returned = luigi.contrib.hive.run_hive(["blah", "blah"], False)
         self.assertEqual("", returned)
 
@@ -442,12 +441,12 @@ class TestHiveTaskArgs(TestHiveTask):
         f_idx = arglist.index('-f')
         self.assertEqual(arglist[f_idx + 1], f_name)
 
-        hivevars = ['{}={}'.format(k, v) for k, v in six.iteritems(task.hivevars())]
+        hivevars = ['{}={}'.format(k, v) for k, v in task.hivevars().items()]
         for var in hivevars:
             idx = arglist.index(var)
             self.assertEqual(arglist[idx - 1], '--hivevar')
 
-        hiveconfs = ['{}={}'.format(k, v) for k, v in six.iteritems(task.hiveconfs())]
+        hiveconfs = ['{}={}'.format(k, v) for k, v in task.hiveconfs().items()]
         for conf in hiveconfs:
             idx = arglist.index(conf)
             self.assertEqual(arglist[idx - 1], '--hiveconf')

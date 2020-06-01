@@ -18,7 +18,7 @@
 """ Definitions needed for events. See :ref:`Events` for info on how to use it."""
 
 
-class Event(object):
+class Event:
     # TODO nice descriptive subclasses of Event instead of strings? pass their instances to the callback instead of an undocumented arg list?
     DEPENDENCY_DISCOVERED = "event.core.dependency.discovered"  # triggered for every (task, upstream task) pair discovered in a jobflow
     DEPENDENCY_MISSING = "event.core.dependency.missing"

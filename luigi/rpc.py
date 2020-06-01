@@ -26,10 +26,9 @@ import socket
 import time
 import base64
 
-from luigi import six
-from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
-from luigi.six.moves.urllib.request import urlopen, Request
-from luigi.six.moves.urllib.error import URLError
+from urllib.parse import urljoin, urlencode, urlparse
+from urllib.request import urlopen, Request
+from urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS
@@ -70,7 +69,7 @@ class RPCError(Exception):
         self.sub_exception = sub_exception
 
 
-class URLLibFetcher(object):
+class URLLibFetcher:
     raises = (URLError, socket.timeout)
 
     def _create_request(self, full_url, body=None):
@@ -78,10 +77,8 @@ class URLLibFetcher(object):
         url = urlparse(full_url)
         if url.username:
             # base64 encoding of username:password
-            auth = base64.b64encode(six.b('{}:{}'.format(url.username, url.password or '')))
-            if six.PY3:
-                auth = auth.decode('utf-8')
-
+            auth = base64.b64encode('{}:{}'.format(url.username, url.password or '').encode('utf-8'))
+            auth = auth.decode('utf-8')
             # update full_url and create a request object with the auth header set
             full_url = url._replace(netloc=url.netloc.split('@', 1)[-1]).geturl()
             req = Request(full_url)
@@ -100,7 +97,7 @@ class URLLibFetcher(object):
         return urlopen(req, timeout=timeout).read().decode('utf-8')
 
 
-class RequestsFetcher(object):
+class RequestsFetcher:
     def __init__(self, session):
         from requests import exceptions as requests_exceptions
         self.raises = requests_exceptions.RequestException
@@ -121,7 +118,7 @@ class RequestsFetcher(object):
         return resp.text
 
 
-class RemoteScheduler(object):
+class RemoteScheduler:
     """
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
