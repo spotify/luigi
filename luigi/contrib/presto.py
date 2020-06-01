@@ -7,7 +7,6 @@ from enum import Enum
 from time import sleep
 
 import luigi
-from luigi.six import add_metaclass
 from luigi.contrib import rdbms
 from luigi.task_register import Register
 
@@ -191,8 +190,7 @@ class PrestoTarget(luigi.Target):
             raise
 
 
-@add_metaclass(WithPrestoClient)
-class PrestoTask(rdbms.Query):
+class PrestoTask(rdbms.Query, metaclass=WithPrestoClient):
     """
     Task for executing presto queries
     During its executions tracking url and percentage progress are set
