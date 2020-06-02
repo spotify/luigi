@@ -283,6 +283,158 @@ class HiveThriftContext(object):
         self.transport.close()
 
 
+class HiveThriftSASLContext(object):
+    """
+    Context manager for hive metastore client (SASL).
+    """
+
+    def __enter__(self):
+        try:
+            from thrift.transport import TSocket, TTransport
+            from thrift.protocol import TBinaryProtocol
+            from hive_metastore import ThriftHiveMetastore
+
+            config = luigi.configuration.get_config()
+            host = config.get('hive', 'metastore_host')
+            port = config.getint('hive', 'metastore_port')
+            use_sasl = config.get('hive', 'security', None)
+            socket = TSocket.TSocket(host, port)
+
+            if not use_sasl:
+                transport = TTransport.TBufferedTransport(socket)
+            else:
+                auth_mechanism = config.get('kerberos', 'authMechanism', 'GSSAPI')
+                kerberos_service_name = config.get('kerberos', 'kerberos_service_name', 'hive')
+                if auth_mechanism == 'GSSAPI':
+                    try:
+                        import saslwrapper as sasl
+                    except ImportError:
+                        import sasl
+
+                    def sasl_factory():
+                        sasl_client = sasl.Client()
+                        sasl_client.setAttr("host", host)
+                        sasl_client.setAttr("service", kerberos_service_name)
+                        sasl_client.init()
+                        return sasl_client
+
+                    from thrift_sasl import TSaslClientTransport
+                    transport = TSaslClientTransport(sasl_factory, "GSSAPI", socket)
+                else:
+                    transport = TTransport.TBufferedTransport(socket)
+
+            protocol = TBinaryProtocol.TBinaryProtocol(transport)
+            transport.open()
+            self.transport = transport
+            return ThriftHiveMetastore.Client(protocol)
+        except ImportError as e:
+            raise Exception('Could not import Hive thrift libraries:' + str(e))
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.transport.close()
+
+
+class HiveMetastoreClient(HiveClient):
+    """
+    Luigi MetastoreClient with additional helpful methods
+    """
+
+    def table_location(self, table, database='default', partition=None):
+        with HiveThriftSASLContext() as client:
+            if partition is not None:
+                try:
+                    import hive_metastore.ttypes
+                    partition_str = self.partition_spec(partition)
+                    thrift_table = client.get_partition_by_name(database, table, partition_str)
+                except hive_metastore.ttypes.NoSuchObjectException:
+                    return ''
+            else:
+                thrift_table = client.get_table(database, table)
+            return thrift_table.sd.location
+
+    def table_exists(self, table, database='default', partition=None):
+        with HiveThriftSASLContext() as client:
+            if partition is None:
+                return table in client.get_all_tables(database)
+            else:
+                return partition in self._existing_partitions(table, database, client)
+
+    def _existing_partitions(self, table, database, client):
+        def _parse_partition_string(partition_string):
+            partition_def = {}
+            for part in partition_string.split("/"):
+                name, value = part.split("=")
+                partition_def[name] = value
+            return partition_def
+
+        # -1 is max_parts, the # of partition names to return (-1 = unlimited)
+        partition_strings = client.get_partition_names(database, table, -1)
+        return [_parse_partition_string(existing_partition) for existing_partition in partition_strings]
+
+    def table_schema(self, table, database='default'):
+        with HiveThriftSASLContext() as client:
+            return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
+
+    def partition_spec(self, partition):
+        return "/".join("%s=%s" % (k, v) for (k, v) in sorted(six.iteritems(partition), key=operator.itemgetter(0)))
+
+    def get_all_databases(self):
+        with HiveThriftSASLContext() as client:
+            return client.get_all_databases()
+
+    def get_all_tables(self, database='default'):
+        with HiveThriftSASLContext() as client:
+            return client.get_all_tables(database)
+
+    def get_partitions(self, table, database='default'):
+        with HiveThriftSASLContext() as client:
+            return self._existing_partitions(table, database, client)
+
+    def get_columns(self, table, database='default'):
+        t = self.get_table(table, database=database)
+        return [col.name for col in t.sd.cols]
+
+    def get_partition(self, table, database, partition):
+        with HiveThriftSASLContext() as client:
+            assert (isinstance(partition, list))
+            return client.get_partition(database, table, partition)
+
+    def get_partition_names(self, table, database='default'):
+        with HiveThriftSASLContext() as client:
+            tbl = client.get_table(database, table)
+            pnames = [p.name for p in tbl.partitionKeys]
+            return pnames
+
+    def get_table(self, table, database='default'):
+        with HiveThriftSASLContext() as client:
+            return client.get_table(database, table)
+
+    def get_database(self, database='default'):
+        with HiveThriftSASLContext() as client:
+            return client.get_database(database)
+
+    def get_partition_values(self, table, database='default'):
+        with HiveThriftSASLContext() as client:
+            return client.get_partitions(database, table, -1)
+
+    def target_exists(self, table, database='default', partition=None):
+        with HiveThriftSASLContext() as client:
+            if not partition:
+                return table in client.get_all_tables(database)
+            else:
+                import hive_metastore.ttypes
+                try:
+                    ddl = client.get_table(database, table)
+                except hive_metastore.ttypes.NoSuchObjectException as e:
+                    raise type(e)(e.message + ". Make sure your partition dict is empty or None "
+                                  + "if you are creating table instead of partition.")
+                pkeys = [p.name for p in ddl.partitionKeys]
+                partitions_ddl = client.get_partitions(database, table, -1)
+                pvalues = [part.values for part in partitions_ddl]
+                pdicts = [dict(zip(pkeys, part)) for part in pvalues]
+                return any(all(subset in superset.items() for subset in partition.items()) for superset in pdicts)
+
+
 class WarehouseHiveClient(HiveClient):
     """
     Client for managed tables that makes decision based on presence of directory in hdfs
