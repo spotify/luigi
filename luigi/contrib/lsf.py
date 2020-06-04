@@ -25,6 +25,8 @@ import sys
 import logging
 import random
 import shutil
+import re
+from packaging import version
 try:
     # Dill is used for handling pickling and unpickling if there is a deference
     # in server setups between the LSF submission node and the nodes in the
@@ -70,8 +72,18 @@ The procedure:
 
 LOGGER = logging.getLogger('luigi-interface')
 
+def get_lsf_version():
+    cmd = "lsid"
+    get_version = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, shell=True)
+    lsid_out = get_version.communicate()[0].decode("utf-8").split("\n")[0]
+    regex = r'(\d+\.\d+(?:\.\d+)*)'
+    lsf_version = re.findall(regex, lsid_out)
+    if len(lsf_version) == 1:
+        return lsf_version[0]
+    return ""
 
-def track_job(job_id):
+def track_job(job_id, lsf_version):
     """
     Tracking is done by requesting each job and then searching for whether the job
     has one of the following states:
@@ -82,9 +94,11 @@ def track_job(job_id):
     based on the LSF documentation
     """
     cmd = "bjobs -noheader -o stat {}".format(job_id)
+    if lsf_version and version.parse(lsf_version) < version.parse("9.1.1.1"):
+        cmd = "bjobs {id} | awk ' $1=={id} '".format(id=job_id) + " | awk ' { print $3 } '"
     track_job_proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, shell=True)
-    status = track_job_proc.communicate()[0].strip('\n')
+    status = track_job_proc.communicate()[0].decode("utf-8").strip('\n')
     return status
 
 
@@ -207,14 +221,16 @@ class LSFJobTask(luigi.Task):
         Dump instance to file.
         """
         self.job_file = os.path.join(out_dir, 'job-instance.pickle')
+        file = open(self.job_file, "wb")
         if self.__module__ == '__main__':
             dump_inst = pickle.dumps(self)
             module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            dump_inst = dump_inst.replace('(c__main__', "(c" + module_name)
-            open(self.job_file, "w").write(dump_inst)
+            dump_inst = dump_inst.replace(b'c__main__', b"c" + module_name.encode("utf-8"))
+            file.write(dump_inst)
 
         else:
-            pickle.dump(self, open(self.job_file, "w"))
+            pickle.dump(self, file)
+        file.close()
 
     def _run_job(self):
         """
@@ -243,7 +259,7 @@ class LSFJobTask(luigi.Task):
         # Find where the runner file is
         runner_path = os.path.abspath(lsf_runner.__file__)
 
-        args += [runner_path]
+        args += ["python3", runner_path]
         args += [self.tmp_dir]
 
         # That should do it. Let the world know what we're doing.
@@ -261,8 +277,8 @@ class LSFJobTask(luigi.Task):
         # Job <123> is submitted ot queue <myqueue>
         # So get the number in those first brackets.
         # I cannot think of a better workaround that leaves logic on the Task side of things.
-        LOGGER.info("### JOB SUBMISSION OUTPUT: %s", str(output))
-        self.job_id = int(output.split("<")[1].split(">")[0])
+        LOGGER.info("### JOB SUBMISSION OUTPUT: %s", output.decode("utf-8"))
+        self.job_id = int(str(output).split("<")[1].split(">")[0])
         LOGGER.info(
             "Job %ssubmitted as job %s",
             self.job_name_flag + ' ',
@@ -284,13 +300,16 @@ class LSFJobTask(luigi.Task):
 
     def _track_job(self):
         time0 = 0
+        #We get the LSF version to know which bjobs 
+        #command options to use in the track_job function
+        lsf_version = get_lsf_version()
         while True:
             # Sleep for a little bit
             time.sleep(self.poll_time)
 
             # See what the job's up to
             # ASSUMPTION
-            lsf_status = track_job(self.job_id)
+            lsf_status = track_job(self.job_id, lsf_version)
             if lsf_status == "RUN":
                 self.job_status = RUNNING
                 LOGGER.info("Job is running...")
