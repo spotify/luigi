@@ -762,18 +762,18 @@ disable_hard_timeout
   (i.e. 10 minutes), and the task first failed at 10:00am, the task would
   be disabled if it failed again any time after 10:10am. Note: This setting
   does not consider the values of the ``retry_count`` or
-  ``disable_window_seconds`` settings.
+  ``disable_window`` settings.
 
 retry_count
-  Number of times a task can fail within ``disable_window_seconds`` before
+  Number of times a task can fail within ``disable_window`` before
   the scheduler will automatically disable it. If not set, the scheduler
   will not automatically disable jobs.
 
-disable_persist_seconds
+disable_persist
   Number of seconds for which an automatic scheduler disable lasts.
   Defaults to 86400 (1 day).
 
-disable_window_seconds
+disable_window
   Number of seconds during which ``retry_count`` failures must
   occur in order for an automatic disable by the scheduler. The
   scheduler forgets about disables that have occurred longer ago than
@@ -1061,4 +1061,4 @@ The fields below are in retry-policy and they can be defined per task.
 
 * ``retry_count``
 * ``disable_hard_timeout``
-* ``disable_window_seconds``
+* ``disable_window``
