@@ -26,15 +26,12 @@ import luigi.contrib.hadoop
 import luigi.contrib.hdfs
 import luigi.contrib.mrrunner
 import luigi.notifications
-import minicluster
 import mock
 from luigi.mock import MockTarget
-from luigi.six import StringIO
+from io import StringIO
 from nose.plugins.attrib import attr
 
 luigi.notifications.DEBUG = True
-
-luigi.contrib.hadoop.attach(minicluster)
 
 
 class OutputMixin(luigi.Task):
@@ -50,10 +47,7 @@ class OutputMixin(luigi.Task):
 class HadoopJobTask(luigi.contrib.hadoop.JobTask, OutputMixin):
 
     def job_runner(self):
-        if self.use_hdfs:
-            return minicluster.MiniClusterHadoopJobRunner()
-        else:
-            return luigi.contrib.hadoop.LocalJobRunner()
+        return luigi.contrib.hadoop.LocalJobRunner()
 
 
 class Words(OutputMixin):
@@ -192,7 +186,7 @@ def read_wordcount_output(p):
     return count
 
 
-class CommonTests(object):
+class CommonTests:
 
     @staticmethod
     def test_run(test_case):
@@ -292,28 +286,6 @@ class MapreduceLocalTest(unittest.TestCase):
         MockTarget.fs.clear()
 
 
-@attr('minicluster')
-class MapreduceIntegrationTest(minicluster.MiniClusterTestCase):
-
-    """ Uses the Minicluster functionality to test this against Hadoop """
-    use_hdfs = True
-
-    def test_run(self):
-        CommonTests.test_run(self)
-
-    def test_run_2(self):
-        CommonTests.test_run_2(self)
-
-    def test_map_only(self):
-        CommonTests.test_map_only(self)
-
-    # TODO(erikbern): some really annoying issue with minicluster causes
-    # test_unicode_job to hang
-
-    def test_failing_job(self):
-        CommonTests.test_failing_job(self)
-
-
 @attr('apache')
 class CreatePackagesArchive(unittest.TestCase):
 
@@ -386,7 +358,7 @@ class CreatePackagesArchive(unittest.TestCase):
         self._assert_package_subpackage(tar.return_value.add)
 
 
-class MockProcess(object):
+class MockProcess:
     def __init__(self, err_lines, returncode):
         err = ''.join(err_lines)
         self.__err_len = len(err)

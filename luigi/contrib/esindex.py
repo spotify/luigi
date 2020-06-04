@@ -90,8 +90,6 @@ import itertools
 
 import luigi
 
-from luigi import six
-
 logger = logging.getLogger('luigi-interface')
 
 try:
@@ -169,7 +167,7 @@ class ElasticsearchTarget(luigi.Target):
         """
         Mark this update as complete.
 
-        The document id would be sufficent but,
+        The document id would be sufficient but,
         for documentation,
         we index the parameters `update_id`, `target_index`, `target_doc_type` and `date` as well.
         """
@@ -274,7 +272,8 @@ class CopyToIndex(luigi.Task):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def index(self):
         """
         The target index.
@@ -366,7 +365,7 @@ class CopyToIndex(luigi.Task):
         iterdocs = iter(self.docs())
         first = next(iterdocs)
         needs_parsing = False
-        if isinstance(first, six.string_types):
+        if isinstance(first, str):
             needs_parsing = True
         elif isinstance(first, dict):
             pass

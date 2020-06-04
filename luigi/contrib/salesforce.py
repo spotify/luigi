@@ -23,6 +23,7 @@ from collections import OrderedDict
 import re
 import csv
 import tempfile
+from urllib.parse import urlsplit
 
 import luigi
 from luigi import Task
@@ -33,11 +34,6 @@ try:
     import requests
 except ImportError:
     logger.warning("This module requires the python package 'requests'.")
-
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
 
 
 def get_soql_fields(soql):
@@ -64,7 +60,7 @@ def parse_results(fields, data):
 
     for record in data['records']:  # for each 'record' in response
         row = [None] * len(fields)  # create null list the length of number of columns
-        for obj, value in record.iteritems():  # for each obj in record
+        for obj, value in record.items():  # for each obj in record
             if not isinstance(value, (dict, list, tuple)):  # if not data structure
                 if obj in fields:
                     row[fields.index(obj)] = ensure_utf(value)
@@ -83,7 +79,7 @@ def _traverse_results(value, fields, row, path):
 
     Traverses through ordered dict and recursively calls itself when encountering a dictionary
     """
-    for f, v in value.iteritems():  # for each item in obj
+    for f, v in value.items():  # for each item in obj
         field_name = '{path}.{name}'.format(path=path, name=f) if path else f
 
         if not isinstance(v, (dict, list, tuple)):  # if not data structure
@@ -109,7 +105,8 @@ class salesforce(luigi.Config):
 
 
 class QuerySalesforce(Task):
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def object_name(self):
         """
         Override to return the SF object we are querying.
@@ -130,7 +127,8 @@ class QuerySalesforce(Task):
         """Override to specify the sandbox name if it is intended to be used."""
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def soql(self):
         """Override to return the raw string SOQL or the path to it."""
         return None
@@ -229,7 +227,7 @@ class QuerySalesforce(Task):
         outfile.close()
 
 
-class SalesforceAPI(object):
+class SalesforceAPI:
     """
     Class used to interact with the SalesforceAPI.  Currently provides only the
     methods necessary for performing a bulk upload operation.

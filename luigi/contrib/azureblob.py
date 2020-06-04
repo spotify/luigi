@@ -122,7 +122,7 @@ class AzureBlobClient(FileSystem):
         container, blob = self.splitfilepath(path)
         if raise_if_exists and self.exists(path):
             raise FileAlreadyExists("The Azure blob path '{blob}' already exists under container '{container}'".format(
-                blob=blob, contaniner=container))
+                blob=blob, container=container))
 
     def isdir(self, path):
         """
@@ -171,7 +171,7 @@ class AzureBlobClient(FileSystem):
         return container, blob
 
 
-class ReadableAzureBlobFile(object):
+class ReadableAzureBlobFile:
     def __init__(self, container, blob, client, download_when_reading, **kwargs):
         self.container = container
         self.blob = blob

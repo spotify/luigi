@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from io import BytesIO
 import os
 import shutil
 import subprocess
@@ -24,15 +25,12 @@ from multiprocessing import Value
 from helpers import unittest
 import luigi
 import luigi.contrib.hdfs
-from luigi import six
 from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
 from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
 from subprocess import Popen
 import mock
 from nose.plugins.attrib import attr
-
-BytesIO = six.BytesIO
 
 
 def poll_generator():
@@ -99,7 +97,7 @@ class ExternalProgramTaskTest(unittest.TestCase):
             job.run()
         except ExternalProgramRunError as e:
             self.assertEqual(e.err, 'stderr')
-            self.assertIn('STDERR: stderr', six.text_type(e))
+            self.assertIn('STDERR: stderr', str(e))
             self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
         else:
             self.fail('Should have thrown ExternalProgramRunError')
@@ -256,6 +254,31 @@ class ExternalProgramTaskTest(unittest.TestCase):
         task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url='stdout',
                             tracking_url_pattern=r"Hello, (.*)!")
         test_args = list(map(str, task.program_args()))
+        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+            with task._proc_with_tracking_url_context(proc_args=test_args, proc_kwargs={}) as proc:
+                proc.wait()
+        self.assertEqual(test_val.value, 1)
+
+    def test_tracking_url_context_works_correctly_when_logs_output_pattern_to_url_is_not_default(self):
+
+        class _Task(TestEchoTask):
+            def build_tracking_url(self, logs_output):
+                return 'The {} is mine'.format(logs_output)
+
+        test_val = Value('i', 0)
+
+        def fake_set_tracking_url(val, url):
+            if url == "The world is mine":
+                val.value += 1
+
+        task = _Task(
+            capture_output=False,
+            stream_for_searching_tracking_url='stdout',
+            tracking_url_pattern=r"Hello, (.*)!"
+        )
+
+        test_args = list(map(str, task.program_args()))
+
         with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
             with task._proc_with_tracking_url_context(proc_args=test_args, proc_kwargs={}) as proc:
                 proc.wait()

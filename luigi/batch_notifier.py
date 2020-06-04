@@ -7,8 +7,8 @@ import collections
 from datetime import datetime
 import time
 
+
 import luigi
-from luigi import six
 from luigi.notifications import send_email, email
 import luigi.parameter
 
@@ -52,7 +52,7 @@ def _plural_format(template, number, plural='s'):
     return template.format(number, '' if number == 1 else plural)
 
 
-class BatchNotifier(object):
+class BatchNotifier:
     def __init__(self, **kwargs):
         self._config = batch_email(**kwargs)
         self._fail_counts = collections.defaultdict(collections.Counter)
@@ -76,8 +76,8 @@ class BatchNotifier(object):
         elif self._config.batch_mode == 'family':
             return family
         elif self._config.batch_mode == 'unbatched_params':
-            param_str = six.u(', ').join(six.u('{}={}').format(*kv) for kv in six.iteritems(unbatched_args))
-            return six.u('{}({})').format(family, param_str)
+            param_str = ', '.join('{}={}'.format(k, v) for k, v in unbatched_args.items())
+            return '{}({})'.format(family, param_str)
         else:
             raise ValueError('Unknown batch mode for batch notifier: {}'.format(
                 self._config.batch_mode))
@@ -85,9 +85,9 @@ class BatchNotifier(object):
     def _format_expl(self, expl):
         lines = expl.rstrip().split('\n')[-self._config.error_lines:]
         if self._email_format == 'html':
-            return six.u('<pre>{}</pre>').format('\n'.join(lines))
+            return '<pre>{}</pre>'.format('\n'.join(lines))
         else:
-            return six.u('\n{}').format(six.u('\n').join(map(six.u('      {}').format, lines)))
+            return '\n{}'.format('\n'.join(map('      {}'.format, lines)))
 
     def _expl_body(self, expls):
         lines = [self._format_expl(expl) for expl in expls]
@@ -102,15 +102,15 @@ class BatchNotifier(object):
             _plural_format('{} disable{}', disable_count),
             _plural_format('{} scheduling failure{}', scheduling_count),
         ]
-        count_str = six.u(', ').join(filter(None, counts))
-        return six.u('{} ({})').format(task, count_str)
+        count_str = ', '.join(filter(None, counts))
+        return '{} ({})'.format(task, count_str)
 
     def _format_tasks(self, tasks):
         lines = map(self._format_task, sorted(tasks, key=self._expl_key))
         if self._email_format == 'html':
-            return six.u('<li>{}').format(six.u('\n<br>').join(lines))
+            return '<li>{}'.format('\n<br>'.join(lines))
         else:
-            return six.u('- {}').format(six.u('\n  ').join(lines))
+            return '- {}'.format('\n  '.join(lines))
 
     def _owners(self, owners):
         return self._default_owner | set(owners)
@@ -136,12 +136,12 @@ class BatchNotifier(object):
 
     def _task_expl_groups(self, expls):
         if not self._config.group_by_error_messages:
-            return [((task,), msg) for task, msg in six.iteritems(expls)]
+            return [((task,), msg) for task, msg in expls.items()]
 
         groups = collections.defaultdict(list)
-        for task, msg in six.iteritems(expls):
+        for task, msg in expls.items():
             groups[msg].append(task)
-        return [(tasks, msg) for msg, tasks in six.iteritems(groups)]
+        return [(tasks, msg) for msg, tasks in groups.items()]
 
     def _expls_key(self, expls_tuple):
         expls = expls_tuple[0]
@@ -156,23 +156,23 @@ class BatchNotifier(object):
     def _email_body(self, fail_counts, disable_counts, scheduling_counts, fail_expls):
         expls = {
             (name, fail_count, disable_counts[name], scheduling_counts[name]): self._expl_body(fail_expls[name])
-            for name, fail_count in six.iteritems(fail_counts)
+            for name, fail_count in fail_counts.items()
         }
         expl_groups = sorted(self._task_expl_groups(expls), key=self._expls_key)
         body_lines = []
         for tasks, msg in expl_groups:
             body_lines.append(self._format_tasks(tasks))
             body_lines.append(msg)
-        body = six.u('\n').join(filter(None, body_lines)).rstrip()
+        body = '\n'.join(filter(None, body_lines)).rstrip()
         if self._email_format == 'html':
-            return six.u('<ul>\n{}\n</ul>').format(body)
+            return '<ul>\n{}\n</ul>'.format(body)
         else:
             return body
 
     def _send_email(self, fail_counts, disable_counts, scheduling_counts, fail_expls, owner):
-        num_failures = sum(six.itervalues(fail_counts))
-        num_disables = sum(six.itervalues(disable_counts))
-        num_scheduling_failures = sum(six.itervalues(scheduling_counts))
+        num_failures = sum(fail_counts.values())
+        num_disables = sum(disable_counts.values())
+        num_scheduling_failures = sum(scheduling_counts.values())
         subject_parts = [
             _plural_format('{} failure{}', num_failures),
             _plural_format('{} disable{}', num_disables),
@@ -188,7 +188,7 @@ class BatchNotifier(object):
 
     def send_email(self):
         try:
-            for owner, failures in six.iteritems(self._fail_counts):
+            for owner, failures in self._fail_counts.items():
                 self._send_email(
                     fail_counts=failures,
                     disable_counts=self._disabled_counts[owner],

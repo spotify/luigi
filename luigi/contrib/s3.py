@@ -20,10 +20,7 @@ Implementation of Simple Storage Service support.
 system operations. The `boto3` library is required to use S3 targets.
 """
 
-from __future__ import division
-
 import datetime
-import io
 import itertools
 import logging
 import os
@@ -31,17 +28,9 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
-try:
-    from ConfigParser import NoSectionError
-except ImportError:
-    from configparser import NoSectionError
-
-from luigi import six
+from configparser import NoSectionError
 
 from luigi import configuration
 from luigi.format import get_default_format
@@ -57,7 +46,6 @@ try:
 except ImportError:
     logger.warning("Loading S3 module without the python package boto3. "
                    "Will crash at runtime if S3 functionality is used.")
-
 
 # two different ways of marking a directory
 # with a suffix in S3
@@ -77,21 +65,6 @@ class DeprecatedBotoClientException(Exception):
     pass
 
 
-class _StreamingBodyAdaptor(io.IOBase):
-    """
-    Adapter class wrapping botocore's StreamingBody to make a file like iterable
-    """
-
-    def __init__(self, streaming_body):
-        self.streaming_body = streaming_body
-
-    def read(self, size):
-        return self.streaming_body.read(size)
-
-    def close(self):
-        return self.streaming_body.close()
-
-
 class S3Client(FileSystem):
     """
     boto3-powered S3 client.
@@ -101,7 +74,7 @@ class S3Client(FileSystem):
     DEFAULT_PART_SIZE = 8388608
     DEFAULT_THREADS = 100
 
-    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
+    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None,
                  **kwargs):
         options = self._get_s3_config()
         options.update(kwargs)
@@ -109,6 +82,8 @@ class S3Client(FileSystem):
             options['aws_access_key_id'] = aws_access_key_id
         if aws_secret_access_key:
             options['aws_secret_access_key'] = aws_secret_access_key
+        if aws_session_token:
+            options['aws_session_token'] = aws_session_token
 
         self._options = options
 
@@ -125,11 +100,12 @@ class S3Client(FileSystem):
         aws_access_key_id = options.get('aws_access_key_id')
         aws_secret_access_key = options.get('aws_secret_access_key')
 
-        # Removing key args would break backwards compability
+        # Removing key args would break backwards compatibility
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
 
-        aws_session_token = None
+        # In case the aws_session_token is provided use it
+        aws_session_token = options.get('aws_session_token')
 
         if role_arn and role_session_name:
             sts_client = boto3.client('sts')
@@ -143,7 +119,7 @@ class S3Client(FileSystem):
                          .format(role_session_name))
 
         for key in ['aws_access_key_id', 'aws_secret_access_key',
-                    'aws_role_session_name', 'aws_role_arn']:
+                    'aws_role_session_name', 'aws_role_arn', 'aws_session_token']:
             if key in options:
                 options.pop(key)
 
@@ -510,7 +486,7 @@ class S3Client(FileSystem):
         except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
-        for k, v in six.iteritems(config):
+        for k, v in config.items():
             try:
                 config[k] = int(v)
             except ValueError:
@@ -582,9 +558,9 @@ class AtomicS3File(AtomicLocalFile):
             self.tmp_path, self.path, **self.s3_options)
 
 
-class ReadableS3File(object):
+class ReadableS3File:
     def __init__(self, s3_key):
-        self.s3_key = _StreamingBodyAdaptor(s3_key.get()['Body'])
+        self.s3_key = s3_key.get()['Body']
         self.buffer = []
         self.closed = False
         self.finished = False

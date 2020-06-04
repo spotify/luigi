@@ -279,6 +279,11 @@ class RootPathHandler(BaseTaskHistoryHandler):
         # instead of absolute (which would be my.app.com/static/visualizer/index.html)
         self.redirect("static/visualiser/index.html")
 
+    def head(self):
+        """HEAD endpoint for health checking the scheduler"""
+        self.set_status(204)
+        self.finish()
+
 
 class MetricsHandler(tornado.web.RequestHandler):
     def initialize(self, scheduler):

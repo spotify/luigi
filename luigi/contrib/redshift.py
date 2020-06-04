@@ -169,7 +169,8 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def copy_options(self):
         """
         Add extra copy options, for example:
@@ -526,14 +527,16 @@ class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
       configuration or environment variables.
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def jsonpath(self):
         """
         Override the jsonpath schema location for the table.
         """
         return ''
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def copy_json_options(self):
         """
         Add extra copy options, for example:
@@ -622,19 +625,23 @@ class KillOpenRedshiftSessions(luigi.Task):
     # 30 seconds is usually fine; 60 is conservative
     connection_reset_wait_seconds = luigi.IntParameter(default=60)
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def host(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def database(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def password(self):
         return None
 
@@ -737,7 +744,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
 
     Usage:
     Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
-    Optionally, override the `autocommit` atribute to run the query in autocommit mode - this is necessary to run VACUUM for example.
+    Optionally, override the `autocommit` attribute to run the query in autocommit mode - this is necessary to run VACUUM for example.
     Override the `run` method if your use case requires some action with the query result.
     Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
     To customize the query signature as recorded in the database marker table, override the `update_id` property.

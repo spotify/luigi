@@ -37,16 +37,18 @@ readme_note = """\
 with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
-install_requires = [
-    # https://pagure.io/python-daemon/issue/18
-    'python-daemon<2.2.0',
-    'python-dateutil>=2.7.5,<3',
-]
+install_requires = ['python-dateutil>=2.7.5,<3']
+
+# Can't use python-daemon>=2.2.0 if on windows
+#     See https://pagure.io/python-daemon/issue/18
+if sys.platform == 'nt':
+    install_requires.append('python-daemon<2.2.0')
+else:
+    install_requires.append('python-daemon')
 
 # Tornado >=5 requires updated ssl module so we only allow it for recent enough
-# versions of python (3.4+ and 2.7.9+).
-if sys.version_info[:2] >= (3, 4) or (sys.version_info[:2] == (2, 7) and
-                                      sys.version_info[2] >= 9):
+# versions of python (3.4+).
+if sys.version_info[:2] >= (3, 4):
     install_requires.append('tornado>=4.0,<6')
 else:
     install_requires.append('tornado>=4.0,<5')
@@ -62,17 +64,22 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
     install_requires.append('sqlalchemy')
     # readthedocs don't like python-daemon, see #1342
-    install_requires.remove('python-daemon<2.2.0')
+    install_requires = [x for x in install_requires if not x.startswith('python-daemon')]
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
+
+# load meta package infos
+meta = {}
+with open("luigi/__meta__.py", "r") as f:
+    exec(f.read(), meta)
 
 setup(
     name='luigi',
-    version='2.8.9',
-    description='Workflow mgmgt + task scheduling + dependency resolution',
+    version=meta['__version__'],
+    description=meta['__doc__'],
     long_description=long_description,
-    author='The Luigi Authors',
-    url='https://github.com/spotify/luigi',
-    license='Apache License 2.0',
+    author=meta['__author__'],
+    url=meta['__contact__'],
+    license=meta['__license__'],
     packages=[
         'luigi',
         'luigi.configuration',
@@ -104,7 +111,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',

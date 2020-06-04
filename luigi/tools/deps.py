@@ -3,10 +3,10 @@
 
 # Finds all tasks and task outputs on the dependency paths from the given downstream task T
 # up to the given source/upstream task S (optional). If the upstream task is not given,
-# all upstream tasks on all dependancy paths of T will be returned.
+# all upstream tasks on all dependency paths of T will be returned.
 
 # Terms:
-# if  the execution of Task T depends on the output of task S on a dependancy graph,
+# if  the execution of Task T depends on the output of task S on a dependency graph,
 #  T is called a downstream/sink task, S is called an upstream/source task.
 
 # This is useful and practical way to find all upstream tasks of task T.
@@ -36,8 +36,6 @@
 # [--upstream-family MyUpstreamTask]
 #
 
-
-from __future__ import print_function
 import luigi.interface
 from luigi.contrib.ssh import RemoteTarget
 from luigi.contrib.postgres import PostgresTarget
@@ -47,7 +45,10 @@ from luigi.task import flatten
 from luigi import parameter
 import sys
 from luigi.cmdline_parser import CmdlineParser
-import collections
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 
 
 def get_task_requires(task):
@@ -118,7 +119,7 @@ def main():
 
         if isinstance(task_output, dict):
             output_descriptions = [get_task_output_description(output) for label, output in task_output.items()]
-        elif isinstance(task_output, collections.Iterable):
+        elif isinstance(task_output, Iterable):
             output_descriptions = [get_task_output_description(output) for output in task_output]
         else:
             output_descriptions = [get_task_output_description(task_output)]

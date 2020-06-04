@@ -28,7 +28,6 @@ import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
-from luigi import six
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -149,6 +148,7 @@ class NoopTask(luigi.Task):
 
 class MyEnum(enum.Enum):
     A = 1
+    C = 3
 
 
 def _value(parameter):
@@ -296,6 +296,19 @@ class ParameterTest(LuigiTestCase):
     def test_enum_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.EnumParameter())
 
+    def test_enum_list_param_valid(self):
+        p = luigi.parameter.EnumListParameter(enum=MyEnum)
+        self.assertEqual((), p.parse(''))
+        self.assertEqual((MyEnum.A,), p.parse('A'))
+        self.assertEqual((MyEnum.A, MyEnum.C), p.parse('A,C'))
+
+    def test_enum_list_param_invalid(self):
+        p = luigi.parameter.EnumListParameter(enum=MyEnum)
+        self.assertRaises(ValueError, lambda: p.parse('A,B'))
+
+    def test_enum_list_param_missing(self):
+        self.assertRaises(ParameterException, lambda: luigi.parameter.EnumListParameter())
+
     def test_list_serialize_parse(self):
         a = luigi.ListParameter()
         b_list = [1, 2, 3]
@@ -436,6 +449,18 @@ class TestParametersHashability(LuigiTestCase):
 
         p = luigi.parameter.EnumParameter(enum=MyEnum)
         self.assertEqual(hash(Foo(args=MyEnum.A).args), hash(p.parse('A')))
+
+    def test_enum_list(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.EnumListParameter(enum=MyEnum)
+
+        p = luigi.parameter.EnumListParameter(enum=MyEnum)
+        self.assertEqual(hash(Foo(args=(MyEnum.A, MyEnum.C)).args), hash(p.parse('A,C')))
+
+        class FooWithDefault(luigi.Task):
+            args = luigi.parameter.EnumListParameter(enum=MyEnum, default=[MyEnum.C])
+
+        self.assertEqual(FooWithDefault().args, p.parse('C'))
 
     def test_dict(self):
         class Foo(luigi.Task):
@@ -616,16 +641,15 @@ class TestRemoveGlobalParameters(LuigiTestCase):
             self.assertEqual(Dogs().n_dogs, 654)
             self.assertEqual(CatsWithoutSection().n_cats, 321)
 
-    if six.PY3:
-        def test_global_significant_param_warning(self):
-            """ We don't want any kind of global param to be positional """
-            with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
-                class MyTask(luigi.Task):
-                    # This could typically be called "--test-dry-run"
-                    x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
+    def test_global_significant_param_warning(self):
+        """ We don't want any kind of global param to be positional """
+        with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
+            class MyTask(luigi.Task):
+                # This could typically be called "--test-dry-run"
+                x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
 
-            self.assertRaises(luigi.parameter.UnknownParameterException,
-                              lambda: MyTask('arg'))
+        self.assertRaises(luigi.parameter.UnknownParameterException,
+                          lambda: MyTask('arg'))
 
         def test_global_insignificant_param_warning(self):
             """ We don't want any kind of global param to be positional """
@@ -678,10 +702,8 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     @with_config({"foo": {"bar": "2001-02-03T04H30"}})
     def testDateMinuteDeprecated(self):
         p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, 'Using "H" between hours and minutes is deprecated, omit it instead.'):
-                self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
-        else:
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   'Using "H" between hours and minutes is deprecated, omit it instead.'):
             self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
 
     @with_config({"foo": {"bar": "2001-02-03T040506"}})
@@ -1000,19 +1022,13 @@ class OverrideEnvStuff(LuigiTestCase):
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'default-scheduler-port is deprecated'):
-                env_params = luigi.interface.core()
-        else:
+        with self.assertWarnsRegex(DeprecationWarning, r'default-scheduler-port is deprecated'):
             env_params = luigi.interface.core()
-        self.assertEqual(env_params.scheduler_port, 6543)
+            self.assertEqual(env_params.scheduler_port, 6543)
 
     @with_config({"core": {"scheduler-port": '6544'}})
     def testOverrideSchedulerPort2(self):
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'scheduler-port \(with dashes\) should be avoided'):
-                env_params = luigi.interface.core()
-        else:
+        with self.assertWarnsRegex(DeprecationWarning, r'scheduler-port \(with dashes\) should be avoided'):
             env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6544)
 

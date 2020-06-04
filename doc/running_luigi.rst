@@ -4,7 +4,7 @@ Running Luigi
 Running from the Command Line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The prefered way to run Luigi tasks is through the ``luigi`` command line tool
+The preferred way to run Luigi tasks is through the ``luigi`` command line tool
 that will be installed with the pip package.
 
 .. code-block:: python
@@ -93,7 +93,7 @@ which will return your worker and/or scheduler implementations:
         # some custom logic
 
 
-    class MyFactory(object):
+    class MyFactory:
       def create_local_scheduler(self):
           return scheduler.Scheduler(prune_on_get_work=True, record_task_history=False)
 

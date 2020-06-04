@@ -33,14 +33,8 @@ import os
 import re
 import warnings
 
-# In python3 ConfigParser was renamed
-# https://stackoverflow.com/a/41202010
-try:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    Interpolation = object
-except ImportError:
-    from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-    from configparser import Interpolation, BasicInterpolation
+from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
+from configparser import Interpolation, BasicInterpolation
 
 from .base_parser import BaseParser
 
@@ -130,17 +124,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         'client.cfg',  # Deprecated old-style local luigi config
         'luigi.cfg',
     ]
-    if hasattr(ConfigParser, "_interpolate"):
-        # Override ConfigParser._interpolate (Python 2)
-        def _interpolate(self, section, option, rawval, vars):
-            value = ConfigParser._interpolate(self, section, option, rawval, vars)
-            return EnvironmentInterpolation().before_get(
-                parser=self, section=section, option=option,
-                value=value, defaults=None,
-            )
-    else:
-        # Override ConfigParser._DEFAULT_INTERPOLATION (Python 3)
-        _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
+    _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
 
     @classmethod
     def reload(cls):
@@ -181,6 +165,28 @@ class LuigiConfigParser(BaseParser, ConfigParser):
                not isinstance(default, expected_type):
                 raise
             return default
+
+    def has_option(self, section, option):
+        """modified has_option
+        Check for the existence of a given option in a given section. If the
+        specified 'section' is None or an empty string, DEFAULT is assumed. If
+        the specified 'section' does not exist, returns False.
+        """
+
+        # Underscore-style is the recommended configuration style
+        option = option.replace('-', '_')
+        if ConfigParser.has_option(self, section, option):
+            return True
+
+        # Support dash-style option names (with deprecation warning).
+        option_alias = option.replace('_', '-')
+        if ConfigParser.has_option(self, section, option_alias):
+            warn = 'Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.'.format(
+                s=section, o=option_alias, u=option)
+            warnings.warn(warn, DeprecationWarning)
+            return True
+
+        return False
 
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
         return self._get_with_default(ConfigParser.get, section, option, default, **kwargs)

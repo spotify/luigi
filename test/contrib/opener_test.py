@@ -1,12 +1,11 @@
 import luigi
 import mock
 import random
-import six
 import unittest
 
 from luigi.contrib.opener import OpenerTarget, NoOpenerError
 from luigi.mock import MockTarget
-from luigi.file import LocalTarget
+from luigi.local_target import LocalTarget
 
 from nose.plugins.attrib import attr
 
@@ -79,8 +78,8 @@ class TestOpenerTarget(unittest.TestCase):
         target.open('w').close()
         self.assertTrue(LocalTarget.fs.exists(self.local_file))
 
-    @mock.patch('luigi.file.LocalTarget.__init__')
-    @mock.patch('luigi.file.LocalTarget.__del__')
+    @mock.patch('luigi.local_target.LocalTarget.__init__')
+    @mock.patch('luigi.local_target.LocalTarget.__del__')
     def test_local_tmp_target(self, lt_del_patch, lt_init_patch):
         '''Verify local target url with query string
 
@@ -117,16 +116,15 @@ class TestOpenerTarget(unittest.TestCase):
                                          bar='true')
 
     def test_binary_support(self):
-        '''Make sure keyword arguments are preserved through the OpenerTarget
+        """
+        Make sure keyword arguments are preserved through the OpenerTarget
+        """
+        # Verify we can't normally write binary data
+        fp = OpenerTarget("mock://file.txt").open('w')
+        self.assertRaises(TypeError, fp.write, b'\x07\x08\x07')
 
-        '''
-        if six.PY3:
-            # Verify we can't normally write binary data
-            fp = OpenerTarget("mock://file.txt").open('w')
-            self.assertRaises(TypeError, fp.write, b'\x07\x08\x07')
-
-            # Verify the format is passed to the target and write binary data
-            fp = OpenerTarget("mock://file.txt",
-                              format=luigi.format.MixedUnicodeBytes).open('w')
-            fp.write(b'\x07\x08\x07')
-            fp.close()
+        # Verify the format is passed to the target and write binary data
+        fp = OpenerTarget("mock://file.txt",
+                          format=luigi.format.MixedUnicodeBytes).open('w')
+        fp.write(b'\x07\x08\x07')
+        fp.close()

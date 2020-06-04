@@ -25,7 +25,6 @@ from luigi import notifications
 from luigi.notifications import generate_email
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-from luigi import six
 import luigi
 
 
@@ -136,29 +135,27 @@ class ExceptionFormatTest(unittest.TestCase):
 
     @with_config({"email": {"receiver": "a@a.a"}})
     def testEmailRecipients(self):
-        six.assertCountEqual(self, notifications._email_recipients(), ["a@a.a"])
-        six.assertCountEqual(self, notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
-        six.assertCountEqual(self, notifications._email_recipients(["b@b.b", "c@c.c"]),
-                             ["a@a.a", "b@b.b", "c@c.c"])
+        self.assertCountEqual(notifications._email_recipients(), ["a@a.a"])
+        self.assertCountEqual(notifications._email_recipients("b@b.b"), ["a@a.a", "b@b.b"])
+        self.assertCountEqual(notifications._email_recipients(["b@b.b", "c@c.c"]), ["a@a.a", "b@b.b", "c@c.c"])
 
     @with_config({"email": {}}, replace_sections=True)
     def testEmailRecipientsNoConfig(self):
-        six.assertCountEqual(self, notifications._email_recipients(), [])
-        six.assertCountEqual(self, notifications._email_recipients("a@a.a"), ["a@a.a"])
-        six.assertCountEqual(self, notifications._email_recipients(["a@a.a", "b@b.b"]),
-                             ["a@a.a", "b@b.b"])
+        self.assertCountEqual(notifications._email_recipients(), [])
+        self.assertCountEqual(notifications._email_recipients("a@a.a"), ["a@a.a"])
+        self.assertCountEqual(notifications._email_recipients(["a@a.a", "b@b.b"]), ["a@a.a", "b@b.b"])
 
     def test_generate_unicode_email(self):
         generate_email(
             sender='test@example.com',
-            subject=six.u('sübjéct'),
-            message=six.u("你好"),
+            subject='sübjéct',
+            message="你好",
             recipients=['receiver@example.com'],
             image_png=None,
         )
 
 
-class NotificationFixture(object):
+class NotificationFixture:
     """
     Defines API and message fixture.
 

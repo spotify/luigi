@@ -20,7 +20,6 @@ from helpers import unittest, in_parse
 
 import luigi
 import luigi.interface
-from luigi import six
 
 
 class DateTask(luigi.Task):
@@ -97,10 +96,8 @@ class DateMinuteParameterTest(unittest.TestCase):
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 7, 0))
 
     def test_parse_deprecated(self):
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, 'Using "H" between hours and minutes is deprecated, omit it instead.'):
-                dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
-        else:
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   'Using "H" between hours and minutes is deprecated, omit it instead.'):
             dm = luigi.DateMinuteParameter().parse('2013-02-01T18H42')
         self.assertEqual(dm, datetime.datetime(2013, 2, 1, 18, 42, 0))
 
