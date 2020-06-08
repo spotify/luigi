@@ -349,7 +349,7 @@ class BigQueryClient:
             if status['status']['state'] == 'DONE':
                 if status['status'].get('errorResult'):
                     raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
-                return
+                return job_id
 
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
             time.sleep(5)
