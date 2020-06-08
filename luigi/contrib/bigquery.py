@@ -799,6 +799,6 @@ class BigQueryExecutionError(Exception):
         :param error_message: status['status']['errorResult'] for the failed job
         :type error_message: str
         """
-        super(BigQueryExecutionError, self).__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
+        super().__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
         self.error_message = error_message
         self.job_id = job_id
