@@ -348,7 +348,7 @@ class BigQueryClient:
             status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute(num_retries=10)
             if status['status']['state'] == 'DONE':
                 if status['status'].get('errorResult'):
-                    raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
+                    raise BigQueryExecutionError(job_id, status['status']['errorResult'])
                 return job_id
 
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
@@ -786,3 +786,9 @@ BigqueryLoadTask = BigQueryLoadTask
 BigqueryRunQueryTask = BigQueryRunQueryTask
 BigqueryCreateViewTask = BigQueryCreateViewTask
 ExternalBigqueryTask = ExternalBigQueryTask
+
+class BigQueryExecutionError(Exception):
+    def __init__(self, job_id, error_message) -> None:
+        super(BigQueryExecutionError, self).__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
+        self.error_message = error_message
+        self.job_id = job_id
