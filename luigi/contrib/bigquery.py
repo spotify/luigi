@@ -787,6 +787,7 @@ BigqueryRunQueryTask = BigQueryRunQueryTask
 BigqueryCreateViewTask = BigQueryCreateViewTask
 ExternalBigqueryTask = ExternalBigQueryTask
 
+
 class BigQueryExecutionError(Exception):
     def __init__(self, job_id, error_message) -> None:
         super(BigQueryExecutionError, self).__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
