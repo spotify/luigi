@@ -336,6 +336,9 @@ class BigQueryClient:
 
            :param dataset:
            :type dataset: BQDataset
+           :return: the job id of the job.
+           :rtype: str
+           :raises luigi.contrib.BigQueryExecutionError: if the job fails.
         """
 
         if dataset and not self.dataset_exists(dataset):
@@ -348,8 +351,8 @@ class BigQueryClient:
             status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute(num_retries=10)
             if status['status']['state'] == 'DONE':
                 if status['status'].get('errorResult'):
-                    raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
-                return
+                    raise BigQueryExecutionError(job_id, status['status']['errorResult'])
+                return job_id
 
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
             time.sleep(5)
@@ -786,3 +789,16 @@ BigqueryLoadTask = BigQueryLoadTask
 BigqueryRunQueryTask = BigQueryRunQueryTask
 BigqueryCreateViewTask = BigQueryCreateViewTask
 ExternalBigqueryTask = ExternalBigQueryTask
+
+
+class BigQueryExecutionError(Exception):
+    def __init__(self, job_id, error_message) -> None:
+        """
+        :param job_id: BigQuery Job ID
+        :type job_id: str
+        :param error_message: status['status']['errorResult'] for the failed job
+        :type error_message: str
+        """
+        super().__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
+        self.error_message = error_message
+        self.job_id = job_id
