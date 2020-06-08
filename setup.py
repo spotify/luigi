@@ -27,15 +27,15 @@ def get_static_files(path):
 
 luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
 
-readme_note = """\
+readme_note = """
 .. note::
 
    For the latest source, discussion, etc, please visit the
-   `GitHub repository <https://github.com/spotify/luigi>`_\n\n
+   `GitHub repository <https://github.com/spotify/luigi>`_
 """
 
 with open('README.rst') as fobj:
-    long_description = readme_note + fobj.read()
+    long_description = "\n\n" + readme_note + "\n\n" + fobj.read()
 
 install_requires = ['python-dateutil>=2.7.5,<3']
 
@@ -75,7 +75,7 @@ with open("luigi/__meta__.py", "r") as f:
 setup(
     name='luigi',
     version=meta['__version__'],
-    description=meta['__doc__'],
+    description=meta['__doc__'].strip(),
     long_description=long_description,
     author=meta['__author__'],
     url=meta['__contact__'],
