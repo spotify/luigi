@@ -336,6 +336,9 @@ class BigQueryClient:
 
            :param dataset:
            :type dataset: BQDataset
+           :return: the job id of the job.
+           :rtype: str
+           :raises luigi.contrib.BigQueryExecutionError: if the job fails.
         """
 
         if dataset and not self.dataset_exists(dataset):
@@ -790,6 +793,12 @@ ExternalBigqueryTask = ExternalBigQueryTask
 
 class BigQueryExecutionError(Exception):
     def __init__(self, job_id, error_message) -> None:
+        """
+        :param job_id: BigQuery Job ID
+        :type job_id: str
+        :param error_message: status['status']['errorResult'] for the failed job
+        :type error_message: str
+        """
         super(BigQueryExecutionError, self).__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
         self.error_message = error_message
         self.job_id = job_id
