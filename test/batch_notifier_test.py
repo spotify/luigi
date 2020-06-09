@@ -4,8 +4,6 @@ from smtplib import SMTPServerDisconnected
 import mock
 import unittest
 
-import six
-
 import luigi.batch_notifier
 
 
@@ -489,41 +487,37 @@ class BatchNotifierTest(unittest.TestCase):
 
     def test_unicode_error_message(self):
         bn = BatchNotifier(error_messages=1)
-        bn.add_failure('Task()', 'Task', {}, six.u('Érror'), [])
+        bn.add_failure('Task()', 'Task', {}, 'Érror', [])
         bn.send_email()
         self.check_email_send(
             'Luigi: 1 failure in the last 60 minutes',
-            six.u(
-                '- Task() (1 failure)\n'
-                '\n'
-                '      Érror'
-            )
+            '- Task() (1 failure)\n'
+            '\n'
+            '      Érror'
         )
 
     def test_unicode_error_message_html(self):
         self.email().format = 'html'
         bn = BatchNotifier(error_messages=1)
-        bn.add_failure('Task()', 'Task', {}, six.u('Érror'), [])
+        bn.add_failure('Task()', 'Task', {}, 'Érror', [])
         bn.send_email()
         self.check_email_send(
             'Luigi: 1 failure in the last 60 minutes',
-            six.u(
-                '<ul>\n'
-                '<li>Task() (1 failure)\n'
-                '<pre>Érror</pre>\n'
-                '</ul>'
-            ),
+            '<ul>\n'
+            '<li>Task() (1 failure)\n'
+            '<pre>Érror</pre>\n'
+            '</ul>'
         )
 
     def test_unicode_param_value(self):
         for batch_mode in ('all', 'unbatched_params'):
             self.send_email.reset_mock()
             bn = BatchNotifier(batch_mode=batch_mode)
-            bn.add_failure(six.u('Task(a=á)'), 'Task', {'a': six.u('á')}, 'error', [])
+            bn.add_failure('Task(a=á)', 'Task', {'a': 'á'}, 'error', [])
             bn.send_email()
             self.check_email_send(
                 'Luigi: 1 failure in the last 60 minutes',
-                six.u('- Task(a=á) (1 failure)')
+                '- Task(a=á) (1 failure)'
             )
 
     def test_unicode_param_value_html(self):
@@ -531,26 +525,24 @@ class BatchNotifierTest(unittest.TestCase):
         for batch_mode in ('all', 'unbatched_params'):
             self.send_email.reset_mock()
             bn = BatchNotifier(batch_mode=batch_mode)
-            bn.add_failure(six.u('Task(a=á)'), 'Task', {'a': six.u('á')}, 'error', [])
+            bn.add_failure('Task(a=á)', 'Task', {'a': 'á'}, 'error', [])
             bn.send_email()
             self.check_email_send(
                 'Luigi: 1 failure in the last 60 minutes',
-                six.u(
-                    '<ul>\n'
-                    '<li>Task(a=á) (1 failure)\n'
-                    '</ul>'
-                )
+                '<ul>\n'
+                '<li>Task(a=á) (1 failure)\n'
+                '</ul>'
             )
 
     def test_unicode_param_name(self):
         for batch_mode in ('all', 'unbatched_params'):
             self.send_email.reset_mock()
             bn = BatchNotifier(batch_mode=batch_mode)
-            bn.add_failure(six.u('Task(á=a)'), 'Task', {six.u('á'): 'a'}, 'error', [])
+            bn.add_failure('Task(á=a)', 'Task', {'á': 'a'}, 'error', [])
             bn.send_email()
             self.check_email_send(
                 'Luigi: 1 failure in the last 60 minutes',
-                six.u('- Task(á=a) (1 failure)')
+                '- Task(á=a) (1 failure)'
             )
 
     def test_unicode_param_name_html(self):
@@ -558,36 +550,33 @@ class BatchNotifierTest(unittest.TestCase):
         for batch_mode in ('all', 'unbatched_params'):
             self.send_email.reset_mock()
             bn = BatchNotifier(batch_mode=batch_mode)
-            bn.add_failure(six.u('Task(á=a)'), 'Task', {six.u('á'): 'a'}, 'error', [])
+            bn.add_failure('Task(á=a)', 'Task', {'á': 'a'}, 'error', [])
             bn.send_email()
             self.check_email_send(
                 'Luigi: 1 failure in the last 60 minutes',
-                six.u(
-                    '<ul>\n'
-                    '<li>Task(á=a) (1 failure)\n'
-                    '</ul>'
-                )
+                '<ul>\n'
+                '<li>Task(á=a) (1 failure)\n'
+                '</ul>'
             )
 
     def test_unicode_class_name(self):
         bn = BatchNotifier()
-        bn.add_failure(six.u('Tásk()'), six.u('Tásk'), {}, 'error', [])
+        bn.add_failure('Tásk()', 'Tásk', {}, 'error', [])
         bn.send_email()
         self.check_email_send(
             'Luigi: 1 failure in the last 60 minutes',
-            six.u('- Tásk() (1 failure)')
+            '- Tásk() (1 failure)'
         )
 
     def test_unicode_class_name_html(self):
         self.email().format = 'html'
         bn = BatchNotifier()
-        bn.add_failure(six.u('Tásk()'), six.u('Tásk'), {}, 'error', [])
+        bn.add_failure('Tásk()', 'Tásk', {}, 'error', [])
         bn.send_email()
         self.check_email_send(
             'Luigi: 1 failure in the last 60 minutes',
-            six.u(
-                '<ul>\n'
-                '<li>Tásk() (1 failure)\n'
-                '</ul>'
-            ),
+            '<ul>\n'
+            '<li>Tásk() (1 failure)\n'
+            '</ul>'
+
         )

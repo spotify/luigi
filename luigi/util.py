@@ -220,13 +220,9 @@ time. Brilliant!
 import datetime
 import logging
 
-from luigi import six
-
 from luigi import task
 from luigi import parameter
 
-if six.PY3:
-    xrange = range
 
 logger = logging.getLogger('luigi-interface')
 
@@ -248,7 +244,7 @@ def common_params(task_instance, task_cls):
     return vals
 
 
-class inherits(object):
+class inherits:
     """
     Task inheritance.
 
@@ -314,7 +310,7 @@ class inherits(object):
         return task_that_inherits
 
 
-class requires(object):
+class requires:
     """
     Same as :class:`~luigi.util.inherits`, but also auto-defines the requires method.
 
@@ -342,7 +338,7 @@ class requires(object):
         return task_that_requires
 
 
-class copies(object):
+class copies:
     """
     Auto-copies a task.
 
@@ -459,7 +455,7 @@ def previous(task):
 
 def get_previous_completed(task, max_steps=10):
     prev = task
-    for _ in xrange(max_steps):
+    for _ in range(max_steps):
         prev = previous(prev)
         logger.debug("Checking if %s is complete", prev)
         if prev.complete():

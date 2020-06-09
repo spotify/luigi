@@ -34,10 +34,7 @@ import logging
 import luigi
 import abc
 
-try:
-    from urlparse import urljoin
-except ImportError:
-    from urllib.parse import urljoin
+from urllib.parse import urljoin
 
 import json
 
@@ -61,7 +58,7 @@ def slot_to_dict(o):
     return o_dict
 
 
-class PaiJob(object):
+class PaiJob:
     """
     The Open PAI job definition.
     Refer to here https://github.com/Microsoft/pai/blob/master/docs/job_tutorial.md
@@ -121,7 +118,7 @@ class PaiJob(object):
             raise TypeError('you must specify one task at least.')
 
 
-class Port(object):
+class Port:
     __slots__ = ('label', 'beginAt', 'portNumber')
 
     def __init__(self, label, begin_at=0, port_number=1):
@@ -137,7 +134,7 @@ class Port(object):
         self.portNumber = port_number
 
 
-class TaskRole(object):
+class TaskRole:
     __slots__ = (
         'name', 'taskNumber', 'cpuNumber', 'memoryMB', 'shmMB', 'gpuNumber', 'portList', 'command',
         'minFailedTaskCount', 'minSucceededTaskCount'
@@ -184,17 +181,20 @@ class OpenPai(luigi.Config):
 class PaiTask(luigi.Task):
     __POLL_TIME = 5
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def name(self):
         """Name for the job, need to be unique, required"""
         return 'SklearnExample'
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def image(self):
         """URL pointing to the Docker image for all tasks in the job, required"""
         return 'openpai/pai.example.sklearn'
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def tasks(self):
         """List of taskRole, one task role at least, required"""
         return []

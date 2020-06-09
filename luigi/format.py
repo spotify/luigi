@@ -24,10 +24,8 @@ import locale
 import tempfile
 import warnings
 
-from luigi import six
 
-
-class FileWrapper(object):
+class FileWrapper:
     """
     Wrap `file` in a "real" so stuff can be added to it after creation.
     """
@@ -53,7 +51,7 @@ class FileWrapper(object):
         return iter(self._subpipe)
 
 
-class InputPipeProcessWrapper(object):
+class InputPipeProcessWrapper:
 
     def __init__(self, command, input_pipe=None):
         """
@@ -170,7 +168,7 @@ class InputPipeProcessWrapper(object):
         return False
 
 
-class OutputPipeProcessWrapper(object):
+class OutputPipeProcessWrapper:
     WRITES_BEFORE_FLUSH = 10000
 
     def __init__(self, command, output_pipe=None):
@@ -246,7 +244,7 @@ class OutputPipeProcessWrapper(object):
         return False
 
 
-class BaseWrapper(object):
+class BaseWrapper:
 
     def __init__(self, stream, *args, **kwargs):
         self._stream = stream
@@ -334,13 +332,13 @@ class MixedUnicodeBytesWrapper(BaseWrapper):
         self._stream.writelines((self._convert(line) for line in lines))
 
     def _convert(self, b):
-        if isinstance(b, six.text_type):
+        if isinstance(b, str):
             b = b.encode(self.encoding)
             warnings.warn('Writing unicode to byte stream', stacklevel=2)
         return b
 
 
-class Format(object):
+class Format:
     """
     Interface for format specifications.
     """
@@ -514,9 +512,4 @@ MixedUnicodeBytes = MixedUnicodeBytesFormat()
 
 
 def get_default_format():
-    if six.PY3:
-        return Text
-    elif os.linesep == '\n':
-        return Nop
-    else:
-        return SysNewLine
+    return Text

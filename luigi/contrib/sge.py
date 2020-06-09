@@ -95,10 +95,7 @@ import time
 import sys
 import logging
 import random
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+import pickle
 
 import luigi
 from luigi.contrib.hadoop import create_packages_archive

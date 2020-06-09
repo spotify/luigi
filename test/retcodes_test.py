@@ -97,7 +97,7 @@ class RetcodesTest(LuigiTestCase):
 
     def test_validate_dependency_error(self):
         # requires() from RequiringTask expects a Task object
-        class DependencyTask(object):
+        class DependencyTask:
             pass
 
         class RequiringTask(luigi.Task):

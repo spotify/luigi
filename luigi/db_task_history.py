@@ -39,7 +39,6 @@ import datetime
 import logging
 from contextlib import contextmanager
 
-from luigi import six
 
 from luigi import configuration
 from luigi import task_history
@@ -123,7 +122,7 @@ class DbTaskHistory(task_history.TaskHistory):
                 yield (task_record, session)
             else:
                 task_record = TaskRecord(task_id=task._task.id, name=task.task_family, host=task.host)
-                for (k, v) in six.iteritems(task.parameters):
+                for k, v in task.parameters.items():
                     task_record.parameters[k] = TaskParameter(name=k, value=v)
                 session.add(task_record)
                 yield (task_record, session)
@@ -137,14 +136,14 @@ class DbTaskHistory(task_history.TaskHistory):
         """
         with self._session(session) as session:
             query = session.query(TaskRecord).join(TaskEvent).filter(TaskRecord.name == task_name)
-            for (k, v) in six.iteritems(task_params):
+            for k, v in task_params.items():
                 alias = sqlalchemy.orm.aliased(TaskParameter)
                 query = query.join(alias).filter(alias.name == k, alias.value == v)
 
             tasks = query.order_by(TaskEvent.ts)
             for task in tasks:
                 # Sanity check
-                assert all(k in task.parameters and v == str(task.parameters[k].value) for (k, v) in six.iteritems(task_params))
+                assert all(k in task.parameters and v == str(task.parameters[k].value) for k, v in task_params.items())
 
                 yield task
 

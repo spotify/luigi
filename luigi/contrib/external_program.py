@@ -207,7 +207,7 @@ class ExternalProgramTask(luigi.Task):
             pipe_to_read.close()
 
 
-class ExternalProgramRunContext(object):
+class ExternalProgramRunContext:
     def __init__(self, proc):
         self.proc = proc
 

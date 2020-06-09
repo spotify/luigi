@@ -20,8 +20,6 @@ Implementation of Simple Storage Service support.
 system operations. The `boto3` library is required to use S3 targets.
 """
 
-from __future__ import division
-
 import datetime
 import itertools
 import logging
@@ -30,17 +28,9 @@ import os.path
 import warnings
 from multiprocessing.pool import ThreadPool
 
-try:
-    from urlparse import urlsplit
-except ImportError:
-    from urllib.parse import urlsplit
+from urllib.parse import urlsplit
 
-try:
-    from ConfigParser import NoSectionError
-except ImportError:
-    from configparser import NoSectionError
-
-from luigi import six
+from configparser import NoSectionError
 
 from luigi import configuration
 from luigi.format import get_default_format
@@ -496,7 +486,7 @@ class S3Client(FileSystem):
         except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
-        for k, v in six.iteritems(config):
+        for k, v in config.items():
             try:
                 config[k] = int(v)
             except ValueError:
@@ -568,7 +558,7 @@ class AtomicS3File(AtomicLocalFile):
             self.tmp_path, self.path, **self.s3_options)
 
 
-class ReadableS3File(object):
+class ReadableS3File:
     def __init__(self, s3_key):
         self.s3_key = s3_key.get()['Body']
         self.buffer = []

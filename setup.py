@@ -27,15 +27,15 @@ def get_static_files(path):
 
 luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
 
-readme_note = """\
+readme_note = """
 .. note::
 
    For the latest source, discussion, etc, please visit the
-   `GitHub repository <https://github.com/spotify/luigi>`_\n\n
+   `GitHub repository <https://github.com/spotify/luigi>`_
 """
 
 with open('README.rst') as fobj:
-    long_description = readme_note + fobj.read()
+    long_description = "\n\n" + readme_note + "\n\n" + fobj.read()
 
 install_requires = ['python-dateutil>=2.7.5,<3']
 
@@ -47,9 +47,8 @@ else:
     install_requires.append('python-daemon')
 
 # Tornado >=5 requires updated ssl module so we only allow it for recent enough
-# versions of python (3.4+ and 2.7.9+).
-if sys.version_info[:2] >= (3, 4) or (sys.version_info[:2] == (2, 7) and
-                                      sys.version_info[2] >= 9):
+# versions of python (3.4+).
+if sys.version_info[:2] >= (3, 4):
     install_requires.append('tornado>=4.0,<6')
 else:
     install_requires.append('tornado>=4.0,<5')
@@ -76,7 +75,7 @@ with open("luigi/__meta__.py", "r") as f:
 setup(
     name='luigi',
     version=meta['__version__'],
-    description=meta['__doc__'],
+    description=meta['__doc__'].strip(),
     long_description=long_description,
     author=meta['__author__'],
     url=meta['__contact__'],
@@ -112,7 +111,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',

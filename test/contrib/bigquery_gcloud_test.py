@@ -38,6 +38,7 @@ import avro.schema
 from avro.datafile import DataFileWriter
 from avro.io import DatumWriter
 from luigi.contrib.gcs import GCSTarget
+from luigi.contrib.bigquery import BigQueryExecutionError
 
 from nose.plugins.attrib import attr
 from helpers import unittest
@@ -321,6 +322,19 @@ class BigQueryGcloudTest(unittest.TestCase):
         task.run()
 
         self.assertTrue(self.bq_client.table_exists(self.table))
+
+    def test_run_successful_job(self):
+        body = {'configuration': {'query': {'query': 'select count(*) from unnest([1,2,3])'}}}
+
+        job_id = self.bq_client.run_job(PROJECT_ID, body)
+
+        self.assertIsNotNone(job_id)
+        self.assertNotEqual('', job_id)
+
+    def test_run_failing_job(self):
+        body = {'configuration': {'query': {'query': 'this is not a valid query'}}}
+
+        self.assertRaises(BigQueryExecutionError, lambda: self.bq_client.run_job(PROJECT_ID, body))
 
 
 @attr('gcloud')

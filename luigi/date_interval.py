@@ -31,18 +31,11 @@ Now, you can launch this from the command line using
 ``--date-interval 2014`` (for a year) and some other notations.
 """
 
-from __future__ import division
-
-from luigi import six
-
 import datetime
 import re
 
-if six.PY3:
-    xrange = range
 
-
-class DateInterval(object):
+class DateInterval:
 
     """
     The :class:`DateInterval` is the base class with subclasses :class:`Date`, :class:`Week`, :class:`Month`, :class:`Year`, and :class:`Custom`.
@@ -77,7 +70,7 @@ class DateInterval(object):
     def hours(self):
         ''' Same as dates() but returns 24 times more info: one for each hour.'''
         for date in self.dates():
-            for hour in xrange(24):
+            for hour in range(24):
                 yield datetime.datetime.combine(date, datetime.time(hour))
 
     def __str__(self):
@@ -190,7 +183,7 @@ class Week(DateInterval):
     '''
     def __init__(self, y, w):
         ''' Python datetime does not have a method to convert from ISO weeks, so the constructor uses some stupid brute force'''
-        for d in xrange(-10, 370):
+        for d in range(-10, 370):
             date = datetime.date(y, 1, 1) + datetime.timedelta(d)
             if date.isocalendar() == (y, w, 1):
                 date_a = date

@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from __future__ import print_function
 
 import email.parser
 import functools
@@ -39,7 +38,6 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi.rpc import RPCError
-from luigi import six
 from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
@@ -882,8 +880,8 @@ class WorkerKeepAliveTests(LuigiTestCase):
             time.sleep(0.1)
 
             try:
-                self.assertEqual(first_should_live, t1.isAlive())
-                self.assertEqual(second_should_live, t2.isAlive())
+                self.assertEqual(first_should_live, t1.is_alive())
+                self.assertEqual(second_should_live, t2.is_alive())
 
             finally:
                 # mark the task done so the worker threads will die
@@ -1002,7 +1000,7 @@ class WorkerDisabledTest(LuigiTestCase):
                 sch.disable_worker('my_worker_id')
                 KillWorkerTask.did_actually_run = True
 
-        class Factory(object):
+        class Factory:
             def create_local_scheduler(self, *args, **kwargs):
                 return sch
 
@@ -1485,9 +1483,6 @@ class HangTheWorkerTask(luigi.Task):
 class MultipleWorkersTest(unittest.TestCase):
 
     @unittest.skip('Always skip. There are many intermittent failures')
-    # This pass under python3 when run as `nosetests test/worker_test.py`
-    # but not as `nosetests test`. Probably some side effect on previous tests
-    @unittest.skipIf(six.PY3, 'This test fail on python3 when run with tox.')
     def test_multiple_workers(self):
         # Test using multiple workers
         # Also test generating classes dynamically since this may reflect issues with
@@ -1761,12 +1756,12 @@ class WorkerWaitJitterTest(unittest.TestCase):
 
         w = Worker()
         x = w._sleeper()
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 10.0)
         mock_sleep.assert_called_with(2.0)
 
         mock_random.return_value = 2.0
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 10.0)
         mock_sleep.assert_called_with(3.0)
 
@@ -1777,12 +1772,12 @@ class WorkerWaitJitterTest(unittest.TestCase):
         mock_random.return_value = 1.0
         w = Worker()
         x = w._sleeper()
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(2.0)
 
         mock_random.return_value = 3.3
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(4.3)
 

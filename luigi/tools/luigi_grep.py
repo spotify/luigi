@@ -4,11 +4,10 @@ import argparse
 import json
 from collections import defaultdict
 
-from luigi import six
-from luigi.six.moves.urllib.request import urlopen
+from urllib.request import urlopen
 
 
-class LuigiGrep(object):
+class LuigiGrep:
 
     def __init__(self, host, port):
         self._host = host
@@ -74,7 +73,7 @@ def main():
 
     for job in results:
         print("{name}: {status}, Dependencies:".format(name=job['name'], status=job['status']))
-        for (status, jobs) in six.iteritems(job['deps_by_status']):
+        for status, jobs in job['deps_by_status'].items():
             print("  status={status}".format(status=status))
             for job in jobs:
                 print("    {job}".format(job=job))
