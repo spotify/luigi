@@ -364,7 +364,14 @@ check_unfulfilled_deps
 force_multiprocessing
   By default, luigi uses multiprocessing when *more than one* worker process is
   requested. When set to true, multiprocessing is used independent of the
-  the number of workers.
+  number of workers.
+  Defaults to false.
+
+check_complete_on_run
+  By default, luigi tasks are marked as 'done' when they finish running without
+  raising an error. When set to true, tasks will also verify that their outputs
+  exist when they finish running, and will fail immediately if the outputs are
+  missing.
   Defaults to false.
 
 
