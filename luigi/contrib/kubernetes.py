@@ -248,7 +248,7 @@ class KubernetesJobTask(luigi.Task):
     def __print_kubectl_hints(self):
         self.__logger.info("To stream Pod logs, use:")
         for pod in self.__get_pods():
-            self.__logger.info("`kubectl logs -f pod/%s`" % pod.name)
+            self.__logger.info("`kubectl logs -f pod/%s -n %s`" % (pod.name, pod.namespace))
 
     def __verify_job_has_started(self):
         """Asserts that the job has successfully started"""
