@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from __future__ import print_function
 
 import email.parser
 import functools
@@ -39,7 +38,6 @@ from luigi.mock import MockTarget, MockFileSystem
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 from luigi.rpc import RPCError
-from luigi import six
 from luigi.cmdline import luigi_run
 
 luigi.notifications.DEBUG = True
@@ -882,8 +880,8 @@ class WorkerKeepAliveTests(LuigiTestCase):
             time.sleep(0.1)
 
             try:
-                self.assertEqual(first_should_live, t1.isAlive())
-                self.assertEqual(second_should_live, t2.isAlive())
+                self.assertEqual(first_should_live, t1.is_alive())
+                self.assertEqual(second_should_live, t2.is_alive())
 
             finally:
                 # mark the task done so the worker threads will die
@@ -1002,7 +1000,7 @@ class WorkerDisabledTest(LuigiTestCase):
                 sch.disable_worker('my_worker_id')
                 KillWorkerTask.did_actually_run = True
 
-        class Factory(object):
+        class Factory:
             def create_local_scheduler(self, *args, **kwargs):
                 return sch
 
@@ -1485,9 +1483,6 @@ class HangTheWorkerTask(luigi.Task):
 class MultipleWorkersTest(unittest.TestCase):
 
     @unittest.skip('Always skip. There are many intermittent failures')
-    # This pass under python3 when run as `nosetests test/worker_test.py`
-    # but not as `nosetests test`. Probably some side effect on previous tests
-    @unittest.skipIf(six.PY3, 'This test fail on python3 when run with tox.')
     def test_multiple_workers(self):
         # Test using multiple workers
         # Also test generating classes dynamically since this may reflect issues with
@@ -1761,12 +1756,12 @@ class WorkerWaitJitterTest(unittest.TestCase):
 
         w = Worker()
         x = w._sleeper()
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 10.0)
         mock_sleep.assert_called_with(2.0)
 
         mock_random.return_value = 2.0
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 10.0)
         mock_sleep.assert_called_with(3.0)
 
@@ -1777,12 +1772,12 @@ class WorkerWaitJitterTest(unittest.TestCase):
         mock_random.return_value = 1.0
         w = Worker()
         x = w._sleeper()
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(2.0)
 
         mock_random.return_value = 3.3
-        six.next(x)
+        next(x)
         mock_random.assert_called_with(0, 5.0)
         mock_sleep.assert_called_with(4.3)
 
@@ -1926,9 +1921,9 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
             self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
 
-            self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
-            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
-            self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(wt.task_id).num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).num_failures())
+            self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).num_failures())
 
     def test_with_all_disabled_with_multiple_worker(self):
         """
@@ -1971,9 +1966,9 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
                     self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
 
-                    self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
-                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
-                    self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+                    self.assertEqual(0, self.sch._state.get_task(wt.task_id).num_failures())
+                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).num_failures())
+                    self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).num_failures())
 
     def test_with_includes_success_with_single_worker(self):
         """
@@ -2009,9 +2004,9 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
             self.assertEqual([e1.task_id], list(self.sch.task_list('DISABLED', '').keys()))
             self.assertEqual([s1.task_id], list(self.sch.task_list('DONE', '').keys()))
 
-            self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
-            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
-            self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(wt.task_id).num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e1.task_id).num_failures())
+            self.assertEqual(0, self.sch._state.get_task(s1.task_id).num_failures())
 
     def test_with_includes_success_with_multiple_worker(self):
         """
@@ -2053,9 +2048,9 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
                     self.assertEqual([e1.task_id], list(self.sch.task_list('DISABLED', '').keys()))
                     self.assertEqual([s1.task_id], list(self.sch.task_list('DONE', '').keys()))
 
-                    self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
-                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
-                    self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
+                    self.assertEqual(0, self.sch._state.get_task(wt.task_id).num_failures())
+                    self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e1.task_id).num_failures())
+                    self.assertEqual(0, self.sch._state.get_task(s1.task_id).num_failures())
 
     def test_with_dynamic_dependencies_with_single_worker(self):
         """
@@ -2100,10 +2095,10 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
             self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
 
-            self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
-            self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
-            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
-            self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+            self.assertEqual(0, self.sch._state.get_task(wt.task_id).num_failures())
+            self.assertEqual(0, self.sch._state.get_task(s1.task_id).num_failures())
+            self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).num_failures())
+            self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).num_failures())
 
     def test_with_dynamic_dependencies_with_multiple_workers(self):
         """
@@ -2151,7 +2146,51 @@ class PerTaskRetryPolicyBehaviorTest(LuigiTestCase):
 
                 self.assertEqual(sorted([e1.task_id, e2.task_id]), sorted(self.sch.task_list('DISABLED', '').keys()))
 
-                self.assertEqual(0, self.sch._state.get_task(wt.task_id).failures.num_failures())
-                self.assertEqual(0, self.sch._state.get_task(s1.task_id).failures.num_failures())
-                self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).failures.num_failures())
-                self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).failures.num_failures())
+                self.assertEqual(0, self.sch._state.get_task(wt.task_id).num_failures())
+                self.assertEqual(0, self.sch._state.get_task(s1.task_id).num_failures())
+                self.assertEqual(self.per_task_retry_count, self.sch._state.get_task(e2.task_id).num_failures())
+                self.assertEqual(self.default_retry_count, self.sch._state.get_task(e1.task_id).num_failures())
+
+    def test_per_task_disable_persist_with_single_worker(self):
+        """
+        Ensure that `Task.disable_window` impacts the task retrying policy:
+        - with the scheduler retry policy (disable_window=3), task fails twice and gets disabled
+        - with the task retry policy (disable_window=0.5) task never gets into the DISABLED state
+        """
+        class TwoErrorsThenSuccessTask(Task):
+            """
+            The task is failing two times and then succeeds, waiting 1s before each try
+            """
+            retry_index = 0
+            disable_window = None
+
+            def run(self):
+                time.sleep(1)
+                self.retry_index += 1
+                if self.retry_index < 3:
+                    raise Exception("Retry index is %s for %s" % (self.retry_index, self.task_family))
+
+        t = TwoErrorsThenSuccessTask()
+
+        sch = Scheduler(retry_delay=0.1, retry_count=2, prune_on_get_work=True, disable_window=2)
+        with Worker(scheduler=sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w:
+            self.assertTrue(w.add(t))
+            self.assertFalse(w.run())
+
+            self.assertEqual(2, t.retry_index)
+            self.assertEqual([t.task_id], list(sch.task_list('DISABLED').keys()))
+            self.assertEqual(2, sch._state.get_task(t.task_id).num_failures())
+
+        t = TwoErrorsThenSuccessTask()
+        t.retry_index = 0
+        t.disable_window = 0.5
+
+        sch = Scheduler(retry_delay=0.1, retry_count=2, prune_on_get_work=True, disable_window=2)
+        with Worker(scheduler=sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0.05) as w:
+            self.assertTrue(w.add(t))
+            # Worker.run return False even if a task failed first but eventually succeeded.
+            self.assertFalse(w.run())
+
+            self.assertEqual(3, t.retry_index)
+            self.assertEqual([t.task_id], list(sch.task_list('DONE').keys()))
+            self.assertEqual(1, len(sch._state.get_task(t.task_id).failures))

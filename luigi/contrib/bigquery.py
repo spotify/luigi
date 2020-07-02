@@ -31,30 +31,30 @@ except ImportError:
                    'not installed. Any BigQuery task will fail')
 
 
-class CreateDisposition(object):
+class CreateDisposition:
     CREATE_IF_NEEDED = 'CREATE_IF_NEEDED'
     CREATE_NEVER = 'CREATE_NEVER'
 
 
-class WriteDisposition(object):
+class WriteDisposition:
     WRITE_TRUNCATE = 'WRITE_TRUNCATE'
     WRITE_APPEND = 'WRITE_APPEND'
     WRITE_EMPTY = 'WRITE_EMPTY'
 
 
-class QueryMode(object):
+class QueryMode:
     INTERACTIVE = 'INTERACTIVE'
     BATCH = 'BATCH'
 
 
-class SourceFormat(object):
+class SourceFormat:
     AVRO = 'AVRO'
     CSV = 'CSV'
     DATASTORE_BACKUP = 'DATASTORE_BACKUP'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
 
 
-class FieldDelimiter(object):
+class FieldDelimiter:
     """
     The separator for fields in a CSV file. The separator can be any ISO-8859-1 single-byte character.
     To use a character in the range 128-255, you must encode the character as UTF8.
@@ -71,23 +71,23 @@ class FieldDelimiter(object):
     PIPE = "|"
 
 
-class PrintHeader(object):
+class PrintHeader:
     TRUE = True
     FALSE = False
 
 
-class DestinationFormat(object):
+class DestinationFormat:
     AVRO = 'AVRO'
     CSV = 'CSV'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
 
 
-class Compression(object):
+class Compression:
     GZIP = 'GZIP'
     NONE = 'NONE'
 
 
-class Encoding(object):
+class Encoding:
     """
     [Optional] The character encoding of the data. The supported values are UTF-8 or ISO-8859-1. The default value is UTF-8.
 
@@ -112,7 +112,7 @@ class BQTable(collections.namedtuple('BQTable', 'project_id dataset_id table_id 
                self.dataset.dataset_id + "/" + self.table_id
 
 
-class BigQueryClient(object):
+class BigQueryClient:
     """A client for Google BigQuery.
 
     For details of how authentication and the descriptor work, see the
@@ -336,6 +336,9 @@ class BigQueryClient(object):
 
            :param dataset:
            :type dataset: BQDataset
+           :return: the job id of the job.
+           :rtype: str
+           :raises luigi.contrib.BigQueryExecutionError: if the job fails.
         """
 
         if dataset and not self.dataset_exists(dataset):
@@ -348,8 +351,8 @@ class BigQueryClient(object):
             status = self.client.jobs().get(projectId=project_id, jobId=job_id).execute(num_retries=10)
             if status['status']['state'] == 'DONE':
                 if status['status'].get('errorResult'):
-                    raise Exception('BigQuery job failed: {}'.format(status['status']['errorResult']))
-                return
+                    raise BigQueryExecutionError(job_id, status['status']['errorResult'])
+                return job_id
 
             logger.info('Waiting for job %s:%s to complete...', project_id, job_id)
             time.sleep(5)
@@ -414,7 +417,7 @@ class BigQueryTarget(luigi.target.Target):
         return str(self.table)
 
 
-class MixinBigQueryBulkComplete(object):
+class MixinBigQueryBulkComplete:
     """
     Allows to efficiently check if a range of BigQueryTargets are complete.
     This enables scheduling tasks with luigi range tools.
@@ -786,3 +789,16 @@ BigqueryLoadTask = BigQueryLoadTask
 BigqueryRunQueryTask = BigQueryRunQueryTask
 BigqueryCreateViewTask = BigQueryCreateViewTask
 ExternalBigqueryTask = ExternalBigQueryTask
+
+
+class BigQueryExecutionError(Exception):
+    def __init__(self, job_id, error_message) -> None:
+        """
+        :param job_id: BigQuery Job ID
+        :type job_id: str
+        :param error_message: status['status']['errorResult'] for the failed job
+        :type error_message: str
+        """
+        super().__init__('BigQuery job {} failed: {}'.format(job_id, error_message))
+        self.error_message = error_message
+        self.job_id = job_id

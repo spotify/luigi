@@ -40,18 +40,13 @@ import subprocess
 import sys
 import contextlib
 
-try:
-    import Queue
-except ImportError:
-    import queue as Queue
+import queue as Queue
 import random
 import socket
 import threading
 import time
 import traceback
 import types
-
-from luigi import six
 
 from luigi import notifications
 from luigi.event import Event
@@ -64,10 +59,7 @@ from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
 from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import json
 
 logger = logging.getLogger('luigi-interface')
 
@@ -90,7 +82,7 @@ def _is_external(task):
 
 
 def _get_retry_policy_dict(task):
-    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window_seconds)._asdict()
+    return RetryPolicy(task.retry_count, task.disable_hard_timeout, task.disable_window)._asdict()
 
 
 class TaskException(Exception):
@@ -147,7 +139,7 @@ class TaskProcess(multiprocessing.Process):
         while True:
             try:
                 if next_send is None:
-                    requires = six.next(task_gen)
+                    requires = next(task_gen)
                 else:
                     requires = task_gen.send(next_send)
             except StopIteration:
@@ -263,13 +255,13 @@ class TaskProcess(multiprocessing.Process):
     @contextlib.contextmanager
     def _forward_attributes(self):
         # forward configured attributes to the task
-        for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+        for reporter_attr, task_attr in self.forward_reporter_attributes.items():
             setattr(self.task, task_attr, getattr(self.status_reporter, reporter_attr))
         try:
             yield self
         finally:
             # reset attributes again
-            for reporter_attr, task_attr in six.iteritems(self.forward_reporter_attributes):
+            for reporter_attr, task_attr in self.forward_reporter_attributes.items():
                 setattr(self.task, task_attr, None)
 
 
@@ -293,7 +285,7 @@ class ContextManagedTaskProcess(TaskProcess):
             super(ContextManagedTaskProcess, self).run()
 
 
-class TaskStatusReporter(object):
+class TaskStatusReporter:
     """
     Reports task status information to the scheduler.
 
@@ -324,7 +316,7 @@ class TaskStatusReporter(object):
         self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
 
 
-class SchedulerMessage(object):
+class SchedulerMessage:
     """
     Message object that is build by the the :py:class:`Worker` when a message from the scheduler is
     received and passed to the message queue of a :py:class:`Task`.
@@ -350,7 +342,7 @@ class SchedulerMessage(object):
         self._scheduler.add_scheduler_message_response(self._task_id, self._message_id, response)
 
 
-class SingleProcessPool(object):
+class SingleProcessPool:
     """
     Dummy process pool for using a single processor.
 
@@ -391,7 +383,7 @@ class AsyncCompletionException(Exception):
         self.trace = trace
 
 
-class TracebackWrapper(object):
+class TracebackWrapper:
     """
     Class to wrap tracebacks so we can know they're not just strings.
     """
@@ -510,7 +502,7 @@ def rpc_message_callback(fn):
     return fn
 
 
-class Worker(object):
+class Worker:
     """
     Worker object communicates with a scheduler.
 
@@ -1037,7 +1029,7 @@ class Worker(object):
 
         :return:
         """
-        for task_id, p in six.iteritems(self._running_tasks):
+        for task_id, p in self._running_tasks.items():
             if not p.is_alive() and p.exitcode:
                 error_msg = 'Task {} died unexpectedly with exit code {}'.format(task_id, p.exitcode)
                 p.task.trigger_event(Event.PROCESS_FAILURE, p.task, error_msg)
@@ -1202,7 +1194,7 @@ class Worker(object):
                 if len(self._running_tasks) == 0:
                     self._idle_since = self._idle_since or datetime.datetime.now()
                     if self._keep_alive(get_work_response):
-                        six.next(sleeper)
+                        next(sleeper)
                         continue
                     else:
                         break

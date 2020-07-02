@@ -6,7 +6,6 @@ omit =
     */site-packages/nose/*
     *__init__*
     *test/*
-    */luigi/six.py
     */.tox/*
     */setup.py
     */bin/luigidc

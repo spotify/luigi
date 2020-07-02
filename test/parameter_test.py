@@ -28,7 +28,6 @@ import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
-from luigi import six
 from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
@@ -642,16 +641,15 @@ class TestRemoveGlobalParameters(LuigiTestCase):
             self.assertEqual(Dogs().n_dogs, 654)
             self.assertEqual(CatsWithoutSection().n_cats, 321)
 
-    if six.PY3:
-        def test_global_significant_param_warning(self):
-            """ We don't want any kind of global param to be positional """
-            with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
-                class MyTask(luigi.Task):
-                    # This could typically be called "--test-dry-run"
-                    x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
+    def test_global_significant_param_warning(self):
+        """ We don't want any kind of global param to be positional """
+        with self.assertWarnsRegex(DeprecationWarning, 'is_global support is removed. Assuming positional=False'):
+            class MyTask(luigi.Task):
+                # This could typically be called "--test-dry-run"
+                x_g1 = luigi.Parameter(default='y', is_global=True, significant=True)
 
-            self.assertRaises(luigi.parameter.UnknownParameterException,
-                              lambda: MyTask('arg'))
+        self.assertRaises(luigi.parameter.UnknownParameterException,
+                          lambda: MyTask('arg'))
 
         def test_global_insignificant_param_warning(self):
             """ We don't want any kind of global param to be positional """
@@ -704,10 +702,8 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
     @with_config({"foo": {"bar": "2001-02-03T04H30"}})
     def testDateMinuteDeprecated(self):
         p = luigi.DateMinuteParameter(config_path=dict(section="foo", name="bar"))
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, 'Using "H" between hours and minutes is deprecated, omit it instead.'):
-                self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
-        else:
+        with self.assertWarnsRegex(DeprecationWarning,
+                                   'Using "H" between hours and minutes is deprecated, omit it instead.'):
             self.assertEqual(datetime.datetime(2001, 2, 3, 4, 30, 0), _value(p))
 
     @with_config({"foo": {"bar": "2001-02-03T040506"}})
@@ -1026,19 +1022,13 @@ class OverrideEnvStuff(LuigiTestCase):
 
     @with_config({"core": {"default-scheduler-port": '6543'}})
     def testOverrideSchedulerPort(self):
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'default-scheduler-port is deprecated'):
-                env_params = luigi.interface.core()
-        else:
+        with self.assertWarnsRegex(DeprecationWarning, r'default-scheduler-port is deprecated'):
             env_params = luigi.interface.core()
-        self.assertEqual(env_params.scheduler_port, 6543)
+            self.assertEqual(env_params.scheduler_port, 6543)
 
     @with_config({"core": {"scheduler-port": '6544'}})
     def testOverrideSchedulerPort2(self):
-        if six.PY3:
-            with self.assertWarnsRegex(DeprecationWarning, r'scheduler-port \(with dashes\) should be avoided'):
-                env_params = luigi.interface.core()
-        else:
+        with self.assertWarnsRegex(DeprecationWarning, r'scheduler-port \(with dashes\) should be avoided'):
             env_params = luigi.interface.core()
         self.assertEqual(env_params.scheduler_port, 6544)
 

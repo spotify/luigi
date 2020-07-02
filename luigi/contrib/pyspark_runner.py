@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright 2012-2015 Spotify AB
+# Copyright 2012-2020 Spotify AB
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -26,27 +26,19 @@ other arguments are the ones returned by PySparkTask.app_options()
 
 """
 
-from __future__ import print_function
-
 import abc
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 import logging
-import sys
 import os
+import pickle
+import sys
 
 from luigi import configuration
-from luigi import six
 
 # this prevents the modules in the directory of this script from shadowing global packages
 sys.path.append(sys.path.pop(0))
 
 
-@six.add_metaclass(abc.ABCMeta)
-class _SparkEntryPoint(object):
+class _SparkEntryPoint(metaclass=abc.ABCMeta):
     def __init__(self, conf):
         self.conf = conf
 

@@ -25,7 +25,7 @@ from luigi.task_register import Register
 import sys
 
 
-class CmdlineParser(object):
+class CmdlineParser:
     """
     Helper for parsing command line arguments and used as part of the
     context when instantiating task objects.

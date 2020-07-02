@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from __future__ import print_function
 
 from helpers import unittest, skipOnTravis
 from mock import Mock
@@ -58,7 +57,7 @@ class TargetTest(unittest.TestCase):
         GoodTarget()
 
 
-class FileSystemTargetTestMixin(object):
+class FileSystemTargetTestMixin:
     """All Target that take bytes (python2: str) should pass those
     tests. In addition, a test to verify the method `exists`should be added
     """

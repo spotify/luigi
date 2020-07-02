@@ -35,7 +35,7 @@ from luigi.local_target import LocalTarget
 from luigi.mock import MockTarget
 from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemException
-from six.moves.urllib.parse import urlsplit, parse_qs
+from urllib.parse import urlsplit, parse_qs
 
 __all__ = ['OpenerError',
            'NoOpenerError',
@@ -67,7 +67,7 @@ class InvalidQuery(OpenerError):
     pass
 
 
-class OpenerRegistry(object):
+class OpenerRegistry:
 
     def __init__(self, openers=None):
         """An opener registry that  stores a number of opener objects used
@@ -142,7 +142,7 @@ class OpenerRegistry(object):
         return target
 
 
-class Opener(object):
+class Opener:
 
     """Base class for Opener objects.
 

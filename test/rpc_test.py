@@ -29,7 +29,6 @@ import time
 import socket
 from multiprocessing import Process, Queue
 import requests
-from luigi import six
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -206,7 +205,7 @@ class URLLibFetcherTest(ServerTestBase):
 
         # with body
         req = fetcher._create_request('http://localhost', body={'foo': 'bar baz/test'})
-        self.assertEqual(req.data, six.b('foo=bar+baz%2Ftest'))
+        self.assertEqual(req.data, b'foo=bar+baz%2Ftest')
 
         # without body
         req = fetcher._create_request('http://localhost')

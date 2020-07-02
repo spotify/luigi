@@ -85,7 +85,7 @@ class CustomizedWorker(luigi.worker.Worker):
         return self.has_run
 
 
-class CustomizedWorkerSchedulerFactory(object):
+class CustomizedWorkerSchedulerFactory:
 
     def __init__(self, *args, **kwargs):
         self.scheduler = CustomizedLocalScheduler()

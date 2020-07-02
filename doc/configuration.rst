@@ -364,7 +364,14 @@ check_unfulfilled_deps
 force_multiprocessing
   By default, luigi uses multiprocessing when *more than one* worker process is
   requested. When set to true, multiprocessing is used independent of the
-  the number of workers.
+  number of workers.
+  Defaults to false.
+
+check_complete_on_run
+  By default, luigi tasks are marked as 'done' when they finish running without
+  raising an error. When set to true, tasks will also verify that their outputs
+  exist when they finish running, and will fail immediately if the outputs are
+  missing.
   Defaults to false.
 
 
@@ -762,18 +769,18 @@ disable_hard_timeout
   (i.e. 10 minutes), and the task first failed at 10:00am, the task would
   be disabled if it failed again any time after 10:10am. Note: This setting
   does not consider the values of the ``retry_count`` or
-  ``disable_window_seconds`` settings.
+  ``disable_window`` settings.
 
 retry_count
-  Number of times a task can fail within ``disable_window_seconds`` before
+  Number of times a task can fail within ``disable_window`` before
   the scheduler will automatically disable it. If not set, the scheduler
   will not automatically disable jobs.
 
-disable_persist_seconds
+disable_persist
   Number of seconds for which an automatic scheduler disable lasts.
   Defaults to 86400 (1 day).
 
-disable_window_seconds
+disable_window
   Number of seconds during which ``retry_count`` failures must
   occur in order for an automatic disable by the scheduler. The
   scheduler forgets about disables that have occurred longer ago than
@@ -1061,4 +1068,4 @@ The fields below are in retry-policy and they can be defined per task.
 
 * ``retry_count``
 * ``disable_hard_timeout``
-* ``disable_window_seconds``
+* ``disable_window``

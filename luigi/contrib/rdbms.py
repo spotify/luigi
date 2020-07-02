@@ -27,7 +27,7 @@ import luigi.task
 logger = logging.getLogger('luigi-interface')
 
 
-class _MetadataColumnsMixin(object):
+class _MetadataColumnsMixin:
     """Provide an additional behavior that adds columns and values to tables
 
     This mixin is used to provide an additional behavior that allow a task to
@@ -41,7 +41,7 @@ class _MetadataColumnsMixin(object):
 
         .. code:: python
 
-            class CommonMetaColumnsBehavior(object):
+            class CommonMetaColumnsBehavior:
                 def update_report_execution_date_query(self):
                     query = "UPDATE {0} " \
                             "SET date_param = DATE '{1}' " \
@@ -162,23 +162,28 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
         * `port`
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def host(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def database(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def password(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def table(self):
         return None
 
@@ -287,7 +292,8 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         * `output`
     """
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def host(self):
         """
         Host of the RDBMS. Implementation should support `hostname:port`
@@ -302,23 +308,28 @@ class Query(luigi.task.MixinNaiveBulkComplete, luigi.Task):
         """
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def database(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def user(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def password(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def table(self):
         return None
 
-    @abc.abstractproperty
+    @property
+    @abc.abstractmethod
     def query(self):
         return None
 

@@ -21,7 +21,6 @@ import sys
 import pickle
 import luigi
 import luigi.contrib.hdfs
-from luigi import six
 from luigi.mock import MockTarget
 from helpers import with_config, temporary_unloaded_module
 from luigi.contrib.external_program import ExternalProgramRunError
@@ -30,10 +29,9 @@ from mock import mock, patch, call, MagicMock
 from functools import partial
 from multiprocessing import Value
 from subprocess import Popen
+from io import BytesIO
 
 from nose.plugins.attrib import attr
-
-BytesIO = six.BytesIO
 
 
 def poll_generator():
@@ -180,7 +178,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
             job.run()
         except ExternalProgramRunError as e:
             self.assertEqual(e.err, 'spark test error')
-            self.assertIn('spark test error', six.text_type(e))
+            self.assertIn('spark test error', str(e))
             self.assertIn(call.info('Program stderr:\nspark test error'),
                           logger.mock_calls)
         else:
