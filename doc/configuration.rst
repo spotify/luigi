@@ -374,6 +374,12 @@ check_complete_on_run
   missing.
   Defaults to false.
 
+failed_execution_summary_log_level
+  Controls the log level at which the execution summaries for failed tasks are
+  reported. Useful for trimming down the size of test suite or system log output,
+  but still including failure information for debugging purposes.
+  Defaults to INFO.
+
 
 [elasticsearch]
 ---------------

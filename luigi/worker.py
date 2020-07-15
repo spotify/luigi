@@ -57,7 +57,7 @@ from luigi.target import Target
 from luigi.task import Task, flatten, getpaths, Config
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
-from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
+from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter, ChoiceParameter
 
 import json
 
@@ -451,6 +451,10 @@ class worker(Config):
                                           description='If true, only mark tasks as done after running if they are complete. '
                                           'Regardless of this setting, the worker will always check if external '
                                           'tasks are complete before marking them as done.')
+    failed_execution_summary_log_level = ChoiceParameter(
+        default='INFO',
+        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+        description="Log level to use when reporting a failed execution summary. Passing execution summaries are logged as INFO.")
     force_multiprocessing = BoolParameter(default=False,
                                           description='If true, use multiprocessing also when '
                                           'running with 1 worker')

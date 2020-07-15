@@ -172,7 +172,14 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         logger.info('Done scheduling tasks')
         success &= worker.run()
     luigi_run_result = LuigiRunResult(worker, success)
-    logger.info(luigi_run_result.summary_text)
+
+    if success:
+        logger.info(luigi_run_result.summary_text)
+    else:
+        # convert our configured log level for failed execution summaries to a numeric log level
+        failed_summary_log_level = logging._checkLevel(worker._config.failed_execution_summary_log_level)
+        logger.log(failed_summary_log_level, luigi_run_result.summary_text)
+
     return luigi_run_result
 
 
