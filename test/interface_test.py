@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import logging
 import sys
 
 import luigi
@@ -98,6 +99,26 @@ class InterfaceTest(LuigiTestCase):
         self.worker.add = Mock(side_effect=[True, True])
         self.worker.run = Mock(return_value=False)
         self.assertFalse(self._run_interface(detailed_summary=True).scheduling_succeeded)
+
+    @with_config({'worker': {'failed_execution_summary_log_level': 'ERROR'}})
+    def test_interface_run_success_always_logs_summary_to_info(self):
+        self.worker.add = Mock(side_effect=[True, True])
+        self.worker.run = Mock(return_value=True)
+        with self.assertLogs(logging.getLogger('luigi-interface'), logging.INFO):
+            self._run_interface()
+
+    @with_config({'worker': {'failed_execution_summary_log_level': 'ERROR'}})
+    def test_interface_run_failure_logs_to_configured_level(self):
+        self.worker.add = Mock(side_effect=[True, True])
+        self.worker.run = Mock(side_effect=RuntimeError)
+        with self.assertLogs(logging.getLogger('luigi-interface'), logging.ERROR):
+            self._run_interface()
+
+    def test_interface_run_failure_defaults_to_logging_at_info(self):
+        self.worker.add = Mock(side_effect=[True, True])
+        self.worker.run = Mock(side_effect=RuntimeError)
+        with self.assertLogs(logging.getLogger('luigi-interface'), logging.INFO):
+            self._run_interface()
 
     @patch(_summary_dict_module_path())
     def test_that_status_is_success(self, fake_summary_dict):
