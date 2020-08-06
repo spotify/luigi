@@ -91,7 +91,7 @@ The task history has the following pages:
 
     .. figure:: history_by_name.png
        :alt: By name screenshot
-* ``/history/by_params/name?data=params``
+* ``/history/by_params/name?data={"param": "value"}``
   a listing of all runs of a given task restricted to runs with param values matching the given data.
   The data is a json blob describing the parameters,
   e.g. ``{"foo": "bar"}`` looks for a task with ``foo=bar``.
