@@ -46,12 +46,11 @@ if sys.platform == 'nt':
 else:
     install_requires.append('python-daemon')
 
-# Tornado >=5 requires updated ssl module so we only allow it for recent enough
-# versions of python (3.4+).
-if sys.version_info[:2] >= (3, 4):
-    install_requires.append('tornado>=4.0,<6')
+# Start from tornado 6, the minimum supported Python version is 3.5.2.
+if sys.version_info[:3] >= (3, 5, 2):
+    install_requires.append('tornado>=5.0,<7')
 else:
-    install_requires.append('tornado>=4.0,<5')
+    install_requires.append('tornado>=5.0,<6')
 
 # Note: To support older versions of setuptools, we're explicitly not
 #   using conditional syntax (i.e. 'enum34>1.1.0;python_version<"3.4"').
@@ -111,8 +110,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
