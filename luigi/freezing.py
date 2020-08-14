@@ -56,3 +56,14 @@ def recursively_freeze(value):
     elif isinstance(value, list) or isinstance(value, tuple):
         return tuple(recursively_freeze(v) for v in value)
     return value
+
+
+def recursively_thaw(value):
+    """
+    Recursively walks the given ``FrozenOrderedDict``, converting all ``FrozenOrderedDict`` objects into ``dict``.
+    """
+    if isinstance(value, FrozenOrderedDict):
+        value = dict(value)
+    if isinstance(value, dict):
+        return dict(((k, recursively_thaw(v)) for k, v in value.items()))
+    return value
