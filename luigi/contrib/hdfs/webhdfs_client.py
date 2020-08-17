@@ -27,7 +27,6 @@ the authors only implement the features they need.  If you need to wrap more of
 the file system operations, please do and contribute back.
 """
 
-
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
 import luigi.contrib.target

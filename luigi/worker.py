@@ -879,6 +879,7 @@ class Worker(object):
             batchable=task.batchable,
             retry_policy_dict=_get_retry_policy_dict(task),
             accepts_messages=task.accepts_messages,
+            schedule=[t.strftime('%H:%M:%S') for t in task.schedule] if hasattr(task, 'schedule') else None,
         )
 
     def _validate_dependency(self, dependency):
@@ -1101,7 +1102,9 @@ class Worker(object):
                            module=task.task_module,
                            new_deps=new_deps,
                            assistant=self._assistant,
-                           retry_policy_dict=_get_retry_policy_dict(task))
+                           retry_policy_dict=_get_retry_policy_dict(task),
+                           schedule=[t.strftime('%H:%M:%S') for t in task.schedule] if hasattr(task, 'schedule') else None,
+                           )
 
             self._running_tasks.pop(task_id)
 

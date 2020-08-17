@@ -22,6 +22,8 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
+import datetime as dt
+
 try:
     from collections.abc import MutableSet
 except ImportError:
@@ -227,8 +229,8 @@ class OrderedSet(MutableSet):
 
     def __init__(self, iterable=None):
         self.end = end = []
-        end += [None, end, end]         # sentinel node for doubly linked list
-        self.map = {}                   # key --> [key, prev, next]
+        end += [None, end, end]  # sentinel node for doubly linked list
+        self.map = {}  # key --> [key, prev, next]
         if iterable is not None:
             self |= iterable
 
@@ -289,7 +291,7 @@ class OrderedSet(MutableSet):
 class Task(object):
     def __init__(self, task_id, status, deps, resources=None, priority=0, family='', module=None,
                  params=None, param_visibilities=None, accepts_messages=False, tracking_url=None, status_message=None,
-                 progress_percentage=None, retry_policy='notoptional'):
+                 progress_percentage=None, retry_policy='notoptional', schedule=None):
         self.id = task_id
         self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
         self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
@@ -306,7 +308,7 @@ class Task(object):
         self.time_running = None  # Timestamp when picked up by worker
         self.expl = None
         self.priority = priority
-        self.resources = _get_default(resources, {})
+        self.process_resources = resources
         self.family = family
         self.module = module
         self.param_visibilities = _get_default(param_visibilities, {})
@@ -325,6 +327,7 @@ class Task(object):
         self.runnable = False
         self.batchable = False
         self.batch_id = None
+        self.schedule = schedule
 
     def __repr__(self):
         return "Task(%r)" % vars(self)
@@ -332,9 +335,11 @@ class Task(object):
     def set_params(self, params):
         self.params = _get_default(params, {})
         self.public_params = {key: value for key, value in self.params.items() if
-                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
+                              self.param_visibilities.get(key,
+                                                          ParameterVisibility.PUBLIC) == ParameterVisibility.PUBLIC}
         self.hidden_params = {key: value for key, value in self.params.items() if
-                              self.param_visibilities.get(key, ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
+                              self.param_visibilities.get(key,
+                                                          ParameterVisibility.PUBLIC) == ParameterVisibility.HIDDEN}
 
     # TODO(2017-08-10) replace this function with direct calls to batchable
     # this only exists for backward compatibility
@@ -352,7 +357,8 @@ class Task(object):
             if (time.time() >= self.failures.first_failure_time + self.retry_policy.disable_hard_timeout):
                 return True
 
-        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(), self.retry_policy.retry_count)
+        logger.debug('%s task num failures is %s and limit is %s', self.id, self.failures.num_failures(),
+                     self.retry_policy.retry_count)
         if self.failures.num_failures() >= self.retry_policy.retry_count:
             logger.debug('%s task num failures limit(%s) is exceeded', self.id, self.retry_policy.retry_count)
             return True
@@ -363,6 +369,27 @@ class Task(object):
     def pretty_id(self):
         param_str = ', '.join(u'{}={}'.format(key, value) for key, value in sorted(self.public_params.items()))
         return u'{}({})'.format(self.family, param_str)
+
+    @property
+    def resources(self):
+        if self.schedule is None:
+            return self.process_resources
+        else:
+            time_resource = 2
+            schedule_from, schedule_to = [dt.datetime.strptime(t, '%H:%M:%S').time() for t in self.schedule]
+            now = dt.datetime.now().time()
+            if schedule_from < schedule_to:
+                if schedule_from <= now <= schedule_to:
+                    time_resource = 1
+            else:
+                if now >= schedule_from or now <= schedule_to:
+                    time_resource = 1
+            added_resources = self.process_resources.copy()
+            added_resources['schedule_{}'.format(self.id)] = time_resource
+            return added_resources
+
+    def set_resources(self, resources):
+        self.process_resources = resources
 
 
 class Worker(object):
@@ -607,7 +634,9 @@ class SimpleTaskState(object):
 
     def fail_dead_worker_task(self, task, config, assistants):
         # If a running worker disconnects, tag all its jobs as FAILED and subject it to the same retry logic
-        if task.status in (BATCH_RUNNING, RUNNING) and task.worker_running and task.worker_running not in task.stakeholders | assistants:
+        if task.status in (
+                BATCH_RUNNING,
+                RUNNING) and task.worker_running and task.worker_running not in task.stakeholders | assistants:
             logger.info("Task %r is marked as running by disconnected worker %r -> marking as "
                         "FAILED with retry delay of %rs", task.id, task.worker_running,
                         config.retry_delay)
@@ -650,7 +679,7 @@ class SimpleTaskState(object):
                 continue
             last_get_work = worker.last_get_work
             if last_get_work_gt is not None and (
-                            last_get_work is None or last_get_work <= last_get_work_gt):
+                    last_get_work is None or last_get_work <= last_get_work_gt):
                 continue
             yield worker
 
@@ -715,7 +744,8 @@ class Scheduler(object):
             self._task_history = db_task_history.DbTaskHistory()
         else:
             self._task_history = history.NopHistory()
-        self._resources = resources or configuration.get_config().getintdict('resources')  # TODO: Can we make this a Parameter?
+        self._resources = resources or configuration.get_config().getintdict(
+            'resources')  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
         self._paused = False
@@ -823,7 +853,7 @@ class Scheduler(object):
                  deps=None, new_deps=None, expl=None, resources=None,
                  priority=0, family='', module=None, params=None, param_visibilities=None, accepts_messages=False,
                  assistant=False, tracking_url=None, worker=None, batchable=None,
-                 batch_id=None, retry_policy_dict=None, owners=None, **kwargs):
+                 batch_id=None, retry_policy_dict=None, owners=None, schedule=None, **kwargs):
         """
         * add task identified by task_id if it doesn't exist
         * if deps is not None, update dependency list
@@ -835,7 +865,7 @@ class Scheduler(object):
         worker_id = worker
         worker = self._update_worker(worker_id)
 
-        resources = {} if resources is None else resources.copy()
+        # resources = {} if resources is None else resources.copy()
 
         if retry_policy_dict is None:
             retry_policy_dict = {}
@@ -846,6 +876,7 @@ class Scheduler(object):
             _default_task = self._make_task(
                 task_id=task_id, status=PENDING, deps=deps, resources=resources,
                 priority=priority, family=family, module=module, params=params, param_visibilities=param_visibilities,
+                schedule=schedule,
             )
         else:
             _default_task = None
@@ -856,7 +887,8 @@ class Scheduler(object):
             return
 
         # Ignore claims that the task is PENDING if it very recently was marked as DONE.
-        if status == PENDING and task.status == DONE and (time.time() - task.updated) < self._config.stable_done_cooldown_secs:
+        if status == PENDING and task.status == DONE and (
+                time.time() - task.updated) < self._config.stable_done_cooldown_secs:
             return
 
         # for setting priority, we'll sometimes create tasks with unset family and params
@@ -940,7 +972,10 @@ class Scheduler(object):
             task.deps.update(new_deps)
 
         if resources is not None:
-            task.resources = resources
+            task.set_resources(resources)
+
+        if schedule is not None:
+            task.schedule = schedule
 
         if worker.enabled and not assistant:
             task.stakeholders.add(worker_id)
@@ -948,7 +983,8 @@ class Scheduler(object):
             # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
             # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
             for dep in task.deps or []:
-                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
+                t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None,
+                                                                         priority=priority))
                 t.stakeholders.add(worker_id)
 
         self._update_priority(task, priority, worker_id)
@@ -1210,7 +1246,7 @@ class Scheduler(object):
         for task in tasks:
             if (best_task and batched_params and task.family == best_task.family and
                     len(batched_tasks) < max_batch_size and task.is_batchable() and all(
-                    task.params.get(name) == value for name, value in unbatched_params.items()) and
+                        task.params.get(name) == value for name, value in unbatched_params.items()) and
                     task.resources == best_task.resources and self._schedulable(task)):
                 for name, params in batched_params.items():
                     params.append(task.params.get(name))
@@ -1473,7 +1509,8 @@ class Scheduler(object):
 
         tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
         for task in filter(filter_func, tasks):
-            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id, upstream_status_table):
+            if task.status != PENDING or not upstream_status or upstream_status == self._upstream_status(task.id,
+                                                                                                         upstream_status_table):
                 serialized = self._serialize_task(task.id, include_deps=False)
                 result[task.id] = serialized
         if limit and len(result) > (max_shown_tasks or self._config.max_shown_tasks):
