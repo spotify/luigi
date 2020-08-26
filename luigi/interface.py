@@ -28,7 +28,7 @@ import tempfile
 import signal
 import warnings
 
-from luigi import lock
+from luigi import lock, WrapperTask
 from luigi import parameter
 from luigi import rpc
 from luigi import scheduler
@@ -37,6 +37,8 @@ from luigi import worker
 from luigi.execution_summary import LuigiRunResult
 from luigi.cmdline_parser import CmdlineParser
 from luigi.setup_logging import InterfaceLogging
+
+logger = logging.getLogger('luigi-interface')
 
 
 class core(task.Config):
@@ -126,6 +128,33 @@ class _WorkerSchedulerFactory:
             scheduler=scheduler, worker_processes=worker_processes, assistant=assistant)
 
 
+def _handle_failed_wrapper_tasks(luigi_run_result):
+    """
+    :param luigi_run_result:
+    """
+    summary_dict = luigi_run_result.summary_dict
+    # failed tasks
+    failed_tasks = summary_dict["failed"]
+    # not completed tasks because of `failed_takes`
+    upstream_failed_tasks = summary_dict["upstream_failure"]
+
+    for t in upstream_failed_tasks:
+        # Only target children of WrapperTask
+        if not isinstance(t, WrapperTask):
+            continue
+        dependent_tasks = set(t.deps())
+        # if a WrapperTask dependent on failed tasks, run its failure handler
+        if len(dependent_tasks - failed_tasks) != len(dependent_tasks):
+            try:
+                t.on_upstream_failure()
+            except Exception as err:
+                # ignore errors while handling exception
+                logger.error(
+                    'Some error occurred while running failure handling of WrappedTask: {task}'.format(task=t)
+                )
+                logger.error(err)
+
+
 def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=None):
     """
     :param tasks:
@@ -172,6 +201,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         logger.info('Done scheduling tasks')
         success &= worker.run()
     luigi_run_result = LuigiRunResult(worker, success)
+    _handle_failed_wrapper_tasks(luigi_run_result)
     logger.info(luigi_run_result.summary_text)
     return luigi_run_result
 

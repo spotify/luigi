@@ -821,6 +821,14 @@ class WrapperTask(Task):
     def complete(self):
         return all(r.complete() for r in flatten(self.requires()))
 
+    def on_upstream_failure(self):
+        """
+        Override for custom error handling of wrapper task
+
+        This function is executed when required tasks are failed
+        """
+        pass
+
 
 class Config(Task):
     """
