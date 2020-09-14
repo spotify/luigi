@@ -26,6 +26,7 @@ from ..freezing import recursively_freeze
 
 from configparser import ConfigParser
 
+
 class LuigiTomlParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
     enabled = bool(toml)
