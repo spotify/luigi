@@ -24,8 +24,9 @@ except ImportError:
 from .base_parser import BaseParser
 from ..freezing import recursively_freeze
 
+from configparser import ConfigParser
 
-class LuigiTomlParser(BaseParser):
+class LuigiTomlParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
     enabled = bool(toml)
     data = dict()
