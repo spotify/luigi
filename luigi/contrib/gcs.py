@@ -60,6 +60,9 @@ EVENTUAL_CONSISTENCY_SLEEP_INTERVAL = 0.1
 # Maximum number of sleeps for eventual consistency.
 EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 
+# Uri for batch requests
+GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
+
 
 def _wait_for_consistency(checker):
     """Eventual consistency: wait until GCS reports something is true.
@@ -231,7 +234,7 @@ class GCSClient(luigi.target.FileSystem):
                 raise InvalidDeleteException(
                     'Path {} is a directory. Must use recursive delete'.format(path))
 
-            req = http.BatchHttpRequest()
+            req = http.BatchHttpRequest(batch_uri=GCS_BATCH_URI)
             for it in self._list_iter(bucket, self._add_path_delimiter(obj)):
                 req.add(self.client.objects().delete(bucket=bucket, object=it['name']))
             req.execute()
