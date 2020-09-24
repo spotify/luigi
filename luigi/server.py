@@ -271,7 +271,7 @@ class ByParamsHandler(BaseTaskHistoryHandler):
 
 class RootPathHandler(BaseTaskHistoryHandler):
     def get(self):
-        self.redirect("/static/visualiser/index.html")
+        self.redirect("static/visualiser/index.html")
 
     def head(self):
         """HEAD endpoint for health checking the scheduler"""
