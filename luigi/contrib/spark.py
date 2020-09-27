@@ -294,7 +294,7 @@ class PySparkTask(SparkSubmitTask):
 
     @property
     def pickle_protocol(self):
-        return configuration.get_config().getint(self.spark_version, "pickle-protocol", pickle.DEFAULT_PROTOCOL)
+        return configuration.get_config().getint('spark', 'pickle-protocol', pickle.DEFAULT_PROTOCOL)
 
     def setup(self, conf):
         """
