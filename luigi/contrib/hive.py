@@ -171,7 +171,7 @@ class HiveCommandClient(HiveClient):
             return stdout and table.lower() in stdout
         else:
             stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+                                (%s);""" % (database, table, self.partition_spec(partition)))
 
             if stdout:
                 return True
