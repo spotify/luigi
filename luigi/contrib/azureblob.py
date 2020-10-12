@@ -63,6 +63,7 @@ class AzureBlobClient(FileSystem):
             * `token_credential` - A token credential used to authenticate HTTPS requests. The token value should be updated before its expiration.
         """
         self.options = {"account_name": account_name, "account_key": account_key, "sas_token": sas_token}
+        kwargs["protocol"] = kwargs.get("protocol") or "https"  # Default protocol to https if it's not set
         self.kwargs = kwargs
 
     @property
@@ -74,7 +75,8 @@ class AzureBlobClient(FileSystem):
                                                  connection_string=self.kwargs.get("connection_string"),
                                                  endpoint_suffix=self.kwargs.get("endpoint_suffix"),
                                                  custom_domain=self.kwargs.get("custom_domain"),
-                                                 is_emulated=self.kwargs.get("is_emulated") or False)
+                                                 is_emulated=self.kwargs.get("is_emulated") or False,
+                                                 token_credential=self.kwargs.get("token_credential"))
 
     def upload(self, tmp_path, container, blob, **kwargs):
         logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(
