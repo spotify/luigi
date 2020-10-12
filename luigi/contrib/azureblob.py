@@ -179,7 +179,8 @@ class ReadableAzureBlobFile:
         self.closed = False
         self.download_when_reading = download_when_reading
         self.azure_blob_options = kwargs
-        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(datetime.datetime.utcnow())), blob)
+        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(datetime.datetime.utcnow())),
+                                                   os.path.basename(blob))
         self.fid = None
 
     def read(self, n=None):

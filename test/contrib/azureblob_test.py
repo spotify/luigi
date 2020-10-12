@@ -117,7 +117,7 @@ class AzureBlobClientTest(unittest.TestCase):
 
 class MovieScriptTask(luigi.Task):
     def output(self):
-        return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client, download_when_reading=False)
+        return AzureBlobTarget("luigi-test", "path/to/movie-cheesy.txt", client, download_when_reading=False)
 
     def run(self):
         client.connection.create_container("luigi-test")
@@ -170,3 +170,12 @@ class AzureBlobTargetTest(unittest.TestCase):
 
     def test_AzureBlobTarget(self):
         luigi.build([FinalTask()], local_scheduler=True, log_level='NOTSET')
+
+    def test_AzureBlobTarget_download_when_reading(self):
+        task = MovieScriptTask()
+        task.run()
+        target = task.output()
+        # Test reading a target blob with a context manager and download_when_reading=True
+        target.download_when_reading = True
+        with target.open("r") as f:
+            assert "James Bond" in f.read()
