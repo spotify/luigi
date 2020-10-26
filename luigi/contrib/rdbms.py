@@ -249,7 +249,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
             raise Exception("The clear_table attribute has been removed. Override init_copy instead!")
 
         if self.enable_metadata_columns:
-            self._add_metadata_columns(connection.cursor())
+            self._add_metadata_columns(connection)
 
     def post_copy(self, connection):
         """
