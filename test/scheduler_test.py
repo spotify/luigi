@@ -23,11 +23,14 @@ import shutil
 from multiprocessing import Process
 from helpers import unittest
 
-import luigi.scheduler
+import luigi
 import luigi.server
-import luigi.configuration
-from helpers import with_config
+from helpers import with_config, RunOnceTask
 from luigi.target import FileAlreadyExists
+
+
+class PicklableTask(RunOnceTask):
+    i = luigi.IntParameter()
 
 
 class SchedulerIoTest(unittest.TestCase):
@@ -286,6 +289,10 @@ class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):
         return {task.id for task in worker.get_tasks(state, 'PENDING')}
 
+    def schedule_parallel(self, tasks):
+        return luigi.interface.build(tasks, local_scheduler=True, parallel_scheduling=True,
+                                     parallel_scheduling_processes=2)
+
     def test_get_pending_tasks_with_many_done_tasks(self):
         sch = luigi.scheduler.Scheduler()
         sch.add_task(worker='NON_TRIVIAL', task_id='A', resources={'a': 1})
@@ -299,6 +306,17 @@ class SchedulerWorkerTest(unittest.TestCase):
 
         non_trivial_worker = scheduler_state.get_worker('NON_TRIVIAL')
         self.assertEqual({'A'}, self.get_pending_ids(non_trivial_worker, scheduler_state))
+
+    def test_parallel_scheduling_with_picklable_tasks(self):
+        tasks = [PicklableTask(i=i) for i in range(5)]
+        self.assertTrue(self.schedule_parallel(tasks))
+
+    def test_parallel_scheduling_with_unpicklable_tasks(self):
+        class UnpicklableTask(RunOnceTask):
+            i = luigi.IntParameter()
+
+        tasks = [UnpicklableTask(i=i) for i in range(5)]
+        self.assertFalse(self.schedule_parallel(tasks))
 
 
 class FailingOnDoubleRunTask(luigi.Task):
