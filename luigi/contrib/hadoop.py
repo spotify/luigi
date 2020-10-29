@@ -151,28 +151,26 @@ def create_packages_archive(packages, filename):
                 # Add the entire egg file
                 # p = p[:p.find('.egg') + 4]
                 # add(dereference(p), os.path.basename(p))
+            # include __init__ files from parent projects
+            root = []
+            for parent in package.__name__.split('.')[0:-1]:
+                root.append(parent)
+                module_name = '.'.join(root)
+                directory = '/'.join(root)
 
-            else:
-                # include __init__ files from parent projects
-                root = []
-                for parent in package.__name__.split('.')[0:-1]:
-                    root.append(parent)
-                    module_name = '.'.join(root)
-                    directory = '/'.join(root)
+                add(dereference(__import__(module_name, None, None, 'non_empty').__path__[0] + "/__init__.py"),
+                    directory + "/__init__.py")
 
-                    add(dereference(__import__(module_name, None, None, 'non_empty').__path__[0] + "/__init__.py"),
-                        directory + "/__init__.py")
+            add_files_for_package(p, p, n)
 
-                add_files_for_package(p, p, n)
-
-                # include egg-info directories that are parallel:
-                for egg_info_path in glob.glob(p + '*.egg-info'):
-                    logger.debug(
-                        'Adding package metadata to archive for "%s" found at "%s"',
-                        package.__name__,
-                        egg_info_path
-                    )
-                    add_files_for_package(egg_info_path, p, n)
+            # include egg-info directories that are parallel:
+            for egg_info_path in glob.glob(p + '*.egg-info'):
+                logger.debug(
+                    'Adding package metadata to archive for "%s" found at "%s"',
+                    package.__name__,
+                    egg_info_path
+                )
+                add_files_for_package(egg_info_path, p, n)
 
         else:
             f = package.__file__
@@ -314,7 +312,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 hadoop_context.application_id = application_id
 
         # Read the rest + stdout
-        err = ''.join(err_lines + [an_err_line for an_err_line in proc.stderr])
+        err = ''.join(err_lines + list(proc.stderr))
         temp_stdout.seek(0)
         out = ''.join(temp_stdout.readlines())
 
@@ -335,8 +333,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
 
         if not task_failures:
             raise HadoopJobError(message + 'Also, could not fetch output from tasks.', out, err)
-        else:
-            raise HadoopJobError(message + 'Output from tasks below:\n%s' % task_failures, out, err)
+        raise HadoopJobError(message + 'Output from tasks below:\n%s' % task_failures, out, err)
 
     if tracking_url_callback is None:
         def tracking_url_callback(x): return None
@@ -467,7 +464,7 @@ class HadoopJobRunner(JobRunner):
         arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
-        libjars = [libjar for libjar in self.libjars]
+        libjars = list(self.libjars)
 
         for libjar in self.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]
@@ -816,8 +813,8 @@ class JobTask(BaseHadoopJobTask):
                 warnings.warn("Job is using one or more non-HdfsTarget outputs" +
                               " so it will be run in local mode")
                 return LocalJobRunner()
-        else:
-            return DefaultHadoopJobRunner()
+            
+        return DefaultHadoopJobRunner()
 
     def reader(self, input_stream):
         """

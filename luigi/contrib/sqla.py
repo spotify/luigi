@@ -337,26 +337,25 @@ class CopyToTable(luigi.Task):
         if needs_setup:
             # only names of columns specified, no types
             raise NotImplementedError("create_table() not implemented for %r and columns types not specified" % self.table)
-        else:
-            # if columns is specified as (name, type) tuples
-            with engine.begin() as con:
+        # if columns is specified as (name, type) tuples
+        with engine.begin() as con:
 
-                if self.schema:
-                    metadata = sqlalchemy.MetaData(schema=self.schema)
+            if self.schema:
+                metadata = sqlalchemy.MetaData(schema=self.schema)
+            else:
+                metadata = sqlalchemy.MetaData()
+
+            try:
+                if not con.dialect.has_table(con, self.table, self.schema or None):
+                    sqla_columns = construct_sqla_columns(self.columns)
+                    self.table_bound = sqlalchemy.Table(self.table, metadata, *sqla_columns)
+                    metadata.create_all(engine)
                 else:
-                    metadata = sqlalchemy.MetaData()
-
-                try:
-                    if not con.dialect.has_table(con, self.table, self.schema or None):
-                        sqla_columns = construct_sqla_columns(self.columns)
-                        self.table_bound = sqlalchemy.Table(self.table, metadata, *sqla_columns)
-                        metadata.create_all(engine)
-                    else:
-                        full_table = '.'.join([self.schema, self.table]) if self.schema else self.table
-                        metadata.reflect(only=[self.table], bind=engine)
-                        self.table_bound = metadata.tables[full_table]
-                except Exception as e:
-                    self._logger.exception(self.table + str(e))
+                    full_table = '.'.join([self.schema, self.table]) if self.schema else self.table
+                    metadata.reflect(only=[self.table], bind=engine)
+                    self.table_bound = metadata.tables[full_table]
+            except Exception as e:
+                self._logger.exception(self.table + str(e))
 
     def update_id(self):
         """
@@ -410,6 +409,6 @@ class CopyToTable(luigi.Task):
         :param table_bound: The object referring to the table
         :return:
         """
-        bound_cols = dict((c, sqlalchemy.bindparam("_" + c.key)) for c in table_bound.columns)
+        bound_cols = {c: sqlalchemy.bindparam("_" + c.key) for c in table_bound.columns}
         ins = table_bound.insert().values(bound_cols)
         conn.execute(ins, ins_rows)

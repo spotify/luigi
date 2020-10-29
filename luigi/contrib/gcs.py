@@ -291,10 +291,9 @@ class GCSClient(luigi.target.FileSystem):
         if self.exists(path):
             if raise_if_exists:
                 raise luigi.target.FileAlreadyExists()
-            elif not self.isdir(path):
+            if not self.isdir(path):
                 raise luigi.target.NotADirectory()
-            else:
-                return
+            return
 
         self.put_string(b"", self._add_path_delimiter(path), mimetype='text/plain')
 

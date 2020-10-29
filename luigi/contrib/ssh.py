@@ -209,10 +209,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if self.exists(path):
             if raise_if_exists:
                 raise luigi.target.FileAlreadyExists()
-            elif not self.isdir(path):
+            if not self.isdir(path):
                 raise luigi.target.NotADirectory()
-            else:
-                return
+            return
 
         if parents:
             cmd = ['mkdir', '-p', path]

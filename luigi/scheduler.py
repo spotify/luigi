@@ -1168,14 +1168,14 @@ class Scheduler:
         elif worker.is_trivial_worker(self._state):
             relevant_tasks = worker.get_tasks(self._state, PENDING, RUNNING)
             used_resources = collections.defaultdict(int)
-            greedy_workers = dict()  # If there's no resources, then they can grab any task
+            greedy_workers = {}  # If there's no resources, then they can grab any task
         else:
             relevant_tasks = self._state.get_active_tasks_by_status(PENDING, RUNNING)
             used_resources = self._used_resources()
             activity_limit = time.time() - self._config.worker_disconnect_delay
             active_workers = self._state.get_active_workers(last_get_work_gt=activity_limit)
-            greedy_workers = dict((worker.id, worker.info.get('workers', 1))
-                                  for worker in active_workers)
+            greedy_workers = {worker.id: worker.info.get('workers', 1)
+                                  for worker in active_workers}
         tasks = list(relevant_tasks)
         tasks.sort(key=self._rank, reverse=True)
 

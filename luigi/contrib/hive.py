@@ -173,10 +173,7 @@ class HiveCommandClient(HiveClient):
             stdout = run_hive_cmd("""use %s; show partitions %s partition
                                 (%s)""" % (database, table, self.partition_spec(partition)))
 
-            if stdout:
-                return True
-            else:
-                return False
+            return bool(stdout)
 
     def table_schema(self, table, database='default'):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table))
@@ -502,13 +499,11 @@ class HivePartitionTarget(luigi.Target):
         except HiveCommandError:
             if self.fail_missing_table:
                 raise
-            else:
-                if self.client.table_exists(self.table, self.database):
-                    # a real error occurred
-                    raise
-                else:
-                    # oh the table just doesn't exist
-                    return False
+            if self.client.table_exists(self.table, self.database):
+                # a real error occurred
+                raise
+            # oh the table just doesn't exist
+            return False
 
     @property
     def path(self):

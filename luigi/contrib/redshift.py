@@ -307,7 +307,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
             raise NotImplementedError("create_table() not implemented "
                                       "for %r and columns types not "
                                       "specified" % self.table)
-        elif len(self.columns[0]) == 2:
+        if len(self.columns[0]) == 2:
             # if columns is specified as (name, type) tuples
             coldefs = ','.join(
                 '{name} {type}'.format(

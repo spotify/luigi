@@ -81,9 +81,8 @@ class TestVisualiser(ServerTestBase):
 
         if status is None:
             raise AssertionError('PhantomJS failed to complete')
-        else:
-            print('PhantomJS return status is {}'.format(status))
-            assert status == 0
+        print('PhantomJS return status is {}'.format(status))
+        assert status == 0
 
     # tasks tab tests.
     def test_keeps_entries_after_page_refresh(self):
@@ -433,8 +432,7 @@ class FailingMergeSort(MergeSort):
     def run(self):
         if self.x[0] == ' ':
             raise Exception('I failed')
-        else:
-            return super(FailingMergeSort, self).run()
+        return super(FailingMergeSort, self).run()
 
 
 if __name__ == '__main__':

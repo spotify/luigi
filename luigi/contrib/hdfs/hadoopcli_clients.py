@@ -184,11 +184,11 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
         for line in lines:
             if not line:
                 continue
-            elif line.startswith('OpenJDK 64-Bit Server VM warning') or line.startswith('It\'s highly recommended') or line.startswith('Found'):
+            if line.startswith('OpenJDK 64-Bit Server VM warning') or line.startswith('It\'s highly recommended') or line.startswith('Found'):
                 continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
-            elif ignore_directories and line[0] == 'd':
+            if ignore_directories and line[0] == 'd':
                 continue
-            elif ignore_files and line[0] == '-':
+            if ignore_files and line[0] == '-':
                 continue
             data = line.split(' ')
 

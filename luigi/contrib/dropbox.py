@@ -112,10 +112,9 @@ class DropboxClient(FileSystem):
         if self.exists(path):
             if not self.isdir(path):
                 raise luigi.target.NotADirectory()
-            elif raise_if_exists:
+            if raise_if_exists:
                 raise luigi.target.FileAlreadyExists()
-            else:
-                return
+            return
 
         self.conn.files_create_folder_v2(path)
 

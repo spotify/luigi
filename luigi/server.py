@@ -87,7 +87,7 @@ class cors(Config):
 
     def __init__(self, *args, **kwargs):
         super(cors, self).__init__(*args, **kwargs)
-        self.allowed_origins = set(i for i in self.allowed_origins if i not in ['*', 'null'])
+        self.allowed_origins = {i for i in self.allowed_origins if i not in ['*', 'null']}
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -239,8 +239,8 @@ def from_utc(utcTime, fmt=None):
         else:
             date = int(time.mktime(time_struct.timetuple()))
             return date
-    else:
-        raise ValueError("No UTC format matches {}".format(utcTime))
+        
+    raise ValueError("No UTC format matches {}".format(utcTime))
 
 
 class RecentRunHandler(BaseTaskHistoryHandler):

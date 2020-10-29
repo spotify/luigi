@@ -29,7 +29,7 @@ from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
 account_name = os.environ.get("ACCOUNT_NAME")
 account_key = os.environ.get("ACCOUNT_KEY")
 sas_token = os.environ.get("SAS_TOKEN")
-is_emulated = False if account_name else True
+is_emulated = not account_name
 client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_emulated)
 
 

@@ -89,7 +89,7 @@ def _track_tasks(task_ids, cluster):
     """Poll task status until STOPPED"""
     while True:
         statuses = _get_task_statuses(task_ids, cluster)
-        if all([status == 'STOPPED' for status in statuses]):
+        if all(status == 'STOPPED' for status in statuses):
             logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
             break
         time.sleep(POLL_TIME)

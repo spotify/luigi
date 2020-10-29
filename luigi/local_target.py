@@ -65,10 +65,9 @@ class LocalFileSystem(FileSystem):
         if self.exists(path):
             if raise_if_exists:
                 raise FileAlreadyExists()
-            elif not self.isdir(path):
+            if not self.isdir(path):
                 raise NotADirectory()
-            else:
-                return
+            return
 
         if parents:
             try:

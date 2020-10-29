@@ -247,8 +247,7 @@ class PaiTask(luigi.Task):
             msg = 'Get token request failed, response is {}'.format(response.text)
             logger.error(msg)
             raise Exception(msg)
-        else:
-            self.__token = response.json()['token']
+        self.__token = response.json()['token']
 
     def __init__(self, *args, **kwargs):
         """
@@ -265,7 +264,7 @@ class PaiTask(luigi.Task):
             msg = 'Job {0} is not found'.format(self.name)
             logger.debug(msg)
             raise HTTPError(msg, response=response)
-        elif response.status_code != 200:
+        if response.status_code != 200:
             msg = 'Get job request failed, response is {}'.format(response.text)
             logger.error(msg)
             raise HTTPError(msg, response=response)

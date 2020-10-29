@@ -53,6 +53,6 @@ def recursively_freeze(value):
     """
     if isinstance(value, Mapping):
         return FrozenOrderedDict(((k, recursively_freeze(v)) for k, v in value.items()))
-    elif isinstance(value, list) or isinstance(value, tuple):
+    elif isinstance(value, (list, tuple)):
         return tuple(recursively_freeze(v) for v in value)
     return value

@@ -287,8 +287,6 @@ class TestS3CopyToTable(unittest.TestCase):
                                                "where tablename = lower(%s) limit 1",
                                                (task.table,))
 
-        return
-
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_table_exist",
                 return_value=False)
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
@@ -311,8 +309,6 @@ class TestS3CopyToTable(unittest.TestCase):
                                            .return_value)
         assert mock_cursor.execute.call_args_list[0][0][0].startswith(
             "CREATE  TABLE %s" % task.table)
-
-        return
 
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_schema_exist", return_value=False)
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
@@ -385,8 +381,6 @@ class TestS3CopyToTable(unittest.TestCase):
 
         assert mock_cursor.execute.call_args_list[0][0][0].startswith(
             "CREATE  TABLE %s (%s )" % (task.table, encode_string))
-
-        return
 
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.does_table_exist", return_value=False)
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")

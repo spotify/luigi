@@ -227,8 +227,7 @@ class Parameter:
         value = self._get_value(task_name, param_name)
         if value == _no_value:
             raise MissingParameterException("No default specified")
-        else:
-            return self.normalize(value)
+        return self.normalize(value)
 
     def _is_batchable(self):
         return self._batch_method is not None
@@ -257,10 +256,9 @@ class Parameter:
         """
         if not self._is_batchable():
             raise NotImplementedError('No batch method found')
-        elif not xs:
+        if not xs:
             raise ValueError('Empty parameter list passed to parse_list')
-        else:
-            return self._batch_method(map(self.parse, xs))
+        return self._batch_method(map(self.parse, xs))
 
     def serialize(self, x):
         """

@@ -146,8 +146,7 @@ class DateInterval:
             return False
         if not isinstance(self, type(other)):
             raise TypeError('Date interval type mismatch')
-        else:
-            return (self.date_a, self.date_b) == (other.date_a, other.date_b)
+        return (self.date_a, self.date_b) == (other.date_a, other.date_b)
 
     def __ne__(self, other):
         return not self.__eq__(other)

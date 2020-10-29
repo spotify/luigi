@@ -130,7 +130,7 @@ class _MetadataColumnsMixin:
     def _add_column_to_table(self, cursor, column):
         if len(column) == 1:
             raise ValueError("_add_column_to_table() column type not specified for {column}".format(column=column[0]))
-        elif len(column) == 2:
+        if len(column) == 2:
             query = "ALTER TABLE {table} ADD COLUMN {column};".format(table=self.table, column=' '.join(column))
         elif len(column) == 3:
             query = "ALTER TABLE {table} ADD COLUMN {column} ENCODE {encoding};".format(table=self.table, column=' '.join(column[0:2]), encoding=column[2])
@@ -215,7 +215,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
         if len(self.columns[0]) == 1:
             # only names of columns specified, no types
             raise NotImplementedError("create_table() not implemented for %r and columns types not specified" % self.table)
-        elif len(self.columns[0]) == 2:
+        if len(self.columns[0]) == 2:
             # if columns is specified as (name, type) tuples
             coldefs = ','.join(
                 '{name} {type}'.format(name=name, type=type) for name, type in self.columns

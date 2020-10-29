@@ -490,7 +490,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
             Given a luigi Target, determine a stringly typed path to pass as a
             Dataflow job argument.
         """
-        if isinstance(target, luigi.LocalTarget) or isinstance(target, gcs.GCSTarget):
+        if isinstance(target, (luigi.LocalTarget, gcs.GCSTarget)):
             return target.path
         elif isinstance(target, bigquery.BigQueryTarget):
             return "{}:{}.{}".format(target.table.project_id, target.table.dataset_id, target.table.table_id)

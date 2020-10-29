@@ -877,7 +877,7 @@ class Worker:
     def _validate_dependency(self, dependency):
         if isinstance(dependency, Target):
             raise Exception('requires() can not return Target objects. Wrap it in an ExternalTask class')
-        elif not isinstance(dependency, Task):
+        if not isinstance(dependency, Task):
             raise Exception('requires() must return Task objects but {} is a {}'.format(dependency, type(dependency)))
 
     def _check_complete_value(self, is_complete):
@@ -1197,8 +1197,7 @@ class Worker:
                     if self._keep_alive(get_work_response):
                         next(sleeper)
                         continue
-                    else:
-                        break
+                    break
                 else:
                     self._handle_next_task()
                     continue
@@ -1207,7 +1206,7 @@ class Worker:
             logger.debug("Pending tasks: %s", get_work_response.n_pending_tasks)
             self._run_task(get_work_response.task_id)
 
-        while len(self._running_tasks):
+        while self._running_tasks:
             logger.debug('Shut down Worker, %d more tasks to go', len(self._running_tasks))
             self._handle_next_task()
 
