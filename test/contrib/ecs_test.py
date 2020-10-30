@@ -63,7 +63,7 @@ class ECSTaskNoOutput(ECSTask):
     def complete(self):
         if self.ecs_task_ids:
             return all(status == 'STOPPED'
-                        for status in _get_task_statuses(self.ecs_task_ids))
+                       for status in _get_task_statuses(self.ecs_task_ids))
         return False
 
 

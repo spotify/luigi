@@ -239,7 +239,7 @@ def from_utc(utcTime, fmt=None):
         else:
             date = int(time.mktime(time_struct.timetuple()))
             return date
-        
+
     raise ValueError("No UTC format matches {}".format(utcTime))
 
 

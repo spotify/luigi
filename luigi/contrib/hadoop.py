@@ -813,7 +813,7 @@ class JobTask(BaseHadoopJobTask):
                 warnings.warn("Job is using one or more non-HdfsTarget outputs" +
                               " so it will be run in local mode")
                 return LocalJobRunner()
-            
+
         return DefaultHadoopJobRunner()
 
     def reader(self, input_stream):
