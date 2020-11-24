@@ -17,9 +17,7 @@
 
 # This module makes use of the f string formatting syntax, which requires Python 3.6 or higher
 
-
 import logging
-
 import luigi
 
 logger = logging.getLogger('luigi-interface')
@@ -33,21 +31,22 @@ except ImportError:
 
 class OracleTarget(luigi.Target):
     """
-    Target for a resource in Microsoft SQL Server.
-    This module is primarily derived from mysqldb.py.  Much of MSSqlTarget,
-    MySqlTarget and PostgresTarget are similar enough to potentially add a
+    Target for a resource in Oracle Server.
+    This module is primarily derived from mysqldb.py.  Much of OracleTarget, MSSqlTarget,
+    MySqlTarget, and PostgresTarget are similar enough to potentially add a
     RDBMSTarget abstract base class to rdbms.py that these classes could be
     derived from.
     """
-
     marker_table = luigi.configuration.get_config().get('oraclesql', 'marker_table', 'luigi_targets')
 
-    def __init__(self, host, database, user, password, table, update_id, **cnx_kwargs):
+    def __init__(self, host, port, database, user, password, table, update_id, **cnx_kwargs):
         """
         Initializes an OracleTarget instance.
 
         :param host: Oracle server address. Possibly a host:port string.
         :type host: str
+        :param port: Oracle server port number
+        :type host: int
         :param database: database name.
         :type database: str
         :param user: database user
@@ -62,7 +61,7 @@ class OracleTarget(luigi.Target):
             self.port = int(self.port)
         else:
             self.host = host
-            self.port = 1521
+            self.port = '1521'  # Default Oracle Server Port
         self.database = database
         self.user = user
         self.password = password
@@ -83,14 +82,14 @@ class OracleTarget(luigi.Target):
         if connection is None:
             connection = self.connect()
 
-        cursor = connection.cursor()
-        sql = f"MERGE INTO {self.marker_table} d " \
-        f"USING (SELECT '{self.update_id}' UPDATE_ID, '{self.table}' TARGET_TABLE, SYSDATE INSERTED from dual) s " \
-        f"ON (d.UPDATE_ID = s.UPDATE_ID) " \
-        f"WHEN MATCHED THEN UPDATE SET d.TARGET_TABLE = s.TARGET_TABLE, d.INSERTED = s.INSERTED " \
-        f"WHEN NOT MATCHED THEN INSERT (UPDATE_ID, TARGET_TABLE) VALUES (s.UPDATE_ID, s.TARGET_TABLE)"
-        cursor.execute(sql)
-        connection.commit()
+        with connection.cursor() as cursor:
+            sql = f"MERGE INTO {self.marker_table} d " \
+                  f"USING (SELECT '{self.update_id}' UPDATE_ID, '{self.table}' TARGET_TABLE, SYSDATE INSERTED from dual) s " \
+                  f"ON (d.UPDATE_ID = s.UPDATE_ID) " \
+                  f"WHEN MATCHED THEN UPDATE SET d.TARGET_TABLE = s.TARGET_TABLE, d.INSERTED = s.INSERTED " \
+                  f"WHEN NOT MATCHED THEN INSERT (UPDATE_ID, TARGET_TABLE) VALUES (s.UPDATE_ID, s.TARGET_TABLE)"
+            cursor.execute(sql)
+            connection.commit()
 
         # make sure update is properly marked
         assert self.exists(connection)
@@ -99,17 +98,14 @@ class OracleTarget(luigi.Target):
         if connection is None:
             connection = self.connect()
         try:
-            # TODO: User cursor as a context manager
-            # with connection.cursor() as cursor:
-            #     for row in cursor.execute("select * from MyTable"):
-            #         print(row)
-            cursor = connection.cursor()
-            cursor.execute(f"SELECT NULL FROM {self.marker_table} WHERE update_id = '{self.update_id}'")
-            cursor.fetchall()
-            row_count = cursor.rowcount
-            
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    f"SELECT NULL FROM {self.marker_table} WHERE UPPER(update_id) = UPPER('{self.update_id}')")
+                cursor.fetchall()
+                row_count = cursor.rowcount
+
         except cx_Oracle.DatabaseError as e:
-            error, = e.args # Returns cx_Oracle._Error object
+            error, = e.args  # Returns cx_Oracle._Error object
             # Table does not exists code
             if error.code == 942:
                 row_count = 0
@@ -119,7 +115,7 @@ class OracleTarget(luigi.Target):
 
     def connect(self):
         """
-        Create a SQL Server connection and return a connection object
+        Create an Oracle Server connection and return a connection object
         """
         connection_string = f"{self.user}/{self.password}@{self.host}:{self.port}/{self.database}"
         connection = cx_Oracle.connect(connection_string)
@@ -130,17 +126,16 @@ class OracleTarget(luigi.Target):
         Create marker table if it doesn't exist.
         Use a separate connection since the transaction might have to be reset.
         """
-        print('WE GOT THIS FAR')
         connection = self.connect()
         try:
-            cursor = connection.cursor()
-            cursor.execute(f"CREATE TABLE {self.marker_table}"
-                           f"(ID NUMBER GENERATED ALWAYS AS IDENTITY,"
-                           f"UPDATE_ID VARCHAR2(128) NOT NULL,"
-                           f"TARGET_TABLE VARCHAR2(128),"
-                           f"INSERTED  DATE DEFAULT SYSDATE NOT NULL,"
-                           f"CONSTRAINT LUIGI_UPDATE_ID_PK PRIMARY KEY (UPDATE_ID))"
-                           )
+            with connection.cursor() as cursor:
+                cursor.execute(f"CREATE TABLE {self.marker_table}"
+                               f"(ID NUMBER GENERATED ALWAYS AS IDENTITY,"
+                               f"UPDATE_ID VARCHAR2(128) NOT NULL,"
+                               f"TARGET_TABLE VARCHAR2(128),"
+                               f"INSERTED  DATE DEFAULT SYSDATE NOT NULL,"
+                               f"CONSTRAINT LUIGI_UPDATE_ID_PK PRIMARY KEY (UPDATE_ID))"
+                               )
         except cx_Oracle.DatabaseError as e:
             error, = e.args  # Returns cx_Oracle._Error object
             # Table already exists code
