@@ -271,7 +271,13 @@ class ByParamsHandler(BaseTaskHistoryHandler):
 
 class RootPathHandler(BaseTaskHistoryHandler):
     def get(self):
-        self.redirect("/static/visualiser/index.html")
+        # we omit the leading slash in case the visualizer is behind a different
+        # path (as in a reverse proxy setup)
+        #
+        # For example, if luigi is behind my.app.com/my/luigi/, we want / to
+        # redirect relative (so it goes to my.app.com/my/luigi/static/visualizer/index.html)
+        # instead of absolute (which would be my.app.com/static/visualizer/index.html)
+        self.redirect("static/visualiser/index.html")
 
     def head(self):
         """HEAD endpoint for health checking the scheduler"""

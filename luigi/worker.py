@@ -606,6 +606,7 @@ class Worker:
         for task in self._running_tasks.values():
             if task.is_alive():
                 task.terminate()
+        self._task_result_queue.close()
         return False  # Don't suppress exception
 
     def _generate_worker_info(self):
