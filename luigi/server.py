@@ -261,6 +261,12 @@ class ByIdHandler(BaseTaskHistoryHandler):
         self.render("show.html", task=task)
 
 
+class ByTaskIdHandler(BaseTaskHistoryHandler):
+    def get(self, task_id):
+        task = self._scheduler.task_history.find_task_by_task_id(task_id)
+        self.render("show.html", task=task)
+
+
 class ByParamsHandler(BaseTaskHistoryHandler):
     def get(self, name):
         payload = self.get_argument('data', default="{}")
@@ -310,6 +316,7 @@ def app(scheduler):
         (r'/history', RecentRunHandler, {'scheduler': scheduler}),
         (r'/history/by_name/(.*?)', ByNameHandler, {'scheduler': scheduler}),
         (r'/history/by_id/(.*?)', ByIdHandler, {'scheduler': scheduler}),
+        (r'/history/by_task_id/(.*?)', ByTaskIdHandler, {'scheduler': scheduler}),
         (r'/history/by_params/(.*?)', ByParamsHandler, {'scheduler': scheduler}),
         (r'/metrics', MetricsHandler, {'scheduler': scheduler})
     ]
