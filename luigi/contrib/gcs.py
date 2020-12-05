@@ -66,6 +66,7 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 # Uri for batch requests
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
+
 def _retry(f):
     for i in range(NUM_RETRIES):
         try:
@@ -74,10 +75,11 @@ def _retry(f):
             if err.resp.status < 500:
                 raise
             logger.warning('Caught error while calling {}'.format(f.__name__), exc_info=True)
-        except RETRYABLE_ERRORS as err:
+        except RETRYABLE_ERRORS:
             logger.warning('Caught error while calling {}'.format(f.__name__), exc_info=True)
         sleep_sec = SLEEP_BASE_SEC * (2**i)
         time.sleep(sleep_sec)
+
 
 def _wait_for_consistency(checker):
     """Eventual consistency: wait until GCS reports something is true.
