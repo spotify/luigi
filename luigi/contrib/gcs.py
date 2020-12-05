@@ -48,6 +48,9 @@ else:
 # Number of times to retry failed downloads.
 NUM_RETRIES = 5
 
+# Base time for exponential backoff (> 1.0 sec)
+SLEEP_BASE_SEC = 1.0
+
 # Number of bytes to send/receive in each request.
 CHUNKSIZE = 10 * 1024 * 1024
 
@@ -63,6 +66,18 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 # Uri for batch requests
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
+def _retry(f):
+    for i in range(NUM_RETRIES):
+        try:
+            return f()
+        except errors.HttpError as err:
+            if err.resp.status < 500:
+                raise
+            logger.warning('Caught error while calling {}'.format(f.__name__), exc_info=True)
+        except RETRYABLE_ERRORS as err:
+            logger.warning('Caught error while calling {}'.format(f.__name__), exc_info=True)
+        sleep_sec = SLEEP_BASE_SEC * (2**i)
+        time.sleep(sleep_sec)
 
 def _wait_for_consistency(checker):
     """Eventual consistency: wait until GCS reports something is true.
@@ -134,14 +149,16 @@ class GCSClient(luigi.target.FileSystem):
         return key if key[-1:] == '/' else key + '/'
 
     def _obj_exists(self, bucket, obj):
-        try:
-            self.client.objects().get(bucket=bucket, object=obj).execute()
-        except errors.HttpError as ex:
-            if ex.resp['status'] == '404':
-                return False
-            raise
-        else:
-            return True
+        def __obj_exists(bucket, obj):
+            try:
+                self.client.objects().get(bucket=bucket, object=obj).execute()
+            except errors.HttpError as ex:
+                if ex.resp['status'] == '404':
+                    return False
+                raise
+            else:
+                return True
+        return _retry(__obj_exists(bucket, obj))
 
     def _list_iter(self, bucket, prefix):
         request = self.client.objects().list(bucket=bucket, prefix=prefix)
