@@ -198,6 +198,7 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
         src.close()
         assert src.closed
 
+
 class RetryTest(unittest.TestCase):
     def test_with_retryable_error(self):
         m = mock.MagicMock(side_effect=[IOError, IOError, 'test_func_output'])
