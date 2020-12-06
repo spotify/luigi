@@ -76,7 +76,7 @@ def _retry(f):
                 raise
             logger.warning('Caught error, retrying', exc_info=True)
         except RETRYABLE_ERRORS:
-            logger.warning('Caught error retrying', exc_info=True)
+            logger.warning('Caught error, retrying', exc_info=True)
         sleep_sec = SLEEP_BASE_SEC * (2**i)
         time.sleep(sleep_sec)
 
