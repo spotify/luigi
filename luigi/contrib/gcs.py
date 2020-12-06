@@ -74,9 +74,9 @@ def _retry(f):
         except errors.HttpError as err:
             if err.resp.status < 500:
                 raise
-            logger.warning('Caught error while calling {}'.format(f.__name__), exc_info=True)
+            logger.warning('Caught error, retrying', exc_info=True)
         except RETRYABLE_ERRORS:
-            logger.warning('Caught error while calling {}'.format(f.__name__), exc_info=True)
+            logger.warning('Caught error retrying', exc_info=True)
         sleep_sec = SLEEP_BASE_SEC * (2**i)
         time.sleep(sleep_sec)
 
