@@ -18,7 +18,9 @@
 # This module makes use of the f string formatting syntax, which requires Python 3.6 or higher
 
 import logging
+
 import luigi
+from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
@@ -144,3 +146,35 @@ class OracleTarget(luigi.Target):
             else:
                 raise
         connection.close()
+
+
+class OracleQuery(rdbms.Query):
+    """
+    Template task for querying an Oracle compatible database
+
+    Usage:
+    Subclass and override the required `host`, `database`, `user`, `password`, `table`, and `query` attributes.
+    Optionally one can override the `autocommit` attribute to put the connection for the query in autocommit mode.
+
+    Override the `run` method if your use case requires some action with the query result.
+
+    Task instances require a dynamic `update_id`, e.g. via parameter(s), otherwise the query will only execute once
+
+    To customize the query signature as recorded in the database marker table, override the `update_id` property.
+    """
+
+    def output(self):
+        """
+        Returns an OracleTarget to record execution in a marker table
+
+        Normally you don't override this.
+        """
+        return OracleTarget(
+            host=self.host,
+            port=self.port,
+            database=self.database,
+            user=self.user,
+            password=self.password,
+            table=self.table,
+            update_id=self.update_id
+        )
