@@ -17,6 +17,7 @@
 
 """luigi bindings for Google Cloud Storage"""
 
+import functools
 import io
 import logging
 import mimetypes
@@ -48,7 +49,7 @@ else:
 # Number of times to retry failed downloads.
 NUM_RETRIES = 5
 
-# Base time for exponential backoff (> 1.0 sec)
+# Base time for exponential backoff
 SLEEP_BASE_SEC = 1.0
 
 # Number of bytes to send/receive in each request.
@@ -160,7 +161,7 @@ class GCSClient(luigi.target.FileSystem):
                 raise
             else:
                 return True
-        return _retry(__obj_exists(bucket, obj))
+        return _retry(functools.partial(__obj_exists, bucket=bucket, obj=obj))
 
     def _list_iter(self, bucket, prefix):
         request = self.client.objects().list(bucket=bucket, prefix=prefix)

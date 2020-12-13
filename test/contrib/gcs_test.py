@@ -30,6 +30,7 @@ except ImportError:
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from luigi.contrib import gcs
 from target_test import FileSystemTargetTestMixin
@@ -45,7 +46,7 @@ CREDENTIALS, _ = google.auth.default()
 ATTEMPTED_BUCKET_CREATE = False
 
 
-def bucket_url(suffix):
+def bucket_url(suffix)
     """
     Actually it's bucket + test folder name
     """
@@ -196,3 +197,11 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
         assert src.closed
         src.close()
         assert src.closed
+
+
+class RetryTest(unittest.TestCase):
+    def test_with_retryable_error(self):
+        m = mock.MagicMock(side_effect=[IOError, IOError, 'test_func_output'])
+        actual = gcs._retry(m)
+        expected = 'test_func_output'
+        self.assertEqual(expected, actual)
