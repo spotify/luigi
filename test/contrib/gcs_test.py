@@ -46,7 +46,7 @@ CREDENTIALS, _ = google.auth.default()
 ATTEMPTED_BUCKET_CREATE = False
 
 
-def bucket_url(suffix)
+def bucket_url(suffix):
     """
     Actually it's bucket + test folder name
     """
