@@ -50,12 +50,6 @@ else:
     # Retry transport and file IO errors.
     RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError)
 
-# Number of times to retry failed downloads.
-NUM_RETRIES = 5
-
-# Base time for exponential backoff
-SLEEP_BASE_SEC = 1.0
-
 # Number of bytes to send/receive in each request.
 CHUNKSIZE = 10 * 1024 * 1024
 
@@ -71,6 +65,7 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 # Uri for batch requests
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
+# Retry configuration. For more details, see https://tenacity.readthedocs.io/en/latest/
 gcs_retry = retry(retry=(retry_if_exception_type(RETRYABLE_ERRORS) | retry_if_exception_type(errors.HttpError)),
                   wait=wait_exponential(multiplier=1, min=1, max=10),
                   stop=stop_after_attempt(5),
@@ -172,6 +167,7 @@ class GCSClient(luigi.target.FileSystem):
 
             response = request.execute()
 
+    @gcs_retry
     def _do_put(self, media, dest_path):
         bucket, obj = self._path_to_bucket_and_key(dest_path)
 
@@ -179,29 +175,13 @@ class GCSClient(luigi.target.FileSystem):
         if not media.resumable():
             return request.execute()
 
-        response = None
-        attempts = 0
-        while response is None:
-            error = None
-            try:
-                status, response = request.next_chunk()
-                if status:
-                    logger.debug('Upload progress: %.2f%%', 100 * status.progress())
-            except errors.HttpError as err:
-                error = err
-                if err.resp.status < 500:
-                    raise
-                logger.warning('Caught error while uploading', exc_info=True)
-            except RETRYABLE_ERRORS as err:
-                logger.warning('Caught error while uploading', exc_info=True)
-                error = err
-
-            if error:
-                attempts += 1
-                if attempts >= NUM_RETRIES:
-                    raise error
-            else:
-                attempts = 0
+        try:
+            status, response = request.next_chunk()
+            if status:
+                logger.debug('Upload progress: %.2f%%', 100 * status.progress())
+        except errors.HttpError as err:
+            if err.resp.status < 500:
+                raise
 
         _wait_for_consistency(lambda: self._obj_exists(bucket, obj))
         return response
@@ -395,6 +375,7 @@ class GCSClient(luigi.target.FileSystem):
                    len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
                 yield it
 
+    @gcs_retry
     def download(self, path, chunksize=None, chunk_callback=lambda _: False):
         """Downloads the object contents to local file system.
 
@@ -415,29 +396,11 @@ class GCSClient(luigi.target.FileSystem):
             request = self.client.objects().get_media(bucket=bucket, object=obj)
             downloader = http.MediaIoBaseDownload(fp, request, chunksize=chunksize)
 
-            attempts = 0
-            done = False
-            while not done:
-                error = None
-                try:
-                    _, done = downloader.next_chunk()
-                    if chunk_callback(fp):
-                        done = True
-                except errors.HttpError as err:
-                    error = err
-                    if err.resp.status < 500:
-                        raise
-                    logger.warning('Error downloading file, retrying', exc_info=True)
-                except RETRYABLE_ERRORS as err:
-                    logger.warning('Error downloading file, retrying', exc_info=True)
-                    error = err
-
-                if error:
-                    attempts += 1
-                    if attempts >= NUM_RETRIES:
-                        raise error
-                else:
-                    attempts = 0
+            try:
+                _, done = downloader.next_chunk()
+            except errors.HttpError as err:
+                if err.resp.status < 500:
+                    raise
 
         return return_fp
 
