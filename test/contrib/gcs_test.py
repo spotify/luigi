@@ -22,7 +22,6 @@ Follow the directions in the gcloud tools to set up local credentials.
 """
 
 from helpers import unittest
-
 try:
     import googleapiclient.errors
     import google.auth
@@ -78,6 +77,7 @@ class _GCSBaseTestCase(unittest.TestCase):
 
 @attr('gcloud')
 class GCSClientTest(_GCSBaseTestCase):
+
     def test_not_exists(self):
         self.assertFalse(self.client.exists(bucket_url('does_not_exist')))
         self.assertFalse(self.client.isdir(bucket_url('does_not_exist')))
@@ -112,7 +112,7 @@ class GCSClientTest(_GCSBaseTestCase):
         self.client.mkdir(bucket_url('test_rename_recursive'))
         self.client.put_string('hello', bucket_url('test_rename_recursive/1'))
         self.client.put_string('hello', bucket_url('test_rename_recursive/2'))
-        self.client.rename(bucket_url('test_rename_recursive'),bucket_url('test_rename_recursive_dest'),)
+        self.client.rename(bucket_url('test_rename_recursive'), bucket_url('test_rename_recursive_dest'))
         self.assertFalse(self.client.exists(bucket_url('test_rename_recursive')))
         self.assertFalse(self.client.exists(bucket_url('test_rename_recursive/1')))
         self.assertTrue(self.client.exists(bucket_url('test_rename_recursive_dest')))
@@ -138,8 +138,9 @@ class GCSClientTest(_GCSBaseTestCase):
         self.client.put_string('hello', bucket_url('test_listdir/2'))
 
         self.assertEqual([bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],
-            list(self.client.listdir(bucket_url('test_listdir/'))))
-        self.assertEqual([bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],list(self.client.listdir(bucket_url('test_listdir'))))
+                         list(self.client.listdir(bucket_url('test_listdir/'))))
+        self.assertEqual([bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],
+                         list(self.client.listdir(bucket_url('test_listdir'))))
 
     def test_put_file(self):
         with tempfile.NamedTemporaryFile() as fp:
@@ -175,8 +176,9 @@ class GCSClientTest(_GCSBaseTestCase):
             fp.close()
 
 
-@attr("gcloud")
+@attr('gcloud')
 class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
+
     def create_target(self, format=None):
         return gcs.GCSTarget(bucket_url(self.id()), format=format, client=self.client)
 
