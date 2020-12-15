@@ -62,8 +62,7 @@ class _GCSBaseTestCase(unittest.TestCase):
         if not ATTEMPTED_BUCKET_CREATE:
             try:
                 self.client.client.buckets().insert(
-                    project=PROJECT_ID, body={'name': BUCKET_NAME}
-                ).execute()
+                    project=PROJECT_ID, body={'name': BUCKET_NAME}).execute()
             except googleapiclient.errors.HttpError as ex:
                 if ex.resp.status != 409:  # bucket already exists
                     raise
@@ -113,10 +112,7 @@ class GCSClientTest(_GCSBaseTestCase):
         self.client.mkdir(bucket_url('test_rename_recursive'))
         self.client.put_string('hello', bucket_url('test_rename_recursive/1'))
         self.client.put_string('hello', bucket_url('test_rename_recursive/2'))
-        self.client.rename(
-            bucket_url('test_rename_recursive'),
-            bucket_url('test_rename_recursive_dest'),
-        )
+        self.client.rename(bucket_url('test_rename_recursive'),bucket_url('test_rename_recursive_dest'),)
         self.assertFalse(self.client.exists(bucket_url('test_rename_recursive')))
         self.assertFalse(self.client.exists(bucket_url('test_rename_recursive/1')))
         self.assertTrue(self.client.exists(bucket_url('test_rename_recursive_dest')))
@@ -141,14 +137,9 @@ class GCSClientTest(_GCSBaseTestCase):
         self.client.put_string('hello', bucket_url('test_listdir/1'))
         self.client.put_string('hello', bucket_url('test_listdir/2'))
 
-        self.assertEqual(
-            [bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],
-            list(self.client.listdir(bucket_url('test_listdir/'))),
-        )
-        self.assertEqual(
-            [bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],
-            list(self.client.listdir(bucket_url('test_listdir'))),
-        )
+        self.assertEqual([bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],
+            list(self.client.listdir(bucket_url('test_listdir/'))))
+        self.assertEqual([bucket_url('test_listdir/1'), bucket_url('test_listdir/2')],list(self.client.listdir(bucket_url('test_listdir'))))
 
     def test_put_file(self):
         with tempfile.NamedTemporaryFile() as fp:
@@ -160,9 +151,7 @@ class GCSClientTest(_GCSBaseTestCase):
 
             self.client.put(fp.name, bucket_url('test_put_file'))
             self.assertTrue(self.client.exists(bucket_url('test_put_file')))
-            self.assertEqual(
-                big, self.client.download(bucket_url('test_put_file')).read()
-            )
+            self.assertEqual(big, self.client.download(bucket_url('test_put_file')).read())
 
     def test_put_file_multiproc(self):
         temporary_fps = []
