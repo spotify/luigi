@@ -17,7 +17,6 @@
 
 """luigi bindings for Google Cloud Storage"""
 
-import functools
 import io
 import logging
 import mimetypes
@@ -27,6 +26,11 @@ import time
 from urllib.parse import urlsplit
 from io import BytesIO
 
+from tenacity import retry
+from tenacity import retry_if_exception_type
+from tenacity import wait_exponential
+from tenacity import stop_after_attempt
+from tenacity import after_log
 from luigi.contrib import gcp
 import luigi.target
 from luigi.format import FileWrapper
@@ -67,19 +71,11 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 # Uri for batch requests
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
-
-def _retry(f):
-    for i in range(NUM_RETRIES):
-        try:
-            return f()
-        except errors.HttpError as err:
-            if err.resp.status < 500:
-                raise
-            logger.warning('Caught error, retrying', exc_info=True)
-        except RETRYABLE_ERRORS:
-            logger.warning('Caught error, retrying', exc_info=True)
-        sleep_sec = SLEEP_BASE_SEC * (2**i)
-        time.sleep(sleep_sec)
+gcs_retry = retry(retry=(retry_if_exception_type(RETRYABLE_ERRORS) | retry_if_exception_type(errors.HttpError)),
+                  wait=wait_exponential(multiplier=1, min=1, max=10),
+                  stop=stop_after_attempt(5),
+                  reraise=True,
+                  after=after_log(logger, logging.WARNING))
 
 
 def _wait_for_consistency(checker):
@@ -151,17 +147,16 @@ class GCSClient(luigi.target.FileSystem):
     def _add_path_delimiter(self, key):
         return key if key[-1:] == '/' else key + '/'
 
+    @gcs_retry
     def _obj_exists(self, bucket, obj):
-        def __obj_exists(bucket, obj):
-            try:
-                self.client.objects().get(bucket=bucket, object=obj).execute()
-            except errors.HttpError as ex:
-                if ex.resp['status'] == '404':
-                    return False
-                raise
-            else:
-                return True
-        return _retry(functools.partial(__obj_exists, bucket=bucket, obj=obj))
+        try:
+            self.client.objects().get(bucket=bucket, object=obj).execute()
+        except errors.HttpError as ex:
+            if ex.resp['status'] == '404':
+                return False
+            raise
+        else:
+            return True
 
     def _list_iter(self, bucket, prefix):
         request = self.client.objects().list(bucket=bucket, prefix=prefix)
