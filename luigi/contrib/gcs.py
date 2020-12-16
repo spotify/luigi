@@ -37,6 +37,9 @@ from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
 
+# Retry when following errors happened
+RETRYABLE_ERRORS = None
+
 try:
     import httplib2
 
@@ -47,8 +50,7 @@ except ImportError:
     logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if GCS functionality is used.")
 else:
-    # Retry transport and file IO errors.
-    RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError)
+    RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError, errors.HttpError)
 
 # Number of bytes to send/receive in each request.
 CHUNKSIZE = 10 * 1024 * 1024
@@ -66,7 +68,7 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
 # Retry configuration. For more details, see https://tenacity.readthedocs.io/en/latest/
-gcs_retry = retry(retry=(retry_if_exception_type(RETRYABLE_ERRORS) | retry_if_exception_type(errors.HttpError)),
+gcs_retry = retry(retry=retry_if_exception_type(RETRYABLE_ERRORS),
                   wait=wait_exponential(multiplier=1, min=1, max=10),
                   stop=stop_after_attempt(5),
                   reraise=True,
