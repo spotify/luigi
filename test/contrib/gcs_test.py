@@ -202,6 +202,7 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
 class RetryTest(unittest.TestCase):
     def test_success_with_retryable_error(self):
         m = mock.MagicMock(side_effect=[IOError, IOError, 'test_func_output'])
+
         @gcs.gcs_retry
         def mock_func():
             return m()
@@ -212,6 +213,7 @@ class RetryTest(unittest.TestCase):
 
     def test_fail_with_retry_limit_exceed(self):
         m = mock.MagicMock(side_effect=[IOError, IOError, IOError, IOError, IOError])
+
         @gcs.gcs_retry
         def mock_func():
             return m()
