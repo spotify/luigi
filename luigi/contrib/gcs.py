@@ -27,7 +27,6 @@ from urllib.parse import urlsplit
 from io import BytesIO
 
 from tenacity import retry
-from tenacity import retry_if_exception_type
 from tenacity import wait_exponential
 from tenacity import stop_after_attempt
 from tenacity import after_log
@@ -50,7 +49,7 @@ except ImportError:
     logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if GCS functionality is used.")
 else:
-    RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError, errors.HttpError)
+    RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError)
 
 # Number of bytes to send/receive in each request.
 CHUNKSIZE = 10 * 1024 * 1024
@@ -67,8 +66,24 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 # Uri for batch requests
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
+
 # Retry configuration. For more details, see https://tenacity.readthedocs.io/en/latest/
-gcs_retry = retry(retry=retry_if_exception_type(RETRYABLE_ERRORS),
+def custom_retry(retry_state):
+    """custom_retry returns true if the outcome produced the function is retryable,
+    false otherwise.
+    """
+    try:
+        retry_state.outcome.result()
+    except errors.HttpError as e:
+        if e.resp < 500:
+            raise
+        return True
+    except RETRYABLE_ERRORS:
+        return True
+    return False
+
+
+gcs_retry = retry(retry=custom_retry,
                   wait=wait_exponential(multiplier=1, min=1, max=10),
                   stop=stop_after_attempt(5),
                   reraise=True,
@@ -177,13 +192,10 @@ class GCSClient(luigi.target.FileSystem):
         if not media.resumable():
             return request.execute()
 
-        try:
-            status, response = request.next_chunk()
-            if status:
-                logger.debug('Upload progress: %.2f%%', 100 * status.progress())
-        except errors.HttpError as err:
-            if err.resp.status < 500:
-                raise
+
+        status, response = request.next_chunk()
+        if status:
+            logger.debug('Upload progress: %.2f%%', 100 * status.progress())
 
         _wait_for_consistency(lambda: self._obj_exists(bucket, obj))
         return response
@@ -397,12 +409,7 @@ class GCSClient(luigi.target.FileSystem):
 
             request = self.client.objects().get_media(bucket=bucket, object=obj)
             downloader = http.MediaIoBaseDownload(fp, request, chunksize=chunksize)
-
-            try:
-                _, done = downloader.next_chunk()
-            except errors.HttpError as err:
-                if err.resp.status < 500:
-                    raise
+            _, done = downloader.next_chunk()
 
         return return_fp
 
