@@ -27,6 +27,8 @@ from urllib.parse import urlsplit
 from io import BytesIO
 
 from tenacity import retry
+from tenacity import retry_if_exception
+from tenacity import retry_if_exception_type
 from tenacity import wait_exponential
 from tenacity import stop_after_attempt
 from tenacity import after_log
@@ -67,23 +69,12 @@ EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
 
-# Retry configuration. For more details, see https://tenacity.readthedocs.io/en/latest/
-def custom_retry(retry_state):
-    """custom_retry returns true if the outcome produced the function is retryable,
-    false otherwise.
-    """
-    try:
-        retry_state.outcome.result()
-    except errors.HttpError as e:
-        if e.resp < 500:
-            raise
-        return True
-    except RETRYABLE_ERRORS:
-        return True
-    return False
+# Retry configurations. For more details, see https://tenacity.readthedocs.io/en/latest/
+def is_error_5xx(err):
+    return isinstance(err, errors.HttpError) and err.resp >= 500
 
 
-gcs_retry = retry(retry=custom_retry,
+gcs_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
                   wait=wait_exponential(multiplier=1, min=1, max=10),
                   stop=stop_after_attempt(5),
                   reraise=True,
@@ -191,7 +182,6 @@ class GCSClient(luigi.target.FileSystem):
         request = self.client.objects().insert(bucket=bucket, name=obj, media_body=media)
         if not media.resumable():
             return request.execute()
-
 
         status, response = request.next_chunk()
         if status:
