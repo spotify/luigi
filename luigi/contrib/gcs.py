@@ -183,9 +183,11 @@ class GCSClient(luigi.target.FileSystem):
         if not media.resumable():
             return request.execute()
 
-        status, response = request.next_chunk()
-        if status:
-            logger.debug('Upload progress: %.2f%%', 100 * status.progress())
+        response = None
+        while response is None:
+            status, response = request.next_chunk()
+            if status:
+                logger.debug('Upload progress: %.2f%%', 100 * status.progress())
 
         _wait_for_consistency(lambda: self._obj_exists(bucket, obj))
         return response
@@ -399,7 +401,11 @@ class GCSClient(luigi.target.FileSystem):
 
             request = self.client.objects().get_media(bucket=bucket, object=obj)
             downloader = http.MediaIoBaseDownload(fp, request, chunksize=chunksize)
-            _, done = downloader.next_chunk()
+
+            while True:
+                _, _ = downloader.next_chunk()
+                if chunk_callback(fp):
+                    break
 
         return return_fp
 
