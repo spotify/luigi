@@ -1151,6 +1151,7 @@ class WorkerEmailTest(LuigiTestCase):
     @email_patch
     def test_connection_error(self, emails):
         sch = RemoteScheduler('http://tld.invalid:1337', connect_timeout=1)
+        sch._rpc_retry_wait = 1  # shorten wait time to speed up tests
 
         class A(DummyTask):
             pass
