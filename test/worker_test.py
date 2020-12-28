@@ -1152,13 +1152,6 @@ class WorkerEmailTest(LuigiTestCase):
     def test_connection_error(self, emails):
         sch = RemoteScheduler('http://tld.invalid:1337', connect_timeout=1)
 
-        self.waits = 0
-
-        def dummy_wait():
-            self.waits += 1
-
-        sch._wait = dummy_wait
-
         class A(DummyTask):
             pass
 
@@ -1167,8 +1160,8 @@ class WorkerEmailTest(LuigiTestCase):
         with Worker(scheduler=sch) as worker:
             try:
                 worker.add(a)
-            except RPCError:
-                self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
+            except RPCError as e:
+                self.assertTrue(e.args[0].find("Errors (3 attempts)") != -1)
                 self.assertNotEqual(emails, [])
                 self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
             else:
