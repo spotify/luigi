@@ -23,13 +23,15 @@ import os
 import json
 import logging
 import socket
-import time
 import base64
 
 from urllib.parse import urljoin, urlencode, urlparse
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 
+from tenacity import retry
+from tenacity import wait_fixed
+from tenacity import stop_after_attempt
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS
 
@@ -144,35 +146,36 @@ class RemoteScheduler:
         else:
             self._fetcher = URLLibFetcher()
 
-    def _wait(self):
+    def _get_retry_decorator(self):
+        def retry_logging(retry_state):
+            logger.warning("Failed connecting to remote scheduler %r", self._url, exc_info=True)
+            logger.info("Retrying attempt %r of %r (max)" % (retry_state.attempt_number, self._rpc_retry_attempts))
+
         if self._rpc_log_retries:
-            logger.info("Wait for %d seconds" % self._rpc_retry_wait)
-        time.sleep(self._rpc_retry_wait)
+            return retry(wait=wait_fixed(self._rpc_retry_wait),
+                         stop=stop_after_attempt(self._rpc_retry_attempts),
+                         reraise=True,
+                         after=retry_logging)
+        return retry(wait=wait_fixed(self._rpc_retry_wait),
+                     stop=stop_after_attempt(self._rpc_retry_attempts),
+                     reraise=True)
 
     def _fetch(self, url_suffix, body):
         full_url = _urljoin(self._url, url_suffix)
-        last_exception = None
-        attempt = 0
-        while attempt < self._rpc_retry_attempts:
-            attempt += 1
-            if last_exception:
-                if self._rpc_log_retries:
-                    logger.info("Retrying attempt %r of %r (max)" % (attempt, self._rpc_retry_attempts))
-                self._wait()  # wait for a bit and retry
-            try:
-                response = self._fetcher.fetch(full_url, body, self._connect_timeout)
-                break
-            except self._fetcher.raises as e:
-                last_exception = e
-                if self._rpc_log_retries:
-                    logger.warning("Failed connecting to remote scheduler %r", self._url,
-                                   exc_info=True)
-                continue
-        else:
+        scheduler_retry = self._get_retry_decorator()
+
+        @scheduler_retry
+        def __fetch(full_url, body):
+            response = self._fetcher.fetch(full_url, body, self._connect_timeout)
+            return response
+
+        try:
+            response = __fetch(full_url, body)
+        except self._fetcher.raises as e:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
                 (self._rpc_retry_attempts, self._url),
-                last_exception
+                e
             )
         return response
 
