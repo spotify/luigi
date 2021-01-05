@@ -71,7 +71,7 @@ GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
 
 # Retry configurations. For more details, see https://tenacity.readthedocs.io/en/latest/
 def is_error_5xx(err):
-    return isinstance(err, errors.HttpError) and err.resp >= 500
+    return isinstance(err, errors.HttpError) and err.resp.status >= 500
 
 
 gcs_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
