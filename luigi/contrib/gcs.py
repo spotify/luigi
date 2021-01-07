@@ -402,10 +402,11 @@ class GCSClient(luigi.target.FileSystem):
             request = self.client.objects().get_media(bucket=bucket, object=obj)
             downloader = http.MediaIoBaseDownload(fp, request, chunksize=chunksize)
 
-            while True:
-                _, _ = downloader.next_chunk()
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
                 if chunk_callback(fp):
-                    break
+                    done = True
 
         return return_fp
 
