@@ -192,6 +192,7 @@ class ExternalProgramTask(luigi.Task):
                             self.build_tracking_url(match.group(1))
                         )
                 else:
+                    file_to_write.flush()
                     sleep(time_to_sleep)
 
         track_proc = Process(target=_track_url_by_pattern)
