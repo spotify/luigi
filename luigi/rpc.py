@@ -29,9 +29,7 @@ from urllib.parse import urljoin, urlencode, urlparse
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 
-from tenacity import retry
-from tenacity import wait_fixed
-from tenacity import stop_after_attempt
+from tenacity import retry, wait_fixed, stop_after_attempt
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS
 
