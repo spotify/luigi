@@ -159,13 +159,8 @@ class RemoteScheduler:
         full_url = _urljoin(self._url, url_suffix)
         scheduler_retry = self._get_retry_decorator()
 
-        @scheduler_retry
-        def __fetch(full_url, body):
-            response = self._fetcher.fetch(full_url, body, self._connect_timeout)
-            return response
-
         try:
-            response = __fetch(full_url, body)
+            response = scheduler_retry.call(RemoteScheduler._call(self._fetcher, full_url, body, self._connect_timeout))
         except self._fetcher.raises as e:
             raise RPCError(
                 "Errors (%d attempts) when connecting to remote scheduler %r" %
@@ -173,6 +168,10 @@ class RemoteScheduler:
                 e
             )
         return response
+
+    @staticmethod
+    def _call(fetcher, full_url, body, timeout):
+        return fetcher.fetch(full_url, body, timeout)
 
     def _request(self, url, data, attempts=3, allow_null=True):
         body = {'data': json.dumps(data)}
