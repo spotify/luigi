@@ -78,20 +78,20 @@ The task history has the following pages:
 
     .. figure:: history.png
        :alt: Recent history screenshot
-* ``/history/by_id/:id``
+* ``/history/by_id/{id}``
   detailed information about a run, including:
   parameter values, the host on which it ran, and timing information.
   Example screenshot:
 
     .. figure:: history_by_id.png
        :alt: By id screenshot
-* ``/history/by_name/:name``
-  a listing of all runs of a task with the given task name.
+* ``/history/by_name/{name}``
+  a listing of all runs of a task with the given task ``{name}``.
   Example screenshot:
 
     .. figure:: history_by_name.png
        :alt: By name screenshot
-* ``/history/by_params/:name?data=params``
-  a listing of all runs of a given task restricted to runs with param values matching the given data.
-  The data is a json blob describing the parameters,
-  e.g. ``{"foo": "bar"}`` looks for a task with ``foo=bar``.
+* ``/history/by_params/{name}?data=params``
+  a listing of all runs of the task ``{name}`` restricted to runs with ``params`` matching the given history.
+  The ``params`` is a json blob describing the parameters,
+  e.g. ``data={"foo": "bar"}`` looks for a task with ``foo=bar``.

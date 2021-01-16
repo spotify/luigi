@@ -182,12 +182,14 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Hopper <https://www.hopper.com/>`_
 * `VOYAGE GROUP/Zucks <https://zucks.co.jp/en/>`_
 * `Textpert <https://www.textpert.ai/>`_
+* `Tracktics <https://www.tracktics.com/>`_
 * `Whizar <https://www.whizar.com/>`_
 * `xtream <https://www.xtreamers.io/>`__
 * `Skyscanner <https://www.skyscanner.net/>`_
 * `Jodel <https://www.jodel.com/>`_
 * `Mekar <https://mekar.id/en/>`_
 * `M3 <https://corporate.m3.com/en/>`_
+* `Assist Digital <https://www.assistdigital.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
