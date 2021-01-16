@@ -1162,7 +1162,7 @@ class WorkerEmailTest(LuigiTestCase):
             try:
                 worker.add(a)
             except RPCError as e:
-                self.assertTrue(e.args[0].find("Errors (3 attempts)") != -1)
+                self.assertTrue(str(e).find("Errors (3 attempts)") != -1)
                 self.assertNotEqual(emails, [])
                 self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
             else:
