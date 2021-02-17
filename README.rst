@@ -206,5 +206,5 @@ Luigi was built at `Spotify <https://www.spotify.com>`_, mainly by
 `Elias Freider <https://github.com/freider>`_.
 `Many other people <https://github.com/spotify/luigi/graphs/contributors>`_
 have contributed since open sourcing in late 2012.
-`Arash Rouhani <https://github.com/tarrasch>`_ is currently the chief
-maintainer of Luigi.
+`Arash Rouhani <https://github.com/tarrasch>`_ was the chief maintainer from 2015 to 2019, and now
+Spotify's Data Team maintains Luigi.
