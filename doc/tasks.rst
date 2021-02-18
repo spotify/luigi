@@ -134,6 +134,8 @@ LocalTarget. Following the above example:
 
 .. code:: python
 
+    from luigi.format import Nop
+
     class GenerateWords(luigi.Task):
 
         def output(self):
