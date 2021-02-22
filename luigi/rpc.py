@@ -154,7 +154,7 @@ class RemoteScheduler:
         return Retrying(wait=wait_fixed(self._rpc_retry_wait),
                         stop=stop_after_attempt(self._rpc_retry_attempts),
                         reraise=True,
-                        before=retry_logging)
+                        after=retry_logging)
 
     def _fetch(self, url_suffix, body):
         full_url = _urljoin(self._url, url_suffix)
