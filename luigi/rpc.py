@@ -148,7 +148,7 @@ class RemoteScheduler:
         def retry_logging(retry_state):
             if self._rpc_log_retries:
                 logger.warning("Failed connecting to remote scheduler %r", self._url, exc_info=True)
-                logger.info("Retrying attempt %r of %r (max)" % (retry_state.attempt_number+1, self._rpc_retry_attempts))
+                logger.info("Retrying attempt %r of %r (max)" % (retry_state.attempt_number + 1, self._rpc_retry_attempts))
                 logger.info("Wait for %d seconds" % self._rpc_retry_wait)
 
         return Retrying(wait=wait_fixed(self._rpc_retry_wait),
