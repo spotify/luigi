@@ -26,7 +26,7 @@ from helpers import unittest, with_config
 from luigi.contrib import redshift
 from luigi.contrib.s3 import S3Client
 
-from nose.plugins.attrib import attr
+import pytest
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308
@@ -142,14 +142,14 @@ class DummyS3CopyToTempTable(DummyS3CopyToTableKey):
     queries = ["insert into dummy_table select * from stage_dummy_table;"]
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestInternalCredentials(unittest.TestCase, DummyS3CopyToTableKey):
     def test_from_property(self):
         self.assertEqual(self.aws_access_key_id, AWS_ACCESS_KEY)
         self.assertEqual(self.aws_secret_access_key, AWS_SECRET_KEY)
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
     @mock.patch.dict(os.environ, {"AWS_ACCESS_KEY_ID": "env_key",
                                   "AWS_SECRET_ACCESS_KEY": "env_secret"})
@@ -164,7 +164,7 @@ class TestExternalCredentials(unittest.TestCase, DummyS3CopyToTableBase):
         self.assertEqual(self.aws_secret_access_key, "config_secret")
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestS3CopyToTableWithMetaColumns(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
     @mock.patch("luigi.contrib.redshift.S3CopyToTable._add_metadata_columns")
@@ -227,7 +227,7 @@ class TestS3CopyToTableWithMetaColumns(unittest.TestCase):
         self.assertFalse(mock_update_columns.called)
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestS3CopyToTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_copy_missing_creds(self, mock_redshift_target):
@@ -567,7 +567,7 @@ class TestS3CopyToTable(unittest.TestCase):
         )
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestS3CopyToSchemaTable(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.S3CopyToTable.copy")
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
@@ -616,7 +616,7 @@ class DummyRedshiftUnloadTask(luigi.contrib.redshift.RedshiftUnloadTask):
         return "SELECT 'a' as col_a, current_date as col_b"
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestRedshiftUnloadTask(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_redshift_unload_command(self, mock_redshift_target):
@@ -654,7 +654,7 @@ class DummyRedshiftAutocommitQuery(luigi.contrib.redshift.RedshiftQuery):
         return "SELECT 'a' as col_a, current_date as col_b"
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestRedshiftAutocommitQuery(unittest.TestCase):
     @mock.patch("luigi.contrib.redshift.RedshiftTarget")
     def test_redshift_autocommit_query(self, mock_redshift_target):
@@ -672,7 +672,7 @@ class TestRedshiftAutocommitQuery(unittest.TestCase):
         self.assertTrue(mock_connect.autocommit)
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestRedshiftManifestTask(unittest.TestCase):
     def test_run(self):
         with mock_s3():

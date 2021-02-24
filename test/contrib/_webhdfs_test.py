@@ -20,10 +20,10 @@ from helpers import unittest
 
 from luigi.contrib import webhdfs
 
-from nose.plugins.attrib import attr
+import pytest
 
 
-@attr('apache')
+@pytest.mark.apache
 class TestWebHdfsTarget(unittest.TestCase):
 
     '''

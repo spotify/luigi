@@ -33,7 +33,7 @@ from urllib.parse import (
 
 import tornado.ioloop
 from tornado.testing import AsyncHTTPTestCase
-from nose.plugins.attrib import attr
+import pytest
 
 try:
     from unittest import mock
@@ -352,7 +352,7 @@ class _ServerTest(unittest.TestCase):
         self.assertEqual(work['task_id'], 'A')
 
 
-@attr('unixsocket')
+@pytest.mark.unixsocket
 class UNIXServerTest(_ServerTest):
     class ServerClient:
         def __init__(self):
@@ -390,6 +390,10 @@ class INETServerClient:
 
 
 class _INETServerTest(_ServerTest):
+    # HACK: nose ignores class whose name starts with underscore
+    # see: https://github.com/nose-devs/nose/blob/6f9dada1a5593b2365859bab92c7d1e468b64b7b/nose/selector.py#L72
+    # This hack affects derived classes of this class e.g. INETProcessServerTest, INETLuigidServerTest, INETLuigidDaemonServerTest.
+    __test__ = False
 
     def test_with_cmdline(self):
         """
@@ -400,6 +404,8 @@ class _INETServerTest(_ServerTest):
 
 
 class INETProcessServerTest(_INETServerTest):
+    __test__ = True
+
     class ServerClient(INETServerClient):
         def run_server(self):
             luigi.server.run(api_port=self.port, address='127.0.0.1')
@@ -426,6 +432,8 @@ class INETURLLibServerTest(INETProcessServerTest):
 
 
 class INETLuigidServerTest(_INETServerTest):
+    __test__ = True
+
     class ServerClient(INETServerClient):
         def run_server(self):
             # I first tried to things like "subprocess.call(['luigid', ...]),
@@ -437,6 +445,7 @@ class INETLuigidServerTest(_INETServerTest):
 
 
 class INETLuigidDaemonServerTest(_INETServerTest):
+    __test__ = True
 
     class ServerClient(INETServerClient):
         def __init__(self):

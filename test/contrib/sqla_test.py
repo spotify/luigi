@@ -28,7 +28,7 @@ import luigi
 import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
-from nose.plugins.attrib import attr
+import pytest
 from helpers import skipOnTravis
 
 
@@ -46,7 +46,7 @@ class BaseTask(luigi.Task):
         out.close()
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSQLA(unittest.TestCase):
     NUM_WORKERS = 1
 
@@ -387,7 +387,7 @@ class TestSQLA(unittest.TestCase):
         self._check_entries(task2.output().engine)
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSQLA2(TestSQLA):
     """ 2 workers version
     """

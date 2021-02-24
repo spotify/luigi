@@ -16,15 +16,18 @@
 #
 import unittest
 
-from hdfs import InsecureClient
-from hdfs.ext.kerberos import KerberosClient
-from nose.plugins.attrib import attr
+import pytest
+try:
+    from hdfs import InsecureClient
+    from hdfs.ext.kerberos import KerberosClient
+except ImportError:
+    raise unittest.SkipTest('Unable to load hdfs module')
 
 from helpers import with_config
 from luigi.contrib.hdfs import WebHdfsClient
 
 
-@attr('apache')
+@pytest.mark.apache
 class TestWebHdfsClient(unittest.TestCase):
 
     @with_config({'webhdfs': {'client_type': 'insecure'}})
