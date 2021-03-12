@@ -28,7 +28,7 @@ from ..freezing import recursively_freeze
 class LuigiTomlParser(BaseParser):
     NO_DEFAULT = object()
     enabled = bool(toml)
-    data = dict()
+    data = {}
     _instance = None
     _config_paths = [
         '/etc/luigi/luigi.toml',
@@ -43,12 +43,12 @@ class LuigiTomlParser(BaseParser):
             return new_data
         for section, content in new_data.items():
             if section not in data:
-                data[section] = dict()
+                data[section] = {}
             data[section].update(content)
         return data
 
     def read(self, config_paths):
-        self.data = dict()
+        self.data = {}
         for path in config_paths:
             if os.path.isfile(path):
                 self.data = self._update_data(self.data, toml.load(path))

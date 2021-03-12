@@ -314,7 +314,7 @@ def run_and_track_hadoop_job(arglist, tracking_url_callback=None, env=None):
                 hadoop_context.application_id = application_id
 
         # Read the rest + stdout
-        err = ''.join(err_lines + [an_err_line for an_err_line in proc.stderr])
+        err = ''.join(err_lines + list(proc.stderr))
         temp_stdout.seek(0)
         out = ''.join(temp_stdout.readlines())
 
@@ -467,7 +467,7 @@ class HadoopJobRunner(JobRunner):
         arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', self.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
-        libjars = [libjar for libjar in self.libjars]
+        libjars = list(self.libjars)
 
         for libjar in self.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ['fs', '-get', libjar, self.tmp_dir]

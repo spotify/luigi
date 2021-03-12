@@ -421,7 +421,7 @@ class Task(metaclass=Register):
 
         def list_to_tuple(x):
             """ Make tuples out of lists and sets to allow hashing """
-            if isinstance(x, list) or isinstance(x, set):
+            if isinstance(x, (list, set)):
                 return tuple(x)
             else:
                 return x

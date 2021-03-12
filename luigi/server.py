@@ -87,7 +87,7 @@ class cors(Config):
 
     def __init__(self, *args, **kwargs):
         super(cors, self).__init__(*args, **kwargs)
-        self.allowed_origins = set(i for i in self.allowed_origins if i not in ['*', 'null'])
+        self.allowed_origins = {i for i in self.allowed_origins if i not in ['*', 'null']}
 
 
 class RPCHandler(tornado.web.RequestHandler):

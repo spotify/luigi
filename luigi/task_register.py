@@ -130,7 +130,7 @@ class Register(abc.ABCMeta):
         :return:  an ``dict`` of task_family -> class
         """
         # We have to do this on-demand in case task names have changed later
-        reg = dict()
+        reg = {}
         for task_cls in cls._reg:
             if not task_cls._visible_in_registry:
                 continue

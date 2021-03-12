@@ -76,7 +76,7 @@ class DataprocBaseTask(_DataprocBaseTask):
         logger.info("Submitted new dataproc job:{} id:{}".format(self._job_name, self._job_id))
         return self._job
 
-    def submit_pyspark_job(self, job_file, extra_files=list(), job_args=None):
+    def submit_pyspark_job(self, job_file, extra_files=[], job_args=None):
 
         if job_args is None:
             job_args = []

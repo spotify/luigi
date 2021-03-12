@@ -128,7 +128,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
             client.put(temppath, remote_path)
             t = S3Target(remote_path, client=client)
             with t.open() as read_file:
-                lines = [line for line in read_file]
+                lines = list(read_file)
         finally:
             key.Key.BufferSize = old_buffer
 
