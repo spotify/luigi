@@ -31,8 +31,8 @@ To run the server as a daemon run:
 
 Note that this requires ``python-daemon``.
 By default, the server starts on AF_INET and AF_INET6 port ``8082``
-(which can be changed with the ``--port`` flag) and listens on all IPs.
-(To use an AF_UNIX socket use the ``--unix-socket`` flag)
+(which can be changed with the ``--port`` flag) and listens on all IPs. To listen on a single IP, pass the ``--address`` flag and the IP to use.
+To use an AF_UNIX socket use the ``--unix-socket`` flag.
 
 For a full list of configuration options and defaults,
 see the :ref:`scheduler configuration section <scheduler-config>`.
