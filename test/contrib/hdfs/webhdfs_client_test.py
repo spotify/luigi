@@ -17,14 +17,12 @@
 import unittest
 
 import pytest
-try:
-    from hdfs import InsecureClient
-    from hdfs.ext.kerberos import KerberosClient
-except ImportError:
-    raise unittest.SkipTest('Unable to load hdfs module')
 
 from helpers import with_config
 from luigi.contrib.hdfs import WebHdfsClient
+
+InsecureClient = pytest.importorskip('hdfs.InsecureClient')
+KerberosClient = pytest.importorskip('hdfs.ext.kerberos.KerberosClient')
 
 
 @pytest.mark.apache
