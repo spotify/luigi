@@ -27,7 +27,7 @@ import luigi.worker
 
 
 class DummyTask(luigi.Task):
-    task_namespace = 'customized_run'
+    task_namespace = 'customized_run'  # to prevent task name coflict between tests
     n = luigi.Parameter()
 
     def __init__(self, *args, **kwargs):
