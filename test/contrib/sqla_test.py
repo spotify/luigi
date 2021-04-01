@@ -29,7 +29,7 @@ import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
 import pytest
-from helpers import skipOnTravis
+from helpers import skipOnTravisAndGithubActions
 
 
 class BaseTask(luigi.Task):
@@ -341,7 +341,7 @@ class TestSQLA(unittest.TestCase):
         luigi.build([task1, task2, task3], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(self.engine)
 
-    @skipOnTravis('AssertionError: 10 != 7; https://travis-ci.org/spotify/luigi/jobs/156732446')
+    @skipOnTravisAndGithubActions('AssertionError: 10 != 7; https://travis-ci.org/spotify/luigi/jobs/156732446')
     def test_multiple_tasks(self):
         """
         Test a case where there are multiple tasks

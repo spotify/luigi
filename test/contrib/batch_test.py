@@ -18,7 +18,7 @@
 from helpers import unittest
 
 import luigi.contrib.batch as batch
-from helpers import skipOnTravis
+from helpers import skipOnTravisAndGithubActions
 
 import pytest
 
@@ -101,7 +101,7 @@ class MockBotoLogsClient:
 
 
 @pytest.mark.aws
-@skipOnTravis("boto3 now importable. These tests need mocked")
+@skipOnTravisAndGithubActions("boto3 now importable. These tests need mocked")
 class BatchClientTest(unittest.TestCase):
 
     def setUp(self):
@@ -164,7 +164,7 @@ class BatchClientTest(unittest.TestCase):
 
 
 @pytest.mark.aws
-@skipOnTravis("boto3 now importable. These tests need mocked")
+@skipOnTravisAndGithubActions("boto3 now importable. These tests need mocked")
 class BatchTaskTest(unittest.TestCase):
 
     def setUp(self):

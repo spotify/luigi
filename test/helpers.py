@@ -30,8 +30,8 @@ import os
 import unittest
 
 
-def skipOnTravis(reason):
-    return unittest.skipIf(os.getenv('TRAVIS') == 'true', reason)
+def skipOnTravisAndGithubActions(reason):
+    return unittest.skipIf(os.getenv('TRAVIS') == 'true' or os.getenv('GITHUB_ACTIONS') == 'true', reason)
 
 
 class with_config:

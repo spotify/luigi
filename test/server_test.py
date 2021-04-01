@@ -21,7 +21,7 @@ import shutil
 import signal
 import time
 import tempfile
-from helpers import unittest, skipOnTravis
+from helpers import unittest, skipOnTravisAndGithubActions
 import luigi.rpc
 import luigi.server
 import luigi.cmdline
@@ -324,24 +324,24 @@ class _ServerTest(unittest.TestCase):
     def tearDown(self):
         self.stop_server()
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/78315794')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/78315794')
     def test_ping(self):
         self.sch.ping(worker='xyz')
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/78023665')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/78023665')
     def test_raw_ping(self):
         self.sch._request('/api/ping', {'worker': 'xyz'})
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/78023665')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/78023665')
     def test_raw_ping_extended(self):
         self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/166833694')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/166833694')
     def test_404(self):
         with self.assertRaises(luigi.rpc.RPCError):
             self.sch._request('/api/fdsfds', {'dummy': 1})
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953884')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/72953884')
     def test_save_state(self):
         self.sch.add_task(worker='X', task_id='B', deps=('A',))
         self.sch.add_task(worker='X', task_id='A')
@@ -419,7 +419,7 @@ class INETURLLibServerTest(INETProcessServerTest):
     def start_server(self, *args, **kwargs):
         super(INETURLLibServerTest, self).start_server(*args, **kwargs)
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/81022689')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/81022689')
     def patching_test(self):
         """
         Check that HAS_REQUESTS patching is meaningful
