@@ -20,6 +20,7 @@ Integration tests for azureblob module.
 
 import os
 import unittest
+import json
 
 from nose.plugins.attrib import attr
 
@@ -129,19 +130,18 @@ class MovieScriptTask(luigi.Task):
             op.write("Greed, for lack of a better word, is good.\n")
 
 
-class AzureNumpyDumpTask(luigi.Task):
+class AzureJsonDumpTask(luigi.Task):
     def output(self):
-        return AzureBlobTarget("luigi-test", "stats.npy", client, format=luigi.format.Nop)
+        return AzureBlobTarget("luigi-test", "stats.json", client)
 
     def run(self):
         with self.output().open("w") as op:
-            import numpy
-            numpy.save(op, numpy.array([1, 2, 3]))
+            json.dump([1, 2, 3], op)
 
 
 class FinalTask(luigi.Task):
     def requires(self):
-        return {"movie": self.clone(MovieScriptTask), "np": self.clone(AzureNumpyDumpTask)}
+        return {"movie": self.clone(MovieScriptTask), "np": self.clone(AzureJsonDumpTask)}
 
     def run(self):
         with self.input()["movie"].open('r') as movie, self.input()["np"].open('r') as np, self.output().open('w') as output:
@@ -149,11 +149,8 @@ class FinalTask(luigi.Task):
             assert "Toto, I've got a feeling" in movie_lines
             output.write(movie_lines)
 
-            import numpy
-            data = numpy.load(np)
-            assert data[0] == 1
-            assert data[1] == 2
-            assert data[2] == 3
+            data = json.load(np)
+            assert data == [1, 2, 3]
             output.write(data.__str__())
 
     def output(self):
@@ -169,4 +166,7 @@ class AzureBlobTargetTest(unittest.TestCase):
         pass
 
     def test_AzureBlobTarget(self):
-        luigi.build([FinalTask()], local_scheduler=True, log_level='NOTSET')
+        final_task = FinalTask()
+        luigi.build([final_task], local_scheduler=True, log_level='NOTSET')
+        output = final_task.output().open("r").read()
+        assert "Toto" in output

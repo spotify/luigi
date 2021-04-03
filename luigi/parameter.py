@@ -1054,7 +1054,10 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the parsed value.
         """
-        return list(json.loads(x, object_pairs_hook=FrozenOrderedDict))
+        i = json.loads(x, object_pairs_hook=FrozenOrderedDict)
+        if i is None:
+            return None
+        return list(i)
 
     def serialize(self, x):
         """

@@ -123,7 +123,7 @@ class TaskProcess(multiprocessing.Process):
         self.worker_id = worker_id
         self.result_queue = result_queue
         self.status_reporter = status_reporter
-        self.worker_timeout = task.worker_timeout or worker_timeout
+        self.worker_timeout = task.worker_timeout if task.worker_timeout is not None else worker_timeout
         self.timeout_time = time.time() + self.worker_timeout if self.worker_timeout else None
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
         self.check_unfulfilled_deps = check_unfulfilled_deps
@@ -606,6 +606,7 @@ class Worker:
         for task in self._running_tasks.values():
             if task.is_alive():
                 task.terminate()
+        self._task_result_queue.close()
         return False  # Don't suppress exception
 
     def _generate_worker_info(self):

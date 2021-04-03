@@ -476,6 +476,17 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.ListParameter()
         self.assertEqual(hash(Foo(args=[1, "hello"]).args), hash(p.normalize(p.parse('[1,"hello"]'))))
 
+    def test_list_param_with_default_none_in_dynamic_req_task(self):
+        class TaskWithDefaultNoneParameter(RunOnceTask):
+            args = luigi.parameter.ListParameter(default=None)
+
+        class DynamicTaskCallsDefaultNoneParameter(RunOnceTask):
+            def run(self):
+                yield [TaskWithDefaultNoneParameter()]
+                self.comp = True
+
+        self.assertTrue(self.run_locally(['DynamicTaskCallsDefaultNoneParameter']))
+
     def test_list_dict(self):
         class Foo(luigi.Task):
             args = luigi.parameter.ListParameter()

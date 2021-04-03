@@ -8,9 +8,6 @@
 .. image:: https://img.shields.io/codecov/c/github/spotify/luigi/master.svg?style=flat
     :target: https://codecov.io/gh/spotify/luigi?branch=master
 
-.. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/spotify/luigi/master
-
 .. image:: https://img.shields.io/pypi/v/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
@@ -182,12 +179,14 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Hopper <https://www.hopper.com/>`_
 * `VOYAGE GROUP/Zucks <https://zucks.co.jp/en/>`_
 * `Textpert <https://www.textpert.ai/>`_
+* `Tracktics <https://www.tracktics.com/>`_
 * `Whizar <https://www.whizar.com/>`_
 * `xtream <https://www.xtreamers.io/>`__
 * `Skyscanner <https://www.skyscanner.net/>`_
 * `Jodel <https://www.jodel.com/>`_
 * `Mekar <https://mekar.id/en/>`_
 * `M3 <https://corporate.m3.com/en/>`_
+* `Assist Digital <https://www.assistdigital.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
@@ -207,5 +206,5 @@ Luigi was built at `Spotify <https://www.spotify.com>`_, mainly by
 `Elias Freider <https://github.com/freider>`_.
 `Many other people <https://github.com/spotify/luigi/graphs/contributors>`_
 have contributed since open sourcing in late 2012.
-`Arash Rouhani <https://github.com/tarrasch>`_ is currently the chief
-maintainer of Luigi.
+`Arash Rouhani <https://github.com/tarrasch>`_ was the chief maintainer from 2015 to 2019, and now
+Spotify's Data Team maintains Luigi.

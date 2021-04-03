@@ -133,3 +133,21 @@ class TaskProcessTest(LuigiTestCase):
 
         self.assertFalse(parent.is_running())
         self.assertFalse(child.is_running())
+
+    def test_disable_worker_timeout(self):
+        """
+        When a task sets worker_timeout explicitly to 0, it should disable the timeout, even if it
+        is configured globally.
+        """
+        class Task(luigi.Task):
+            worker_timeout = 0
+
+        task_process = TaskProcess(
+            task=Task(),
+            worker_id=1,
+            result_queue=mock.Mock(),
+            status_reporter=mock.Mock(),
+            worker_timeout=10,
+
+        )
+        self.assertEqual(task_process.worker_timeout, 0)

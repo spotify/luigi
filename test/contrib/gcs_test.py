@@ -30,6 +30,7 @@ except ImportError:
 import os
 import tempfile
 import unittest
+from unittest import mock
 
 from luigi.contrib import gcs
 from target_test import FileSystemTargetTestMixin
@@ -143,7 +144,7 @@ class GCSClientTest(_GCSBaseTestCase):
 
     def test_put_file(self):
         with tempfile.NamedTemporaryFile() as fp:
-            lorem = 'Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt\n'
+            lorem = b'Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam nonummy nibh euismod tincidunt\n'
             # Larger file than chunk size, fails with incorrect progress set up
             big = lorem * 41943
             fp.write(big)
@@ -196,3 +197,26 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
         assert src.closed
         src.close()
         assert src.closed
+
+
+class RetryTest(unittest.TestCase):
+    def test_success_with_retryable_error(self):
+        m = mock.MagicMock(side_effect=[IOError, IOError, 'test_func_output'])
+
+        @gcs.gcs_retry
+        def mock_func():
+            return m()
+
+        actual = mock_func()
+        expected = 'test_func_output'
+        self.assertEqual(expected, actual)
+
+    def test_fail_with_retry_limit_exceed(self):
+        m = mock.MagicMock(side_effect=[IOError, IOError, IOError, IOError, IOError])
+
+        @gcs.gcs_retry
+        def mock_func():
+            return m()
+
+        with self.assertRaises(IOError):
+            mock_func()
