@@ -34,7 +34,7 @@ from unittest import mock
 
 from luigi.contrib import gcs
 from target_test import FileSystemTargetTestMixin
-from nose.plugins.attrib import attr
+import pytest
 
 # In order to run this test, you should set these to your GCS project/bucket.
 # Unfortunately there's no mock
@@ -75,7 +75,7 @@ class _GCSBaseTestCase(unittest.TestCase):
         self.client.remove(bucket_url(''), recursive=True)
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class GCSClientTest(_GCSBaseTestCase):
 
     def test_not_exists(self):
@@ -176,7 +176,7 @@ class GCSClientTest(_GCSBaseTestCase):
             fp.close()
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
 
     def create_target(self, format=None):

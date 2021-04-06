@@ -26,7 +26,7 @@ from luigi.contrib.gcs import GCSTarget
 
 from helpers import unittest
 from mock import MagicMock
-from nose.plugins.attrib import attr
+import pytest
 
 PROJECT_ID = 'projectid'
 DATASET_ID = 'dataset'
@@ -123,7 +123,7 @@ class TestExtractTask(bigquery.BigQueryExtractTask):
         return TestExternalBigQueryTask()
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class BigQueryTest(unittest.TestCase):
 
     def test_bulk_complete(self):

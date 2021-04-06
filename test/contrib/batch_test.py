@@ -20,7 +20,7 @@ from helpers import unittest
 import luigi.contrib.batch as batch
 from helpers import skipOnTravis
 
-from nose.plugins.attrib import attr
+import pytest
 
 try:
     import boto3
@@ -100,7 +100,7 @@ class MockBotoLogsClient:
         }
 
 
-@attr('aws')
+@pytest.mark.aws
 @skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchClientTest(unittest.TestCase):
 
@@ -163,7 +163,7 @@ class BatchClientTest(unittest.TestCase):
             self.assertTrue('log line 1' in context.exception)
 
 
-@attr('aws')
+@pytest.mark.aws
 @skipOnTravis("boto3 now importable. These tests need mocked")
 class BatchTaskTest(unittest.TestCase):
 

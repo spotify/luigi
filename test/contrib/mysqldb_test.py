@@ -7,7 +7,7 @@ import luigi.contrib.mysqldb
 import datetime
 from helpers import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 
 def datetime_to_epoch(dt):
@@ -48,7 +48,7 @@ class DummyMysqlImporter(luigi.contrib.mysqldb.CopyToTable):
 
 
 # Testing that an existing update will not be run in RangeDaily
-@attr('mysql')
+@pytest.mark.mysql
 class DailyCopyToTableTest(unittest.TestCase):
 
     @mock.patch('mysql.connector.connect')
@@ -72,7 +72,7 @@ class DailyCopyToTableTest(unittest.TestCase):
         self.assertFalse(task.complete())
 
 
-@attr('mysql')
+@pytest.mark.mysql
 class TestCopyToTableWithMetaColumns(unittest.TestCase):
     @mock.patch("luigi.contrib.mysqldb.CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
     @mock.patch("luigi.contrib.mysqldb.CopyToTable._add_metadata_columns")
