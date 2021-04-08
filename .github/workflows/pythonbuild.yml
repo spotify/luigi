@@ -9,6 +9,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-16.04
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+        - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     strategy:
       matrix:
         include:
@@ -43,6 +59,16 @@ jobs:
           - python-version: 3.9
             tox-env: py39-apache
 
+          - python-version: 3.6
+            tox-env: py36-postgres
+          - python-version: 3.7
+            tox-env: py37-postgres
+          - python-version: 3.8
+            tox-env: py38-postgres
+          - python-version: 3.9
+            tox-env: py39-postgres
+
+
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -65,6 +91,10 @@ jobs:
           mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot -proot || true
           mysql -e 'create user 'travis'@'localhost';' -uroot -proot || true
           mysql -e 'grant all privileges ON *.* TO 'travis'@'localhost';' -uroot -proot || true
+      - name: Create PSQL database
+        if: ${{ contains(matrix.tox-env, 'postgres') }} 
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
       - name: Build
         run: |
           OVERRIDE_SKIP_CI_TESTS=${{ matrix.OVERRIDE_SKIP_CI_TESTS }} tox -e ${{ matrix.tox-env }}
