@@ -21,6 +21,20 @@ jobs:
           - python-version: 3.9
             tox-env: py39-core
 
+
+          - python-version: 3.6
+            tox-env: py36-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: 3.7
+            tox-env: py37-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: 3.8
+            tox-env: py38-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: 3.9
+            tox-env: py39-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
@@ -45,4 +59,4 @@ jobs:
           mysql -e 'grant all privileges ON *.* TO 'travis'@'localhost';' -uroot -proot || true
       - name: Build
         run: |
-          tox -e ${{ matrix.tox-env }}
+          OVERRIDE_SKIP_CI_TESTS=${{ matrix.OVERRIDE_SKIP_CI_TESTS }} tox -e ${{ matrix.tox-env }}

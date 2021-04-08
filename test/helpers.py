@@ -31,6 +31,10 @@ import unittest
 
 
 def skipOnTravisAndGithubActions(reason):
+    if _override_skip_CI_tests():
+        # Do not skip the CI tests
+        return unittest.skipIf(False, "")
+    # run the skip CI tests logic
     return unittest.skipIf(_running_on_travis() or _running_on_github_actions(), reason)
 
 
@@ -44,6 +48,10 @@ def _running_on_travis():
 
 def _running_on_github_actions():
     return os.getenv('GITHUB_ACTIONS') == 'true'
+
+
+def _override_skip_CI_tests():
+    return os.getenv('OVERRIDE_SKIP_CI_TESTS') == 'true'
 
 
 class with_config:
