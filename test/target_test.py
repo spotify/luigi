@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from helpers import unittest, skipOnTravis
+from helpers import unittest, skipOnTravisAndGithubActions
 from mock import Mock
 import re
 import random
@@ -185,7 +185,7 @@ class FileSystemTargetTestMixin:
         with t.open("r") as f:
             self.assertEqual(f.foo, "custom read property")
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/73693470')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/73693470')
     def test_binary_write(self):
         t = self.create_target(luigi.format.Nop)
         with t.open('w') as f:
