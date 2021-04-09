@@ -17,7 +17,7 @@
 import os
 
 from helpers import unittest
-from nose.plugins.attrib import attr
+import pytest
 
 import luigi
 import luigi.notifications
@@ -108,7 +108,7 @@ class Metric2(MetricBase):
         yield 'metric2', 3
 
 
-@attr('postgres')
+@pytest.mark.postgres
 class TestPostgresImportTask(unittest.TestCase):
 
     def test_default_escape(self):

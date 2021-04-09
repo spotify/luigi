@@ -1,0 +1,201 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  core:
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        include:
+          - python-version: 3.6
+            tox-env: py36-core
+          - python-version: 3.7
+            tox-env: py37-core
+          - python-version: 3.8
+            tox-env: py38-core
+          - python-version: 3.9
+            tox-env: py39-core
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements files
+          key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip 'tox<3.0'
+      - name: Setup MySQL DB
+        run: |
+          sudo /etc/init.d/mysql start
+          mysql -e 'create database IF NOT EXISTS luigi_test;' -uroot -proot || true
+          mysql -e 'create user 'travis'@'localhost';' -uroot -proot || true
+          mysql -e 'grant all privileges ON *.* TO 'travis'@'localhost';' -uroot -proot || true
+      - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
+        run: |
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
+
+  postgres:
+    runs-on: ubuntu-20.04
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+        - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        include:
+          - python-version: 3.6
+            tox-env: py36-postgres
+          - python-version: 3.7
+            tox-env: py37-postgres
+          - python-version: 3.8
+            tox-env: py38-postgres
+          - python-version: 3.9
+            tox-env: py39-postgres
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements files
+          key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip 'tox<3.0'
+      - name: Create PSQL database
+        run: |
+          PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
+      - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
+        run: |
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
+
+  base:
+    runs-on: ubuntu-20.04
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: accesskey
+      AWS_SECRET_ACCESS_KEY: secretkey
+
+    strategy:
+      matrix:
+        include:
+          - python-version: 3.6
+            tox-env: py36-aws
+          - python-version: 3.7
+            tox-env: py37-aws
+          - python-version: 3.8
+            tox-env: py38-aws
+          - python-version: 3.9
+            tox-env: py39-aws
+
+          - python-version: 3.6
+            tox-env: py36-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: 3.7
+            tox-env: py37-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: 3.8
+            tox-env: py38-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: 3.9
+            tox-env: py39-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
+
+          - python-version: 3.6
+            tox-env: py36-apache
+          - python-version: 3.7
+            tox-env: py37-apache
+          - python-version: 3.8
+            tox-env: py38-apache
+          - python-version: 3.9
+            tox-env: py39-apache
+            
+          - python-version: 3.6
+            tox-env: py36-azureblob
+          - python-version: 3.7
+            tox-env: py37-azureblob
+          - python-version: 3.8
+            tox-env: py38-azureblob
+          - python-version: 3.9
+            tox-env: py39-azureblob
+
+
+          - python-version: 3.9
+            tox-env: flake8
+          - python-version: 3.9
+            tox-env: docs
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          # This path is specific to Ubuntu
+          path: ~/.cache/pip
+          # Look to see if there is a cache hit for the corresponding requirements files
+          key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip 'tox<4.0'
+      - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+          OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
+        run: tox
+      - name: Codecov
+        if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
+        run: |
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
