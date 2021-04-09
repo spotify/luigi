@@ -160,6 +160,12 @@ jobs:
           - python-version: 3.9
             tox-env: py39-azureblob
 
+
+          - python-version: 3.9
+            tox-env: flake8
+          - python-version: 3.9
+            tox-env: docs
+
     steps:
       - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
