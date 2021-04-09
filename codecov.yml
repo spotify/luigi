@@ -28,5 +28,8 @@ coverage:
     - "luigi/contrib/mrrunner.py"
     - "luigi/contrib/kubernetes.py"
 
+
+  notify:
+    wait_for_ci: yes
 # For luigi we do not want any comments
 comment: false
