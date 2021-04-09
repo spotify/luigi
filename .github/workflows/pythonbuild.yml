@@ -45,8 +45,15 @@ jobs:
           mysql -e 'create user 'travis'@'localhost';' -uroot -proot || true
           mysql -e 'grant all privileges ON *.* TO 'travis'@'localhost';' -uroot -proot || true
       - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
         run: |
-          tox -e ${{ matrix.tox-env }}
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
 
   postgres:
     runs-on: ubuntu-20.04
@@ -57,6 +64,11 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: postgres
+          DATAPROC_TEST_PROJECT_ID: luigi-travistestenvironment
+          CS_TEST_PROJECT_ID: luigi-travistestenvironment
+          GCS_TEST_BUCKET: luigi-travistestenvironment
+          BQ_TEST_PROJECT_ID: luigi-travistestenvironment
+          BQ_TEST_INPUT_BUCKET: luigi-bigquery-test
         ports:
         - 5432:5432
         # Set health checks to wait until postgres has started
@@ -98,8 +110,15 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
       - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
         run: |
-          tox -e ${{ matrix.tox-env }}
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
 
   base:
     runs-on: ubuntu-20.04
@@ -172,7 +191,15 @@ jobs:
           key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 'tox<3.0'
+          python -m pip install --upgrade pip 'tox<4.0'
       - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+          OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
         run: |
-          OVERRIDE_SKIP_CI_TESTS=${{ matrix.OVERRIDE_SKIP_CI_TESTS }} tox -e ${{ matrix.tox-env }}
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
