@@ -28,8 +28,9 @@ coverage:
     - "luigi/contrib/mrrunner.py"
     - "luigi/contrib/kubernetes.py"
 
-
+  require_ci_to_pass: yes
   notify:
+    after_n_builds: 24
     wait_for_ci: yes
 # For luigi we do not want any comments
 comment: false
