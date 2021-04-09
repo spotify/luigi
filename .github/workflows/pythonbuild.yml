@@ -45,8 +45,15 @@ jobs:
           mysql -e 'create user 'travis'@'localhost';' -uroot -proot || true
           mysql -e 'grant all privileges ON *.* TO 'travis'@'localhost';' -uroot -proot || true
       - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
         run: |
-          tox -e ${{ matrix.tox-env }}
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
 
   postgres:
     runs-on: ubuntu-20.04
@@ -98,8 +105,15 @@ jobs:
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
       - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: tox
+      - name: Codecov
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
         run: |
-          tox -e ${{ matrix.tox-env }}
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
 
   base:
     runs-on: ubuntu-20.04
@@ -172,7 +186,16 @@ jobs:
           key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 'tox<3.0'
+          python -m pip install --upgrade pip 'tox<4.0'
       - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+          OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
+        run: tox
+      - name: Codecov
+        if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
+        env: 
+          COVERAGE_PROCESS_START: .coveragerc
         run: |
-          OVERRIDE_SKIP_CI_TESTS=${{ matrix.OVERRIDE_SKIP_CI_TESTS }} tox -e ${{ matrix.tox-env }}
+          pip install codecov
+          codecov -e ${{ matrix.tox-env }}
