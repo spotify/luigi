@@ -8,7 +8,7 @@ on:
 
 jobs:
   core:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-20.04
 
     strategy:
       matrix:
@@ -49,7 +49,7 @@ jobs:
           tox -e ${{ matrix.tox-env }}
 
   postgres:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-20.04
     services:
       postgres:
         image: postgres
@@ -102,7 +102,7 @@ jobs:
           tox -e ${{ matrix.tox-env }}
 
   base:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-20.04
     env:
       AWS_DEFAULT_REGION: us-east-1
       AWS_ACCESS_KEY_ID: accesskey
