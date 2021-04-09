@@ -70,15 +70,6 @@ jobs:
       matrix:
         include:
           - python-version: 3.6
-            tox-env: py36-core
-          - python-version: 3.7
-            tox-env: py37-core
-          - python-version: 3.8
-            tox-env: py38-core
-          - python-version: 3.9
-            tox-env: py39-core
-
-          - python-version: 3.6
             tox-env: py36-postgres
           - python-version: 3.7
             tox-env: py37-postgres
