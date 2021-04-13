@@ -188,6 +188,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `M3 <https://corporate.m3.com/en/>`_
 * `Assist Digital <https://www.assistdigital.com/>`_
 * `Meltwater <https://www.meltwater.com/>`_
+* `DevSamurai <https://www.devsamurai.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
