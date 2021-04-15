@@ -134,6 +134,7 @@ class DailyCopyToTableTest(unittest.TestCase):
         mock_cursor = MockPostgresCursor([task.task_id])
 
         original_cursor = mock_connection.cursor
+
         def get_mock_cursor():
             original_cursor()
             return mock_cursor
