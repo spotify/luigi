@@ -40,7 +40,7 @@ class MockContextManager(mock.Mock):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.context_counter -= 1
 
-    def _get_child_mock(self, /, **kwargs):
+    def _get_child_mock(self, **kwargs):
         """Child mocks will be instances of super."""
         return mock.Mock(**kwargs)
 
