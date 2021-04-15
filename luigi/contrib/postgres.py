@@ -285,7 +285,7 @@ class CopyToTable(rdbms.CopyToTable):
         elif len(self.columns[0]) == 2:
             column_names = [c[0] for c in self.columns]
         else:
-            raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
+            raise ValueError('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
         cursor.copy_from(file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
 
     def run(self):
