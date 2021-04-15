@@ -143,7 +143,6 @@ class DailyCopyToTableTest(unittest.TestCase):
         task = DummyPostgresImporter(date=datetime.datetime(2021, 4, 15))
         task.columns = [(42,)]  # inject defect
 
-        #import pdb; pdb.set_trace()
         with self.assertRaisesRegex(ValueError, "columns"):
             task.run()
 
