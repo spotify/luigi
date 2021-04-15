@@ -36,6 +36,7 @@ class MockContextManager(mock.Mock):
     def __enter__(self):
         self.context_counter += 1
         self.all_context_counter += 1
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.context_counter -= 1
