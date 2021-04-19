@@ -61,6 +61,23 @@ class LuigiTomlParser(BaseParser):
 
         return self.data
 
+    def defaults(self):
+        """
+        Unlike ConfigParser, [DEFAULT] section is not particularly meaningful in toml.
+        This is to match LuigiConfigParser.
+        """
+        return {}
+
+    def items(self, section=None):
+        """
+        Return a list of (name, value) tuples for each option in a section.
+        This is to match LuigiConfigParser.
+        """
+        if section is None:
+            return self.data.items()
+        else:
+            return [(option, value) for option, value in self.data[section].items()]
+
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
         try:
             return self.data[section][option]
