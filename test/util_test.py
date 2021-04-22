@@ -197,9 +197,9 @@ class BasicsTest(LuigiTestCase):
         @requires(parent_1=ParentTask, parent_2=ParentTask)
         class ChildTask(RunOnceTask):
             resulting_input = 'notset'
+
             def run(self):
                 self.__class__.resulting_input = self.input()
-
 
         self.assertTrue(self.run_locally_split('ChildTask'))
         self.assertEqual(ChildTask.resulting_input, {'parent_1': 'Target', 'parent_2': 'Target'})
