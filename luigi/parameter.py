@@ -87,6 +87,13 @@ class DuplicateParameterException(ParameterException):
     pass
 
 
+class OptionalParameterTypeWarning(UserWarning):
+    """
+    Warning class for OptionalParameterMixin with wrong type.
+    """
+    pass
+
+
 class Parameter:
     """
     Parameter whose value is a ``str``, and a base class for other parameter types.
@@ -323,24 +330,62 @@ class Parameter:
         }
 
 
-class OptionalParameter(Parameter):
-    """ A Parameter that treats empty string as None """
+class OptionalParameterMixin:
+    """
+    Mixin to make a parameter class optional and treat empty string as None.
+    """
+
+    expected_type = str
 
     def serialize(self, x):
+        """
+        Parse the given value if the value is not None else return an empty string.
+        """
         if x is None:
             return ''
         else:
-            return str(x)
+            return super().serialize(x)
 
     def parse(self, x):
-        return x or None
+        """
+        Parse the given value if it is a string (empty strings are parsed to None).
+        """
+        if not isinstance(x, str):
+            return x
+        elif x:
+            return super().parse(x)
+        else:
+            return None
+
+    def normalize(self, x):
+        """
+        Normalize the given value if it is not None.
+        """
+        if x is None:
+            return None
+        return super().normalize(x)
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
-        if self.__class__ != OptionalParameter:
-            return
-        if not isinstance(param_value, str) and param_value is not None:
-            warnings.warn('OptionalParameter "{}" with value "{}" is not of type string or None.'.format(
-                param_name, param_value))
+        if not isinstance(param_value, self.expected_type) and param_value is not None:
+            warnings.warn(
+                (
+                    f'{self.__class__.__name__} "{param_name}" with value '
+                    f'"{param_value}" is not of type "{self.expected_type.__name__}" or None.'
+                ),
+                OptionalParameterTypeWarning,
+            )
+
+
+class OptionalParameter(OptionalParameterMixin, Parameter):
+    """Class to parse optional parameters."""
+
+    expected_type = str
+
+
+class OptionalStrParameter(OptionalParameterMixin, Parameter):
+    """Class to parse optional str parameters."""
+
+    expected_type = str
 
 
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
@@ -627,6 +672,12 @@ class IntParameter(Parameter):
         return value + 1
 
 
+class OptionalIntParameter(OptionalParameterMixin, IntParameter):
+    """Class to parse optional int parameters."""
+
+    expected_type = int
+
+
 class FloatParameter(Parameter):
     """
     Parameter whose value is a ``float``.
@@ -637,6 +688,12 @@ class FloatParameter(Parameter):
         Parses a ``float`` from the string using ``float()``.
         """
         return float(s)
+
+
+class OptionalFloatParameter(OptionalParameterMixin, FloatParameter):
+    """Class to parse optional float parameters."""
+
+    expected_type = float
 
 
 class BoolParameter(Parameter):
@@ -707,6 +764,12 @@ class BoolParameter(Parameter):
         else:
             raise ValueError("unknown parsing value '{}'".format(self.parsing))
         return parser_kwargs
+
+
+class OptionalBoolParameter(OptionalParameterMixin, BoolParameter):
+    """Class to parse optional bool parameters."""
+
+    expected_type = bool
 
 
 class DateIntervalParameter(Parameter):
@@ -1007,6 +1070,12 @@ class DictParameter(Parameter):
         return json.dumps(x, cls=_DictParamEncoder)
 
 
+class OptionalDictParameter(OptionalParameterMixin, DictParameter):
+    """Class to parse optional dict parameters."""
+
+    expected_type = FrozenOrderedDict
+
+
 class ListParameter(Parameter):
     """
     Parameter whose value is a ``list``.
@@ -1070,6 +1139,12 @@ class ListParameter(Parameter):
         return json.dumps(x, cls=_DictParamEncoder)
 
 
+class OptionalListParameter(OptionalParameterMixin, ListParameter):
+    """Class to parse optional list parameters."""
+
+    expected_type = tuple
+
+
 class TupleParameter(ListParameter):
     """
     Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
@@ -1123,6 +1198,12 @@ class TupleParameter(ListParameter):
             return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
             return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
+
+
+class OptionalTupleParameter(OptionalParameterMixin, TupleParameter):
+    """Class to parse optional tuple parameters."""
+
+    expected_type = tuple
 
 
 class NumericalParameter(Parameter):
@@ -1201,6 +1282,14 @@ class NumericalParameter(Parameter):
                     s=s, permitted_range=self._permitted_range))
 
 
+class OptionalNumericalParameter(OptionalParameterMixin, NumericalParameter):
+    """Class to parse optional numerical parameters."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.expected_type = self._var_type
+
+
 class ChoiceParameter(Parameter):
     """
     A parameter which takes two values:
@@ -1257,3 +1346,11 @@ class ChoiceParameter(Parameter):
         else:
             raise ValueError("{var} is not a valid choice from {choices}".format(
                 var=var, choices=self._choices))
+
+
+class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
+    """Class to parse optional choice parameters."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.expected_type = self._var_type

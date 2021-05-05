@@ -357,13 +357,21 @@ class ParameterTest(LuigiTestCase):
         TestConfig(param="str")
         warnings.warn.assert_not_called()
 
-    @mock.patch('luigi.parameter.warnings')
-    def test_no_warn_on_none_in_optional(self, warnings):
+    def test_no_warn_on_none_in_optional(self):
         class TestConfig(luigi.Config):
             param = luigi.OptionalParameter(default=None)
 
-        TestConfig()
-        warnings.warn.assert_not_called()
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig()
+            warnings.warn.assert_not_called()
+
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig(param=None)
+            warnings.warn.assert_not_called()
+
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig(param="")
+            warnings.warn.assert_not_called()
 
     @mock.patch('luigi.parameter.warnings')
     def test_no_warn_on_string_in_optional(self, warnings):
@@ -379,7 +387,7 @@ class ParameterTest(LuigiTestCase):
             param = luigi.OptionalParameter()
 
         TestConfig(param=1)
-        warnings.warn.assert_called_once_with('OptionalParameter "param" with value "1" is not of type string or None.')
+        warnings.warn.assert_called_once_with('OptionalParameter "param" with value "1" is not of type "str" or None.', luigi.parameter.OptionalParameterTypeWarning)
 
     def test_optional_parameter_parse_none(self):
         self.assertIsNone(luigi.OptionalParameter().parse(''))
