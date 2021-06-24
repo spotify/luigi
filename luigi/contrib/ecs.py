@@ -182,7 +182,6 @@ class ECSTask(luigi.Task):
         else:
             container_overrides.append(command)
 
-
     @property
     def combined_overrides(self):
         """
