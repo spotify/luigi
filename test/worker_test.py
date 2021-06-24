@@ -1324,6 +1324,17 @@ class WorkerEmailTest(LuigiTestCase):
         self.assertEqual(1, len(emails))
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
 
+    @email_patch
+    def test_run_error_long_traceback(self, emails):
+        class A(luigi.Task):
+            def run(self):
+                raise Exception("b0rk"*10500)
+
+        a = A()
+        luigi.build([a], workers=1, local_scheduler=True)
+        self.assertTrue(len(emails[0]) < 10000)
+        self.assertTrue(emails[0].find("Traceback exceeds max length and has been truncated"))
+
     @with_config({'batch_email': {'email_interval': '0'}, 'worker': {'send_failure_email': 'False'}})
     @email_patch
     def test_run_error_email_batch(self, emails):
