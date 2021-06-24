@@ -21,14 +21,38 @@ import luigi.target
 import time
 from luigi.contrib import gcp
 
+from tenacity import retry
+from tenacity import retry_if_exception
+from tenacity import retry_if_exception_type
+from tenacity import wait_exponential
+from tenacity import stop_after_attempt
+
 logger = logging.getLogger('luigi-interface')
 
+RETRYABLE_ERRORS = None
 try:
+    import httplib2
     from googleapiclient import discovery
+    from googleapiclient import errors
     from googleapiclient import http
 except ImportError:
     logger.warning('BigQuery module imported, but google-api-python-client is '
                    'not installed. Any BigQuery task will fail')
+else:
+    RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError, TimeoutError, BrokenPipeError)
+
+
+# Retry configurations. For more details, see https://tenacity.readthedocs.io/en/latest/
+def is_error_5xx(err):
+    return isinstance(err, errors.HttpError) and err.resp.status >= 500
+
+
+bq_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
+                  wait=wait_exponential(multiplier=1, min=1, max=10),
+                  stop=stop_after_attempt(3),
+                  reraise=True,
+                  after=lambda x: x.args[0].__initialise_client()
+                  )
 
 
 class CreateDisposition:
@@ -120,14 +144,12 @@ class BigQueryClient:
     https://www.googleapis.com/discovery/v1/apis/bigquery/v2/rest
     """
 
-    def __init__(self, oauth_credentials=None, descriptor='', http_=None, retry_limit=2):
+    def __init__(self, oauth_credentials=None, descriptor='', http_=None):
         # Save initialisation arguments in case we need to re-create client
         # due to connection timeout
         self.oauth_credentials = oauth_credentials
         self.descriptor = descriptor
         self.http_ = http_
-        self.retry_limit = retry_limit
-        self.retry_count = 0
 
         self.__initialise_client()
 
@@ -139,6 +161,7 @@ class BigQueryClient:
         else:
             self.client = discovery.build('bigquery', 'v2', cache_discovery=False, **authenticate_kwargs)
 
+    @bq_retry
     def dataset_exists(self, dataset):
         """Returns whether the given dataset exists.
         If regional location is specified for the dataset, that is also checked
@@ -157,13 +180,6 @@ class BigQueryClient:
                     raise Exception('''Dataset already exists with regional location {}. Can't use {}.'''.format(
                         fetched_location if fetched_location is not None else 'unspecified',
                         dataset.location))
-
-        except (TimeoutError, BrokenPipeError, IOError) as bq_connection_error:
-            if self.retry_count > self.retry_limit:
-                raise Exception(f"Exceeded max retries for BigQueryClient connection error: {bq_connection_error}") from bq_connection_error
-            self.retry_count += 1
-            self.__initialise_client()
-            self.dataset_exists(dataset)
         except http.HttpError as ex:
             if ex.resp.status == 404:
                 return False
@@ -171,6 +187,7 @@ class BigQueryClient:
 
         return True
 
+    @bq_retry
     def table_exists(self, table):
         """Returns whether the given table exists.
 
@@ -184,12 +201,6 @@ class BigQueryClient:
             self.client.tables().get(projectId=table.project_id,
                                      datasetId=table.dataset_id,
                                      tableId=table.table_id).execute()
-        except (TimeoutError, BrokenPipeError, IOError) as bq_connection_error:
-            if self.retry_count > self.retry_limit:
-                raise Exception(f"Exceeded max retries for BigQueryClient connection error: {bq_connection_error}") from bq_connection_error
-            self.retry_count += 1
-            self.__initialise_client()
-            self.table_exists(table)
         except http.HttpError as ex:
             if ex.resp.status == 404:
                 return False
