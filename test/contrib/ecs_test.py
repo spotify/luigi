@@ -88,7 +88,7 @@ class ECSTaskCustomRunTaskKwargs(ECSTaskNoOutput):
         return {'overrides': {'ephemeralStorage': {'sizeInGiB': 30}}}
 
 
-class ECSTaskCustomRunTaskKwargsWithCommand(ECSTaskNoOutput):
+class ECSTaskCustomRunTaskKwargsWithCollidingCommand(ECSTaskNoOutput):
 
     @property
     def command(self):
@@ -115,6 +115,45 @@ class ECSTaskCustomRunTaskKwargsWithCommand(ECSTaskNoOutput):
                 }
             },
             'overrides': {
+                'containerOverrides': [
+                    {'name': 'hello-world-2', 'command': ['command-to-be-overwritten']}
+                ],
+                'ephemeralStorage': {
+                    'sizeInGiB': 30
+                }
+            }
+        }
+
+
+class ECSTaskCustomRunTaskKwargsWithMergedCommands(ECSTaskNoOutput):
+
+    @property
+    def command(self):
+        return [
+            {'name': 'hello-world', 'command': ['/bin/sleep', '10']}
+        ]
+
+    @property
+    def run_task_kwargs(self):
+        return {
+            'launchType': 'FARGATE',
+            'platformVersion': '1.4.0',
+            'networkConfiguration': {
+                'awsvpcConfiguration': {
+                    'subnets': [
+                        'subnet-01234567890abcdef',
+                        'subnet-abcdef01234567890'
+                    ],
+                    'securityGroups': [
+                        'sg-abcdef01234567890',
+                    ],
+                    'assignPublicIp': 'ENABLED'
+                }
+            },
+            'overrides': {
+                'containerOverrides': [
+                    {'name': 'hello-world-2', 'command': ['/bin/sleep', '10']}
+                ],
                 'ephemeralStorage': {
                     'sizeInGiB': 30
                 }
@@ -155,13 +194,35 @@ class TestECSTask(unittest.TestCase):
         luigi.build([t], local_scheduler=True)
 
     @mock_ecs
-    def test_custom_run_task_kwargs_with_command(self):
-        t = ECSTaskCustomRunTaskKwargsWithCommand(task_def_arn=self.arn)
-        self.assertEqual(t.combined_overrides, {
-            'containerOverrides': [
-                {'name': 'hello-world', 'command': ['/bin/sleep', '10']},
-                {'name': 'hello-world-2', 'command': ['/bin/sleep', '10']},
-            ],
-            'ephemeralStorage': {'sizeInGiB': 30}
-        })
+    def test_custom_run_task_kwargs_with_colliding_command(self):
+        t = ECSTaskCustomRunTaskKwargsWithCollidingCommand(task_def_arn=self.arn)
+        combined_overrides = t.combined_overrides
+        self.assertEqual(
+            sorted(combined_overrides['containerOverrides'], key=lambda x: x['name']),
+            sorted(
+                [
+                    {'name': 'hello-world', 'command': ['/bin/sleep', '10']},
+                    {'name': 'hello-world-2', 'command': ['/bin/sleep', '10']},
+                ],
+                key=lambda x: x['name']
+            )
+        )
+        self.assertEqual(combined_overrides['ephemeralStorage'], {'sizeInGiB': 30})
+        luigi.build([t], local_scheduler=True)
+
+    @mock_ecs
+    def test_custom_run_task_kwargs_with_merged_commands(self):
+        t = ECSTaskCustomRunTaskKwargsWithMergedCommands(task_def_arn=self.arn)
+        combined_overrides = t.combined_overrides
+        self.assertEqual(
+            sorted(combined_overrides['containerOverrides'], key=lambda x: x['name']),
+            sorted(
+                [
+                    {'name': 'hello-world', 'command': ['/bin/sleep', '10']},
+                    {'name': 'hello-world-2', 'command': ['/bin/sleep', '10']},
+                ],
+                key=lambda x: x['name']
+            )
+        )
+        self.assertEqual(combined_overrides['ephemeralStorage'], {'sizeInGiB': 30})
         luigi.build([t], local_scheduler=True)

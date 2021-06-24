@@ -166,6 +166,23 @@ class ECSTask(luigi.Task):
         """
         pass
 
+    @staticmethod
+    def update_container_overrides_command(container_overrides, command):
+        """
+        Update a list of container overrides with the specified command.
+
+        The specified command will take precedence over any existing commands
+        in `container_overrides` for the same container name. If no existing
+        command yet exists in `container_overrides` for the specified command,
+        it will be added.
+        """
+        for colliding_override in filter(lambda x: x['name'] == command['name'], container_overrides):
+            colliding_override['command'] = command['command']
+            break
+        else:
+            container_overrides.append(command)
+
+
     @property
     def combined_overrides(self):
         """
@@ -178,17 +195,8 @@ class ECSTask(luigi.Task):
         overrides = copy.deepcopy(self.run_task_kwargs.get('overrides', {}))
         if self.command:
             if 'containerOverrides' in overrides:
-                new_commands = []
                 for command in self.command:
-                    for container_override in overrides['containerOverrides']:
-                        if container_override['name'] == command['name']:
-                            # containerOverrides collision found; ensure the
-                            # `self.command` value takes priority
-                            container_override['command'] = command['command']
-                            break
-                    else:
-                        new_commands.append(command)
-                overrides['containerOverrides'].extend(new_commands)
+                    self.update_container_overrides_command(overrides['containerOverrides'], command)
             else:
                 overrides['containerOverrides'] = self.command
         return overrides
