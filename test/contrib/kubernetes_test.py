@@ -110,7 +110,7 @@ class TestK8STask(unittest.TestCase):
         kubernetes_job._KubernetesJobTask__track_job()
         # Make sure successful job signals
         self.assertTrue(mock_signal.called)
-        
+
     def test_cluster_is_scaling(self):
         kubernetes_job = KubernetesJobTask()
         condition = {
