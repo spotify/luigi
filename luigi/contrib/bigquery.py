@@ -48,11 +48,11 @@ def is_error_5xx(err):
 
 
 bq_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
-                  wait=wait_exponential(multiplier=1, min=1, max=10),
-                  stop=stop_after_attempt(3),
-                  reraise=True,
-                  after=lambda x: x.args[0].__initialise_client()
-                  )
+                 wait=wait_exponential(multiplier=1, min=1, max=10),
+                 stop=stop_after_attempt(3),
+                 reraise=True,
+                 after=lambda x: x.args[0].__initialise_client()
+                 )
 
 
 class CreateDisposition:
