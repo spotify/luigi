@@ -33,6 +33,7 @@ Requires:
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
 import logging
+import re
 import time
 import uuid
 from datetime import datetime
@@ -219,6 +220,23 @@ class KubernetesJobTask(luigi.Task):
         """Delay for initial pod creation for just submitted job in seconds"""
         return self.__DEFAULT_POD_CREATION_INTERVAL
 
+    def __is_scaling_in_progress(self, condition):
+        """
+        returns true if cluster is currently going through a scale up
+        """
+        if 'reason'not in condition or \
+           'Unschedulable' not in condition['reason'] or\
+           'message' not in condition:
+            return False
+        
+        match = re.match(r'(\d)\/(\d) nodes are available.*', condition['message'])
+        if match:
+            current_nodes = int(match.group(1))
+            target_nodes = int(match.group(2))
+            if current_nodes <= target_nodes:
+                return True
+        return False
+
     def __track_job(self):
         """Poll job status while active"""
         while not self.__verify_job_has_started():
@@ -308,6 +326,11 @@ class KubernetesJobTask(luigi.Task):
                 if 'message' in cond:
                     if cond['reason'] == 'ContainersNotReady':
                         return False
+                    if cond['reason'] == 'Unschedulable':
+                        if self.__is_scaling_in_progress(cond):
+                            # wait if cluster is scaling up...
+                            self.__logger.debug("Kubernetes Cluster is scaling up " + cond['message'])
+                            return False
                     assert cond['status'] != 'False', \
                         "[ERROR] %s - %s" % (cond['reason'], cond['message'])
         return True
