@@ -228,7 +228,7 @@ class KubernetesJobTask(luigi.Task):
            'Unschedulable' not in condition['reason'] or\
            'message' not in condition:
             return False
-        
+
         match = re.match(r'(\d)\/(\d) nodes are available.*', condition['message'])
         if match:
             current_nodes = int(match.group(1))
