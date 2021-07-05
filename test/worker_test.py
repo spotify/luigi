@@ -26,7 +26,7 @@ import threading
 import time
 
 import psutil
-from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
+from helpers import (unittest, with_config, skipOnTravisAndGithubActions, LuigiTestCase,
                      temporary_unloaded_module)
 
 import luigi.notifications
@@ -1151,13 +1151,7 @@ class WorkerEmailTest(LuigiTestCase):
     @email_patch
     def test_connection_error(self, emails):
         sch = RemoteScheduler('http://tld.invalid:1337', connect_timeout=1)
-
-        self.waits = 0
-
-        def dummy_wait():
-            self.waits += 1
-
-        sch._wait = dummy_wait
+        sch._rpc_retry_wait = 1  # shorten wait time to speed up tests
 
         class A(DummyTask):
             pass
@@ -1167,8 +1161,8 @@ class WorkerEmailTest(LuigiTestCase):
         with Worker(scheduler=sch) as worker:
             try:
                 worker.add(a)
-            except RPCError:
-                self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
+            except RPCError as e:
+                self.assertTrue(str(e).find("Errors (3 attempts)") != -1)
                 self.assertNotEqual(emails, [])
                 self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
             else:
@@ -1572,7 +1566,7 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_time_out_hung_single_worker(self):
         luigi.build([HangTheWorkerTask(0.1)], workers=1, local_scheduler=True)
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953986')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/72953986')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
@@ -1589,7 +1583,7 @@ class MultipleWorkersTest(unittest.TestCase):
         w._handle_next_task()
         self.assertEqual(0, len(w._running_tasks))
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/76645264')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/76645264')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)

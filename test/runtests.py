@@ -15,9 +15,10 @@
 # limitations under the License.
 #
 
+import sys
 import warnings
 
-import nose
+import pytest
 
 if __name__ == '__main__':
     with warnings.catch_warnings():
@@ -27,4 +28,4 @@ if __name__ == '__main__':
             message='(.*)outputs has no custom(.*)',
             category=UserWarning
         )
-        nose.main()
+        sys.exit(pytest.main(sys.argv[1:]))
