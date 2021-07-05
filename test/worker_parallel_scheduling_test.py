@@ -175,7 +175,7 @@ class ParallelSchedulingTest(unittest.TestCase):
         send.check_called_once()
         self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
         self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
-        self.assertTrue('raise UnpicklableException()' in send.call_args[0][1])
+        self.assertTrue("Can't pickle local object 'UnpicklableExceptionTask" in send.call_args[0][1])
 
     @mock.patch('luigi.notifications.send_error_email')
     def test_raise_exception_in_requires(self, send):

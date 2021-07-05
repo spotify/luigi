@@ -811,7 +811,14 @@ class Worker:
                         self._validate_task(dep)
                         seen.add(dep.task_id)
                         results.append((dep, pool.apply_async(check_complete, (dep,))))
-        except BaseException:
+        except (KeyboardInterrupt, TaskException):
+            raise
+        except Exception as ex:
+            self.add_succeeded = False
+            formatted_traceback = traceback.format_exc()
+            self._log_unexpected_error(task)
+            task.trigger_event(Event.BROKEN_TASK, task, ex)
+            self._email_unexpected_error(task, formatted_traceback)
             raise
         finally:
             pool.close()
