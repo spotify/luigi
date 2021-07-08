@@ -527,6 +527,12 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         """	Indicates if BigQuery should allow quoted data sections that contain newline characters in a CSV file. The default value is false."""
         return False
 
+    @property
+    def project_id(self):
+        """Project ID on which to run the BigQuery Job
+        """
+        return self.output().table.project_id
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -565,7 +571,7 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         else:
             job['configuration']['load']['autodetect'] = True
 
-        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+        bq_client.run_job(self.project_id, job, dataset=output.table.dataset)
 
 
 class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
@@ -610,6 +616,12 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         """
         return True
 
+    @property
+    def project_id(self):
+        """Project ID on which to run the BigQuery Job
+        """
+        return self.output().table.project_id
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -643,7 +655,7 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
             }
         }
 
-        bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
+        bq_client.run_job(self.project_id, job, dataset=output.table.dataset)
 
 
 class BigQueryCreateViewTask(luigi.Task):
