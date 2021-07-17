@@ -22,7 +22,7 @@ import os
 import unittest
 import json
 
-from nose.plugins.attrib import attr
+import pytest
 
 import luigi
 from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
@@ -34,7 +34,7 @@ is_emulated = False if account_name else True
 client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_emulated)
 
 
-@attr('azureblob')
+@pytest.mark.azureblob
 class AzureBlobClientTest(unittest.TestCase):
     def setUp(self):
         self.client = client
@@ -157,7 +157,7 @@ class FinalTask(luigi.Task):
         return luigi.LocalTarget("samefile")
 
 
-@attr('azureblob')
+@pytest.mark.azureblob
 class AzureBlobTargetTest(unittest.TestCase):
     def setUp(self):
         self.client = client

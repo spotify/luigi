@@ -19,7 +19,7 @@ import itertools
 import mock
 import time
 from helpers import unittest
-from nose.plugins.attrib import attr
+import pytest
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
     UNKNOWN, RUNNING, BATCH_RUNNING, UPSTREAM_RUNNING, Scheduler
@@ -28,7 +28,7 @@ luigi.notifications.DEBUG = True
 WORKER = 'myworker'
 
 
-@attr('scheduler')
+@pytest.mark.scheduler
 class SchedulerApiTest(unittest.TestCase):
 
     def setUp(self):

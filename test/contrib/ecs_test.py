@@ -36,7 +36,7 @@ import unittest
 import luigi
 from luigi.contrib.ecs import ECSTask, _get_task_statuses
 from moto import mock_ecs
-from nose.plugins.attrib import attr
+import pytest
 
 try:
     import boto3
@@ -74,7 +74,7 @@ class ECSTaskOverrideCommand(ECSTaskNoOutput):
         return [{'name': 'hello-world', 'command': ['/bin/sleep', '10']}]
 
 
-@attr('aws')
+@pytest.mark.aws
 class TestECSTask(unittest.TestCase):
 
     @mock_ecs

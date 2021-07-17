@@ -42,6 +42,7 @@ class InstanceTest(unittest.TestCase):
         test = self
 
         class A(luigi.Task):
+            task_namespace = 'instance'  # to prevent task name conflict between tests
 
             def __init__(self):
                 self.has_run = False
@@ -63,6 +64,7 @@ class InstanceTest(unittest.TestCase):
 
     def test_external_instance_cache(self):
         class A(luigi.Task):
+            task_namespace = 'instance'  # to prevent task name conflict between tests
             pass
 
         class OtherA(luigi.ExternalTask):
