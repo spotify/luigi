@@ -19,22 +19,25 @@ Example Kubernetes Job Task.
 
 Requires:
 
-- pykube: ``pip install pykube-ng``
-- A local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
-
-**WARNING**: For Python versions < 3.5 the kubeconfig file must point to a Kubernetes API
-hostname, and NOT to an IP address.
+- Official kubernetes-client python library: ``pip install kubernetes``
+    - See: https://github.com/kubernetes-client/python/
+- A kubectl configuration and that is active and functional
+    - Can be your kubectl config setup for EKS with `aws eks update-kubeconfig --name clustername`
+    - Or access to any other hosted/managed/self-setup Kubernetes cluster
+    - For devs can a local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
+    - Or for devs Docker Desktop has support for minikube: https://www.docker.com/products/docker-desktop
 
 You can run this code example like this:
 
     .. code:: console
-        $ luigi --module examples.kubernetes_job PerlPi --local-scheduler
+        $ PYTHONPATH=. luigi --module examples.kubernetes_job PerlPi --local-scheduler
+        # Or alternatively...
+        $ python -m luigi --module examples.kubernetes PerlPi --local-scheduler
 
 Running this code will create a pi-luigi-uuid kubernetes job within the cluster
-pointed to by the default context in "~/.kube/config".
-
-If running within a kubernetes cluster, set auth_method = "service-account" to
-access the local cluster.
+pointed to by the default context in "~/.kube/config".  It will also auto-detect if this
+is running in an Kubernetes Cluster and has functional access to the local cluster's APIs
+via an ClusterRole.
 """
 
 # import os
