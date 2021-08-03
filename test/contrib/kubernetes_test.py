@@ -45,7 +45,7 @@ logger = logging.getLogger('luigi-interface')
 try:
     import kubernetes as kubernetes_api
 except ImportError:
-    raise unittest.SkipTest('pykube is not installed. This test requires pykube.')
+    raise unittest.SkipTest('kubernetes is not installed. This test requires kubernetes.')
 
 
 class SuccessJob(KubernetesJobTask):
