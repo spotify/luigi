@@ -44,9 +44,11 @@ from luigi.contrib.kubernetes import KubernetesJobTask
 
 class PerlPi(KubernetesJobTask):
 
-    name = "pi"
-    max_retrials = 3
-    spec_schema = {
+    name = "pi"                         # The name (prefix) of the job that will be created for identification purposes
+    backoff_limit = 2                   # This is the number of retries incase there is a pod/node/code failure
+    kubernetes_namespace = "farley"     # This is the kubernetes namespace you wish to run in
+    print_pod_logs_on_exit = True       # Set this to true if you wish to see the logs of this
+    spec_schema = {                     # This is the standard "spec" of the containers in this job, this is a good sane example
         "containers": [{
             "name": "pi",
             "image": "perl",
