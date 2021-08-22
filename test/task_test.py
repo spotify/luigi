@@ -152,6 +152,15 @@ class TaskTest(unittest.TestCase):
         with self.assertWarnsRegex(UserWarning, 'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
             DummyTask(**params)
 
+    def test_disable_window_seconds(self):
+        """
+        Deprecated disable_window_seconds param uses disable_window value
+        """
+        class ATask(luigi.Task):
+            disable_window = 17
+        task = ATask()
+        self.assertEqual(task.disable_window_seconds, 17)
+
 
 class ExternalizeTaskTest(LuigiTestCase):
 
