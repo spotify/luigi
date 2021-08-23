@@ -527,6 +527,16 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         """	Indicates if BigQuery should allow quoted data sections that contain newline characters in a CSV file. The default value is false."""
         return False
 
+    def configure_job(self, configuration):
+        """Set additional job configuration.
+
+        This allows to specify job configuration parameters that are not exposed via Task properties.
+
+        :param configuration: Current configuration.
+        :return: New or updated configuration.
+        """
+        return configuration
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -564,6 +574,8 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             job['configuration']['load']['schema'] = {'fields': self.schema}
         else:
             job['configuration']['load']['autodetect'] = True
+
+        job['configuration'] = self.configure_job(job['configuration'])
 
         bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
@@ -610,6 +622,16 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         """
         return True
 
+    def configure_job(self, configuration):
+        """Set additional job configuration.
+
+        This allows to specify job configuration parameters that are not exposed via Task properties.
+
+        :param configuration: Current configuration.
+        :return: New or updated configuration.
+        """
+        return configuration
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -642,6 +664,8 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
                 }
             }
         }
+
+        job['configuration'] = self.configure_job(job['configuration'])
 
         bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
@@ -739,6 +763,16 @@ class BigQueryExtractTask(luigi.Task):
         """Whether to use compression."""
         return Compression.NONE
 
+    def configure_job(self, configuration):
+        """Set additional job configuration.
+
+        This allows to specify job configuration parameters that are not exposed via Task properties.
+
+        :param configuration: Current configuration.
+        :return: New or updated configuration.
+        """
+        return configuration
+
     def run(self):
         input = luigi.task.flatten(self.input())[0]
         assert (
@@ -774,6 +808,8 @@ class BigQueryExtractTask(luigi.Task):
             job['configuration']['extract']['printHeader'] = self.print_header
             job['configuration']['extract']['fieldDelimiter'] = \
                 self.field_delimiter
+
+        job['configuration'] = self.configure_job(job['configuration'])
 
         bq_client.run_job(
             input.table.project_id,
