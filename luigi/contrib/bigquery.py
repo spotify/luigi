@@ -52,6 +52,7 @@ class SourceFormat:
     CSV = 'CSV'
     DATASTORE_BACKUP = 'DATASTORE_BACKUP'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
+    PARQUET = 'PARQUET'
 
 
 class FieldDelimiter:
