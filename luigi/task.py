@@ -218,12 +218,12 @@ class Task(metaclass=Register):
         Override this positive integer to have different ``disable_window`` at task level.
         Check :ref:`scheduler-config`
         """
-        return self.disable_window_seconds
+        return None
 
     @property
     def disable_window_seconds(self):
         warnings.warn("Use of `disable_window_seconds` has been deprecated, use `disable_window` instead", DeprecationWarning)
-        return None
+        return self.disable_window
 
     @property
     def owner_email(self):
