@@ -54,6 +54,20 @@ class BasicsTest(LuigiTestCase):
         self.assertEqual(str(child_task), 'blah.ChildTask(my_param=hello)')
         self.assertIn(ParentTask(my_param='hello'), luigi.task.flatten(child_task.requires()))
 
+    def test_task_ids_using_inherits_kwargs(self):
+        class ParentTask(luigi.Task):
+            my_param = luigi.Parameter()
+        luigi.namespace('blah')
+
+        @inherits(parent=ParentTask)
+        class ChildTask(luigi.Task):
+            def requires(self):
+                return self.clone(ParentTask)
+        luigi.namespace('')
+        child_task = ChildTask(my_param='hello')
+        self.assertEqual(str(child_task), 'blah.ChildTask(my_param=hello)')
+        self.assertIn(ParentTask(my_param='hello'), luigi.task.flatten(child_task.requires()))
+
     def _setup_parent_and_child_inherits(self):
         class ParentTask(luigi.Task):
             my_parameter = luigi.Parameter()
@@ -174,3 +188,18 @@ class BasicsTest(LuigiTestCase):
         ChildTask = self._setup_requires_inheritence()
         self.assertNotEqual(str(ChildTask.__mro__[0]),
                             str(ChildTask.__mro__[1]))
+
+    def test_kwargs_requires_gives_named_inputs(self):
+        class ParentTask(RunOnceTask):
+            def output(self):
+                return "Target"
+
+        @requires(parent_1=ParentTask, parent_2=ParentTask)
+        class ChildTask(RunOnceTask):
+            resulting_input = 'notset'
+
+            def run(self):
+                self.__class__.resulting_input = self.input()
+
+        self.assertTrue(self.run_locally_split('ChildTask'))
+        self.assertEqual(ChildTask.resulting_input, {'parent_1': 'Target', 'parent_2': 'Target'})
