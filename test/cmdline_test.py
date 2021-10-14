@@ -362,7 +362,7 @@ class InvokeOverCmdlineTest(unittest.TestCase):
         print(stdout)
         print(stderr)
 
-        self.assertNotEquals(returncode, 1)
+        self.assertNotEqual(returncode, 1)
         self.assertFalse(b'required_test_param' in stderr)
 
 
