@@ -387,7 +387,10 @@ class ParameterTest(LuigiTestCase):
             param = luigi.OptionalParameter()
 
         TestConfig(param=1)
-        warnings.warn.assert_called_once_with('OptionalParameter "param" with value "1" is not of type "str" or None.', luigi.parameter.OptionalParameterTypeWarning)
+        warnings.warn.assert_called_once_with(
+            'OptionalParameter "param" with value "1" is not of type "str" or None.',
+            luigi.parameter.OptionalParameterTypeWarning
+        )
 
     def test_optional_parameter_parse_none(self):
         self.assertIsNone(luigi.OptionalParameter().parse(''))
