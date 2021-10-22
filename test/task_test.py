@@ -166,7 +166,7 @@ class TaskTest(unittest.TestCase):
         class ATaskWithBadParam(luigi.Task):
             bad_param = luigi.IntParameter()
 
-        with self.assertRaisesRegex(ValueError, r"ATaskWithBadParam\[args=\(\), kwargs={}\]: Error when parsing the default value of 'bad_param'") as exc:
+        with self.assertRaisesRegex(ValueError, r"ATaskWithBadParam\[args=\(\), kwargs={}\]: Error when parsing the default value of 'bad_param'"):
             ATaskWithBadParam()
 
 

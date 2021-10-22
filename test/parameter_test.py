@@ -821,22 +821,26 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(weeks=5), _value(p))
 
+    @mock.patch('luigi.parameter.ParameterException')
     @with_config({"foo": {"bar": "P3Y6M4DT12H30M5S"}})
-    def testTimeDelta8601YearMonthNotSupported(self):
+    def testTimeDelta8601YearMonthNotSupported(self, exc):
         def f():
             return _value(luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar")))
-        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with years or months are not supported
+        self.assertRaises(ValueError, f)  # ISO 8601 durations with years or months are not supported
+        exc.assert_called_once_with("Invalid time delta - could not parse P3Y6M4DT12H30M5S")
 
     @with_config({"foo": {"bar": "PT6M"}})
     def testTimeDelta8601MAfterT(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(minutes=6), _value(p))
 
+    @mock.patch('luigi.parameter.ParameterException')
     @with_config({"foo": {"bar": "P6M"}})
-    def testTimeDelta8601MBeforeT(self):
+    def testTimeDelta8601MBeforeT(self, exc):
         def f():
             return _value(luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar")))
-        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with months are not supported
+        self.assertRaises(ValueError, f)  # ISO 8601 durations with months are not supported
+        exc.assert_called_once_with("Invalid time delta - could not parse P6M")
 
     def testHasDefaultNoSection(self):
         self.assertRaises(luigi.parameter.MissingParameterException,
