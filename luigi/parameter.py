@@ -335,7 +335,7 @@ class OptionalParameterMixin:
     Mixin to make a parameter class optional and treat empty string as None.
     """
 
-    expected_type = str
+    expected_type = type(None)
 
     def serialize(self, x):
         """

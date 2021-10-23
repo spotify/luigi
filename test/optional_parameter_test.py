@@ -6,7 +6,7 @@ from helpers import LuigiTestCase, with_config
 
 class OptionalParameterTest(LuigiTestCase):
 
-    def actual_test(current_test, cls, default, expected_value, expected_type, bad_data, **kwargs):
+    def actual_test(self, cls, default, expected_value, expected_type, bad_data, **kwargs):
 
         class TestConfig(luigi.Config):
             param = cls(default=default, **kwargs)
@@ -17,7 +17,7 @@ class OptionalParameterTest(LuigiTestCase):
                 assert self.empty_param is None
 
         # Test parsing empty string (should be None)
-        current_test.assertIsNone(cls(**kwargs).parse(''))
+        self.assertIsNone(cls(**kwargs).parse(''))
 
         # Test that warning is raised only with bad type
         with mock.patch('luigi.parameter.warnings') as warnings:
@@ -44,7 +44,7 @@ class OptionalParameterTest(LuigiTestCase):
                     )
 
         # Test with value from config
-        current_test.assertTrue(luigi.build([TestConfig()], local_scheduler=True))
+        self.assertTrue(luigi.build([TestConfig()], local_scheduler=True))
 
     @with_config({"TestConfig": {"param": "expected value", "empty_param": ""}})
     def test_optional_parameter(self):
