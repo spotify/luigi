@@ -437,6 +437,9 @@ sender
   User name in from field of error e-mails.
   Default value: luigi-client@<server_name>
 
+traceback_max_length
+  Maximum length for traceback included in error email. Default is 5000.
+
 
 [batch_notifier]
 ----------------

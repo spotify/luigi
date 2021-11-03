@@ -218,6 +218,7 @@ class B(HappyTestFriend):
 
 
 class A(HappyTestFriend):
+    task_namespace = 'event_callbacks'  # to prevent task name coflict between tests
 
     def requires(self):
         return [B(1), B(2)]

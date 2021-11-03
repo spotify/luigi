@@ -357,13 +357,21 @@ class ParameterTest(LuigiTestCase):
         TestConfig(param="str")
         warnings.warn.assert_not_called()
 
-    @mock.patch('luigi.parameter.warnings')
-    def test_no_warn_on_none_in_optional(self, warnings):
+    def test_no_warn_on_none_in_optional(self):
         class TestConfig(luigi.Config):
             param = luigi.OptionalParameter(default=None)
 
-        TestConfig()
-        warnings.warn.assert_not_called()
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig()
+            warnings.warn.assert_not_called()
+
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig(param=None)
+            warnings.warn.assert_not_called()
+
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig(param="")
+            warnings.warn.assert_not_called()
 
     @mock.patch('luigi.parameter.warnings')
     def test_no_warn_on_string_in_optional(self, warnings):
@@ -379,7 +387,10 @@ class ParameterTest(LuigiTestCase):
             param = luigi.OptionalParameter()
 
         TestConfig(param=1)
-        warnings.warn.assert_called_once_with('OptionalParameter "param" with value "1" is not of type string or None.')
+        warnings.warn.assert_called_once_with(
+            'OptionalParameter "param" with value "1" is not of type "str" or None.',
+            luigi.parameter.OptionalParameterTypeWarning
+        )
 
     def test_optional_parameter_parse_none(self):
         self.assertIsNone(luigi.OptionalParameter().parse(''))
@@ -475,6 +486,17 @@ class TestParametersHashability(LuigiTestCase):
 
         p = luigi.parameter.ListParameter()
         self.assertEqual(hash(Foo(args=[1, "hello"]).args), hash(p.normalize(p.parse('[1,"hello"]'))))
+
+    def test_list_param_with_default_none_in_dynamic_req_task(self):
+        class TaskWithDefaultNoneParameter(RunOnceTask):
+            args = luigi.parameter.ListParameter(default=None)
+
+        class DynamicTaskCallsDefaultNoneParameter(RunOnceTask):
+            def run(self):
+                yield [TaskWithDefaultNoneParameter()]
+                self.comp = True
+
+        self.assertTrue(self.run_locally(['DynamicTaskCallsDefaultNoneParameter']))
 
     def test_list_dict(self):
         class Foo(luigi.Task):
@@ -810,22 +832,26 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(weeks=5), _value(p))
 
+    @mock.patch('luigi.parameter.ParameterException')
     @with_config({"foo": {"bar": "P3Y6M4DT12H30M5S"}})
-    def testTimeDelta8601YearMonthNotSupported(self):
+    def testTimeDelta8601YearMonthNotSupported(self, exc):
         def f():
             return _value(luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar")))
-        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with years or months are not supported
+        self.assertRaises(ValueError, f)  # ISO 8601 durations with years or months are not supported
+        exc.assert_called_once_with("Invalid time delta - could not parse P3Y6M4DT12H30M5S")
 
     @with_config({"foo": {"bar": "PT6M"}})
     def testTimeDelta8601MAfterT(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(minutes=6), _value(p))
 
+    @mock.patch('luigi.parameter.ParameterException')
     @with_config({"foo": {"bar": "P6M"}})
-    def testTimeDelta8601MBeforeT(self):
+    def testTimeDelta8601MBeforeT(self, exc):
         def f():
             return _value(luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar")))
-        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with months are not supported
+        self.assertRaises(ValueError, f)  # ISO 8601 durations with months are not supported
+        exc.assert_called_once_with("Invalid time delta - could not parse P6M")
 
     def testHasDefaultNoSection(self):
         self.assertRaises(luigi.parameter.MissingParameterException,

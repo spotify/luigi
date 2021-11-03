@@ -26,7 +26,7 @@ from mock import patch
 import luigi
 from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
 
-from nose.plugins.attrib import attr
+import pytest
 
 DEFAULT_HOME = '/home'
 
@@ -49,7 +49,7 @@ def on_sge_master():
         return False
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSGEWrappers(unittest.TestCase):
 
     def test_track_job(self):
@@ -76,7 +76,7 @@ class TestJobTask(SGEJobTask):
         return luigi.LocalTarget(os.path.join(DEFAULT_HOME, 'testfile_' + str(self.i)))
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSGEJob(unittest.TestCase):
 
     """Test from SGE master node"""
