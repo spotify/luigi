@@ -415,7 +415,11 @@ class Task(metaclass=Register):
         # Then use the defaults for anything not filled in
         for param_name, param_obj in params:
             if param_name not in result:
-                if not param_obj.has_task_value(task_family, param_name):
+                try:
+                    has_task_value = param_obj.has_task_value(task_family, param_name)
+                except Exception as exc:
+                    raise ValueError("%s: Error when parsing the default value of '%s'" % (exc_desc, param_name)) from exc
+                if not has_task_value:
                     raise parameter.MissingParameterException("%s: requires the '%s' parameter to be set" % (exc_desc, param_name))
                 result[param_name] = param_obj.task_value(task_family, param_name)
 
