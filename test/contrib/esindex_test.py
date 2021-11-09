@@ -41,7 +41,7 @@ import luigi
 from elasticsearch.connection import Urllib3HttpConnection
 from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
 
-from nose.plugins.attrib import attr
+import pytest
 
 HOST = os.getenv('ESINDEX_TEST_HOST', 'localhost')
 PORT = os.getenv('ESINDEX_TEST_PORT', 9200)
@@ -65,7 +65,7 @@ except Exception:
     raise unittest.SkipTest('Unable to connect to ElasticSearch')
 
 
-@attr('aws')
+@pytest.mark.aws
 class ElasticsearchTargetTest(unittest.TestCase):
 
     """ Test touch and exists. """
@@ -160,7 +160,7 @@ def _cleanup():
         es.indices.delete(INDEX)
 
 
-@attr('aws')
+@pytest.mark.aws
 class CopyToIndexTest(unittest.TestCase):
 
     """ Test indexing tasks. """
@@ -230,7 +230,7 @@ class CopyToIndexTest(unittest.TestCase):
                                             doc_type=task3.doc_type, id=234))
 
 
-@attr('aws')
+@pytest.mark.aws
 class MarkerIndexTest(unittest.TestCase):
 
     @classmethod
@@ -308,7 +308,7 @@ class IndexingTask4(CopyToTestIndex):
                  'name': 'another', 'date': 'today'}]
 
 
-@attr('aws')
+@pytest.mark.aws
 class IndexHistSizeTest(unittest.TestCase):
 
     @classmethod

@@ -27,6 +27,7 @@ luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
+    task_namespace = 'wrap'  # to prevent task name conflict between tests
 
     def output(self):
         return MockTarget('/tmp/a.txt')

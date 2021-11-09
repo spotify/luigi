@@ -14,7 +14,7 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python (3.6, 3.7 tested) package that helps you build complex
+Luigi is a Python (3.6, 3.7, 3.8, 3.9 tested) package that helps you build complex
 pipelines of batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much more.
 
@@ -187,6 +187,8 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Mekar <https://mekar.id/en/>`_
 * `M3 <https://corporate.m3.com/en/>`_
 * `Assist Digital <https://www.assistdigital.com/>`_
+* `Meltwater <https://www.meltwater.com/>`_
+* `DevSamurai <https://www.devsamurai.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 

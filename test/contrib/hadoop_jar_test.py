@@ -21,7 +21,7 @@ import shlex
 from helpers import unittest
 from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask, fix_paths
 from mock import patch, Mock
-from nose.plugins.attrib import attr
+import pytest
 
 
 class TestHadoopJarJob(HadoopJarJobTask):
@@ -49,7 +49,7 @@ class TestRemoteHadoopJarTwoParamJob(TestRemoteHadoopJarJob):
     param2 = luigi.Parameter()
 
 
-@attr('apache')
+@pytest.mark.apache
 class FixPathsTest(unittest.TestCase):
     def test_fix_paths_non_hdfs_target_path(self):
         mock_job = Mock()
