@@ -19,6 +19,9 @@ Graph = (function() {
     /* Amount of horizontal space given for each node */
     var nodeWidth = 200;
 
+    /* Random horizontal offset for each row */
+    var jitterWidth = 100;
+
     /* Calculate minimum SVG height required for legend */
     var legendMaxY = (function () {
         return Object.keys(statusColors).length * legendLineHeight + ( legendLineHeight / 2 )
@@ -156,7 +159,6 @@ Graph = (function() {
 
         return rowSizes;
     }
-
     /* Format nodes according to their depth and horizontal sort order.
        Algorithm: evenly distribute nodes along each depth level, offsetting each
        by the text line height to prevent overlapping text. This is done within
@@ -164,18 +166,25 @@ Graph = (function() {
        is at least nodeWidth to ensure readability. The height of each level is
        determined by number of nodes divided by number of columns, rounded up. */
     function layoutNodes(nodes, rowSizes) {
-        var numCols = Math.max(2, Math.floor(graphWidth / nodeWidth));
+        var numCols = Math.max(2, Math.floor((graphWidth - jitterWidth) / nodeWidth));
         function rowStartPosition(depth) {
             if (depth === 0) return 20;
             var rowHeight = Math.ceil(rowSizes[depth-1] / numCols);
             return rowStartPosition(depth-1)+Math.max(rowHeight * nodeHeight + 100);
+        }
+        var jitter = []
+        for (var i in rowSizes) {
+            jitter[i] = Math.ceil(Math.random() * jitterWidth)
         }
         $.each(nodes, function(i, node) {
             var numRows = Math.ceil(rowSizes[node.depth] / numCols);
             var levelCols = Math.ceil(rowSizes[node.depth] / numRows);
             var row = node.xOrder % numRows;
             var col = node.xOrder / numRows;
-            node.x = ((col + 1) / (levelCols + 1)) * (graphWidth - 200);
+            node.x =
+                ((col + 1) / (levelCols + 1))
+                * (graphWidth - jitterWidth - nodeWidth)
+                + jitter[node.depth];
             node.y = rowStartPosition(node.depth) + row * nodeHeight;
         });
     }
