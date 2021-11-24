@@ -153,9 +153,6 @@ Graph = (function() {
             }
         }
         placeNodes(nodes[0], 0);
-        console.log("nodes with rows")
-        console.log(nodes)
-        console.log(rowSizes)
 
         return rowSizes;
     }
