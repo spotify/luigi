@@ -62,6 +62,40 @@ test("computeDepth", function() {
     equal(E.depth, -1);
 });
 
+test("computeRowsSelfDeps", function () {
+    var A1 = {name: "A", taskId: "A1", deps: ["A2"], depth: -1}
+    var A2 = {name: "A", taskId: "A2", deps: [], depth: -1}
+    var nodes = [A1, A2]
+    var nodeIndex = {"A1": 0, "A2": 1}
+    var rowSizes = Graph.testableMethods.computeRows(nodes, nodeIndex)
+    equal(A1.depth, 0)
+    equal(A2.depth, 1)
+    equal(rowSizes, [1, 1])
+});
+
+test("computeRowsGrouped", function() {
+    var A0 = {name: "A", taskId: "A0", deps: ["D0", "B0"], depth: -1}
+    var B0 = {name: "B", taskId: "B0", deps: ["C1", "C2"], depth: -1}
+    var C1 = {name: "C", taskId: "C1", deps: ["D1", "E1"], depth: -1}
+    var C2 = {name: "C", taskId: "C2", deps: ["D2", "E2"], depth: -1}
+    var D0 = {name: "D", taskId: "D0", deps: [], depth: -1}
+    var D1 = {name: "D", taskId: "D1", deps: [], depth: -1}
+    var D2 = {name: "D", taskId: "D2", deps: [], depth: -1}
+    var E1 = {name: "E", taskId: "E1", deps: [], depth: -1}
+    var E2 = {name: "E", taskId: "E2", deps: [], depth: -1}
+    var rowSizes = Graph.testableMethods.computeRows(nodes, nodeIndex)
+    equal(A0.depth, 0)
+    equal(B0.depth, 1)
+    equal(C1.depth, 2)
+    equal(C2.depth, 2)
+    equal(D0.depth, 3)
+    equal(D1.depth, 3)
+    equal(D2.depth, 3)
+    equal(E1.depth, 4)
+    equal(E2.depth, 4)
+    equal(rowSizes, [1, 1, 2, 3, 2])
+});
+
 test("createGraph", function() {
     var tasks = [
         {taskId: "A", deps: ["B","C"], status: "PENDING"},

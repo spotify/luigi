@@ -19,6 +19,9 @@ Graph = (function() {
     /* Amount of horizontal space given for each node */
     var nodeWidth = 200;
 
+    /* Random horizontal offset for each row */
+    var jitterWidth = 100;
+
     /* Calculate minimum SVG height required for legend */
     var legendMaxY = (function () {
         return Object.keys(statusColors).length * legendLineHeight + ( legendLineHeight / 2 )
@@ -65,21 +68,72 @@ Graph = (function() {
         });
         return edges;
     }
-
-    /* Compute the maximum depth of each node for layout purposes, returns the number
-       of nodes at each depth level (for layout purposes) */
+    /* Compute the depth of each node for layout purposes */
     function computeDepth(nodes, nodeIndex) {
+        var selfDependencies = false
         function descend(n, depth) {
             if (n.depth === undefined || depth > n.depth) {
                 n.depth = depth;
                 $.each(n.deps, function(i, dep) {
                     if (nodeIndex[dep]) {
-                        descend(nodes[nodeIndex[dep]], depth + 1);
+                        var child_node = nodes[nodeIndex[dep]]
+                        descend(child_node, depth + 1);
+                        if (!selfDependencies && n.name == child_node.name) {
+                            selfDependencies = true;
+                        }
                     }
                 });
             }
         }
         descend(nodes[0], 0);
+        return selfDependencies
+    }
+
+    /* Group tasks, so all tasks with the same name appear at the same depth. */
+    function groupTasks(nodes) {
+
+        // compute average assigned depth
+        var taskDepths = {};
+        $.each(nodes, function(i, n) {
+            if (taskDepths[n.name] === undefined) {
+                taskDepths[n.name] = [n.depth];
+            } else {
+                taskDepths[n.name].push(n.depth);
+            }
+        });
+        var averages = [];
+        $.each(taskDepths, function(key, array) {
+            var total = 0;
+            for (var i in array) total += array[i];
+            var mean = total / array.length;
+            averages.push([key, mean]);
+        });
+
+        // sort tasks
+        averages.sort( function(first, second) {
+            return first[1] - second[1];
+        });
+
+        // reassign task depths and node depths
+        var classDepths = {}
+        $.each(averages, function(i, a) {
+            classDepths[a[0]] = i;
+        });
+
+        $.each(nodes, function(i, n) {
+            n.depth = classDepths[n.name];
+        });
+        return classDepths
+    }
+
+    /* Compute the depth of each node for layout purposes, returns the number
+       of nodes at each depth level (for layout purposes) */
+    function computeRows(nodes, nodeIndex) {
+        var selfDependencies = computeDepth(nodes, nodeIndex)
+
+        if (!selfDependencies) {
+            var classDepths = groupTasks(nodes)
+        }
 
         var rowSizes = [];
         function placeNodes(n, depth) {
@@ -91,7 +145,9 @@ Graph = (function() {
                 rowSizes[depth]++;
                 $.each(n.deps, function(i, dep) {
                     if (nodeIndex[dep]) {
-                        placeNodes(nodes[nodeIndex[dep]], depth + 1);
+                        var next_node = nodes[nodeIndex[dep]]
+                        var depth = (selfDependencies ? depth + 1 : classDepths[next_node.name])
+                        placeNodes(next_node, depth);
                     }
                 });
             }
@@ -100,7 +156,6 @@ Graph = (function() {
 
         return rowSizes;
     }
-
     /* Format nodes according to their depth and horizontal sort order.
        Algorithm: evenly distribute nodes along each depth level, offsetting each
        by the text line height to prevent overlapping text. This is done within
@@ -108,18 +163,25 @@ Graph = (function() {
        is at least nodeWidth to ensure readability. The height of each level is
        determined by number of nodes divided by number of columns, rounded up. */
     function layoutNodes(nodes, rowSizes) {
-        var numCols = Math.max(2, Math.floor(graphWidth / nodeWidth));
+        var numCols = Math.max(2, Math.floor((graphWidth - jitterWidth) / nodeWidth));
         function rowStartPosition(depth) {
             if (depth === 0) return 20;
             var rowHeight = Math.ceil(rowSizes[depth-1] / numCols);
             return rowStartPosition(depth-1)+Math.max(rowHeight * nodeHeight + 100);
+        }
+        var jitter = []
+        for (var i in rowSizes) {
+            jitter[i] = Math.ceil(Math.random() * jitterWidth)
         }
         $.each(nodes, function(i, node) {
             var numRows = Math.ceil(rowSizes[node.depth] / numCols);
             var levelCols = Math.ceil(rowSizes[node.depth] / numRows);
             var row = node.xOrder % numRows;
             var col = node.xOrder / numRows;
-            node.x = ((col + 1) / (levelCols + 1)) * (graphWidth - 200);
+            node.x =
+                ((col + 1) / (levelCols + 1))
+                * (graphWidth - jitterWidth - nodeWidth)
+                + jitter[node.depth];
             node.y = rowStartPosition(node.depth) + row * nodeHeight;
         });
     }
@@ -132,7 +194,7 @@ Graph = (function() {
         var nodes = $.map(tasks, nodeFromTask);
         var nodeIndex = uniqueIndexByProperty(nodes, "taskId");
 
-        var rowSizes = computeDepth(nodes, nodeIndex);
+        var rowSizes = computeRows(nodes, nodeIndex);
 
         nodes = $.map(nodes, function(node) { return node.depth >= 0 ? node: null; });
 
@@ -278,6 +340,7 @@ Graph = (function() {
             uniqueIndexByProperty: uniqueIndexByProperty,
             createDependencyEdges: createDependencyEdges,
             computeDepth: computeDepth,
+            computeRows: computeRows,
             createGraph: createGraph,
             findBounds: findBounds
         }
