@@ -118,10 +118,11 @@ class Register(abc.ABCMeta):
         """
         Internal note: This function will be deleted soon.
         """
-        if not cls.get_task_namespace():
+        task_namespace = cls.get_task_namespace()
+        if not task_namespace:
             return cls.__name__
         else:
-            return "{}.{}".format(cls.get_task_namespace(), cls.__name__)
+            return f"{task_namespace}.{cls.__name__}"
 
     @classmethod
     def _get_reg(cls):
