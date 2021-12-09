@@ -260,13 +260,13 @@ class ExternalPythonProgramTask(ExternalProgramTask):
     :py:class:`luigi.parameter.Parameter` s for setting a virtualenv and for
     extending the ``PYTHONPATH``.
     """
-    virtualenv = luigi.Parameter(
+    virtualenv = luigi.OptionalParameter(
         default=None,
         positional=False,
         description='path to the virtualenv directory to use. It should point to '
                     'the directory containing the ``bin/activate`` file used for '
                     'enabling the virtualenv.')
-    extra_pythonpath = luigi.Parameter(
+    extra_pythonpath = luigi.OptionalParameter(
         default=None,
         positional=False,
         description='extend the search path for modules by prepending this '
