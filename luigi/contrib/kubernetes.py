@@ -363,7 +363,8 @@ class KubernetesJobTask(luigi.Task):
                 "backoffLimit": self.backoff_limit,
                 "template": {
                     "metadata": {
-                        "name": self.uu_name
+                        "name": self.uu_name,
+                        "labels": {}
                     },
                     "spec": self.spec_schema
                 }
@@ -376,6 +377,8 @@ class KubernetesJobTask(luigi.Task):
                 self.active_deadline_seconds
         # Update user labels
         job_json['metadata']['labels'].update(self.labels)
+        job_json['spec']['template']['metadata']['labels'].update(self.labels)
+
         # Add default restartPolicy if not specified
         if "restartPolicy" not in self.spec_schema:
             job_json["spec"]["template"]["spec"]["restartPolicy"] = "Never"

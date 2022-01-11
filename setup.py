@@ -37,7 +37,7 @@ readme_note = """
 with open('README.rst') as fobj:
     long_description = "\n\n" + readme_note + "\n\n" + fobj.read()
 
-install_requires = ['python-dateutil>=2.7.5,<3']
+install_requires = ['python-dateutil>=2.7.5,<3', 'tenacity>=6.3.0,<7']
 
 # Can't use python-daemon>=2.2.0 if on windows
 #     See https://pagure.io/python-daemon/issue/18
@@ -113,6 +113,8 @@ setup(
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: System :: Monitoring',
     ],
 )

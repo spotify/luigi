@@ -50,6 +50,7 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 """
 
+import copy
 import time
 import logging
 import luigi
@@ -150,8 +151,10 @@ class ECSTask(luigi.Task):
 
         Override to return list of dicts with keys 'name' and 'command',
         describing the container names and commands to pass to the container.
-        Directly corresponds to the `overrides` parameter of runTask API. For
-        example::
+        These values will be specified in the `containerOverrides` property of
+        the `overrides` parameter passed to the runTask API.
+
+        Example::
 
             [
                 {
@@ -163,6 +166,80 @@ class ECSTask(luigi.Task):
         """
         pass
 
+    @staticmethod
+    def update_container_overrides_command(container_overrides, command):
+        """
+        Update a list of container overrides with the specified command.
+
+        The specified command will take precedence over any existing commands
+        in `container_overrides` for the same container name. If no existing
+        command yet exists in `container_overrides` for the specified command,
+        it will be added.
+        """
+        for colliding_override in filter(lambda x: x['name'] == command['name'], container_overrides):
+            colliding_override['command'] = command['command']
+            break
+        else:
+            container_overrides.append(command)
+
+    @property
+    def combined_overrides(self):
+        """
+        Return single dict combining any provided `overrides` parameters.
+
+        This is used to allow custom `overrides` parameters to be specified in
+        `self.run_task_kwargs` while ensuring that the values specified in
+        `self.command` are honored in `containerOverrides`.
+        """
+        overrides = copy.deepcopy(self.run_task_kwargs.get('overrides', {}))
+        if self.command:
+            if 'containerOverrides' in overrides:
+                for command in self.command:
+                    self.update_container_overrides_command(overrides['containerOverrides'], command)
+            else:
+                overrides['containerOverrides'] = self.command
+        return overrides
+
+    @property
+    def run_task_kwargs(self):
+        """
+        Additional keyword arguments to be provided to ECS runTask API.
+
+        Override this property in a subclass to provide additional parameters
+        such as `network_configuration`, `launchType`, etc.
+
+        If the returned `dict` includes an `overrides` value with a nested
+        `containerOverrides` array defining one or more container `command`
+        values, prior to calling `run_task` they will be combined with and
+        superseded by any colliding values specified separately in the
+        `command` property.
+
+        Example::
+
+            {
+                'launchType': 'FARGATE',
+                'platformVersion': '1.4.0',
+                'networkConfiguration': {
+                    'awsvpcConfiguration': {
+                        'subnets': [
+                            'subnet-01234567890abcdef',
+                            'subnet-abcdef01234567890'
+                        ],
+                        'securityGroups': [
+                            'sg-abcdef01234567890',
+                        ],
+                        'assignPublicIp': 'ENABLED'
+                    }
+                },
+                'overrides': {
+                    'ephemeralStorage': {
+                        'sizeInGiB': 30
+                    }
+                }
+            }
+        """
+        return {}
+
     def run(self):
         if (not self.task_def and not self.task_def_arn) or \
                 (self.task_def and self.task_def_arn):
@@ -173,15 +250,16 @@ class ECSTask(luigi.Task):
             response = client.register_task_definition(**self.task_def)
             self.task_def_arn = response['taskDefinition']['taskDefinitionArn']
 
+        run_task_kwargs = self.run_task_kwargs
+        run_task_kwargs.update({
+            'taskDefinition': self.task_def_arn,
+            'cluster': self.cluster,
+            'overrides': self.combined_overrides,
+        })
+
         # Submit the task to AWS ECS and get assigned task ID
         # (list containing 1 string)
-        if self.command:
-            overrides = {'containerOverrides': self.command}
-        else:
-            overrides = {}
-        response = client.run_task(taskDefinition=self.task_def_arn,
-                                   overrides=overrides,
-                                   cluster=self.cluster)
+        response = client.run_task(**run_task_kwargs)
 
         if response['failures']:
             raise Exception(", ".join(["fail to run task {0} reason: {1}".format(failure['arn'], failure['reason'])

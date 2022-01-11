@@ -84,6 +84,9 @@ class email(luigi.Config):
         default='',
         config_path=dict(section='core', name='error-email'),
         description='Address to send error e-mails to')
+    traceback_max_length = luigi.parameter.IntParameter(
+        default=5000,
+        description='Max length for error traceback')
     sender = luigi.parameter.Parameter(
         default=DEFAULT_CLIENT_EMAIL,
         config_path=dict(section='core', name='email-sender'),
@@ -372,6 +375,11 @@ def format_task_error(headline, task, command, formatted_exception=None):
 
     :return: message body
     """
+
+    if formatted_exception:
+        if len(formatted_exception) > email().traceback_max_length:
+            truncated_exception = formatted_exception[:email().traceback_max_length]
+            formatted_exception = f"{truncated_exception}...Traceback exceeds max length and has been truncated."
 
     if formatted_exception:
         formatted_exception = wrap_traceback(formatted_exception)

@@ -360,6 +360,7 @@ class PySparkTask(SparkSubmitTask):
                 mod_path = mod.__path__[0]
             except AttributeError:
                 mod_path = mod.__file__
+            os.makedirs(self.run_path, exist_ok=True)
             tar_path = os.path.join(self.run_path, package + '.tar.gz')
             tar = tarfile.open(tar_path, "w:gz")
             tar.add(mod_path, os.path.basename(mod_path))

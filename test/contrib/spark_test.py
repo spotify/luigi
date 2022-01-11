@@ -31,7 +31,7 @@ from multiprocessing import Value
 from subprocess import Popen
 from io import BytesIO
 
-from nose.plugins.attrib import attr
+import pytest
 
 
 def poll_generator():
@@ -113,7 +113,7 @@ class MessyNamePySparkTask(TestPySparkTask):
     name = 'AppName(a,b,c,1:2,3/4)'
 
 
-@attr('apache')
+@pytest.mark.apache
 class SparkSubmitTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 
@@ -253,7 +253,7 @@ class SparkSubmitTaskTest(unittest.TestCase):
                 self.assertEqual(test_val.value, 1)
 
 
-@attr('apache')
+@pytest.mark.apache
 class PySparkTaskTest(unittest.TestCase):
     ss = 'ss-stub'
 

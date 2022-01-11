@@ -36,7 +36,7 @@ import logging
 import mock
 from luigi.contrib.kubernetes import KubernetesJobTask
 
-from nose.plugins.attrib import attr
+import pytest
 
 logger = logging.getLogger('luigi-interface')
 
@@ -71,8 +71,12 @@ class FailJob(KubernetesJobTask):
         }]
     }
 
+    @property
+    def labels(self):
+        return {"dummy_label": "dummy_value"}
 
-@attr('contrib')
+
+@pytest.mark.contrib
 class TestK8STask(unittest.TestCase):
 
     def test_success_job(self):
@@ -90,6 +94,7 @@ class TestK8STask(unittest.TestCase):
         job = Job(kube_api, jobs.response["items"][0])
         self.assertTrue("failed" in job.obj["status"])
         self.assertTrue(job.obj["status"]["failed"] > fail.max_retrials)
+        self.assertTrue(job.obj['spec']['template']['metadata']['labels'] == fail.labels())
 
     @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__get_job_status")
     @mock.patch.object(KubernetesJobTask, "signal_complete")
