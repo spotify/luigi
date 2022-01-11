@@ -810,6 +810,7 @@ class TimeDeltaParameter(Parameter):
     """
     Class that maps to timedelta using strings in any of the following forms:
 
+     * A bare number is interpreted as duration in seconds.
      * ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
         Note: multiple arguments must be supplied in longest to shortest unit order
      * ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
@@ -857,6 +858,10 @@ class TimeDeltaParameter(Parameter):
 
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """
+        try:
+            return datetime.timedelta(seconds=float(input))
+        except ValueError:
+            pass
         result = self._parseIso8601(input)
         if not result:
             result = self._parseSimple(input)
