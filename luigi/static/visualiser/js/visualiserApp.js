@@ -325,6 +325,9 @@ function visualiserApp(luigi) {
 
     function showErrorTrace(data) {
         data.error = decodeError(data.error);
+        if (data.taskParams) {
+          data.taskParams = Object.entries(data.taskParams).map(([k,v]) => `--${k.replace(/_/g, '-')} ${JSON.stringify(v)}`).join(" ");
+        }
         $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});
     }

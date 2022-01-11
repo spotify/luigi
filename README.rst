@@ -100,7 +100,7 @@ Conceptually, Luigi is similar to `GNU
 Make <http://www.gnu.org/software/make/>`_ where you have certain tasks
 and these tasks in turn may have dependencies on other tasks. There are
 also some similarities to `Oozie <http://oozie.apache.org/>`_
-and `Azkaban <http://data.linkedin.com/opensource/azkaban>`_. One major
+and `Azkaban <https://azkaban.github.io/>`_. One major
 difference is that Luigi is not just built specifically for Hadoop, and
 it's easy to extend it with other kinds of tasks.
 
