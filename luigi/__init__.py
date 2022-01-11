@@ -36,9 +36,12 @@ from luigi.parameter import (
     Parameter,
     DateParameter, MonthParameter, YearParameter, DateHourParameter, DateMinuteParameter, DateSecondParameter,
     DateIntervalParameter, TimeDeltaParameter,
-    IntParameter, FloatParameter, BoolParameter,
+    IntParameter, FloatParameter, BoolParameter, PathParameter,
     TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter,
-    NumericalParameter, ChoiceParameter, OptionalParameter
+    NumericalParameter, ChoiceParameter, OptionalParameter, OptionalStrParameter,
+    OptionalIntParameter, OptionalFloatParameter, OptionalBoolParameter, OptionalPathParameter,
+    OptionalDictParameter, OptionalListParameter, OptionalTupleParameter,
+    OptionalChoiceParameter, OptionalNumericalParameter,
 )
 
 from luigi import configuration
@@ -57,10 +60,13 @@ __all__ = [
     'RPCError', 'parameter', 'Parameter', 'DateParameter', 'MonthParameter',
     'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter',
     'DateIntervalParameter', 'TimeDeltaParameter', 'IntParameter',
-    'FloatParameter', 'BoolParameter', 'TaskParameter',
+    'FloatParameter', 'BoolParameter', 'PathParameter', 'TaskParameter',
     'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter',
     'configuration', 'interface', 'local_target', 'run', 'build', 'event', 'Event',
-    'NumericalParameter', 'ChoiceParameter', 'OptionalParameter', 'LuigiStatusCode',
+    'NumericalParameter', 'ChoiceParameter', 'OptionalParameter', 'OptionalStrParameter',
+    'OptionalIntParameter', 'OptionalFloatParameter', 'OptionalBoolParameter', 'OptionalPathParameter',
+    'OptionalDictParameter', 'OptionalListParameter', 'OptionalTupleParameter',
+    'OptionalChoiceParameter', 'OptionalNumericalParameter', 'LuigiStatusCode',
     '__version__',
 ]
 

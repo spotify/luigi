@@ -27,7 +27,7 @@ import mock
 from luigi.mock import MockTarget
 import re
 
-from nose.plugins.attrib import attr
+import pytest
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -62,7 +62,7 @@ def mocked_open(*args, **kwargs):
         return old__open(*args)
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSalesforceAPI(unittest.TestCase):
     # We patch 'requests.get' with our own method. The mock object is passed in to our test case method.
     @mock.patch('requests.get', side_effect=mocked_requests_get)
@@ -92,7 +92,7 @@ class TestQuerySalesforce(QuerySalesforce):
         return "SELECT * FROM %s" % self.object_name
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSalesforceQuery(unittest.TestCase):
 
     @mock.patch('builtins.open', side_effect=mocked_open)

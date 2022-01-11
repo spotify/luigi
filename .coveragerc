@@ -11,6 +11,7 @@ omit =
     */bin/luigidc
     hadoop_test.py
     minicluster.py
+
 [run]
 parallel=True
 concurrency=multiprocessing

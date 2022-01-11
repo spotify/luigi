@@ -29,7 +29,7 @@ import luigi.notifications
 import mock
 from luigi.mock import MockTarget
 from io import StringIO
-from nose.plugins.attrib import attr
+import pytest
 
 luigi.notifications.DEBUG = True
 
@@ -241,7 +241,7 @@ class CommonTests:
         test_case.assertFalse(success)
 
 
-@attr('apache')
+@pytest.mark.apache
 class MapreduceLocalTest(unittest.TestCase):
     use_hdfs = False
 
@@ -286,7 +286,7 @@ class MapreduceLocalTest(unittest.TestCase):
         MockTarget.fs.clear()
 
 
-@attr('apache')
+@pytest.mark.apache
 class CreatePackagesArchive(unittest.TestCase):
 
     def setUp(self):
@@ -381,7 +381,7 @@ class KeyboardInterruptedMockProcess(MockProcess):
             raise KeyboardInterrupt
 
 
-@attr('apache')
+@pytest.mark.apache
 class JobRunnerTest(unittest.TestCase):
     def setUp(self):
         self.tracking_urls = []

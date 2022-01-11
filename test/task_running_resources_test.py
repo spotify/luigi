@@ -21,7 +21,7 @@ import signal
 import multiprocessing
 from contextlib import contextmanager
 
-from helpers import unittest, RunOnceTask, with_config
+from helpers import unittest, RunOnceTask, with_config, skipOnGithubActions
 
 import luigi
 import luigi.server
@@ -124,6 +124,7 @@ class ConcurrentRunningResourcesTest(unittest.TestCase):
             with self.assert_duration(min_duration=4):
                 w.run()
 
+    @skipOnGithubActions("Temporary skipping on GH actions")  # TODO: Fix and remove skip
     def test_tasks_parallel(self):
         # parallel test
         # run two tasks and the first one lowers its requirement on the "foo" resource, so that

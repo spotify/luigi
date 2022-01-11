@@ -1,3 +1,9 @@
+codecov:
+  require_ci_to_pass: yes
+  notify:
+    after_n_builds: 24
+    wait_for_ci: yes
+
 coverage:
   precision: 2  # Just copied from default
   round: down  # Just copied from default

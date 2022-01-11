@@ -28,6 +28,7 @@ import json
 from json import JSONEncoder
 import operator
 from ast import literal_eval
+from pathlib import Path
 
 from configparser import NoOptionError, NoSectionError
 
@@ -83,6 +84,13 @@ class UnknownParameterException(ParameterException):
 class DuplicateParameterException(ParameterException):
     """
     Exception signifying that a Parameter was specified multiple times.
+    """
+    pass
+
+
+class OptionalParameterTypeWarning(UserWarning):
+    """
+    Warning class for OptionalParameterMixin with wrong type.
     """
     pass
 
@@ -323,24 +331,66 @@ class Parameter:
         }
 
 
-class OptionalParameter(Parameter):
-    """ A Parameter that treats empty string as None """
+class OptionalParameterMixin:
+    """
+    Mixin to make a parameter class optional and treat empty string as None.
+    """
+
+    expected_type = type(None)
 
     def serialize(self, x):
+        """
+        Parse the given value if the value is not None else return an empty string.
+        """
         if x is None:
             return ''
         else:
-            return str(x)
+            return super().serialize(x)
 
     def parse(self, x):
-        return x or None
+        """
+        Parse the given value if it is a string (empty strings are parsed to None).
+        """
+        if not isinstance(x, str):
+            return x
+        elif x:
+            return super().parse(x)
+        else:
+            return None
+
+    def normalize(self, x):
+        """
+        Normalize the given value if it is not None.
+        """
+        if x is None:
+            return None
+        return super().normalize(x)
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
-        if self.__class__ != OptionalParameter:
-            return
-        if not isinstance(param_value, str) and param_value is not None:
-            warnings.warn('OptionalParameter "{}" with value "{}" is not of type string or None.'.format(
-                param_name, param_value))
+        if not isinstance(param_value, self.expected_type) and param_value is not None:
+            try:
+                param_type = "any type in " + str([i.__name__ for i in self.expected_type]).replace("'", '"')
+            except TypeError:
+                param_type = f'type "{self.expected_type.__name__}"'
+            warnings.warn(
+                (
+                    f'{self.__class__.__name__} "{param_name}" with value '
+                    f'"{param_value}" is not of {param_type} or None.'
+                ),
+                OptionalParameterTypeWarning,
+            )
+
+
+class OptionalParameter(OptionalParameterMixin, Parameter):
+    """Class to parse optional parameters."""
+
+    expected_type = str
+
+
+class OptionalStrParameter(OptionalParameterMixin, Parameter):
+    """Class to parse optional str parameters."""
+
+    expected_type = str
 
 
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
@@ -627,6 +677,12 @@ class IntParameter(Parameter):
         return value + 1
 
 
+class OptionalIntParameter(OptionalParameterMixin, IntParameter):
+    """Class to parse optional int parameters."""
+
+    expected_type = int
+
+
 class FloatParameter(Parameter):
     """
     Parameter whose value is a ``float``.
@@ -637,6 +693,12 @@ class FloatParameter(Parameter):
         Parses a ``float`` from the string using ``float()``.
         """
         return float(s)
+
+
+class OptionalFloatParameter(OptionalParameterMixin, FloatParameter):
+    """Class to parse optional float parameters."""
+
+    expected_type = float
 
 
 class BoolParameter(Parameter):
@@ -709,6 +771,12 @@ class BoolParameter(Parameter):
         return parser_kwargs
 
 
+class OptionalBoolParameter(OptionalParameterMixin, BoolParameter):
+    """Class to parse optional bool parameters."""
+
+    expected_type = bool
+
+
 class DateIntervalParameter(Parameter):
     """
     A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
@@ -742,6 +810,7 @@ class TimeDeltaParameter(Parameter):
     """
     Class that maps to timedelta using strings in any of the following forms:
 
+     * A bare number is interpreted as duration in seconds.
      * ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
         Note: multiple arguments must be supplied in longest to shortest unit order
      * ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
@@ -789,6 +858,10 @@ class TimeDeltaParameter(Parameter):
 
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """
+        try:
+            return datetime.timedelta(seconds=float(input))
+        except ValueError:
+            pass
         result = self._parseIso8601(input)
         if not result:
             result = self._parseSimple(input)
@@ -1007,6 +1080,12 @@ class DictParameter(Parameter):
         return json.dumps(x, cls=_DictParamEncoder)
 
 
+class OptionalDictParameter(OptionalParameterMixin, DictParameter):
+    """Class to parse optional dict parameters."""
+
+    expected_type = FrozenOrderedDict
+
+
 class ListParameter(Parameter):
     """
     Parameter whose value is a ``list``.
@@ -1070,6 +1149,12 @@ class ListParameter(Parameter):
         return json.dumps(x, cls=_DictParamEncoder)
 
 
+class OptionalListParameter(OptionalParameterMixin, ListParameter):
+    """Class to parse optional list parameters."""
+
+    expected_type = tuple
+
+
 class TupleParameter(ListParameter):
     """
     Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
@@ -1123,6 +1208,12 @@ class TupleParameter(ListParameter):
             return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
             return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
+
+
+class OptionalTupleParameter(OptionalParameterMixin, TupleParameter):
+    """Class to parse optional tuple parameters."""
+
+    expected_type = tuple
 
 
 class NumericalParameter(Parameter):
@@ -1201,6 +1292,14 @@ class NumericalParameter(Parameter):
                     s=s, permitted_range=self._permitted_range))
 
 
+class OptionalNumericalParameter(OptionalParameterMixin, NumericalParameter):
+    """Class to parse optional numerical parameters."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.expected_type = self._var_type
+
+
 class ChoiceParameter(Parameter):
     """
     A parameter which takes two values:
@@ -1257,3 +1356,69 @@ class ChoiceParameter(Parameter):
         else:
             raise ValueError("{var} is not a valid choice from {choices}".format(
                 var=var, choices=self._choices))
+
+
+class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
+    """Class to parse optional choice parameters."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.expected_type = self._var_type
+
+
+class PathParameter(Parameter):
+    """
+    Parameter whose value is a path.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            existing_file_path = luigi.PathParameter(exists=True)
+            new_file_path = luigi.PathParameter()
+
+            def run(self):
+                # Get data from existing file
+                with self.existing_file_path.open("r", encoding="utf-8") as f:
+                    data = f.read()
+
+                # Output message in new file
+                self.new_file_path.parent.mkdir(parents=True, exist_ok=True)
+                with self.new_file_path.open("w", encoding="utf-8") as f:
+                    f.write("hello from a PathParameter => ")
+                    f.write(data)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --existing-file-path <path> --new-file-path <path>
+    """
+
+    def __init__(self, *args, absolute=False, exists=False, **kwargs):
+        """
+        :param bool absolute: If set to ``True``, the given path is converted to an absolute path.
+        :param bool exists: If set to ``True``, a :class:`ValueError` is raised if the path does not exist.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.absolute = absolute
+        self.exists = exists
+
+    def normalize(self, x):
+        """
+        Normalize the given value to a :class:`pathlib.Path` object.
+        """
+        path = Path(x)
+        if self.absolute:
+            path = path.absolute()
+        if self.exists and not path.exists():
+            raise ValueError(f"The path {path} does not exist.")
+        return path
+
+
+class OptionalPathParameter(OptionalParameter, PathParameter):
+    """Class to parse optional path parameters."""
+
+    expected_type = (str, Path)

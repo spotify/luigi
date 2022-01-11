@@ -16,7 +16,7 @@
 #
 import os
 
-from luigi.configuration import LuigiConfigParser, get_config
+from luigi.configuration import LuigiConfigParser, LuigiTomlParser, get_config
 from luigi.configuration.cfg_parser import InterpolationMissingEnvvarError
 
 from helpers import LuigiTestCase, with_config
@@ -43,6 +43,8 @@ class ConfigParserTest(LuigiTestCase):
             os.environ.pop(key)
         for key, value in self.environ_backup:
             os.environ[key] = value
+        if 'LUIGI_CONFIG_PARSER' in os.environ:
+            del os.environ["LUIGI_CONFIG_PARSER"]
 
     @with_config({"test": {
         "a": "testval",
@@ -95,3 +97,10 @@ class ConfigParserTest(LuigiTestCase):
         config = get_config()
         self.assertEqual(config.get("test", "foo-bar"), "bax")
         self.assertEqual(config.get("test", "foo_bar"), "bax")
+
+    def test_default_parser(self):
+        config = get_config()
+        self.assertIsInstance(config, LuigiConfigParser)
+        os.environ["LUIGI_CONFIG_PARSER"] = "toml"
+        config = get_config()
+        self.assertIsInstance(config, LuigiTomlParser)

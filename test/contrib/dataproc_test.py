@@ -19,7 +19,7 @@ except ImportError:
 import luigi
 import os
 import time
-from nose.plugins.attrib import attr
+import pytest
 
 # In order to run this test, you should set these to your GCS project.
 # Unfortunately there's no mock
@@ -38,7 +38,7 @@ class _DataprocBaseTestCase(unittest.TestCase):
         pass
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class DataprocTaskTest(_DataprocBaseTestCase):
 
     def test_1_create_cluster(self):

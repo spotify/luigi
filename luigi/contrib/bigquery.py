@@ -21,14 +21,38 @@ import luigi.target
 import time
 from luigi.contrib import gcp
 
+from tenacity import retry
+from tenacity import retry_if_exception
+from tenacity import retry_if_exception_type
+from tenacity import wait_exponential
+from tenacity import stop_after_attempt
+
 logger = logging.getLogger('luigi-interface')
 
+RETRYABLE_ERRORS = None
 try:
+    import httplib2
     from googleapiclient import discovery
+    from googleapiclient import errors
     from googleapiclient import http
 except ImportError:
     logger.warning('BigQuery module imported, but google-api-python-client is '
                    'not installed. Any BigQuery task will fail')
+else:
+    RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError, TimeoutError, BrokenPipeError)
+
+
+# Retry configurations. For more details, see https://tenacity.readthedocs.io/en/latest/
+def is_error_5xx(err):
+    return isinstance(err, errors.HttpError) and err.resp.status >= 500
+
+
+bq_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
+                 wait=wait_exponential(multiplier=1, min=1, max=10),
+                 stop=stop_after_attempt(3),
+                 reraise=True,
+                 after=lambda x: x.args[0].__initialise_client()
+                 )
 
 
 class CreateDisposition:
@@ -52,6 +76,7 @@ class SourceFormat:
     CSV = 'CSV'
     DATASTORE_BACKUP = 'DATASTORE_BACKUP'
     NEWLINE_DELIMITED_JSON = 'NEWLINE_DELIMITED_JSON'
+    PARQUET = 'PARQUET'
 
 
 class FieldDelimiter:
@@ -121,13 +146,23 @@ class BigQueryClient:
     """
 
     def __init__(self, oauth_credentials=None, descriptor='', http_=None):
-        authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
+        # Save initialisation arguments in case we need to re-create client
+        # due to connection timeout
+        self.oauth_credentials = oauth_credentials
+        self.descriptor = descriptor
+        self.http_ = http_
 
-        if descriptor:
-            self.client = discovery.build_from_document(descriptor, **authenticate_kwargs)
+        self.__initialise_client()
+
+    def __initialise_client(self):
+        authenticate_kwargs = gcp.get_authenticate_kwargs(self.oauth_credentials, self.http_)
+
+        if self.descriptor:
+            self.client = discovery.build_from_document(self.descriptor, **authenticate_kwargs)
         else:
             self.client = discovery.build('bigquery', 'v2', cache_discovery=False, **authenticate_kwargs)
 
+    @bq_retry
     def dataset_exists(self, dataset):
         """Returns whether the given dataset exists.
         If regional location is specified for the dataset, that is also checked
@@ -146,7 +181,6 @@ class BigQueryClient:
                     raise Exception('''Dataset already exists with regional location {}. Can't use {}.'''.format(
                         fetched_location if fetched_location is not None else 'unspecified',
                         dataset.location))
-
         except http.HttpError as ex:
             if ex.resp.status == 404:
                 return False
@@ -154,6 +188,7 @@ class BigQueryClient:
 
         return True
 
+    @bq_retry
     def table_exists(self, table):
         """Returns whether the given table exists.
 
@@ -527,6 +562,16 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
         """	Indicates if BigQuery should allow quoted data sections that contain newline characters in a CSV file. The default value is false."""
         return False
 
+    def configure_job(self, configuration):
+        """Set additional job configuration.
+
+        This allows to specify job configuration parameters that are not exposed via Task properties.
+
+        :param configuration: Current configuration.
+        :return: New or updated configuration.
+        """
+        return configuration
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -564,6 +609,8 @@ class BigQueryLoadTask(MixinBigQueryBulkComplete, luigi.Task):
             job['configuration']['load']['schema'] = {'fields': self.schema}
         else:
             job['configuration']['load']['autodetect'] = True
+
+        job['configuration'] = self.configure_job(job['configuration'])
 
         bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
@@ -610,6 +657,16 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
         """
         return True
 
+    def configure_job(self, configuration):
+        """Set additional job configuration.
+
+        This allows to specify job configuration parameters that are not exposed via Task properties.
+
+        :param configuration: Current configuration.
+        :return: New or updated configuration.
+        """
+        return configuration
+
     def run(self):
         output = self.output()
         assert isinstance(output, BigQueryTarget), 'Output must be a BigQueryTarget, not %s' % (output)
@@ -642,6 +699,8 @@ class BigQueryRunQueryTask(MixinBigQueryBulkComplete, luigi.Task):
                 }
             }
         }
+
+        job['configuration'] = self.configure_job(job['configuration'])
 
         bq_client.run_job(output.table.project_id, job, dataset=output.table.dataset)
 
@@ -739,6 +798,16 @@ class BigQueryExtractTask(luigi.Task):
         """Whether to use compression."""
         return Compression.NONE
 
+    def configure_job(self, configuration):
+        """Set additional job configuration.
+
+        This allows to specify job configuration parameters that are not exposed via Task properties.
+
+        :param configuration: Current configuration.
+        :return: New or updated configuration.
+        """
+        return configuration
+
     def run(self):
         input = luigi.task.flatten(self.input())[0]
         assert (
@@ -774,6 +843,8 @@ class BigQueryExtractTask(luigi.Task):
             job['configuration']['extract']['printHeader'] = self.print_header
             job['configuration']['extract']['fieldDelimiter'] = \
                 self.field_delimiter
+
+        job['configuration'] = self.configure_job(job['configuration'])
 
         bq_client.run_job(
             input.table.project_id,

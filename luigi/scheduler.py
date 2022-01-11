@@ -1560,7 +1560,9 @@ class Scheduler:
     def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
-            return {"taskId": task_id, "error": task.expl, 'displayName': task.pretty_id}
+            return {"taskId": task_id, "error": task.expl, 'displayName':
+                    task.pretty_id, 'taskParams': task.params, 'taskModule':
+                    task.module, 'taskFamily': task.family}
         else:
             return {"taskId": task_id, "error": ""}
 

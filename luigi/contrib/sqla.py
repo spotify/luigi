@@ -15,7 +15,7 @@
 # the License.
 #
 """
-Support for SQLAlchmey. Provides SQLAlchemyTarget for storing in databases
+Support for SQLAlchemy. Provides SQLAlchemyTarget for storing in databases
 supported by SQLAlchemy. The user would be responsible for installing the
 required database driver to connect using SQLAlchemy.
 

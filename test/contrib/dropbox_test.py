@@ -5,7 +5,7 @@ import unittest
 import uuid
 from datetime import datetime
 
-from nose.plugins.attrib import attr
+import pytest
 
 import luigi
 from luigi.format import NopFormat
@@ -56,7 +56,7 @@ DROPBOX_TEST_FILE_TO_UPLOAD_LARGE = DROPBOX_TEST_PATH + '/file.blob'
 DROPBOX_TEST_NON_EXISTING_FILE = DROPBOX_TEST_SIMPLE_DIR + 'ajdlkajfal'
 
 
-@attr('dropbox')
+@pytest.mark.dropbox
 class TestClientDropbox(unittest.TestCase):
     def setUp(self):
         self.luigiconn = DropboxClient(DROPBOX_APP_TOKEN)
@@ -241,7 +241,7 @@ class TestClientDropbox(unittest.TestCase):
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_FILE_TO_COPY_DEST))
 
 
-@attr('dropbox')
+@pytest.mark.dropbox
 class TestDropboxTarget(unittest.TestCase):
     def setUp(self):
         self.luigiconn = DropboxClient(DROPBOX_APP_TOKEN)

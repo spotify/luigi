@@ -303,14 +303,14 @@ wait_interval
   available jobs.
 
 wait_jitter
-  Size of jitter to add to the worker wait interval such that the multiple
-  workers do not ask the scheduler for another job at the same time.
+  Duration of jitter to add to the worker wait interval such that the multiple
+  workers do not ask the scheduler for another job at the same time, in seconds.
   Default: 5.0
 
 max_keep_alive_idle_duration
   .. versionadded:: 2.8.4
 
-  Maximum duration to keep worker alive while in idle state.
+  Maximum duration in seconds to keep worker alive while in idle state.
   Default: 0 (Indefinitely)
 
 max_reschedules
@@ -437,6 +437,9 @@ sender
   User name in from field of error e-mails.
   Default value: luigi-client@<server_name>
 
+traceback_max_length
+  Maximum length for traceback included in error email. Default is 5000.
+
 
 [batch_notifier]
 ----------------
@@ -444,7 +447,7 @@ sender
 Parameters controlling the contents of batch notifications sent from the
 scheduler
 
-email_interval
+email_interval_minutes
   Number of minutes between e-mail sends. Making this larger results in
   fewer, bigger e-mails.
   Defaults to 60.

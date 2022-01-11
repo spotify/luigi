@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+echo "$DOCKERHUB_TOKEN" | docker login -u spotifyci --password-stdin
+
 docker pull arafato/azurite
 mkdir -p blob_emulator
 $1/stop_azurite.sh

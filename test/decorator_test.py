@@ -29,6 +29,7 @@ luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
+    task_namespace = 'decorator'  # to prevent task name conflict between tests
     param1 = luigi.Parameter("class A-specific default")
 
 

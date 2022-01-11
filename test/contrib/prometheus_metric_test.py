@@ -1,5 +1,5 @@
 from helpers import unittest
-from nose.plugins.attrib import attr
+import pytest
 from prometheus_client import CONTENT_TYPE_LATEST
 
 from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
@@ -17,7 +17,7 @@ TASK_ID = 'TaskID'
 TASK_FAMILY = 'TaskFamily'
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class PrometheusMetricTest(unittest.TestCase):
     def setUp(self):
         self.collector = PrometheusMetricsCollector()

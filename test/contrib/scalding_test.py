@@ -25,7 +25,7 @@ import shutil
 import tempfile
 import unittest
 
-from nose.plugins.attrib import attr
+import pytest
 
 
 class MyScaldingTask(scalding.ScaldingJobTask):
@@ -35,7 +35,7 @@ class MyScaldingTask(scalding.ScaldingJobTask):
         return self.scala_source
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class ScaldingTest(unittest.TestCase):
     def setUp(self):
         self.scalding_home = os.path.join(tempfile.gettempdir(), 'scalding-%09d' % random.randint(0, 999999999))

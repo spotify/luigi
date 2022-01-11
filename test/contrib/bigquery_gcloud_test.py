@@ -40,7 +40,7 @@ from avro.io import DatumWriter
 from luigi.contrib.gcs import GCSTarget
 from luigi.contrib.bigquery import BigQueryExecutionError
 
-from nose.plugins.attrib import attr
+import pytest
 from helpers import unittest
 
 # In order to run this test, you should set your GCS/BigQuery project/bucket.
@@ -63,7 +63,7 @@ def bucket_url(suffix):
     return 'gs://{}/{}/{}'.format(BUCKET_NAME, TEST_FOLDER, suffix)
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class TestLoadTask(bigquery.BigQueryLoadTask):
     source = luigi.Parameter()
     table = luigi.Parameter()
@@ -84,7 +84,7 @@ class TestLoadTask(bigquery.BigQueryLoadTask):
         return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table, location=self.location)
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
     query = ''' SELECT 'hello' as field1, 2 as field2 '''
     table = luigi.Parameter()
@@ -94,7 +94,7 @@ class TestRunQueryTask(bigquery.BigQueryRunQueryTask):
         return bigquery.BigQueryTarget(PROJECT_ID, self.dataset, self.table)
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class TestExtractTask(bigquery.BigQueryExtractTask):
     source = luigi.Parameter()
     table = luigi.Parameter()
@@ -119,7 +119,7 @@ class TestExtractTask(bigquery.BigQueryExtractTask):
             table=self.table)
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class BigQueryGcloudTest(unittest.TestCase):
     def setUp(self):
         self.bq_client = bigquery.BigQueryClient(CREDENTIALS)
@@ -337,7 +337,7 @@ class BigQueryGcloudTest(unittest.TestCase):
         self.assertRaises(BigQueryExecutionError, lambda: self.bq_client.run_job(PROJECT_ID, body))
 
 
-@attr('gcloud')
+@pytest.mark.gcloud
 class BigQueryLoadAvroTest(unittest.TestCase):
     def _produce_test_input(self):
         schema = avro.schema.parse("""

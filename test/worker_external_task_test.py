@@ -185,9 +185,9 @@ class WorkerExternalTaskTest(unittest.TestCase):
         # split up scheduling task and running to simulate runtime scenario
         with self._make_worker() as w:
             w.add(test_task)
-        # touch output so test_task should be considered complete at runtime
-        open(test_task.output_path, 'a').close()
-        success = w.run()
+            # touch output so test_task should be considered complete at runtime
+            open(test_task.output_path, 'a').close()
+            success = w.run()
 
         self.assertTrue(success)
         # upstream dependency output didn't exist at runtime

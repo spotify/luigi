@@ -354,3 +354,13 @@ class FileSystemTest(unittest.TestCase):
         LocalTarget(src).open('w').close()
         self.fs.move(src, dest)
         self.assertTrue(os.path.exists(dest))
+
+
+class DestructorTest(unittest.TestCase):
+
+    def test_destructor(self):
+        # LocalTarget might not be fully initialised if an exception is thrown in the constructor of LocalTarget or a
+        # subclass. The destructor can't expect attributes to be initialised.
+        t = LocalTarget(is_tmp=True)
+        del t.is_tmp
+        t.__del__()

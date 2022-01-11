@@ -32,12 +32,15 @@ PARSERS = {
     'toml': LuigiTomlParser,
 }
 
-# select parser via env var
 DEFAULT_PARSER = 'cfg'
-PARSER = os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)
-if PARSER not in PARSERS:
-    warnings.warn("Invalid parser: {parser}".format(parser=PARSER))
-    PARSER = DEFAULT_PARSER
+
+
+def _get_default_parser():
+    parser = os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)
+    if parser not in PARSERS:
+        warnings.warn("Invalid parser: {parser}".format(parser=DEFAULT_PARSER))
+        parser = DEFAULT_PARSER
+    return parser
 
 
 def _check_parser(parser_class, parser):
@@ -50,9 +53,11 @@ def _check_parser(parser_class, parser):
         raise ImportError(msg.format(parser=parser))
 
 
-def get_config(parser=PARSER):
+def get_config(parser=None):
     """Get configs singleton for parser
     """
+    if parser is None:
+        parser = _get_default_parser()
     parser_class = PARSERS[parser]
     _check_parser(parser_class, parser)
     return parser_class.instance()
@@ -66,21 +71,22 @@ def add_config_path(path):
         return False
 
     # select parser by file extension
+    default_parser = _get_default_parser()
     _base, ext = os.path.splitext(path)
     if ext and ext[1:] in PARSERS:
         parser = ext[1:]
     else:
-        parser = PARSER
+        parser = default_parser
     parser_class = PARSERS[parser]
 
     _check_parser(parser_class, parser)
-    if parser != PARSER:
+    if parser != default_parser:
         msg = (
             "Config for {added} parser added, but used {used} parser. "
             "Set up right parser via env var: "
             "export LUIGI_CONFIG_PARSER={added}"
         )
-        warnings.warn(msg.format(added=parser, used=PARSER))
+        warnings.warn(msg.format(added=parser, used=default_parser))
 
     # add config path to parser
     parser_class.add_config_path(path)

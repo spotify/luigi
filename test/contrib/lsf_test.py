@@ -34,7 +34,7 @@ from mock import patch
 import luigi
 from luigi.contrib.lsf import LSFJobTask
 
-from nose.plugins.attrib import attr
+import pytest
 
 DEFAULT_HOME = ''
 
@@ -70,7 +70,7 @@ class TestJobTask(LSFJobTask):
         return luigi.LocalTarget(os.path.join(DEFAULT_HOME, 'test_lsf_file_' + str(self.i)))
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestSGEJob(unittest.TestCase):
 
     '''Test from SGE master node'''
