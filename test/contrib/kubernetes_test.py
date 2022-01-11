@@ -36,7 +36,7 @@ import logging
 import mock
 from luigi.contrib.kubernetes import KubernetesJobTask
 
-from nose.plugins.attrib import attr
+import pytest
 
 logger = logging.getLogger('luigi-interface')
 
@@ -76,7 +76,7 @@ class FailJob(KubernetesJobTask):
         return {"dummy_label": "dummy_value"}
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestK8STask(unittest.TestCase):
 
     def test_success_job(self):

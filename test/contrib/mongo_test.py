@@ -20,7 +20,7 @@ from helpers import unittest
 
 from luigi.contrib.mongodb import MongoCellTarget, MongoRangeTarget
 
-from nose.plugins.attrib import attr
+import pytest
 
 HOST = 'localhost'
 PORT = 27017
@@ -37,7 +37,7 @@ except Exception:
     raise unittest.SkipTest('Unable to connect to local mongoDB instance')
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class MongoCellTargetTest(unittest.TestCase):
 
     """ MongoCellTarget unittest on local test database """
@@ -150,7 +150,7 @@ class MongoCellTargetTest(unittest.TestCase):
             self.tearDown()
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class MongoRangerTargetTest(unittest.TestCase):
 
     """ MongoRangelTarget unittest on local test database """

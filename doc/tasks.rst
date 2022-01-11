@@ -152,6 +152,13 @@ LocalTarget. Following the above example:
             with self.output().open('w') as f:
                 pickle.dump(words, f)
 
+
+It is your responsibility to ensure that after running :func:`~luigi.task.Task.run`, the task is
+complete, i.e. :func:`~luigi.task.Task.complete` returns ``True``. Unless you have overridden
+:func:`~luigi.task.Task.complete`, :func:`~luigi.task.Task.run` should generate all the targets
+defined as outputs. Luigi verifies that you adhere to the contract before running downstream
+dependencies, and reports ``Unfulfilled dependencies at run time`` if a violation is detected.
+
 .. _Task.input:
 
 Task.input
