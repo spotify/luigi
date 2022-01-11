@@ -854,6 +854,16 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         self.assertRaises(ValueError, f)  # ISO 8601 durations with months are not supported
         exc.assert_called_once_with("Invalid time delta - could not parse P6M")
 
+    @with_config({"foo": {"bar": "12.34"}})
+    def testTimeDeltaFloat(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=12.34), _value(p))
+
+    @with_config({"foo": {"bar": "56789"}})
+    def testTimeDeltaInt(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=56789), _value(p))
+
     def testHasDefaultNoSection(self):
         self.assertRaises(luigi.parameter.MissingParameterException,
                           lambda: _value(luigi.Parameter(config_path=dict(section="foo", name="bar"))))

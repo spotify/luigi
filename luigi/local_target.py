@@ -186,5 +186,5 @@ class LocalTarget(FileSystemTarget):
         return self.path
 
     def __del__(self):
-        if self.is_tmp and self.exists():
+        if hasattr(self, "is_tmp") and self.is_tmp and self.exists():
             self.remove()
