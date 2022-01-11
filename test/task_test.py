@@ -18,7 +18,7 @@ import doctest
 import pickle
 import warnings
 
-from helpers import unittest, LuigiTestCase
+from helpers import unittest, LuigiTestCase, with_config
 from datetime import datetime, timedelta
 
 import luigi
@@ -151,6 +151,23 @@ class TaskTest(unittest.TestCase):
         params['timedelta_param'] = MockTimedelta()
         with self.assertWarnsRegex(UserWarning, 'Parameter "timedelta_param" with value ".*" is not of type timedelta.'):
             DummyTask(**params)
+
+    def test_disable_window_seconds(self):
+        """
+        Deprecated disable_window_seconds param uses disable_window value
+        """
+        class ATask(luigi.Task):
+            disable_window = 17
+        task = ATask()
+        self.assertEqual(task.disable_window_seconds, 17)
+
+    @with_config({"ATaskWithBadParam": {"bad_param": "bad_value"}})
+    def test_bad_param(self):
+        class ATaskWithBadParam(luigi.Task):
+            bad_param = luigi.IntParameter()
+
+        with self.assertRaisesRegex(ValueError, r"ATaskWithBadParam\[args=\(\), kwargs={}\]: Error when parsing the default value of 'bad_param'"):
+            ATaskWithBadParam()
 
 
 class ExternalizeTaskTest(LuigiTestCase):
