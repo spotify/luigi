@@ -21,6 +21,7 @@ from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
 import mock
+import pytest
 
 import luigi
 import luigi.date_interval
@@ -1264,3 +1265,67 @@ class TaskAsParameterName1335Test(LuigiTestCase):
             task = luigi.IntParameter()
 
         self.assertTrue(self.run_locally_split('MyTask --task 5'))
+
+
+class TestPathParameter:
+
+    @pytest.fixture(params=[None, "not_existing_dir"])
+    def default(self, request):
+        return request.param
+
+    @pytest.fixture(params=[True, False])
+    def absolute(self, request):
+        return request.param
+
+    @pytest.fixture(params=[True, False])
+    def exists(self, request):
+        return request.param
+
+    @pytest.fixture()
+    def path_parameter(self, tmpdir, default, absolute, exists):
+        class TaskPathParameter(luigi.Task):
+
+            a = luigi.PathParameter(
+                default=str(tmpdir / default) if default is not None else str(tmpdir),
+                absolute=absolute,
+                exists=exists,
+            )
+            b = luigi.OptionalPathParameter(
+                default=str(tmpdir / default) if default is not None else str(tmpdir),
+                absolute=absolute,
+                exists=exists,
+            )
+            c = luigi.OptionalPathParameter(default=None)
+            d = luigi.OptionalPathParameter(default="not empty default")
+
+            def run(self):
+                # Use the parameter as a Path object
+                new_file = self.a / "test.file"
+                new_optional_file = self.b / "test_optional.file"
+                if default is not None:
+                    new_file.parent.mkdir(parents=True)
+                new_file.touch()
+                new_optional_file.touch()
+                assert new_file.exists()
+                assert new_optional_file.exists()
+                assert self.c is None
+                assert self.d is None
+
+            def output(self):
+                return luigi.LocalTarget("not_existing_file")
+
+        return {
+            "tmpdir": tmpdir,
+            "default": default,
+            "absolute": absolute,
+            "exists": exists,
+            "cls": TaskPathParameter,
+        }
+
+    @with_config({"TaskPathParameter": {"d": ""}})
+    def test_exists(self, path_parameter):
+        if path_parameter["default"] is not None and path_parameter["exists"]:
+            with pytest.raises(ValueError, match="The path .* does not exist"):
+                luigi.build([path_parameter["cls"]()], local_scheduler=True)
+        else:
+            assert luigi.build([path_parameter["cls"]()], local_scheduler=True)
