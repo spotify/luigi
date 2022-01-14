@@ -76,12 +76,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: 3.6
-            tox-env: py36-postgres
-          - python-version: 3.7
-            tox-env: py37-postgres
-          - python-version: 3.8
-            tox-env: py38-postgres
+          #- python-version: 3.6
+          #  tox-env: py36-postgres
+          #- python-version: 3.7
+          #  tox-env: py37-postgres
+          #- python-version: 3.8
+          #  tox-env: py38-postgres
           - python-version: 3.9
             tox-env: py39-postgres
 
@@ -125,43 +125,43 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: 3.6
-            tox-env: py36-aws
-          - python-version: 3.7
-            tox-env: py37-aws
-          - python-version: 3.8
-            tox-env: py38-aws
+          #- python-version: 3.6
+          #  tox-env: py36-aws
+          #- python-version: 3.7
+          #  tox-env: py37-aws
+          #- python-version: 3.8
+          #  tox-env: py38-aws
           - python-version: 3.9
             tox-env: py39-aws
 
-          - python-version: 3.6
-            tox-env: py36-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: 3.7
-            tox-env: py37-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: 3.8
-            tox-env: py38-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
+          #- python-version: 3.6
+          #  tox-env: py36-unixsocket
+          #  OVERRIDE_SKIP_CI_TESTS: True
+          #- python-version: 3.7
+          #  tox-env: py37-unixsocket
+          #  OVERRIDE_SKIP_CI_TESTS: True
+          #- python-version: 3.8
+          #  tox-env: py38-unixsocket
+          #  OVERRIDE_SKIP_CI_TESTS: True
           - python-version: 3.9
             tox-env: py39-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
 
-          - python-version: 3.6
-            tox-env: py36-apache
-          - python-version: 3.7
-            tox-env: py37-apache
-          - python-version: 3.8.9
-            tox-env: py38-apache
+          #- python-version: 3.6
+          #  tox-env: py36-apache
+          #- python-version: 3.7
+          #  tox-env: py37-apache
+          #- python-version: 3.8.9
+          #  tox-env: py38-apache
           - python-version: 3.9.4
             tox-env: py39-apache
             
-          - python-version: 3.6
-            tox-env: py36-azureblob
-          - python-version: 3.7
-            tox-env: py37-azureblob
-          - python-version: 3.8
-            tox-env: py38-azureblob
+          #- python-version: 3.6
+          #  tox-env: py36-azureblob
+          #- python-version: 3.7
+          #  tox-env: py37-azureblob
+          #- python-version: 3.8
+          #  tox-env: py38-azureblob
           - python-version: 3.9
             tox-env: py39-azureblob
 
