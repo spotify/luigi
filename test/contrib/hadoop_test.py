@@ -318,42 +318,49 @@ class CreatePackagesArchive(unittest.TestCase):
     @mock.patch('tarfile.open')
     def test_create_packages_archive_module(self, tar):
         module = __import__("module", None, None, 'dummy')
+        module.__file__ = os.path.relpath(module.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([module], '/dev/null')
         self._assert_module(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package(self, tar):
         package = __import__("package", None, None, 'dummy')
+        package.__path__[0] = os.path.relpath(package.__path__[0], os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule(self, tar):
         package_submodule = __import__("package.submodule", None, None, 'dummy')
+        package_submodule.__file__ = os.path.relpath(package_submodule.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_submodule], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule_with_absolute_import(self, tar):
         package_submodule_with_absolute_import = __import__("package.submodule_with_absolute_import", None, None, 'dummy')
+        package_submodule_with_absolute_import.__file__ = os.path.relpath(package_submodule_with_absolute_import.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_submodule_with_absolute_import], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule_without_imports(self, tar):
         package_submodule_without_imports = __import__("package.submodule_without_imports", None, None, 'dummy')
+        package_submodule_without_imports.__file__ = os.path.relpath(package_submodule_without_imports.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_submodule_without_imports], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_subpackage(self, tar):
         package_subpackage = __import__("package.subpackage", None, None, 'dummy')
+        package_subpackage.__path__[0] = os.path.relpath(package_subpackage.__path__[0], os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_subpackage], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_subpackage_submodule(self, tar):
         package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
+        package_subpackage_submodule.__file__ = os.path.relpath(package_subpackage_submodule.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
 
