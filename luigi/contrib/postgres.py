@@ -33,6 +33,8 @@ logger = logging.getLogger('luigi-interface')
 DB_LIBRARY = None
 DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
 DB_ERROR_CODES = {}
+ERROR_DUPLICATE_TABLE = 'duplicate_table'
+ERROR_UNDEFINED_TABLE = 'undefined_table'
 
 if DB_DRIVER == 'psycopg2':
     try:
@@ -40,8 +42,8 @@ if DB_DRIVER == 'psycopg2':
         import psycopg2.errorcodes
 
         DB_ERROR_CODES.update({
-            psycopg2.errorcodes.DUPLICATE_TABLE: 'duplicate_table',
-            psycopg2.errorcodes.UNDEFINED_TABLE: 'undefined_table'
+            psycopg2.errorcodes.DUPLICATE_TABLE: ERROR_DUPLICATE_TABLE,
+            psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
         })
 
         DB_LIBRARY = 'psycopg2'
@@ -55,7 +57,7 @@ if DB_LIBRARY is None or DB_DRIVER == 'pg8000':
         DB_LIBRARY = 'pg8000'
         # pg8000 doesn't have an error code catalog so we need to make our own
         # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
-        DB_ERROR_CODES.update({'42P07': 'duplicate_table', '42P01': 'undefined_table'})
+        DB_ERROR_CODES.update({'42P07': ERROR_DUPLICATE_TABLE, '42P01': ERROR_UNDEFINED_TABLE})
     except ImportError:
         pass
 
@@ -213,7 +215,7 @@ class PostgresTarget(luigi.Target):
                            )
             row = cursor.fetchone()
         except dbapi.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
+            if db_error_code(e) == ERROR_UNDEFINED_TABLE:
                 row = None
             else:
                 raise
@@ -221,7 +223,7 @@ class PostgresTarget(luigi.Target):
 
     def connect(self):
         """
-        Get a psycopg2 connection object to the database where the table is.
+        Get a DBAPI 2.0 connection object to the database where the table is.
         """
         connection = dbapi.connect(
             host=self.host,
@@ -257,7 +259,7 @@ class PostgresTarget(luigi.Target):
         try:
             cursor.execute(sql)
         except dbapi.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+            if db_error_code(e) == ERROR_DUPLICATE_TABLE:
                 pass
             else:
                 raise
@@ -365,7 +367,7 @@ class CopyToTable(rdbms.CopyToTable):
                 if self.enable_metadata_columns:
                     self.post_copy_metacolumns(cursor)
             except dbapi.ProgrammingError as e:
-                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
+                if db_error_code(ERROR_UNDEFINED_TABLE) and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)
                     connection.reset()
