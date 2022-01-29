@@ -19,6 +19,7 @@ Implements a subclass of :py:class:`~luigi.target.Target` that writes data to Po
 Also provides a helper task to copy data into a Postgres table.
 """
 
+import os
 import datetime
 import logging
 import re
@@ -30,29 +31,33 @@ from luigi.contrib import rdbms
 logger = logging.getLogger('luigi-interface')
 
 DB_LIBRARY = None
+DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
 DB_ERROR_CODES = {}
-try:
-    import psycopg2 as dbapi
-    import psycopg2.errorcodes
 
-    DB_ERROR_CODES.update({
-        psycopg2.errorcodes.DUPLICATE_TABLE: 'duplicate_table',
-        psycopg2.errorcodes.UNDEFINED_TABLE: 'undefined_table'
-    })
+if DB_DRIVER == 'psycopg2':
+    try:
+        import psycopg2 as dbapi
+        import psycopg2.errorcodes
 
-    DB_LIBRARY = 'psycopg2'
-except ImportError:
-    pass
+        DB_ERROR_CODES.update({
+            psycopg2.errorcodes.DUPLICATE_TABLE: 'duplicate_table',
+            psycopg2.errorcodes.UNDEFINED_TABLE: 'undefined_table'
+        })
 
-try:
-    import pg8000.dbapi as dbapi  # noqa: F811
-    import pg8000.core
-    DB_LIBRARY = 'pg8000'
-    # pg8000 doesn't have an error code catalog so we need to make our own
-    # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
-    DB_ERROR_CODES.update({'42P07': 'duplicate_table', '42P01': 'undefined_table'})
-except ImportError:
-    pass
+        DB_LIBRARY = 'psycopg2'
+    except ImportError:
+        pass
+
+if DB_LIBRARY is None or DB_DRIVER == 'pg8000':
+    try:
+        import pg8000.dbapi as dbapi  # noqa: F811
+        import pg8000.core
+        DB_LIBRARY = 'pg8000'
+        # pg8000 doesn't have an error code catalog so we need to make our own
+        # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
+        DB_ERROR_CODES.update({'42P07': 'duplicate_table', '42P01': 'undefined_table'})
+    except ImportError:
+        pass
 
 
 if DB_LIBRARY is None:
