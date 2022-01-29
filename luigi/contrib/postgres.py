@@ -30,8 +30,9 @@ from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
-DB_LIBRARY = None
+_loaded_db_library = None
 DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
+
 DB_ERROR_CODES = {}
 ERROR_DUPLICATE_TABLE = 'duplicate_table'
 ERROR_UNDEFINED_TABLE = 'undefined_table'
@@ -46,15 +47,15 @@ if DB_DRIVER == 'psycopg2':
             psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
         })
 
-        DB_LIBRARY = 'psycopg2'
+        _loaded_db_library = 'psycopg2'
     except ImportError:
         pass
 
-if DB_LIBRARY is None or DB_DRIVER == 'pg8000':
+if _loaded_db_library is None or DB_DRIVER == 'pg8000':
     try:
         import pg8000.dbapi as dbapi  # noqa: F811
         import pg8000.core
-        DB_LIBRARY = 'pg8000'
+        _loaded_db_library = 'pg8000'
         # pg8000 doesn't have an error code catalog so we need to make our own
         # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
         DB_ERROR_CODES.update({'42P07': ERROR_DUPLICATE_TABLE, '42P01': ERROR_UNDEFINED_TABLE})
@@ -62,16 +63,20 @@ if DB_LIBRARY is None or DB_DRIVER == 'pg8000':
         pass
 
 
-if DB_LIBRARY is None:
+if _loaded_db_library is None:
     logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. Will crash at runtime if postgres functionality is used.")
 
 
-def db_error_code(e):
+def db_error_code(exception):
     error_code = None
-    if DB_LIBRARY == 'psycopg2' and isinstance(e, dbapi.DatabaseError):
-        error_code = e.pgcode
-    elif DB_LIBRARY == 'pg8000' and isinstance(e, dbapi.DatabaseError):
-        error_code = e.args[pg8000.core.RESPONSE_CODE]
+    if hasattr(exception, 'pgcode'):
+        error_code = exception.pgcode
+    elif isinstance(exception.args, dict) and pg8000.core.RESPONSE_CODE in exception.args:
+        error_code = exception.args[pg8000.core.RESPONSE_CODE]
+    else:
+        value_error = ValueError("Undefined database error")
+        value_error.__cause__ = exception
+        raise value_error
 
     return DB_ERROR_CODES[error_code]
 
