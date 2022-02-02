@@ -30,7 +30,7 @@ from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
-_loaded_db_library = None
+dbapi = None
 DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
 
 DB_ERROR_CODES = {}
@@ -40,22 +40,22 @@ ERROR_UNDEFINED_TABLE = 'undefined_table'
 if DB_DRIVER == 'psycopg2':
     try:
         import psycopg2 as dbapi
-        import psycopg2.errorcodes
 
-        DB_ERROR_CODES.update({
-            psycopg2.errorcodes.DUPLICATE_TABLE: ERROR_DUPLICATE_TABLE,
-            psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
-        })
+        def update_error_codes():
+            import psycopg2.errorcodes
 
-        _loaded_db_library = 'psycopg2'
+            DB_ERROR_CODES.update({
+                psycopg2.errorcodes.DUPLICATE_TABLE: ERROR_DUPLICATE_TABLE,
+                psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
+            })
+        update_error_codes()
     except ImportError:
         pass
 
-if _loaded_db_library is None or DB_DRIVER == 'pg8000':
+if dbapi is None or DB_DRIVER == 'pg8000':
     try:
         import pg8000.dbapi as dbapi  # noqa: F811
         import pg8000.core
-        _loaded_db_library = 'pg8000'
         # pg8000 doesn't have an error code catalog so we need to make our own
         # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
         DB_ERROR_CODES.update({'42P07': ERROR_DUPLICATE_TABLE, '42P01': ERROR_UNDEFINED_TABLE})
@@ -63,22 +63,33 @@ if _loaded_db_library is None or DB_DRIVER == 'pg8000':
         pass
 
 
-if _loaded_db_library is None:
-    logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. Will crash at runtime if postgres functionality is used.")
+if dbapi is None:
+    logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. "
+                   "Will crash at runtime if postgres functionality is used.")
+
+
+def _is_pg8000_error(exception):
+    try:
+        return isinstance(exception, dbapi.DatabaseError) and \
+            isinstance(exception.args, tuple) and \
+            isinstance(exception.args[0], dict) and \
+            pg8000.core.RESPONSE_CODE in exception.args[0]
+    except NameError:
+        return False
 
 
 def db_error_code(exception):
-    error_code = None
-    if hasattr(exception, 'pgcode'):
-        error_code = exception.pgcode
-    elif isinstance(exception.args, dict) and pg8000.core.RESPONSE_CODE in exception.args:
-        error_code = exception.args[pg8000.core.RESPONSE_CODE]
-    else:
-        value_error = ValueError("Undefined database error")
-        value_error.__cause__ = exception
-        raise value_error
+    try:
+        error_code = None
+        if hasattr(exception, 'pgcode'):
+            error_code = exception.pgcode
+        elif _is_pg8000_error(exception):
+            error_code = exception.args[0][pg8000.core.RESPONSE_CODE]
 
-    return DB_ERROR_CODES[error_code]
+        return DB_ERROR_CODES.get(error_code)
+    except TypeError as error:
+        error.__cause__ = exception
+        raise error
 
 
 class MultiReplacer:
@@ -105,7 +116,7 @@ class MultiReplacer:
         >>> MultiReplacer(replace_pairs)("ab")
         'xb'
     """
-# TODO: move to misc/util module
+    # TODO: move to misc/util module
 
     def __init__(self, replace_pairs):
         """
@@ -155,7 +166,7 @@ class PostgresTarget(luigi.Target):
     use_db_timestamps = True
 
     def __init__(
-        self, host, database, user, password, table, update_id, port=None
+            self, host, database, user, password, table, update_id, port=None
     ):
         """
         Args:
@@ -219,7 +230,7 @@ class PostgresTarget(luigi.Target):
                            (self.update_id,)
                            )
             row = cursor.fetchone()
-        except dbapi.ProgrammingError as e:
+        except dbapi.DatabaseError as e:
             if db_error_code(e) == ERROR_UNDEFINED_TABLE:
                 row = None
             else:
@@ -263,7 +274,7 @@ class PostgresTarget(luigi.Target):
 
         try:
             cursor.execute(sql)
-        except dbapi.ProgrammingError as e:
+        except dbapi.DatabaseError as e:
             if db_error_code(e) == ERROR_DUPLICATE_TABLE:
                 pass
             else:
@@ -305,7 +316,7 @@ class CopyToTable(rdbms.CopyToTable):
         else:
             return default_escape(str(value))
 
-# everything below will rarely have to be overridden
+    # everything below will rarely have to be overridden
 
     def output(self):
         """
@@ -371,8 +382,8 @@ class CopyToTable(rdbms.CopyToTable):
                 self.post_copy(connection)
                 if self.enable_metadata_columns:
                     self.post_copy_metacolumns(cursor)
-            except dbapi.ProgrammingError as e:
-                if db_error_code(ERROR_UNDEFINED_TABLE) and attempt == 0:
+            except dbapi.DatabaseError as e:
+                if db_error_code(e) == ERROR_UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)
                     connection.reset()
