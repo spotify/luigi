@@ -83,7 +83,7 @@ def track_job(job_id):
     """
     cmd = "bjobs -noheader -o stat {}".format(job_id)
     track_job_proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, shell=True, text=True)
+        cmd, stdout=subprocess.PIPE, shell=True, universal_newlines=True)
     status = track_job_proc.communicate()[0].strip('\n')
     return status
 
@@ -246,7 +246,7 @@ class LSFJobTask(luigi.Task):
         # Submit the job
         run_job_proc = subprocess.Popen(
             [str(a) for a in args],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.tmp_dir, text=True)
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.tmp_dir, universal_newlines=True)
         output = run_job_proc.communicate()[0]
 
         # ASSUMPTION
