@@ -30,12 +30,13 @@ from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
-dbapi = None
 DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
 
 DB_ERROR_CODES = {}
 ERROR_DUPLICATE_TABLE = 'duplicate_table'
 ERROR_UNDEFINED_TABLE = 'undefined_table'
+
+dbapi = None
 
 if DB_DRIVER == 'psycopg2':
     try:
@@ -76,6 +77,16 @@ def _is_pg8000_error(exception):
             pg8000.core.RESPONSE_CODE in exception.args[0]
     except NameError:
         return False
+
+
+def _pg8000_connection_reset(connection):
+    cursor = connection.cursor()
+    if connection.autocommit:
+        cursor.execute("DISCARD ALL")
+    else:
+        cursor.execute("ABORT")
+        cursor.execute("BEGIN TRANSACTION")
+    cursor.close()
 
 
 def db_error_code(exception):
@@ -341,7 +352,18 @@ class CopyToTable(rdbms.CopyToTable):
             column_names = [c[0] for c in self.columns]
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
-        cursor.copy_from(file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
+
+        # cursor.copy_from is not available in pg8000
+        if hasattr(cursor, 'copy_from'):
+            cursor.copy_from(
+                file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
+        else:
+            copy_sql = (
+                "COPY {table} ({column_list}) FROM STDIN "
+                "WITH (FORMAT text, NULL '{null_string}', DELIMITER '{delimiter}')"
+            ).format(table=self.table, delimiter=self.column_separator, null_string=r'\\N',
+                     column_list=", ".join(column_names))
+            cursor.execute(copy_sql, stream=file)
 
     def run(self):
         """
@@ -386,7 +408,11 @@ class CopyToTable(rdbms.CopyToTable):
                 if db_error_code(e) == ERROR_UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)
-                    connection.reset()
+                    # reset() is a psycopg2-specific method
+                    if hasattr(connection, 'reset'):
+                        connection.reset()
+                    else:
+                        _pg8000_connection_reset(connection)
                     self.create_table(connection)
                 else:
                     raise
