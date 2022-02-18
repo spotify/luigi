@@ -282,6 +282,16 @@ class SchedulerIoTest(unittest.TestCase):
         self.assertTrue(isinstance(collector, PrometheusMetricsCollector))
 
 
+    @with_config({'scheduler': {'metrics_collector': 'custom','metrics_custom_import': 'luigi.contrib.prometheus_metric.PrometheusMetricsCollector'}})
+    def test_custom_metrics_collector(self):
+        from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
+
+        s = luigi.scheduler.Scheduler()
+        scheduler_state = s._state
+        collector = scheduler_state._metrics_collector
+        self.assertTrue(isinstance(collector, PrometheusMetricsCollector))
+
+
 class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):
         return {task.id for task in worker.get_tasks(state, 'PENDING')}
