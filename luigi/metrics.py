@@ -31,9 +31,9 @@ class MetricsCollectors(Enum):
             import_class_string = split_import_string[-1]
 
             mod = importlib.import_module(import_path)
-            metrics_class = getattr(mod,import_class_string)
+            metrics_class = getattr(mod, import_class_string)
 
-            if issubclass(metrics_class,MetricsCollector):
+            if issubclass(metrics_class, MetricsCollector):
                 return metrics_class()
             else:
                 raise ValueError(f"Custom Import: {custom_import} is not a subclass of MetricsCollector")

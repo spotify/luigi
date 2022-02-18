@@ -841,7 +841,7 @@ metrics_collector
 
 metrics_custom_import
   Optional setting allowing Luigi to import a custom subclass of MetricsCollector
-  at runtime. The string should be formatted like `module.sub_module.ClassName'.
+  at runtime. The string should be formatted like "module.sub_module.ClassName".
 
 
 [sendgrid]

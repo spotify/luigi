@@ -281,8 +281,7 @@ class SchedulerIoTest(unittest.TestCase):
         collector = scheduler_state._metrics_collector
         self.assertTrue(isinstance(collector, PrometheusMetricsCollector))
 
-
-    @with_config({'scheduler': {'metrics_collector': 'custom','metrics_custom_import': 'luigi.contrib.prometheus_metric.PrometheusMetricsCollector'}})
+    @with_config({'scheduler': {'metrics_collector': 'custom', 'metrics_custom_import': 'luigi.contrib.prometheus_metric.PrometheusMetricsCollector'}})
     def test_custom_metrics_collector(self):
         from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
 
