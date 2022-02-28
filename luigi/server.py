@@ -49,6 +49,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
 import tornado.web
+from tornado.routing import HostMatches
 
 from luigi import Config, parameter
 from luigi.scheduler import Scheduler, RPC_METHODS
@@ -302,7 +303,7 @@ def app(scheduler):
                 "unescape": tornado.escape.xhtml_unescape,
                 "compress_response": True,
                 }
-    handlers = [
+    handlers = [HostMatches(r'(localhost|127\.0\.0\.1)'),[
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
         (r'/', RootPathHandler, {'scheduler': scheduler}),
         (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
@@ -312,7 +313,7 @@ def app(scheduler):
         (r'/history/by_id/(.*?)', ByIdHandler, {'scheduler': scheduler}),
         (r'/history/by_params/(.*?)', ByParamsHandler, {'scheduler': scheduler}),
         (r'/metrics', MetricsHandler, {'scheduler': scheduler})
-    ]
+    ]]
     api_app = tornado.web.Application(handlers, **settings)
     return api_app
 
