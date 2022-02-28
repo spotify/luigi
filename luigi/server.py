@@ -303,7 +303,7 @@ def app(scheduler):
                 "unescape": tornado.escape.xhtml_unescape,
                 "compress_response": True,
                 }
-    handlers = [HostMatches(r'(localhost|127\.0\.0\.1)'),[
+    handlers = [HostMatches(r'(localhost|127\.0\.0\.1)'), [
         (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
         (r'/', RootPathHandler, {'scheduler': scheduler}),
         (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
