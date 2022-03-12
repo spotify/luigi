@@ -836,7 +836,12 @@ metrics_collector
   Optional setting allowing Luigi to use a contribution to collect metrics
   about the pipeline to a third-party. By default this uses the default metric
   collector that acts as a shell and does nothing. The currently available
-  options are "datadog" and "prometheus".
+  options are "datadog", "prometheus" and "custom". If it's custom the
+  'metrics_custom_import' needs to be set.
+
+metrics_custom_import
+  Optional setting allowing Luigi to import a custom subclass of MetricsCollector
+  at runtime. The string should be formatted like "module.sub_module.ClassName".
 
 
 [sendgrid]
