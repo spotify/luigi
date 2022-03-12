@@ -28,6 +28,7 @@ import json
 from json import JSONEncoder
 import operator
 from ast import literal_eval
+from pathlib import Path
 
 from configparser import NoOptionError, NoSectionError
 
@@ -367,10 +368,14 @@ class OptionalParameterMixin:
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if not isinstance(param_value, self.expected_type) and param_value is not None:
+            try:
+                param_type = "any type in " + str([i.__name__ for i in self.expected_type]).replace("'", '"')
+            except TypeError:
+                param_type = f'type "{self.expected_type.__name__}"'
             warnings.warn(
                 (
                     f'{self.__class__.__name__} "{param_name}" with value '
-                    f'"{param_value}" is not of type "{self.expected_type.__name__}" or None.'
+                    f'"{param_value}" is not of {param_type} or None.'
                 ),
                 OptionalParameterTypeWarning,
             )
@@ -805,6 +810,7 @@ class TimeDeltaParameter(Parameter):
     """
     Class that maps to timedelta using strings in any of the following forms:
 
+     * A bare number is interpreted as duration in seconds.
      * ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
         Note: multiple arguments must be supplied in longest to shortest unit order
      * ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
@@ -852,6 +858,10 @@ class TimeDeltaParameter(Parameter):
 
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """
+        try:
+            return datetime.timedelta(seconds=float(input))
+        except ValueError:
+            pass
         result = self._parseIso8601(input)
         if not result:
             result = self._parseSimple(input)
@@ -1354,3 +1364,61 @@ class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.expected_type = self._var_type
+
+
+class PathParameter(Parameter):
+    """
+    Parameter whose value is a path.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            existing_file_path = luigi.PathParameter(exists=True)
+            new_file_path = luigi.PathParameter()
+
+            def run(self):
+                # Get data from existing file
+                with self.existing_file_path.open("r", encoding="utf-8") as f:
+                    data = f.read()
+
+                # Output message in new file
+                self.new_file_path.parent.mkdir(parents=True, exist_ok=True)
+                with self.new_file_path.open("w", encoding="utf-8") as f:
+                    f.write("hello from a PathParameter => ")
+                    f.write(data)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --existing-file-path <path> --new-file-path <path>
+    """
+
+    def __init__(self, *args, absolute=False, exists=False, **kwargs):
+        """
+        :param bool absolute: If set to ``True``, the given path is converted to an absolute path.
+        :param bool exists: If set to ``True``, a :class:`ValueError` is raised if the path does not exist.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.absolute = absolute
+        self.exists = exists
+
+    def normalize(self, x):
+        """
+        Normalize the given value to a :class:`pathlib.Path` object.
+        """
+        path = Path(x)
+        if self.absolute:
+            path = path.absolute()
+        if self.exists and not path.exists():
+            raise ValueError(f"The path {path} does not exist.")
+        return path
+
+
+class OptionalPathParameter(OptionalParameter, PathParameter):
+    """Class to parse optional path parameters."""
+
+    expected_type = (str, Path)

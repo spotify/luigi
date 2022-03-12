@@ -303,14 +303,14 @@ wait_interval
   available jobs.
 
 wait_jitter
-  Size of jitter to add to the worker wait interval such that the multiple
-  workers do not ask the scheduler for another job at the same time.
+  Duration of jitter to add to the worker wait interval such that the multiple
+  workers do not ask the scheduler for another job at the same time, in seconds.
   Default: 5.0
 
 max_keep_alive_idle_duration
   .. versionadded:: 2.8.4
 
-  Maximum duration to keep worker alive while in idle state.
+  Maximum duration in seconds to keep worker alive while in idle state.
   Default: 0 (Indefinitely)
 
 max_reschedules
@@ -447,7 +447,7 @@ traceback_max_length
 Parameters controlling the contents of batch notifications sent from the
 scheduler
 
-email_interval
+email_interval_minutes
   Number of minutes between e-mail sends. Making this larger results in
   fewer, bigger e-mails.
   Defaults to 60.
@@ -836,7 +836,12 @@ metrics_collector
   Optional setting allowing Luigi to use a contribution to collect metrics
   about the pipeline to a third-party. By default this uses the default metric
   collector that acts as a shell and does nothing. The currently available
-  options are "datadog" and "prometheus".
+  options are "datadog", "prometheus" and "custom". If it's custom the
+  'metrics_custom_import' needs to be set.
+
+metrics_custom_import
+  Optional setting allowing Luigi to import a custom subclass of MetricsCollector
+  at runtime. The string should be formatted like "module.sub_module.ClassName".
 
 
 [sendgrid]

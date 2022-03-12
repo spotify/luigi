@@ -151,9 +151,9 @@ jobs:
             tox-env: py36-apache
           - python-version: 3.7
             tox-env: py37-apache
-          - python-version: 3.8.9
+          - python-version: 3.8
             tox-env: py38-apache
-          - python-version: 3.9.4
+          - python-version: 3.9
             tox-env: py39-apache
             
           - python-version: 3.6
