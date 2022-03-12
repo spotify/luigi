@@ -158,7 +158,9 @@ class TaskProcess(multiprocessing.Process):
 
         if self.use_multiprocessing:
             # Need to have different random seeds if running in separate processes
-            random.seed((os.getpid(), time.time()))
+            processID = os.getpid()
+            currentTime = time.time()
+            random.seed((processID, currentTime))
 
         status = FAILED
         expl = ''
