@@ -387,7 +387,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
     def test_sns_subject_is_shortened(self):
         """
         Call notifications.send_email_sns with too long Subject (more than 100 chars)
-        and check that it is cut to lenght of 100 chars.
+        and check that it is cut to length of 100 chars.
         """
 
         long_subject = 'Luigi: SanityCheck(regexPattern=aligned-source\\|data-not-older\\|source-chunks-compl,'\
