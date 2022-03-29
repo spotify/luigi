@@ -1,3 +1,0 @@
-sqlalchemy
-enum34>1.1.0
-tornado>=4.0,<5
