@@ -41,7 +41,7 @@ install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
-    'sqlalchemy',
+    'sqlalchemy==1.4.32',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
