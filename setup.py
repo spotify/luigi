@@ -40,11 +40,15 @@ with open('README.rst') as fobj:
 install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
+    # sqlalchemy is a requirement for writing task records to the Luigi history server. 
+    # We could install it in the luigi venvironment, be we just made it a dependency here 
+    # instead.
+    # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
+    'sqlalchemy==1.4.32',
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
-    install_requires.append('sqlalchemy')
     # readthedocs don't like python-daemon, see #1342
     install_requires.remove('python-daemon<3.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
