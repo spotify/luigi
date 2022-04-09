@@ -263,7 +263,6 @@ class CopyToTable(rdbms.CopyToTable):
         for attempt in range(2):
             try:
                 cursor = connection.cursor()
-                print("caling init copy...")
                 self.init_copy(connection)
                 self.copy(cursor)
                 self.post_copy(connection)
@@ -284,7 +283,7 @@ class CopyToTable(rdbms.CopyToTable):
 
     @property
     def bulk_size(self):
-        return 10000
+        return int(luigi.configuration.get_config().get("oracle", "bulk-size", 10000))
 
     @property
     def dsn(self):
