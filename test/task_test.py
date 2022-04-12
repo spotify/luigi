@@ -409,3 +409,15 @@ class AutoNamespaceTest(LuigiTestCase):
             pass
         luigi.namespace(scope='incorrect_namespace')
         self.assertEqual(MyTask.get_task_namespace(), '')
+
+
+class InitSubclassTest(LuigiTestCase):
+    def test_task_works_with_init_subclass(self):
+        class ReceivesClassKwargs(luigi.Task):
+            def __init_subclass__(cls, x, **kwargs):
+                super(ReceivesClassKwargs, cls).__init_subclass__()
+                cls.x = x
+
+        class Receiver(ReceivesClassKwargs, x=1):
+            pass
+        self.assertEquals(Receiver.x, 1)
