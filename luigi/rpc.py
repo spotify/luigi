@@ -76,6 +76,26 @@ class URLLibFetcher(object):
         return urlopen(full_url, body, timeout).read().decode('utf-8')
 
 
+class BobaPKIHTTPAdapter(requests.adapters.HTTPAdapter):
+    """HTTP adapter which disables hostname validation on HTTPS connections.
+
+    Copied from $ATT/rpc2/affirm/rpc2/transport/http.py
+    """
+
+    def init_poolmanager(self, *args, **kwargs):
+        super(BobaPKIHTTPAdapter, self).init_poolmanager(assert_hostname=False, *args, **kwargs)
+
+
+def get_requests_session():
+    session = requests.Session()
+    cert_verify = os.environ.get('BOBAPKI_CACERT_VERIFY', None)
+    if cert_verify is not None:
+        session.mount('https://', BobaPKIHTTPAdapter())
+        session.verify = cert_verify
+
+    return session
+
+
 class RequestsFetcher(object):
     def __init__(self, session):
         from requests import exceptions as requests_exceptions
@@ -87,7 +107,7 @@ class RequestsFetcher(object):
         # if the process id change changed from when the session was created
         # a new session needs to be setup since requests isn't multiprocessing safe.
         if os.getpid() != self.process_id:
-            self.session = requests.Session()
+            self.session = get_requests_session()
             self.process_id = os.getpid()
 
     def fetch(self, full_url, body, timeout):
@@ -118,7 +138,7 @@ class RemoteScheduler(object):
         self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
 
         if HAS_REQUESTS:
-            self._fetcher = RequestsFetcher(requests.Session())
+            self._fetcher = RequestsFetcher(get_requests_session())
         else:
             self._fetcher = URLLibFetcher()
 
