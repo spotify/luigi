@@ -54,7 +54,7 @@ if sys.version_info < (3, 4):
 
 setup(
     name='luigi',
-    version='2.7.5.affirm.1.4.0',
+    version='2.7.5+affirm.1.4.2',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
