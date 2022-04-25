@@ -40,8 +40,8 @@ with open('README.rst') as fobj:
 install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
-    # sqlalchemy is a requirement for writing task records to the Luigi history server. 
-    # We could install it in the luigi venvironment, be we just made it a dependency here 
+    # sqlalchemy is a requirement for writing task records to the Luigi history server.
+    # We could install it in the luigi venvironment, be we just made it a dependency here
     # instead.
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
     'sqlalchemy==1.4.32',
@@ -58,7 +58,7 @@ if sys.version_info < (3, 4):
 
 setup(
     name='luigi',
-    version='2.7.8+fs9',
+    version='2.7.8+fs10',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',

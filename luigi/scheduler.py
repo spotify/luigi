@@ -38,8 +38,11 @@ import logging
 import os
 import re
 import time
-import Queue
 import uuid
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 
 from luigi import six
 
@@ -953,7 +956,7 @@ class Scheduler(object):
             task.workers.add(worker_id)
             self._state.get_worker(worker_id).tasks.add(task)
             task.runnable = runnable
-        
+
         if should_update_history:
             self._update_task_history(task, task.status)
 
