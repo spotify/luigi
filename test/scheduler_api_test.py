@@ -1774,6 +1774,8 @@ class SchedulerApiTest(unittest.TestCase):
         self.add_task('ClassA', day='2016-02-01', val='5')
 
         self.search_pending('ClassA 2016-02-01 num', {expected})
+        # ensure that the task search is case insensitive
+        self.search_pending('classa 2016-02-01 num', {expected})
 
     def test_upstream_beyond_limit(self):
         sch = Scheduler(max_shown_tasks=3)
