@@ -54,7 +54,7 @@ class Register(abc.ABCMeta):
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
     an error."""
 
-    def __new__(metacls, classname, bases, classdict):
+    def __new__(metacls, classname, bases, classdict, **kwargs):
         """
         Custom class creation for namespacing.
 
@@ -63,7 +63,7 @@ class Register(abc.ABCMeta):
         When the set or inherited namespace evaluates to ``None``, set the task namespace to
         whatever the currently declared namespace is.
         """
-        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
+        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict, **kwargs)
         cls._namespace_at_class_time = metacls._get_namespace(cls.__module__)
         metacls._reg.append(cls)
         return cls
