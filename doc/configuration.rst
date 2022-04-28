@@ -168,24 +168,6 @@ log_level
 logging_conf_file
   Location of the logging configuration file.
 
-max_shown_tasks
-  .. versionadded:: 1.0.20
-
-  The maximum number of tasks returned in a task_list api call. This
-  will restrict the number of tasks shown in task lists in the
-  visualiser. Small values can alleviate frozen browsers when there are
-  too many done tasks. This defaults to 100000 (one hundred thousand).
-
-max_graph_nodes
-  .. versionadded:: 2.0.0
-
-  The maximum number of nodes returned by a dep_graph or
-  inverse_dep_graph api call. Small values can greatly speed up graph
-  display in the visualiser by limiting the number of nodes shown. Some
-  of the nodes that are not sent to the visualiser will still show up as
-  dependencies of nodes that were sent. These nodes are given TRUNCATED
-  status.
-
 no_configure_logging
   If true, logging is not configured. Defaults to false.
 
@@ -788,6 +770,24 @@ disable_window
   occur in order for an automatic disable by the scheduler. The
   scheduler forgets about disables that have occurred longer ago than
   this amount of time. Defaults to 3600 (1 hour).
+
+max_shown_tasks
+  .. versionadded:: 1.0.20
+
+  The maximum number of tasks returned in a task_list api call. This
+  will restrict the number of tasks shown in task lists in the
+  visualiser. Small values can alleviate frozen browsers when there are
+  too many done tasks. This defaults to 100000 (one hundred thousand).
+
+max_graph_nodes
+  .. versionadded:: 2.0.0
+
+  The maximum number of nodes returned by a dep_graph or
+  inverse_dep_graph api call. Small values can greatly speed up graph
+  display in the visualiser by limiting the number of nodes shown. Some
+  of the nodes that are not sent to the visualiser will still show up as
+  dependencies of nodes that were sent. These nodes are given TRUNCATED
+  status.
 
 record_task_history
   If true, stores task history in a database. Defaults to false.
