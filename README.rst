@@ -2,8 +2,8 @@
    :alt: Luigi Logo
    :align: center
 
-.. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
-    :target: https://travis-ci.org/spotify/luigi
+.. image:: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fspotify%2Fluigi%2Fbadge&label=build&logo=none&%3Fref%3Dmaster&style=flat
+    :target: https://actions-badge.atrox.dev/spotify/luigi/goto?ref=master
 
 .. image:: https://img.shields.io/codecov/c/github/spotify/luigi/master.svg?style=flat
     :target: https://codecov.io/gh/spotify/luigi?branch=master
