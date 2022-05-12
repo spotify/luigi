@@ -1,4 +1,8 @@
-FROM python:2.7-alpine
+FROM python:2.7
+
+RUN sed '/st_mysql_options options;/a unsigned int reconnect;' /usr/include/mysql/mysql.h -i.bkp
+RUN pip install mysql-python
+RUN pip install PyMySQL
 
 EXPOSE 8082
 ENTRYPOINT [ "luigid" ]
