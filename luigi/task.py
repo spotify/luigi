@@ -373,8 +373,8 @@ class Task(metaclass=Register):
         return [name for name, p in cls.get_params() if p._is_batchable()]
 
     @classmethod
-    def get_param_names(cls, include_significant=False):
-        return [name for name, p in cls.get_params() if include_significant or p.significant]
+    def get_param_names(cls, include_insignificant=False):
+        return [name for name, p in cls.get_params() if include_insignificant or p.significant]
 
     @classmethod
     def get_param_values(cls, params, args, kwargs):
