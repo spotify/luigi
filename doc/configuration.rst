@@ -356,6 +356,16 @@ check_complete_on_run
   missing.
   Defaults to false.
 
+prevent_parameter_collision
+  In complex pipelines especially when tasks are inherited, it can happen that
+  different tasks define parameters with the same name. Luigi would normally use
+  the same value for both parameter instances, which might not be desired.
+  When set to ``true``, luigi will check for parameter collisions and refuse to
+  run if a parameter is defined multiple times. Optionally, an allow-list of
+  parameters called ``collisions_to_ignore`` can be passed to ``inherits/requires``,
+  to ignore when checking for duplicate parameters.
+  Defaults to false.
+
 
 [elasticsearch]
 ---------------
