@@ -32,9 +32,11 @@ import functools
 
 import luigi
 
+from luigi import configuration
 from luigi import parameter
 from luigi.task_register import Register
 from luigi.parameter import ParameterVisibility
+from luigi.parameter import UnconsumedParameterWarning
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -429,6 +431,23 @@ class Task(metaclass=Register):
                 return tuple(x)
             else:
                 return x
+
+        # Check for unconsumed parameters
+        conf = configuration.get_config()
+        if not hasattr(cls, "_unconsumed_params"):
+            cls._unconsumed_params = set()
+        if task_family in conf.sections():
+            for key, value in conf[task_family].items():
+                composite_key = f"{task_family}_{key}"
+                if key not in result and composite_key not in cls._unconsumed_params:
+                    warnings.warn(
+                        "The configuration contains the parameter "
+                        f"'{key}' with value '{value}' that is not consumed by the task "
+                        f"'{task_family}'.",
+                        UnconsumedParameterWarning,
+                    )
+                    cls._unconsumed_params.add(composite_key)
+
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
 
