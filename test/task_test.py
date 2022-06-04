@@ -169,6 +169,55 @@ class TaskTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, r"ATaskWithBadParam\[args=\(\), kwargs={}\]: Error when parsing the default value of 'bad_param'"):
             ATaskWithBadParam()
 
+    @with_config(
+        {
+            "TaskA": {
+                "a": "a",
+                "b": "b",
+                "c": "c",
+            },
+            "TaskB": {
+                "a": "a",
+                "b": "b",
+                "c": "c",
+            },
+        }
+    )
+    def test_unconsumed_params(self):
+        class TaskA(luigi.Task):
+            a = luigi.Parameter(default="a")
+
+        class TaskB(luigi.Task):
+            a = luigi.Parameter(default="a")
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings(
+                action="ignore",
+                category=Warning,
+            )
+            warnings.simplefilter(
+                action="always",
+                category=luigi.parameter.UnconsumedParameterWarning,
+            )
+
+            TaskA()
+            TaskB()
+
+            assert len(w) == 4
+            expected = [
+                ("b", "TaskA"),
+                ("c", "TaskA"),
+                ("b", "TaskB"),
+                ("c", "TaskB"),
+            ]
+            for i, (expected_value, task_name) in zip(w, expected):
+                assert issubclass(i.category, luigi.parameter.UnconsumedParameterWarning)
+                assert str(i.message) == (
+                    "The configuration contains the parameter "
+                    f"'{expected_value}' with value '{expected_value}' that is not consumed by "
+                    f"the task '{task_name}'."
+                )
+
 
 class ExternalizeTaskTest(LuigiTestCase):
 

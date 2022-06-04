@@ -95,6 +95,10 @@ class OptionalParameterTypeWarning(UserWarning):
     pass
 
 
+class UnconsumedParameterWarning(UserWarning):
+    """Warning class for parameters that are not consumed by the task."""
+
+
 class Parameter:
     """
     Parameter whose value is a ``str``, and a base class for other parameter types.
