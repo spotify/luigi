@@ -148,6 +148,15 @@ class NoopTask(luigi.Task):
     pass
 
 
+class PEP593Task(luigi.Task):
+    param: Annotated[int, luigi.IntParameter()]
+    default_param: Annotated[bool, luigi.BoolParameter()] = False
+
+    def run(self):
+        PEP593Task._param_val = self.param
+        PEP593Task._default_param_val = self.default_param
+
+
 class MyEnum(enum.Enum):
     A = 1
     C = 3
@@ -1332,13 +1341,14 @@ class TestPathParameter:
             assert luigi.build([path_parameter["cls"]()], local_scheduler=True)
 
 
-class TestPEP593Parameters:
+class TestPEP593Parameters(LuigiTestCase):
     def test_parsing(self) -> None:
-        class Task(luigi.Task):
-            param: Annotated[int, luigi.IntParameter()]
-            default_param: Annotated[int, luigi.BoolParameter()] = False
-
-        params = dict(Task.get_params())
+        params = dict(PEP593Task.get_params())
         assert isinstance(params["param"], luigi.IntParameter)
         assert isinstance(params["default_param"], luigi.BoolParameter)
         assert params["default_param"]._default is False
+
+    def test_running(self):
+        self.run_locally(["PEP593Task", "--param", "2"])
+        self.assertEqual(PEP593Task._default_param_val, False)
+        self.assertEqual(PEP593Task._param_val, 2)
