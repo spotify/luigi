@@ -29,6 +29,7 @@ import hashlib
 import re
 import copy
 import functools
+import sys
 
 import luigi
 
@@ -47,6 +48,30 @@ TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
 TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
 _SAME_AS_PYTHON_MODULE = '_same_as_python_module'
+
+
+if sys.version_info < (3, 9):
+    try:
+        from typing_extensions import Annotated, get_args, get_origin, get_type_hints
+    except ImportError:
+        Annotated = get_args = get_origin = get_type_hints = None
+else:
+    from typing import Annotated, get_args, get_origin, get_type_hints
+
+
+def _get_pep539_annotations(tsk_cls):
+    if Annotated is None:
+        return []
+    params = []
+    type_hints = get_type_hints(tsk_cls, include_extras=True)
+    for param_name, annotation in type_hints.items():
+        if get_origin(annotation) is Annotated:
+            args_iter = iter(get_args(annotation))
+            next(args_iter)
+            for metadata in args_iter:
+                if isinstance(metadata, Parameter):
+                    params.append((param_name, metadata))
+    return params
 
 
 def namespace(namespace=None, scope=''):
@@ -363,7 +388,15 @@ class Task(metaclass=Register):
             param_obj = getattr(cls, param_name)
             if not isinstance(param_obj, Parameter):
                 continue
+            params.append((param_name, param_obj))
 
+        pep593_params = _get_pep539_annotations(cls)
+        for param_name, param_obj in pep593_params:
+            try:
+                default_val = getattr(cls, param_name)
+                param_obj._default = default_val
+            except AttributeError:  # no default value
+                pass
             params.append((param_name, param_obj))
 
         # The order the parameters are created matters. See Parameter class

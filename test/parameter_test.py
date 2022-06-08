@@ -16,6 +16,7 @@
 #
 
 import datetime
+from typing import Annotated
 
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
@@ -1329,3 +1330,15 @@ class TestPathParameter:
                 luigi.build([path_parameter["cls"]()], local_scheduler=True)
         else:
             assert luigi.build([path_parameter["cls"]()], local_scheduler=True)
+
+
+class TestPEP593Parameters:
+    def test_parsing(self) -> None:
+        class Task(luigi.Task):
+            param: Annotated[int, luigi.IntParameter()]
+            default_param: Annotated[int, luigi.BoolParameter()] = False
+
+        params = dict(Task.get_params())
+        assert isinstance(params["param"], luigi.IntParameter)
+        assert isinstance(params["default_param"], luigi.BoolParameter)
+        assert params["default_param"]._default is False
