@@ -16,7 +16,12 @@
 #
 
 import datetime
-from typing import Annotated
+import sys
+import unittest
+if sys.version_info < (3, 9):
+    Annotated = None
+else:
+    from typing import Annotated
 
 from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
@@ -1341,6 +1346,7 @@ class TestPathParameter:
             assert luigi.build([path_parameter["cls"]()], local_scheduler=True)
 
 
+@unittest.skipIf(sys.version_info < (3, 9), 'only for Python>=3.9')
 class TestPEP593Parameters(LuigiTestCase):
     def test_parsing(self) -> None:
         params = dict(PEP593Task.get_params())
