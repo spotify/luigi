@@ -49,6 +49,7 @@ class core(task.Config):
     This is arguably a bit of a hack.
     '''
     use_cmdline_section = False
+    _ignore_unconsumed = {'autoload_range'}
 
     local_scheduler = parameter.BoolParameter(
         default=False,

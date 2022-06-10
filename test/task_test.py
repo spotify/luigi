@@ -188,6 +188,8 @@ class TaskTest(unittest.TestCase):
             a = luigi.Parameter(default="a")
 
         class TaskB(luigi.Task):
+            _ignore_unconsumed = ['b']
+
             a = luigi.Parameter(default="a")
 
         with warnings.catch_warnings(record=True) as w:
@@ -203,11 +205,10 @@ class TaskTest(unittest.TestCase):
             TaskA()
             TaskB()
 
-            assert len(w) == 4
+            assert len(w) == 3
             expected = [
                 ("b", "TaskA"),
                 ("c", "TaskA"),
-                ("b", "TaskB"),
                 ("c", "TaskB"),
             ]
             for i, (expected_value, task_name) in zip(w, expected):

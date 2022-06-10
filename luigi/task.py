@@ -439,6 +439,8 @@ class Task(metaclass=Register):
         if task_family in conf.sections():
             for key, value in conf[task_family].items():
                 composite_key = f"{task_family}_{key}"
+                if key in getattr(cls, '_ignore_unconsumed', []):
+                    continue
                 if key not in result and composite_key not in cls._unconsumed_params:
                     warnings.warn(
                         "The configuration contains the parameter "
