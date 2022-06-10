@@ -19,7 +19,7 @@ The abstract :py:class:`Task` class.
 It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
-
+from collections import deque, OrderedDict
 from contextlib import contextmanager
 import logging
 import traceback
@@ -955,7 +955,7 @@ def getpaths(struct):
 
 def flatten(struct):
     """
-    Creates a flat list of all all items in structured output (dicts, lists, items):
+    Creates a flat list of all items in structured output (dicts, lists, items):
 
     .. code-block:: python
 
@@ -992,14 +992,19 @@ def flatten(struct):
 def flatten_output(task):
     """
     Lists all output targets by recursively walking output-less (wrapper) tasks.
-
-    FIXME order consistently.
     """
-    r = flatten(task.output())
-    if not r:
-        for dep in flatten(task.requires()):
-            r += flatten_output(dep)
-    return r
+
+    output_tasks = OrderedDict()  # OrderedDict used as ordered set
+    tasks_to_process = deque([task])
+    while tasks_to_process:
+        current_task = tasks_to_process.popleft()
+        if flatten(current_task.output()):
+            if current_task not in output_tasks:
+                output_tasks[current_task] = None
+        else:
+            tasks_to_process.extend(flatten(current_task.requires()))
+
+    return flatten(task.output() for task in output_tasks)
 
 
 def _task_wraps(task_class):
