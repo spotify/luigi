@@ -356,6 +356,15 @@ check_complete_on_run
   missing.
   Defaults to false.
 
+cache_task_completion
+  By default, luigi task processes might check the completion status multiple
+  times per task which is a safe way to avoid potential inconsistencies. For
+  tasks with many dynamic dependencies, yielded in multiple stages, this might
+  become expensive, e.g. in case the per-task completion check entails remote
+  resources. When set to true, completion checks are cached so that tasks
+  declared as complete once are not checked again.
+  Defaults to false.
+
 
 [elasticsearch]
 ---------------
