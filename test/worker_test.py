@@ -460,8 +460,7 @@ class WorkerTest(LuigiTestCase):
                 self.has_run = True
 
         # test the enabled feature
-        with Worker(scheduler=self.sch, worker_id='2') as w:
-            w._config.cache_task_completion = True
+        with Worker(scheduler=self.sch, worker_id='2', cache_task_completion=True) as w:
             b0 = B(i=0)
             a0 = A(i=0)
             a1 = A(i=1)
@@ -480,8 +479,7 @@ class WorkerTest(LuigiTestCase):
             self.assertEqual(a2.complete_count, 3)
 
         # test the disabled feature
-        with Worker(scheduler=self.sch, worker_id='2') as w:
-            w._config.cache_task_completion = False
+        with Worker(scheduler=self.sch, worker_id='2', cache_task_completion=False) as w:
             b10 = B(i=10)
             a10 = A(i=10)
             a11 = A(i=11)

@@ -39,6 +39,7 @@ import signal
 import subprocess
 import sys
 import contextlib
+import functools
 
 import queue as Queue
 import random
@@ -130,6 +131,9 @@ class TaskProcess(multiprocessing.Process):
         self.check_complete_on_run = check_complete_on_run
         self.task_completion_cache = task_completion_cache
 
+        # completeness check using the cache
+        self.check_complete = functools.partial(check_complete_cached, completion_cache=task_completion_cache)
+
     def _run_get_new_deps(self):
         task_gen = self.task.run()
 
@@ -147,7 +151,7 @@ class TaskProcess(multiprocessing.Process):
                 return None
 
             new_req = flatten(requires)
-            if all(self._check_complete(t) for t in new_req):
+            if all(self.check_complete(t) for t in new_req):
                 next_send = getpaths(requires)
             else:
                 new_deps = [(t.task_module, t.task_family, t.to_str_params())
@@ -173,7 +177,7 @@ class TaskProcess(multiprocessing.Process):
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
             if self.check_unfulfilled_deps and not _is_external(self.task):
-                missing = [dep.task_id for dep in self.task.deps() if not self._check_complete(dep)]
+                missing = [dep.task_id for dep in self.task.deps() if not self.check_complete(dep)]
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
                     raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
@@ -183,7 +187,7 @@ class TaskProcess(multiprocessing.Process):
 
             if _is_external(self.task):
                 # External task
-                if self._check_complete(self.task):
+                if self.check_complete(self.task):
                     status = DONE
                 else:
                     status = FAILED
@@ -193,7 +197,7 @@ class TaskProcess(multiprocessing.Process):
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
                 if not new_deps:
-                    if not self.check_complete_on_run or self._check_complete(self.task):
+                    if not self.check_complete_on_run or self.check_complete(self.task):
                         status = DONE
                     else:
                         raise TaskException("Task finished running, but complete() is still returning false.")
@@ -266,24 +270,6 @@ class TaskProcess(multiprocessing.Process):
             # reset attributes again
             for reporter_attr, task_attr in self.forward_reporter_attributes.items():
                 setattr(self.task, task_attr, None)
-
-    def _check_complete(self, task):
-        """
-        Checks if a task is complete, optionally using the task_completion_cache.
-        """
-        task_id = task.task_id
-
-        # return True if caching is used and the task was already complete
-        if self.task_completion_cache is not None and self.task_completion_cache.get(task_id):
-            return True
-
-        is_complete = task.complete()
-
-        # update the cache when used
-        if self.task_completion_cache is not None:
-            self.task_completion_cache[task_id] = is_complete
-
-        return is_complete
 
 
 # This code and the task_process_context config key currently feels a bit ad-hoc.
@@ -413,13 +399,29 @@ class TracebackWrapper:
         self.trace = trace
 
 
-def check_complete(task, out_queue):
+def check_complete_cached(task, completion_cache=None):
+    # check if cached and complete
+    cache_key = task.task_id
+    if completion_cache is not None and completion_cache.get(cache_key):
+        return True
+
+    # (re-)check the status
+    is_complete = task.complete()
+
+    # tell the cache when complete
+    if completion_cache is not None and is_complete:
+        completion_cache[cache_key] = is_complete
+
+    return is_complete
+
+
+def check_complete(task, out_queue, completion_cache=None):
     """
-    Checks if task is complete, puts the result to out_queue.
+    Checks if task is complete, puts the result to out_queue, optionally using the completion cache.
     """
     logger.debug("Checking if %s is complete", task)
     try:
-        is_complete = task.complete()
+        is_complete = check_complete_cached(task, completion_cache)
     except Exception:
         is_complete = TracebackWrapper(traceback.format_exc())
     out_queue.put((task, is_complete))
@@ -584,8 +586,10 @@ class Worker:
         self._running_tasks = {}
         self._idle_since = None
 
-        # mp-safe dictionary for caching completation checks across task processes (set in run)
+        # mp-safe dictionary for caching completation checks across task processes
         self._task_completion_cache = None
+        if self._config.cache_task_completion:
+            self._task_completion_cache = multiprocessing.Manager().dict()
 
         # Stuff for execution_summary
         self._add_task_history = []
@@ -772,7 +776,7 @@ class Worker:
             queue = DequeQueue()
             pool = SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(check_complete, [task, queue])
+        pool.apply_async(check_complete, [task, queue, self._task_completion_cache])
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
@@ -786,7 +790,7 @@ class Worker:
                     if next.task_id not in seen:
                         self._validate_task(next)
                         seen.add(next.task_id)
-                        pool.apply_async(check_complete, [next, queue])
+                        pool.apply_async(check_complete, [next, queue, self._task_completion_cache])
                         queue_size += 1
         except (KeyboardInterrupt, TaskException):
             raise
@@ -1208,9 +1212,6 @@ class Worker:
         self.run_succeeded = True
 
         self._add_worker()
-
-        if self._config.cache_task_completion:
-            self._task_completion_cache = multiprocessing.Manager().dict()
 
         while True:
             while len(self._running_tasks) >= self.worker_processes > 0:
