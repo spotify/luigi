@@ -459,7 +459,7 @@ class WorkerTest(LuigiTestCase):
                 yield A(i=self.i + 2)
                 self.has_run = True
 
-        # test the enabled feature
+        # test with enabled cache_task_completion
         with Worker(scheduler=self.sch, worker_id='2', cache_task_completion=True) as w:
             b0 = B(i=0)
             a0 = A(i=0)
@@ -478,7 +478,7 @@ class WorkerTest(LuigiTestCase):
             self.assertEqual(a1.complete_count, 2)
             self.assertEqual(a2.complete_count, 2)
 
-        # test the disabled feature
+        # test with disabled cache_task_completion
         with Worker(scheduler=self.sch, worker_id='2', cache_task_completion=False) as w:
             b10 = B(i=10)
             a10 = A(i=10)
@@ -496,6 +496,25 @@ class WorkerTest(LuigiTestCase):
             self.assertEqual(a10.complete_count, 5)
             self.assertEqual(a11.complete_count, 4)
             self.assertEqual(a12.complete_count, 3)
+
+        # test with enabled check_complete_on_run
+        with Worker(scheduler=self.sch, worker_id='2', check_complete_on_run=True) as w:
+            b20 = B(i=20)
+            a20 = A(i=20)
+            a21 = A(i=21)
+            a22 = A(i=22)
+            self.assertTrue(w.add(b20))
+            # a's are required dynamically, so their counts must be 0
+            self.assertEqual(b20.complete_count, 1)
+            self.assertEqual(a20.complete_count, 0)
+            self.assertEqual(a21.complete_count, 0)
+            self.assertEqual(a22.complete_count, 0)
+            w.run()
+            # the complete methods of a's yielded first in b's run method were called more often
+            self.assertEqual(b20.complete_count, 2)
+            self.assertEqual(a20.complete_count, 6)
+            self.assertEqual(a21.complete_count, 5)
+            self.assertEqual(a22.complete_count, 4)
 
     def test_gets_missed_work(self):
         class A(Task):
