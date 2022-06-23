@@ -173,6 +173,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         success &= worker.run()
     luigi_run_result = LuigiRunResult(worker, success)
     logger.info(luigi_run_result.summary_text)
+    if hasattr(sch, 'close'):
+        sch.close()
     return luigi_run_result
 
 
