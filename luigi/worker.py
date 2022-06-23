@@ -614,7 +614,7 @@ class Worker:
     def _generate_worker_info(self):
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
-        args = [('salt', '%09d' % random.randrange(0, 999999999)),
+        args = [('salt', '%09d' % random.randrange(0, 10_000_000_000)),
                 ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
