@@ -20,6 +20,7 @@ import gc
 import os
 import pickle
 import time
+import warnings
 from helpers import unittest
 
 import mock
@@ -28,6 +29,7 @@ import psutil
 import luigi
 from luigi.worker import Worker
 from luigi.task_status import UNKNOWN
+from helpers import RunOnceTask
 
 
 def running_children():
@@ -93,6 +95,10 @@ class UnpicklableExceptionTask(luigi.Task):
         class UnpicklableException(Exception):
             pass
         raise UnpicklableException()
+
+
+class PicklableTask(RunOnceTask):
+    i = luigi.IntParameter()
 
 
 class ParallelSchedulingTest(unittest.TestCase):
@@ -175,7 +181,7 @@ class ParallelSchedulingTest(unittest.TestCase):
         send.check_called_once()
         self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
         self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
-        self.assertTrue('raise UnpicklableException()' in send.call_args[0][1])
+        self.assertTrue("Can't pickle local object 'UnpicklableExceptionTask" in send.call_args[0][1])
 
     @mock.patch('luigi.notifications.send_error_email')
     def test_raise_exception_in_requires(self, send):
@@ -183,3 +189,54 @@ class ParallelSchedulingTest(unittest.TestCase):
         send.check_called_once()
         self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]['status'])
         self.assertFalse(self.sch.add_task.call_args[1]['runnable'])
+
+    def test_parallel_scheduling_with_picklable_tasks(self):
+        tasks = [PicklableTask(i=i) for i in range(5)]
+        success = luigi.interface.build(tasks, local_scheduler=True, parallel_scheduling=True,
+                                        parallel_scheduling_processes=2)
+        self.assertTrue(success)
+
+    def test_parallel_scheduling_with_unpicklable_tasks(self):
+        class UnpicklableTask(RunOnceTask):
+            i = luigi.IntParameter()
+
+        tasks = [UnpicklableTask(i=i) for i in range(5)]
+        success = luigi.interface.build(tasks, local_scheduler=True, parallel_scheduling=True,
+                                        parallel_scheduling_processes=2)
+        self.assertFalse(success)
+
+    def test_sync_result(self):
+        def func1(a, b):
+            return a + b
+
+        def func2(a, b):
+            raise Exception("unknown")
+
+        def func3(a):
+            raise Exception("never called")
+
+        r = luigi.worker.SyncResult(func1, (1, 2))
+        self.assertIsNone(r.wait())
+        self.assertTrue(r.ready())
+        self.assertTrue(r.successful())
+        self.assertEqual(r.get(), 3)
+
+        r = luigi.worker.SyncResult(func2, (1, 2))
+        self.assertIsNone(r.wait())
+        self.assertTrue(r.ready())
+        self.assertFalse(r.successful())
+        with self.assertRaises(Exception):
+            r.get()
+
+        r = luigi.worker.SyncResult(func3, (1, 2))
+        self.assertIsNone(r.wait())
+        self.assertTrue(r.ready())
+        self.assertFalse(r.successful())
+        with self.assertRaises(TypeError):
+            r.get()
+
+    def test_deprecations(self):
+        with warnings.catch_warnings(record=True) as w:
+            luigi.worker.AsyncCompletionException("foo")
+            luigi.worker.TracebackWrapper("foo")
+        self.assertEqual(len(w), 2)

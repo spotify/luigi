@@ -23,9 +23,7 @@ import shutil
 from multiprocessing import Process
 from helpers import unittest
 
-import luigi.scheduler
 import luigi.server
-import luigi.configuration
 from helpers import with_config
 from luigi.target import FileAlreadyExists
 
