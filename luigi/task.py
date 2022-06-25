@@ -823,6 +823,7 @@ class DynamicRequirements(object):
     def flat_requirements(self):
         if self._flat_requirements is None:
             self._flat_requirements = flatten(self.requirements)
+        return self._flat_requirements
 
     @property
     def paths(self):
