@@ -765,6 +765,83 @@ class MixinNaiveBulkComplete:
         return generated_tuples
 
 
+class DynamicRequirements(object):
+    """
+    Wraps dynamic requirements yielded in tasks's run methods to control how completeness checks of
+    (e.g.) large chunks of tasks are performed. Besides the wrapped *requirements*, instances of
+    this class can be passed an optional function *custom_complete* that might implement an
+    optimized check for completeness. If set, the function will be called with a single argument
+    *complete_fn* which should be used to perform the per-task check. Example:
+
+    .. code-block:: python
+
+        class SomeTaskWithDynamicRequirements(luigi.Task):
+            ...
+
+            def run(self):
+                large_chunk_of_tasks = [OtherTask(i=i) for i in range(10000)]
+
+                def custom_complete(complete_fn):
+                    # example: assume OtherTask always write into the same directory, so just check
+                    #          if the first task is complete, and then do a base name comparison
+                    if not complete_fn(large_chunk_of_tasks[0]):
+                        return False
+                    paths = [task.output().path for task in large_chunk_of_tasks]
+                    basenames = os.path.listdir(os.path.dirname(paths[0]))  # a single fs call
+                    return all(os.path.basename(path) in basenames for path in paths)
+
+                yield DynamicRequirements(large_chunk_of_tasks, custom_complete)
+
+    .. py:attribute:: requirements
+
+        The original, wrapped requirements.
+
+    .. py:attribute:: flat_requirements
+
+        Flattened view of the wrapped requirements (via :py:func:`flatten`). Read only.
+
+    .. py:attribute:: paths
+
+        Outputs of the requirements in the identical structure (via :py:func:`getpaths`). Read only.
+
+    .. py:attribute:: custom_complete
+
+       The optional, custom function performing the completeness check of the wrapped requirements.
+    """
+
+    def __init__(self, requirements, custom_complete=None):
+        super(DynamicRequirements, self).__init__()
+
+        # store attributes
+        self.requirements = requirements
+        self.custom_complete = custom_complete
+
+        # cached flat requirements
+        self._flat_requirements = None
+
+    @property
+    def flat_requirements(self):
+        if self._flat_requirements is None:
+            self._flat_requirements = flatten(self.requirements)
+
+    @property
+    def paths(self):
+        return getpaths(self.requirements)
+
+    def complete(self, complete_fn=None):
+        # default completeness check
+        if complete_fn is None:
+            def complete_fn(task):
+                return task.complete()
+
+        # use the custom complete function when set
+        if self.custom_complete:
+            return self.custom_complete(complete_fn)
+
+        # default implementation
+        return all(complete_fn(t) for t in self.flat_requirements)
+
+
 class ExternalTask(Task):
     """
     Subclass for references to external dependencies.
