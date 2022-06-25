@@ -152,16 +152,16 @@ class TaskProcess(multiprocessing.Process):
 
             # if requires is not a DynamicRequirements, create one to use its default behavior
             if not isinstance(requires, DynamicRequirements):
-                reqs = DynamicRequirements(requires)
+                requires = DynamicRequirements(requires)
 
-            if not reqs.complete(self.check_complete):
+            if not requires.complete(self.check_complete):
                 # when therequirements are not complete yet, return them which adds them to the tree
                 new_deps = [(t.task_module, t.task_family, t.to_str_params())
-                            for t in reqs.flat_requirements]
+                            for t in requires.flat_requirements]
                 return new_deps
 
             # get the next generator result
-            next_send = reqs.paths
+            next_send = requires.paths
 
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
