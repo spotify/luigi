@@ -155,7 +155,7 @@ class TaskProcess(multiprocessing.Process):
                 requires = DynamicRequirements(requires)
 
             if not requires.complete(self.check_complete):
-                # when therequirements are not complete yet, return them which adds them to the tree
+                # not all requirements are complete, return them which adds them to the tree
                 new_deps = [(t.task_module, t.task_family, t.to_str_params())
                             for t in requires.flat_requirements]
                 return new_deps

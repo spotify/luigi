@@ -770,8 +770,8 @@ class DynamicRequirements(object):
     Wraps dynamic requirements yielded in tasks's run methods to control how completeness checks of
     (e.g.) large chunks of tasks are performed. Besides the wrapped *requirements*, instances of
     this class can be passed an optional function *custom_complete* that might implement an
-    optimized check for completeness. If set, the function will be called with a single argument
-    *complete_fn* which should be used to perform the per-task check. Example:
+    optimized check for completeness. If set, the function will be called with a single argument,
+    *complete_fn*, which should be used to perform the per-task check. Example:
 
     .. code-block:: python
 
@@ -783,7 +783,7 @@ class DynamicRequirements(object):
 
                 def custom_complete(complete_fn):
                     # example: assume OtherTask always write into the same directory, so just check
-                    #          if the first task is complete, and then do a base name comparison
+                    #          if the first task is complete, and compare basenames for the rest
                     if not complete_fn(large_chunk_of_tasks[0]):
                         return False
                     paths = [task.output().path for task in large_chunk_of_tasks]
@@ -816,8 +816,9 @@ class DynamicRequirements(object):
         self.requirements = requirements
         self.custom_complete = custom_complete
 
-        # cached flat requirements
+        # cached flat requirements and paths
         self._flat_requirements = None
+        self._paths = None
 
     @property
     def flat_requirements(self):
@@ -827,7 +828,9 @@ class DynamicRequirements(object):
 
     @property
     def paths(self):
-        return getpaths(self.requirements)
+        if self._paths is None:
+            self._paths = getpaths(self.requirements)
+        return self._paths
 
     def complete(self, complete_fn=None):
         # default completeness check
