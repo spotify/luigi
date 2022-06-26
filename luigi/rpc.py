@@ -19,6 +19,7 @@ Implementation of the REST interface between the workers and the server.
 rpc.py implements the client side of it, server.py implements the server side.
 See :doc:`/central_scheduler` for more info.
 """
+import abc
 import os
 import json
 import logging
@@ -69,7 +70,17 @@ class RPCError(Exception):
         self.sub_exception = sub_exception
 
 
-class URLLibFetcher:
+class _FetcherInterface(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def fetch(self, full_url, body, timeout):
+        pass
+
+    @abc.abstractmethod
+    def close(self):
+        pass
+
+
+class URLLibFetcher(_FetcherInterface):
     raises = (URLError, socket.timeout)
 
     def _create_request(self, full_url, body=None):
@@ -96,12 +107,15 @@ class URLLibFetcher:
         req = self._create_request(full_url, body=body)
         return urlopen(req, timeout=timeout).read().decode('utf-8')
 
+    def close(self):
+        pass
 
-class RequestsFetcher:
-    def __init__(self, session):
+
+class RequestsFetcher(_FetcherInterface):
+    def __init__(self):
         from requests import exceptions as requests_exceptions
         self.raises = requests_exceptions.RequestException
-        self.session = session
+        self.session = requests.Session()
         self.process_id = os.getpid()
 
     def check_pid(self):
@@ -116,6 +130,9 @@ class RequestsFetcher:
         resp = self.session.post(full_url, data=body, timeout=timeout)
         resp.raise_for_status()
         return resp.text
+
+    def close(self):
+        self.session.close()
 
 
 class RemoteScheduler:
@@ -140,9 +157,12 @@ class RemoteScheduler:
         self._rpc_log_retries = config.getboolean('core', 'rpc-log-retries', True)
 
         if HAS_REQUESTS:
-            self._fetcher = RequestsFetcher(requests.Session())
+            self._fetcher = RequestsFetcher()
         else:
             self._fetcher = URLLibFetcher()
+
+    def close(self):
+        self._fetcher.close()
 
     def _get_retryer(self):
         def retry_logging(retry_state):
