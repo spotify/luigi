@@ -787,7 +787,7 @@ class DynamicRequirements(object):
                     if not complete_fn(large_chunk_of_tasks[0]):
                         return False
                     paths = [task.output().path for task in large_chunk_of_tasks]
-                    basenames = os.path.listdir(os.path.dirname(paths[0]))  # a single fs call
+                    basenames = os.listdir(os.path.dirname(paths[0]))  # a single fs call
                     return all(os.path.basename(path) in basenames for path in paths)
 
                 yield DynamicRequirements(large_chunk_of_tasks, custom_complete)
