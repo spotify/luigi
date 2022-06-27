@@ -209,7 +209,7 @@ the Task.run_ method will resume from scratch each time a new task is yielded.
 In other words, you should make sure your Task.run_ method is idempotent.
 (This is good practice for all Tasks in Luigi, but especially so for tasks with dynamic dependencies).
 As this might entail redundant calls to tasks' :func:`~luigi.task.Task.complete` methods,
-you should consider setting the "cache_task_completion" option int the :ref:`worker-config`.
+you should consider setting the "cache_task_completion" option in the :ref:`worker-config`.
 To further control how dynamic task requirements are handled internally by worker nodes,
 there is also the option to wrap dependent tasks by :class:`~luigi.task.DynamicRequirements`.
 
