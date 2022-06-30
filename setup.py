@@ -40,6 +40,7 @@ with open('README.rst') as fobj:
 install_requires = [
     'tornado>=4.0,<5',
     'python-daemon<3.0',
+    'enum34>1.1.0 ; python_version < "3.4"'
 ]
 
 if os.environ.get('READTHEDOCS', None) == 'True':
@@ -49,12 +50,9 @@ if os.environ.get('READTHEDOCS', None) == 'True':
     install_requires.remove('python-daemon<3.0')
     install_requires.append('sphinx>=1.4.4')  # Value mirrored in doc/conf.py
 
-if sys.version_info < (3, 4):
-    install_requires.append('enum34>1.1.0')
-
 setup(
     name='luigi',
-    version='2.7.5+affirm.1.4.2',
+    version='2.7.5+affirm.1.4.3',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
