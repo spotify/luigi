@@ -61,6 +61,10 @@ class LuigiTomlParser(BaseParser):
 
         return self.data
 
+    def sections(self):
+        """Return a list of sections as list of strings"""
+        return [section for section in self.data.keys() if section.lower() != 'logging']
+
     def get(self, section, option, default=NO_DEFAULT, **kwargs):
         try:
             return self.data[section][option]
