@@ -652,7 +652,7 @@ class RangeByMinutesBaseTest(unittest.TestCase):
                     ('CommonDateMinuteTask', 13),  # 20 intervals - 7 missing
                 ],
                 'event.tools.range.complete.fraction': [
-                    ('CommonDateMinuteTask', 13. / (13 + 7)),  # (exptected - missing) / expected
+                    ('CommonDateMinuteTask', 13. / (13 + 7)),  # (expected - missing) / expected
                 ],
             }
         )
