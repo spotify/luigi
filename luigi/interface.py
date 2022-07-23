@@ -18,7 +18,7 @@
 This module contains the bindings for command line integration and dynamic loading of tasks
 
 If you don't want to run luigi from the command line. You may use the methods
-defined in this module to programatically run luigi.
+defined in this module to programmatically run luigi.
 """
 
 import logging
