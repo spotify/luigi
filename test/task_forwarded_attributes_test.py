@@ -54,7 +54,7 @@ class YieldingTask(NonYieldingTask):
 
     def run(self):
         # as TaskProcess._run_get_new_deps handles generators in a specific way, store names of
-        # forwarded attributes before and after yielding a dynamic dependency, so we can explicitely
+        # forwarded attributes before and after yielding a dynamic dependency, so we can explicitly
         # validate the attribute forwarding implementation
         self.attributes_before_yield = self.gather_forwarded_attributes()
         yield RunOnceTask()
