@@ -78,7 +78,7 @@ class TaskTest(unittest.TestCase):
 
     def test_external_tasks_loadable(self):
         task = load_task("luigi", "ExternalTask", {})
-        assert(isinstance(task, luigi.ExternalTask))
+        self.assertTrue(isinstance(task, luigi.ExternalTask))
 
     def test_getpaths(self):
         class RequiredTask(luigi.Task):

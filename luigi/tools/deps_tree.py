@@ -50,7 +50,7 @@ def print_tree(task, indent='', last=True):
     name = task.__class__.__name__
     params = task.to_str_params(only_significant=True)
     result = '\n' + indent
-    if(last):
+    if (last):
         result += '└─--'
         indent += '    '
     else:
