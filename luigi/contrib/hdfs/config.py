@@ -84,7 +84,7 @@ def tmppath(path=None, include_unix_username=True):
 
     Note that include_unix_username might work on windows too.
     """
-    addon = "luigitemp-%08d" % random.randrange(1e9)
+    addon = "luigitemp-%09d" % random.randrange(0, 10_000_000_000)
     temp_dir = '/tmp'  # default tmp dir if none is specified in config
 
     # 1. Figure out to which temporary directory to place

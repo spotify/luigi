@@ -245,28 +245,32 @@ def from_utc(utcTime, fmt=None):
 
 class RecentRunHandler(BaseTaskHistoryHandler):
     def get(self):
-        tasks = self._scheduler.task_history.find_latest_runs()
-        self.render("recent.html", tasks=tasks)
+        with self._scheduler.task_history._session(None) as session:
+            tasks = self._scheduler.task_history.find_latest_runs(session)
+            self.render("recent.html", tasks=tasks)
 
 
 class ByNameHandler(BaseTaskHistoryHandler):
     def get(self, name):
-        tasks = self._scheduler.task_history.find_all_by_name(name)
-        self.render("recent.html", tasks=tasks)
+        with self._scheduler.task_history._session(None) as session:
+            tasks = self._scheduler.task_history.find_all_by_name(name, session)
+            self.render("recent.html", tasks=tasks)
 
 
 class ByIdHandler(BaseTaskHistoryHandler):
     def get(self, id):
-        task = self._scheduler.task_history.find_task_by_id(id)
-        self.render("show.html", task=task)
+        with self._scheduler.task_history._session(None) as session:
+            task = self._scheduler.task_history.find_task_by_id(id, session)
+            self.render("show.html", task=task)
 
 
 class ByParamsHandler(BaseTaskHistoryHandler):
     def get(self, name):
         payload = self.get_argument('data', default="{}")
         arguments = json.loads(payload)
-        tasks = self._scheduler.task_history.find_all_by_parameters(name, session=None, **arguments)
-        self.render("recent.html", tasks=tasks)
+        with self._scheduler.task_history._session(None) as session:
+            tasks = self._scheduler.task_history.find_all_by_parameters(name, session=session, **arguments)
+            self.render("recent.html", tasks=tasks)
 
 
 class RootPathHandler(BaseTaskHistoryHandler):

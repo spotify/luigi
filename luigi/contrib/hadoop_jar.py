@@ -47,7 +47,7 @@ def fix_paths(job):
                 args.append(x.path)
             else:  # output
                 x_path_no_slash = x.path[:-1] if x.path[-1] == '/' else x.path
-                y = luigi.contrib.hdfs.HdfsTarget(x_path_no_slash + '-luigi-tmp-%09d' % random.randrange(0, 1e10))
+                y = luigi.contrib.hdfs.HdfsTarget(x_path_no_slash + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000))
                 tmp_files.append((y, x_path_no_slash))
                 logger.info('Using temp path: %s for path %s', y.path, x.path)
                 args.append(y.path)

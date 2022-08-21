@@ -1442,7 +1442,7 @@ class Scheduler:
             terms = search.split()
 
             def filter_func(t):
-                return all(term in t.pretty_id for term in terms)
+                return all(term.casefold() in t.pretty_id.casefold() for term in terms)
 
         tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
         for task in filter(filter_func, tasks):
