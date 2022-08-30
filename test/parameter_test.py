@@ -153,15 +153,6 @@ class NoopTask(luigi.Task):
     pass
 
 
-class PEP593Task(luigi.Task):
-    param: Annotated[int, luigi.IntParameter()]
-    default_param: Annotated[bool, luigi.BoolParameter()] = False
-
-    def run(self):
-        PEP593Task._param_val = self.param
-        PEP593Task._default_param_val = self.default_param
-
-
 class MyEnum(enum.Enum):
     A = 1
     C = 3
@@ -1344,6 +1335,18 @@ class TestPathParameter:
                 luigi.build([path_parameter["cls"]()], local_scheduler=True)
         else:
             assert luigi.build([path_parameter["cls"]()], local_scheduler=True)
+
+
+if Annotated is None:
+    PEP593Task = luigi.Task
+else:
+    class PEP593Task(luigi.Task):
+        param: Annotated[int, luigi.IntParameter()]
+        default_param: Annotated[bool, luigi.BoolParameter()] = False
+
+        def run(self):
+            PEP593Task._param_val = self.param
+            PEP593Task._default_param_val = self.default_param
 
 
 @unittest.skipIf(sys.version_info < (3, 9), 'only for Python>=3.9')
