@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: luigi
+spec:
+  type: library
+  owner: dataex
