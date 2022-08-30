@@ -913,7 +913,7 @@ class JobTask(BaseHadoopJobTask):
 
     def extra_files(self):
         """
-        Can be overriden in subclass.
+        Can be overridden in subclass.
 
         Each element is either a string, or a pair of two strings (src, dst).
 

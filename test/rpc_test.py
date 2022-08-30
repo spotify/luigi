@@ -27,7 +27,6 @@ import luigi.server
 from server_test import ServerTestBase
 import socket
 from multiprocessing import Process, Queue
-import requests
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -147,8 +146,8 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
 
 class RequestsFetcherTest(ServerTestBase):
     def test_fork_changes_session(self):
-        session = requests.Session()
-        fetcher = luigi.rpc.RequestsFetcher(session)
+        fetcher = luigi.rpc.RequestsFetcher()
+        session = fetcher.session
 
         q = Queue()
 

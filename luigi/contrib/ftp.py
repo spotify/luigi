@@ -254,7 +254,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.conn.makedirs(directory)
 
         if atomic:
-            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, 1e10)))
+            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, 10_000_000_000)))
         else:
             tmp_path = normpath
 
@@ -279,7 +279,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         # random file name
         if atomic:
-            tmp_path = folder + os.sep + 'luigi-tmp-%09d' % random.randrange(0, 1e10)
+            tmp_path = folder + os.sep + 'luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
         else:
             tmp_path = normpath
 
@@ -297,7 +297,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if folder and not os.path.exists(folder):
             os.makedirs(folder)
 
-        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
 
         # download file
         self._connect()
@@ -409,7 +409,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
         elif mode == 'r':
             temppath = '{}-luigi-tmp-{:09d}'.format(
-                self.path.lstrip('/'), random.randrange(0, 1e10)
+                self.path.lstrip('/'), random.randrange(0, 10_000_000_000)
             )
             try:
                 # store reference to the TemporaryDirectory because it will be removed on GC

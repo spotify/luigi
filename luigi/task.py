@@ -329,7 +329,7 @@ class Task(metaclass=Register):
 
     task_namespace = __not_user_specified
     """
-    This value can be overriden to set the namespace that will be used.
+    This value can be overridden to set the namespace that will be used.
     (See :ref:`Task.namespaces_famlies_and_ids`)
     If it's not specified and you try to read this value anyway, it will return
     garbage. Please use :py:meth:`get_task_namespace` to read the namespace.

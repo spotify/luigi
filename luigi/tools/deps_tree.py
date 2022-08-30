@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-This module parses commands exactly the same as the luigi task runner. You must specify the module, the task and task paramters.
-Instead of executing a task, this module prints the significant paramters and state of the task and its dependencies in a tree format.
+This module parses commands exactly the same as the luigi task runner. You must specify the module, the task and task parameters.
+Instead of executing a task, this module prints the significant parameters and state of the task and its dependencies in a tree format.
 Use this to visualize the execution plan in the terminal.
 
 .. code-block:: none
@@ -50,7 +50,7 @@ def print_tree(task, indent='', last=True):
     name = task.__class__.__name__
     params = task.to_str_params(only_significant=True)
     result = '\n' + indent
-    if(last):
+    if (last):
         result += '└─--'
         indent += '    '
     else:

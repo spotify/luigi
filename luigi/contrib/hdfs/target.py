@@ -177,7 +177,7 @@ class HdfsTarget(FileSystemTarget):
             return False
 
     def _is_writable(self, path):
-        test_path = path + '.test_write_access-%09d' % random.randrange(1e10)
+        test_path = path + '.test_write_access-%09d' % random.randrange(10_000_000_000)
         try:
             self.fs.touchz(test_path)
             self.fs.remove(test_path, recursive=False)
