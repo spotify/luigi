@@ -85,7 +85,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if self.tls:
             self.conn = ftplib.FTP_TLS()
         else:
-            self.conn = ftplib.FTP()
+            # OpenRefactory Warning: The 'ftplib.FTP' method uses 'FTP' protocol which transfers data without any encryption.
+            # Using SFTP/SCP/FTPS over FTP is recommended. Use 'ftplib.FTP_TLS' method instead.
+            self.conn = ftplib.FTP_TLS()
         self.conn.connect(self.host, self.port, timeout=self.timeout)
         self.conn.login(self.username, self.password)
         if self.tls:
