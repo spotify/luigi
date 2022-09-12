@@ -198,8 +198,8 @@ You can also yield a list of tasks.
         def run(self):
             other_target = yield OtherTask()
 
-        # dynamic dependencies resolve into targets
-        f = other_target.open('r')
+            # dynamic dependencies resolve into targets
+            f = other_target.open('r')
 
 
 This mechanism is an alternative to Task.requires_ in case

@@ -810,7 +810,7 @@ class DynamicRequirements(object):
     """
 
     def __init__(self, requirements, custom_complete=None):
-        super(DynamicRequirements, self).__init__()
+        super().__init__()
 
         # store attributes
         self.requirements = requirements

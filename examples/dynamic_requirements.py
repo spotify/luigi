@@ -96,7 +96,7 @@ class Dynamic(luigi.Task):
         # in DynamicRequirements and optionally define a custom complete method
         def custom_complete(complete_fn):
             # example: Data() stores all outputs in the same directory, so avoid doing len(data) fs
-            # calls but rather check the only the first, and compare basenames for the rest
+            # calls but rather check only the first, and compare basenames for the rest
             # (complete_fn defaults to "lambda task: task.complete()" but can also include caching)
             if not complete_fn(data_dependent_deps[0]):
                 return False
