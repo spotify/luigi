@@ -87,7 +87,7 @@ class FileSystem(metaclass=abc.ABCMeta):
     FileSystem abstraction used in conjunction with :py:class:`FileSystemTarget`.
 
     Typically, a FileSystem is associated with instances of a :py:class:`FileSystemTarget`. The
-    instances of the py:class:`FileSystemTarget` will delegate methods such as
+    instances of the :py:class:`FileSystemTarget` will delegate methods such as
     :py:meth:`FileSystemTarget.exists` and :py:meth:`FileSystemTarget.remove` to the FileSystem.
 
     Methods of FileSystem raise :py:class:`FileSystemException` if there is a problem completing the
