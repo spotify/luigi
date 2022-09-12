@@ -198,8 +198,8 @@ You can also yield a list of tasks.
         def run(self):
             other_target = yield OtherTask()
 
-	    # dynamic dependencies resolve into targets
-	    f = other_target.open('r')
+            # dynamic dependencies resolve into targets
+            f = other_target.open('r')
 
 
 This mechanism is an alternative to Task.requires_ in case
@@ -208,6 +208,10 @@ It does come with some constraints:
 the Task.run_ method will resume from scratch each time a new task is yielded.
 In other words, you should make sure your Task.run_ method is idempotent.
 (This is good practice for all Tasks in Luigi, but especially so for tasks with dynamic dependencies).
+As this might entail redundant calls to tasks' :func:`~luigi.task.Task.complete` methods,
+you should consider setting the "cache_task_completion" option in the :ref:`worker-config`.
+To further control how dynamic task requirements are handled internally by worker nodes,
+there is also the option to wrap dependent tasks by :class:`~luigi.task.DynamicRequirements`.
 
 For an example of a workflow using dynamic dependencies, see
 `examples/dynamic_requirements.py <https://github.com/spotify/luigi/blob/master/examples/dynamic_requirements.py>`_.

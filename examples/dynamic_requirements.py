@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import os
 import random as rnd
 import time
 
@@ -90,6 +91,20 @@ class Dynamic(luigi.Task):
 
         with self.output().open('w') as f:
             f.write('Tada!')
+
+        # and in case data is rather long, consider wrapping the requirements
+        # in DynamicRequirements and optionally define a custom complete method
+        def custom_complete(complete_fn):
+            # example: Data() stores all outputs in the same directory, so avoid doing len(data) fs
+            # calls but rather check only the first, and compare basenames for the rest
+            # (complete_fn defaults to "lambda task: task.complete()" but can also include caching)
+            if not complete_fn(data_dependent_deps[0]):
+                return False
+            paths = [task.output().path for task in data_dependent_deps]
+            basenames = os.listdir(os.path.dirname(paths[0]))  # a single fs call
+            return all(os.path.basename(path) in basenames for path in paths)
+
+        yield luigi.DynamicRequirements(data_dependent_deps, custom_complete)
 
 
 if __name__ == '__main__':

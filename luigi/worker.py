@@ -55,7 +55,7 @@ from luigi.task_register import load_task
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
 from luigi.target import Target
-from luigi.task import Task, flatten, getpaths, Config
+from luigi.task import Task, Config, DynamicRequirements
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
 from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
@@ -150,13 +150,18 @@ class TaskProcess(multiprocessing.Process):
             except StopIteration:
                 return None
 
-            new_req = flatten(requires)
-            if all(self.check_complete(t) for t in new_req):
-                next_send = getpaths(requires)
-            else:
+            # if requires is not a DynamicRequirements, create one to use its default behavior
+            if not isinstance(requires, DynamicRequirements):
+                requires = DynamicRequirements(requires)
+
+            if not requires.complete(self.check_complete):
+                # not all requirements are complete, return them which adds them to the tree
                 new_deps = [(t.task_module, t.task_family, t.to_str_params())
-                            for t in new_req]
+                            for t in requires.flat_requirements]
                 return new_deps
+
+            # get the next generator result
+            next_send = requires.paths
 
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)

@@ -59,6 +59,7 @@ class DummyTask(Task):
 
 class DynamicDummyTask(Task):
     p = luigi.Parameter()
+    sleep = luigi.FloatParameter(default=0.5, significant=False)
 
     def output(self):
         return luigi.LocalTarget(self.p)
@@ -66,7 +67,7 @@ class DynamicDummyTask(Task):
     def run(self):
         with self.output().open('w') as f:
             f.write('Done!')
-        time.sleep(0.5)  # so we can benchmark & see if parallelization works
+        time.sleep(self.sleep)  # so we can benchmark & see if parallelization works
 
 
 class DynamicDummyTaskWithNamespace(DynamicDummyTask):
@@ -93,6 +94,37 @@ class DynamicRequires(Task):
             for i, d in enumerate(dummy_targets):
                 for line in d.open('r'):
                     print('%d: %s' % (i, line.strip()), file=f)
+
+
+class DynamicRequiresWrapped(Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.p, 'parent'))
+
+    def run(self):
+        reqs = [
+            DynamicDummyTask(p=os.path.join(self.p, '%s.txt' % i), sleep=0.0)
+            for i in range(10)
+        ]
+
+        # yield again as DynamicRequires
+        yield luigi.DynamicRequirements(reqs)
+
+        # and again with a custom complete function that does base name comparisons
+        def custom_complete(complete_fn):
+            if not complete_fn(reqs[0]):
+                return False
+            paths = [task.output().path for task in reqs]
+            basenames = os.listdir(os.path.dirname(paths[0]))
+            self._custom_complete_called = True
+            self._custom_complete_result = all(os.path.basename(path) in basenames for path in paths)
+            return self._custom_complete_result
+
+        yield luigi.DynamicRequirements(reqs, custom_complete)
+
+        with self.output().open('w') as f:
+            f.write('Done!')
 
 
 class DynamicRequiresOtherModule(Task):
@@ -1152,6 +1184,13 @@ class DynamicDependenciesTest(unittest.TestCase):
         t = DynamicRequiresOtherModule(p=self.p)
         luigi.build([t], local_scheduler=True, workers=self.n_workers)
         self.assertTrue(t.complete())
+
+    def test_wrapped_dynamic_requirements(self):
+        t = DynamicRequiresWrapped(p=self.p)
+        luigi.build([t], local_scheduler=True, workers=1)
+        self.assertTrue(t.complete())
+        self.assertTrue(getattr(t, '_custom_complete_called', False))
+        self.assertTrue(getattr(t, '_custom_complete_result', False))
 
 
 class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):

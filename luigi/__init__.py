@@ -21,7 +21,9 @@ Package containing core luigi functionality.
 from luigi.__meta__ import __version__
 
 from luigi import task
-from luigi.task import Task, Config, ExternalTask, WrapperTask, namespace, auto_namespace
+from luigi.task import (
+    Task, Config, ExternalTask, WrapperTask, namespace, auto_namespace, DynamicRequirements,
+)
 
 from luigi import target
 from luigi.target import Target
@@ -56,6 +58,7 @@ from luigi.event import Event
 
 __all__ = [
     'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',
+    'DynamicRequirements',
     'target', 'Target', 'LocalTarget', 'rpc', 'RemoteScheduler',
     'RPCError', 'parameter', 'Parameter', 'DateParameter', 'MonthParameter',
     'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter',
