@@ -440,7 +440,8 @@ class S3Client(FileSystem):
     def listdir(self, path, start_time=None, end_time=None, return_key=False):
         """
         Get an iterable with S3 folder contents.
-        Iterable contains paths relative to queried path.
+        Iterable contains absolute paths for which queried path is a prefix.
+
         :param path: URL for target S3 location
         :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
         :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
@@ -471,6 +472,15 @@ class S3Client(FileSystem):
                     yield self._add_path_delimiter(path) + item.key[key_path_len:]
 
     def list(self, path, start_time=None, end_time=None, return_key=False):  # backwards compat
+        """
+        Get an iterable with S3 folder contents.
+        Iterable contains paths relative to queried path.
+
+        :param path: URL for target S3 location
+        :param start_time: Optional argument to list files with modified (offset aware) datetime after start_time
+        :param end_time: Optional argument to list files with modified (offset aware) datetime before end_time
+        :param return_key: Optional argument, when set to True will return boto3's ObjectSummary (instead of the filename)
+        """
         key_path_len = len(self._add_path_delimiter(path))
         for item in self.listdir(path, start_time=start_time, end_time=end_time, return_key=return_key):
             if return_key:
