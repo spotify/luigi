@@ -125,7 +125,7 @@ def task_id_str(task_family, params):
     # task_id is a concatenation of task family, the first values of the first 3 parameters
     # sorted by parameter name and a md5hash of the family/parameters as a cananocalised json.
     param_str = json.dumps(params, separators=(',', ':'), sort_keys=True)
-    param_hash = hashlib.md5(param_str.encode('utf-8')).hexdigest()
+    param_hash = hashlib.new('md5', param_str.encode('utf-8'), usedforsecurity=False).hexdigest()
 
     param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
                              for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))

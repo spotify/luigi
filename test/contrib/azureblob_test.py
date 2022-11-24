@@ -60,7 +60,7 @@ class AzureBlobClientTest(unittest.TestCase):
     def test_create_delete_container(self):
         import datetime
         import hashlib
-        m = hashlib.md5()
+        m = hashlib.new('md5', usedforsecurity=False)
         m.update(datetime.datetime.now().__str__().encode())
         container_name = m.hexdigest()
 
@@ -74,7 +74,7 @@ class AzureBlobClientTest(unittest.TestCase):
         import datetime
         import hashlib
         import tempfile
-        m = hashlib.md5()
+        m = hashlib.new('md5', usedforsecurity=False)
         m.update(datetime.datetime.now().__str__().encode())
         container_name = m.hexdigest()
         m.update(datetime.datetime.now().__str__().encode())
