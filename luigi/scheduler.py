@@ -1231,7 +1231,7 @@ class Scheduler:
 
         if len(batched_tasks) > 1:
             batch_string = '|'.join(task.id for task in batched_tasks)
-            batch_id = hashlib.md5(batch_string.encode('utf-8')).hexdigest()
+            batch_id = hashlib.new('md5', batch_string.encode('utf-8'), usedforsecurity=False).hexdigest()
             for task in batched_tasks:
                 self._state.set_batch_running(task, batch_id, worker_id)
 

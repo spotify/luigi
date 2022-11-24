@@ -25,6 +25,7 @@ an example of how to run a Hadoop job.
 import abc
 import datetime
 import glob
+import hashlib
 import logging
 import os
 import pickle
@@ -37,7 +38,6 @@ import subprocess
 import sys
 import tempfile
 import warnings
-from hashlib import md5
 from itertools import groupby
 
 from luigi import configuration
@@ -620,7 +620,7 @@ class LocalJobRunner(JobRunner):
         lines = []
         for i, line in enumerate(input_stream):
             parts = line.rstrip('\n').split('\t')
-            blob = md5(str(i).encode('ascii')).hexdigest()  # pseudo-random blob to make sure the input isn't sorted
+            blob = hashlib.new('md5', str(i).encode('ascii'), usedforsecurity=False).hexdigest()  # pseudo-random blob to make sure the input isn't sorted
             lines.append((parts[:-1], blob, line))
         for _, _, line in sorted(lines):
             output.write(line)
