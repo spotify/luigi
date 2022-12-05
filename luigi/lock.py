@@ -80,7 +80,7 @@ def get_info(pid_dir, my_pid=None):
 
     my_cmd = getpcmd(my_pid)
     cmd_hash = my_cmd.encode('utf8')
-    pid_file = os.path.join(pid_dir, hashlib.md5(cmd_hash).hexdigest()) + '.pid'
+    pid_file = os.path.join(pid_dir, hashlib.new('md5', cmd_hash, usedforsecurity=False).hexdigest()) + '.pid'
 
     return my_pid, my_cmd, pid_file
 
