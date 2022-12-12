@@ -61,6 +61,7 @@ class LockTest(unittest.TestCase):
     def test_get_info(self):
         try:
             p = subprocess.Popen(["yes", u"à我ф"], stdout=subprocess.PIPE)
+            time.sleep(0.42)
             pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
         finally:
             p.kill()
