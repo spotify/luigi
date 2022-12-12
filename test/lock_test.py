@@ -38,7 +38,7 @@ class TestCmd(unittest.TestCase):
             command = ["sleep", "1"]
 
         external_process = subprocess.Popen(command)
-        time.sleep(0.42)
+        time.sleep(0.42)  # need this sleep for CI running on GitHub from Python 3.10
         result = luigi.lock.getpcmd(external_process.pid)
 
         self.assertTrue(
@@ -61,7 +61,7 @@ class LockTest(unittest.TestCase):
     def test_get_info(self):
         try:
             p = subprocess.Popen(["yes", u"à我ф"], stdout=subprocess.PIPE)
-            time.sleep(0.42)
+            time.sleep(0.42)  # need this sleep for CI running on GitHub from Python 3.10
             pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
         finally:
             p.kill()
