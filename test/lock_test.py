@@ -18,6 +18,7 @@
 import os
 import subprocess
 import tempfile
+import time
 import mock
 from helpers import unittest
 
@@ -37,6 +38,7 @@ class TestCmd(unittest.TestCase):
             command = ["sleep", "1"]
 
         external_process = subprocess.Popen(command)
+        time.sleep(0.42)
         result = luigi.lock.getpcmd(external_process.pid)
 
         self.assertTrue(
