@@ -111,7 +111,7 @@ def rpc_method(**request_args):
             if not all(arg in actual_args for arg in required_args):
                 raise TypeError('{} takes {} arguments ({} given)'.format(
                     fn_name, len(all_args), len(actual_args)))
-            return self._request('/api/{}'.format(fn_name), actual_args, **request_args)
+            return self._request('api/{}'.format(fn_name), actual_args, **request_args)
 
         RPC_METHODS[fn_name] = rpc_func
         return fn
