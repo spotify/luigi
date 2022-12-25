@@ -34,11 +34,11 @@ pcmd_retry = retry(retry)
 class TestCmd(unittest.TestCase):
 
     def test_getpcmd(self):
-        def _is_empyty(cmd):
+        def _is_empty(cmd):
             return cmd == ""
 
         # for CI stability, add retring
-        @retry(retry=retry_if_result(_is_empyty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
+        @retry(retry=retry_if_result(_is_empty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
         def _getpcmd(pid):
             return luigi.lock.getpcmd(pid)
 
@@ -68,11 +68,11 @@ class LockTest(unittest.TestCase):
         os.rmdir(self.pid_dir)
 
     def test_get_info(self):
-        def _is_empyty(pid, cmd, pid_file):
-            return cmd == ""
+        def _is_empty(result):
+            return result[1] == ""  # cmd is empty
 
         # for CI stability, add retring
-        @retry(retry=retry_if_result(_is_empyty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
+        @retry(retry=retry_if_result(_is_empty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
         def _get_info(pid_dir, pid):
             return luigi.lock.get_info(pid_dir, pid)
 
