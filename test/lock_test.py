@@ -18,7 +18,6 @@
 import os
 import subprocess
 import tempfile
-import time
 import mock
 from helpers import unittest
 
@@ -32,13 +31,12 @@ luigi.notifications.DEBUG = True
 pcmd_retry = retry(retry)
 
 
-def _is_empyty(s):
-    return s == ""
-
-
 class TestCmd(unittest.TestCase):
 
     def test_getpcmd(self):
+        def _is_empyty(cmd):
+            return cmd == ""
+
         # for CI stability, add retring
         @retry(retry=retry_if_result(_is_empyty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
         def _getpcmd(pid):
@@ -70,6 +68,9 @@ class LockTest(unittest.TestCase):
         os.rmdir(self.pid_dir)
 
     def test_get_info(self):
+        def _is_empyty(pid, cmd, pid_file):
+            return cmd == ""
+
         # for CI stability, add retring
         @retry(retry=retry_if_result(_is_empyty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
         def _get_info(pid_dir, pid):
