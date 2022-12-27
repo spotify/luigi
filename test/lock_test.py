@@ -28,8 +28,6 @@ import luigi.notifications
 
 luigi.notifications.DEBUG = True
 
-pcmd_retry = retry(retry)
-
 
 class TestCmd(unittest.TestCase):
 
