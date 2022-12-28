@@ -69,7 +69,7 @@ class InputPipeProcessWrapper:
         if input_pipe is not None:
             try:
                 input_pipe.fileno()
-            except AttributeError:
+            except (AttributeError, io.UnsupportedOperation):
                 # subprocess require a fileno to work, if not present we copy to disk first
                 self._original_input = False
                 f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
