@@ -21,6 +21,7 @@ import tempfile
 import mock
 from helpers import unittest
 
+from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 import luigi
 import luigi.lock
 import luigi.notifications
@@ -31,13 +32,21 @@ luigi.notifications.DEBUG = True
 class TestCmd(unittest.TestCase):
 
     def test_getpcmd(self):
+        def _is_empty(cmd):
+            return cmd == ""
+
+        # for CI stability, add retring
+        @retry(retry=retry_if_result(_is_empty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
+        def _getpcmd(pid):
+            return luigi.lock.getpcmd(pid)
+
         if os.name == 'nt':
             command = ["ping", "1.1.1.1", "-w", "1000"]
         else:
             command = ["sleep", "1"]
 
         external_process = subprocess.Popen(command)
-        result = luigi.lock.getpcmd(external_process.pid)
+        result = _getpcmd(external_process.pid)
 
         self.assertTrue(
             result.strip() in ["sleep 1", '[sleep]', 'ping 1.1.1.1 -w 1000']
@@ -57,9 +66,17 @@ class LockTest(unittest.TestCase):
         os.rmdir(self.pid_dir)
 
     def test_get_info(self):
+        def _is_empty(result):
+            return result[1] == ""  # cmd is empty
+
+        # for CI stability, add retring
+        @retry(retry=retry_if_result(_is_empty), wait=wait_exponential(multiplier=0.2, min=0.1, max=3), stop=stop_after_attempt(3))
+        def _get_info(pid_dir, pid):
+            return luigi.lock.get_info(pid_dir, pid)
+
         try:
             p = subprocess.Popen(["yes", u"à我ф"], stdout=subprocess.PIPE)
-            pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
+            pid, cmd, pid_file = _get_info(self.pid_dir, p.pid)
         finally:
             p.kill()
         self.assertEqual(cmd, u'yes à我ф')
