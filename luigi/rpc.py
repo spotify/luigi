@@ -59,7 +59,7 @@ def _urljoin(base, url):
     parsed = urlparse(base)
     scheme = parsed.scheme
     return urlparse(
-        urljoin(parsed._replace(scheme='http').geturl(), url)
+        urljoin(parsed._replace(scheme='http').geturl(), url if parsed.path == '' else parsed.path + url)
     )._replace(scheme=scheme).geturl()
 
 
