@@ -38,7 +38,7 @@ from luigi import task_register
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
-from .freezing import recursively_freeze, FrozenOrderedDict
+from .freezing import recursively_freeze, recursively_unfreeze, FrozenOrderedDict
 
 
 _no_value = object()
@@ -1108,7 +1108,7 @@ class DictParameter(Parameter):
         """
         frozen_value = recursively_freeze(value)
         if self.schema is not None:
-            jsonschema.validate(instance=frozen_value.get_wrapped(), schema=self.schema)
+            jsonschema.validate(instance=recursively_unfreeze(frozen_value), schema=self.schema)
         return frozen_value
 
     def parse(self, source):
@@ -1166,7 +1166,56 @@ class ListParameter(Parameter):
     .. code-block:: console
 
         $ luigi --module my_tasks MyTask --grades '[100,70]'
+
+    It is possible to provide a JSON schema that should be validated by the given value:
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          grades = luigi.ListParameter(
+            schema={
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "minItems": 1
+            }
+          )
+
+          def run(self):
+                sum = 0
+                for element in self.grades:
+                    sum += element
+                avg = sum / len(self.grades)
+
+    Using this schema, the following command will work:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --numbers '[1, 8.7, 6]'
+
+    while these commands will fail because the parameter is not valid:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --numbers '[]'  # must have at least 1 element
+        $ luigi --module my_tasks MyTask --numbers '[-999, 999]'  # elements must be in [0, 10]
+
     """
+
+    def __init__(
+        self,
+        *args,
+        schema=None,
+        **kwargs,
+    ):
+        self.schema = schema
+        super().__init__(
+            *args,
+            **kwargs,
+        )
 
     def normalize(self, x):
         """
@@ -1175,7 +1224,10 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return recursively_freeze(x)
+        frozen_value = recursively_freeze(x)
+        if self.schema is not None:
+            jsonschema.validate(instance=recursively_unfreeze(frozen_value), schema=self.schema)
+        return frozen_value
 
     def parse(self, x):
         """
