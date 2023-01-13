@@ -19,9 +19,7 @@ from jsonschema.exceptions import ValidationError
 from helpers import unittest, in_parse
 
 import luigi
-import luigi.interface
 import json
-import collections
 import pytest
 
 
