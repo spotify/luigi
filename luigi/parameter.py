@@ -26,10 +26,14 @@ import warnings
 from enum import IntEnum
 import json
 from json import JSONEncoder
-import jsonschema
 import operator
 from ast import literal_eval
 from pathlib import Path
+try:
+    import jsonschema
+    _JSONSCHEMA_ENABLED = True
+except ImportError:
+    _JSONSCHEMA_ENABLED = False
 
 from configparser import NoOptionError, NoSectionError
 
@@ -1096,6 +1100,11 @@ class DictParameter(Parameter):
         schema=None,
         **kwargs,
     ):
+        if schema is not None and not _JSONSCHEMA_ENABLED:
+            warnings.warn(
+                "The 'jsonschema' package is not installed so the parameter can not be validated "
+                "even though a schema is given."
+            )
         self.schema = schema
         super().__init__(
             *args,
@@ -1211,6 +1220,11 @@ class ListParameter(Parameter):
         schema=None,
         **kwargs,
     ):
+        if schema is not None and not _JSONSCHEMA_ENABLED:
+            warnings.warn(
+                "The 'jsonschema' package is not installed so the parameter can not be validated "
+                "even though a schema is given."
+            )
         self.schema = schema
         super().__init__(
             *args,

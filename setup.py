@@ -37,7 +37,7 @@ readme_note = """
 with open('README.rst') as fobj:
     long_description = "\n\n" + readme_note + "\n\n" + fobj.read()
 
-install_requires = ['python-dateutil>=2.7.5,<3', 'tenacity>=8,<9', 'jsonschema']
+install_requires = ['python-dateutil>=2.7.5,<3', 'tenacity>=8,<9']
 
 # Can't use python-daemon>=2.2.0 if on windows
 #     See https://pagure.io/python-daemon/issue/18
@@ -100,6 +100,7 @@ setup(
     },
     install_requires=install_requires,
     extras_require={
+        'jsonschema': ['jsonschema'],
         'prometheus': ['prometheus-client>=0.5,<0.15'],
         'toml': ['toml<2.0.0'],
     },
