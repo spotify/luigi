@@ -20,6 +20,7 @@ from helpers import unittest, in_parse
 
 import luigi
 import json
+import mock
 import pytest
 
 
@@ -98,3 +99,13 @@ class ListParameterTest(unittest.TestCase):
 
         with pytest.raises(ValidationError, match="-999 is less than the minimum of 0"):
             a.normalize(invalid_list_value)
+
+        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False) as mocked:
+            with pytest.warns(
+                UserWarning,
+                match=(
+                    "The 'jsonschema' package is not installed so the parameter can not be "
+                    "validated even though a schema is given."
+                )
+            ):
+                luigi.ListParameter(schema={"type": "array", "items": {"type": "number"}})

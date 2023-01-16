@@ -21,6 +21,7 @@ from helpers import unittest, in_parse
 import luigi
 import luigi.interface
 import json
+import mock
 import collections
 import pytest
 
@@ -111,3 +112,13 @@ class DictParameterTest(unittest.TestCase):
         b.normalize({"role": "web", "env": "staging"})
         with pytest.raises(ValidationError, match=r"'UNKNOWN_VALUE' is not one of \['web', 'staging'\]"):
             b.normalize({"role": "UNKNOWN_VALUE", "env": "staging"})
+
+        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False) as mocked:
+            with pytest.warns(
+                UserWarning,
+                match=(
+                    "The 'jsonschema' package is not installed so the parameter can not be "
+                    "validated even though a schema is given."
+                )
+            ):
+                luigi.ListParameter(schema={"type": "object"})
