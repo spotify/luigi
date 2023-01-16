@@ -100,7 +100,7 @@ class ListParameterTest(unittest.TestCase):
         with pytest.raises(ValidationError, match="-999 is less than the minimum of 0"):
             a.normalize(invalid_list_value)
 
-        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False) as mocked:
+        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False):
             with pytest.warns(
                 UserWarning,
                 match=(

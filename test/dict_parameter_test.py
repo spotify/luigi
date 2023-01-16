@@ -113,7 +113,7 @@ class DictParameterTest(unittest.TestCase):
         with pytest.raises(ValidationError, match=r"'UNKNOWN_VALUE' is not one of \['web', 'staging'\]"):
             b.normalize({"role": "UNKNOWN_VALUE", "env": "staging"})
 
-        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False) as mocked:
+        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False):
             with pytest.warns(
                 UserWarning,
                 match=(
