@@ -100,6 +100,7 @@ setup(
     },
     install_requires=install_requires,
     extras_require={
+        'jsonschema': ['jsonschema'],
         'prometheus': ['prometheus-client>=0.5,<0.15'],
         'toml': ['toml<2.0.0'],
     },
