@@ -29,6 +29,11 @@ from json import JSONEncoder
 import operator
 from ast import literal_eval
 from pathlib import Path
+try:
+    import jsonschema
+    _JSONSCHEMA_ENABLED = True
+except ImportError:
+    _JSONSCHEMA_ENABLED = False
 
 from configparser import NoOptionError, NoSectionError
 
@@ -37,7 +42,7 @@ from luigi import task_register
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
-from .freezing import recursively_freeze, FrozenOrderedDict
+from .freezing import recursively_freeze, recursively_unfreeze, FrozenOrderedDict
 
 
 _no_value = object()
@@ -1056,13 +1061,64 @@ class DictParameter(Parameter):
     It can be used to define dynamic parameters, when you do not know the exact list of your parameters (e.g. list of
     tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
     values (like a database connection config).
+
+    It is possible to provide a JSON schema that should be validated by the given value:
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          tags = luigi.DictParameter(
+            schema={
+              "type": "object",
+              "patternProperties": {
+                ".*": {"type": "string", "enum": ["web", "staging"]},
+              }
+            }
+          )
+
+          def run(self):
+            logging.info("Find server with role: %s", self.tags['role'])
+            server = aws.ec2.find_my_resource(self.tags)
+
+    Using this schema, the following command will work:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --tags '{"role": "web", "env": "staging"}'
+
+    while this command will fail because the parameter is not valid:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --tags '{"role": "UNKNOWN_VALUE", "env": "staging"}'
+
     """
+
+    def __init__(
+        self,
+        *args,
+        schema=None,
+        **kwargs,
+    ):
+        if schema is not None and not _JSONSCHEMA_ENABLED:
+            warnings.warn(
+                "The 'jsonschema' package is not installed so the parameter can not be validated "
+                "even though a schema is given."
+            )
+        self.schema = schema
+        super().__init__(
+            *args,
+            **kwargs,
+        )
 
     def normalize(self, value):
         """
         Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
-        return recursively_freeze(value)
+        frozen_value = recursively_freeze(value)
+        if self.schema is not None:
+            jsonschema.validate(instance=recursively_unfreeze(frozen_value), schema=self.schema)
+        return frozen_value
 
     def parse(self, source):
         """
@@ -1119,7 +1175,61 @@ class ListParameter(Parameter):
     .. code-block:: console
 
         $ luigi --module my_tasks MyTask --grades '[100,70]'
+
+    It is possible to provide a JSON schema that should be validated by the given value:
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          grades = luigi.ListParameter(
+            schema={
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "minItems": 1
+            }
+          )
+
+          def run(self):
+                sum = 0
+                for element in self.grades:
+                    sum += element
+                avg = sum / len(self.grades)
+
+    Using this schema, the following command will work:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --numbers '[1, 8.7, 6]'
+
+    while these commands will fail because the parameter is not valid:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --numbers '[]'  # must have at least 1 element
+        $ luigi --module my_tasks MyTask --numbers '[-999, 999]'  # elements must be in [0, 10]
+
     """
+
+    def __init__(
+        self,
+        *args,
+        schema=None,
+        **kwargs,
+    ):
+        if schema is not None and not _JSONSCHEMA_ENABLED:
+            warnings.warn(
+                "The 'jsonschema' package is not installed so the parameter can not be validated "
+                "even though a schema is given."
+            )
+        self.schema = schema
+        super().__init__(
+            *args,
+            **kwargs,
+        )
 
     def normalize(self, x):
         """
@@ -1128,7 +1238,10 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        return recursively_freeze(x)
+        frozen_value = recursively_freeze(x)
+        if self.schema is not None:
+            jsonschema.validate(instance=recursively_unfreeze(frozen_value), schema=self.schema)
+        return frozen_value
 
     def parse(self, x):
         """
