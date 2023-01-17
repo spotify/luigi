@@ -1137,15 +1137,14 @@ class DictParameter(Parameter):
         """
         Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
-        frozen_value = recursively_freeze(value)
         if self.schema is not None:
-            unfrozen_value = recursively_unfreeze(frozen_value)
+            unfrozen_value = recursively_unfreeze(value)
             try:
-                self.schema.validate(unfrozen_value)  # Validators may update the instance inplace
-                frozen_value = super().normalize(unfrozen_value)
+                self.schema.validate(unfrozen_value)
+                value = unfrozen_value  # Validators may update the instance inplace
             except AttributeError:
                 jsonschema.validate(instance=unfrozen_value, schema=self.schema)
-        return frozen_value
+        return recursively_freeze(value)
 
     def parse(self, source):
         """
@@ -1292,15 +1291,14 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        frozen_value = recursively_freeze(x)
         if self.schema is not None:
-            unfrozen_value = recursively_unfreeze(frozen_value)
+            unfrozen_value = recursively_unfreeze(x)
             try:
-                self.schema.validate(unfrozen_value)  # Validators may update the instance inplace
-                frozen_value = super().normalize(unfrozen_value)
+                self.schema.validate(unfrozen_value)
+                x = unfrozen_value  # Validators may update the instance inplace
             except AttributeError:
                 jsonschema.validate(instance=unfrozen_value, schema=self.schema)
-        return frozen_value
+        return recursively_freeze(x)
 
     def parse(self, x):
         """

@@ -138,3 +138,7 @@ class DictParameterTest(unittest.TestCase):
         c.normalize({"role": "web", "env": "staging"})
         with pytest.raises(ValidationError, match=r"'UNKNOWN_VALUE' is not one of \['web', 'staging'\]"):
             c.normalize({"role": "UNKNOWN_VALUE", "env": "staging"})
+
+        # Test with frozen data
+        frozen_data = luigi.freezing.recursively_freeze({"role": "web", "env": "staging"})
+        c.normalize(frozen_data)

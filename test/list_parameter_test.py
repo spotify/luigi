@@ -125,3 +125,7 @@ class ListParameterTest(unittest.TestCase):
         c.normalize(valid_list)
         with pytest.raises(ValidationError, match=r"'INVALID_ATTRIBUTE' is not of type 'number'",):
             c.normalize(["INVALID_ATTRIBUTE"])
+
+        # Test with frozen data
+        frozen_data = luigi.freezing.recursively_freeze(valid_list)
+        c.normalize(frozen_data)
