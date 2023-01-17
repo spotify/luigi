@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+from jsonschema import Draft4Validator
 from jsonschema.exceptions import ValidationError
 from helpers import unittest, in_parse
 
@@ -113,6 +114,7 @@ class DictParameterTest(unittest.TestCase):
         with pytest.raises(ValidationError, match=r"'UNKNOWN_VALUE' is not one of \['web', 'staging'\]"):
             b.normalize({"role": "UNKNOWN_VALUE", "env": "staging"})
 
+        # Check that warnings are properly emitted
         with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False):
             with pytest.warns(
                 UserWarning,
@@ -122,3 +124,21 @@ class DictParameterTest(unittest.TestCase):
                 )
             ):
                 luigi.ListParameter(schema={"type": "object"})
+
+        # Test with a custom validator
+        validator = Draft4Validator(
+            schema={
+              "type": "object",
+              "patternProperties": {
+                ".*": {"type": "string", "enum": ["web", "staging"]},
+              },
+            }
+        )
+        c = luigi.DictParameter(schema=validator)
+        c.normalize({"role": "web", "env": "staging"})
+        with pytest.raises(ValidationError, match=r"'UNKNOWN_VALUE' is not one of \['web', 'staging'\]"):
+            c.normalize({"role": "UNKNOWN_VALUE", "env": "staging"})
+
+        # Test with frozen data
+        frozen_data = luigi.freezing.recursively_freeze({"role": "web", "env": "staging"})
+        c.normalize(frozen_data)

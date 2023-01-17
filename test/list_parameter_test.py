@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+from jsonschema import Draft4Validator
 from jsonschema.exceptions import ValidationError
 from helpers import unittest, in_parse
 
@@ -76,10 +77,7 @@ class ListParameterTest(unittest.TestCase):
         )
 
         # Check that the default value is validated
-        with pytest.raises(
-            ValidationError,
-            match=r"'INVALID_ATTRIBUTE' is not of type 'number'",
-        ):
+        with pytest.raises(ValidationError, match=r"'INVALID_ATTRIBUTE' is not of type 'number'"):
             a.normalize(["INVALID_ATTRIBUTE"])
 
         # Check that empty list is not valid
@@ -100,6 +98,7 @@ class ListParameterTest(unittest.TestCase):
         with pytest.raises(ValidationError, match="-999 is less than the minimum of 0"):
             a.normalize(invalid_list_value)
 
+        # Check that warnings are properly emitted
         with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False):
             with pytest.warns(
                 UserWarning,
@@ -109,3 +108,24 @@ class ListParameterTest(unittest.TestCase):
                 )
             ):
                 luigi.ListParameter(schema={"type": "array", "items": {"type": "number"}})
+
+        # Test with a custom validator
+        validator = Draft4Validator(
+            schema={
+                "type": "array",
+                "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 10,
+                },
+                "minItems": 1,
+            }
+        )
+        c = luigi.DictParameter(schema=validator)
+        c.normalize(valid_list)
+        with pytest.raises(ValidationError, match=r"'INVALID_ATTRIBUTE' is not of type 'number'",):
+            c.normalize(["INVALID_ATTRIBUTE"])
+
+        # Test with frozen data
+        frozen_data = luigi.freezing.recursively_freeze(valid_list)
+        c.normalize(frozen_data)

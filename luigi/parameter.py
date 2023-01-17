@@ -1092,6 +1092,26 @@ class DictParameter(Parameter):
 
         $ luigi --module my_tasks MyTask --tags '{"role": "UNKNOWN_VALUE", "env": "staging"}'
 
+    Finally, the provided schema can be a custom validator:
+
+    .. code-block:: python
+
+        custom_validator = jsonschema.Draft4Validator(
+          schema={
+            "type": "object",
+            "patternProperties": {
+              ".*": {"type": "string", "enum": ["web", "staging"]},
+            }
+          }
+        )
+
+        class MyTask(luigi.Task):
+          tags = luigi.DictParameter(schema=custom_validator)
+
+          def run(self):
+            logging.info("Find server with role: %s", self.tags['role'])
+            server = aws.ec2.find_my_resource(self.tags)
+
     """
 
     def __init__(
@@ -1105,7 +1125,9 @@ class DictParameter(Parameter):
                 "The 'jsonschema' package is not installed so the parameter can not be validated "
                 "even though a schema is given."
             )
-        self.schema = schema
+            self.schema = None
+        else:
+            self.schema = schema
         super().__init__(
             *args,
             **kwargs,
@@ -1115,10 +1137,14 @@ class DictParameter(Parameter):
         """
         Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
-        frozen_value = recursively_freeze(value)
         if self.schema is not None:
-            jsonschema.validate(instance=recursively_unfreeze(frozen_value), schema=self.schema)
-        return frozen_value
+            unfrozen_value = recursively_unfreeze(value)
+            try:
+                self.schema.validate(unfrozen_value)
+                value = unfrozen_value  # Validators may update the instance inplace
+            except AttributeError:
+                jsonschema.validate(instance=unfrozen_value, schema=self.schema)
+        return recursively_freeze(value)
 
     def parse(self, source):
         """
@@ -1212,6 +1238,31 @@ class ListParameter(Parameter):
         $ luigi --module my_tasks MyTask --numbers '[]'  # must have at least 1 element
         $ luigi --module my_tasks MyTask --numbers '[-999, 999]'  # elements must be in [0, 10]
 
+    Finally, the provided schema can be a custom validator:
+
+    .. code-block:: python
+
+        custom_validator = jsonschema.Draft4Validator(
+          schema={
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "minItems": 1
+          }
+        )
+
+        class MyTask(luigi.Task):
+          grades = luigi.ListParameter(schema=custom_validator)
+
+          def run(self):
+                sum = 0
+                for element in self.grades:
+                    sum += element
+                avg = sum / len(self.grades)
+
     """
 
     def __init__(
@@ -1225,7 +1276,9 @@ class ListParameter(Parameter):
                 "The 'jsonschema' package is not installed so the parameter can not be validated "
                 "even though a schema is given."
             )
-        self.schema = schema
+            self.schema = None
+        else:
+            self.schema = schema
         super().__init__(
             *args,
             **kwargs,
@@ -1238,10 +1291,14 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
-        frozen_value = recursively_freeze(x)
         if self.schema is not None:
-            jsonschema.validate(instance=recursively_unfreeze(frozen_value), schema=self.schema)
-        return frozen_value
+            unfrozen_value = recursively_unfreeze(x)
+            try:
+                self.schema.validate(unfrozen_value)
+                x = unfrozen_value  # Validators may update the instance inplace
+            except AttributeError:
+                jsonschema.validate(instance=unfrozen_value, schema=self.schema)
+        return recursively_freeze(x)
 
     def parse(self, x):
         """
