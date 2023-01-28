@@ -50,6 +50,7 @@ except ImportError:
     logger.warning("WARNING: kubernetes is not installed. KubernetesJobTask requires kubernetes")
     logger.warning("  Please run 'pip install kubernetes' and try again")
 
+
 class KubernetesJobTask(luigi.Task):
     __DEFAULT_POLL_INTERVAL = 5  # see __track_job
     __DEFAULT_POD_CREATION_INTERVAL = 5
@@ -61,12 +62,12 @@ class KubernetesJobTask(luigi.Task):
         # Configs can be set in Configuration class directly or using helper utility, by default lets try to load in-cluster config
         # and if that fails cascade into using an kube config
         try:
-           kubernetes_api.config.load_incluster_config()
-        except Exception as e:
-           try:
-              kubernetes_api.config.load_kube_config()
-           except Exception as ex:
-              raise ex
+            kubernetes_api.config.load_incluster_config()
+        except Exception:
+            try:
+                kubernetes_api.config.load_kube_config()
+            except Exception as ex:
+                raise ex
 
         # Create our API instances for Kubernetes
         self.__kubernetes_api_instance = kubernetes_api.client.CoreV1Api()
@@ -199,7 +200,6 @@ class KubernetesJobTask(luigi.Task):
         """Delay for initial pod creation for just submitted job in seconds.  Default of 5"""
         return self.__DEFAULT_POD_CREATION_INTERVAL
 
-
     def __is_scaling_in_progress(self, condition, messages):
         """Parses condition and messages, returns true if cluster is currently scaling up"""
 
@@ -218,25 +218,21 @@ class KubernetesJobTask(luigi.Task):
                 if current_nodes <= target_nodes:
                     return True
 
-
     def __has_scaling_failed(self, condition, messages):
         """Parses messages from kubectl events to see if scaling up failed"""
         try:
             # If we're not unschedulable then stop processing...
             if condition.reason != 'Unschedulable':
                 return False
-
             # Check our messages for the can't scale up message
             for message in messages:
                 # Check if our status message is about that we can't scale up, if so exit immediately
                 if "pod didn't trigger scale-up (it wouldn" in message:
                     # We return here immediately on purpose, instead of the delayed return below
                     return True
-        except:
+        except Exception:
             pass
-
         return False
-
 
     def __track_job(self):
         """Poll job status while active"""
@@ -269,18 +265,21 @@ class KubernetesJobTask(luigi.Task):
         pass
 
     def __get_pods_events(self, pod_name):
-        api_response = self.__kubernetes_api_instance.list_namespaced_event(namespace=self.kubernetes_namespace, limit=10, field_selector="involvedObject.name=" + pod_name)
+        api_response = self.__kubernetes_api_instance.list_namespaced_event(
+            namespace=self.kubernetes_namespace, limit=10, field_selector="involvedObject.name=" + pod_name)
         output_messages = []
         for item in api_response.items:
             output_messages.append(item.message)
         return output_messages
 
     def __get_pods(self):
-        api_response = self.__kubernetes_api_instance.list_namespaced_pod(namespace=self.kubernetes_namespace, limit=10, label_selector="job-name=" + self.uu_name)
+        api_response = self.__kubernetes_api_instance.list_namespaced_pod(
+            namespace=self.kubernetes_namespace, limit=10, label_selector="job-name=" + self.uu_name)
         return api_response.items
 
     def __get_job(self):
-        api_response = self.__kubernetes_batch_instance.list_namespaced_job(namespace=self.kubernetes_namespace, limit=10, label_selector="luigi_task_id=" + self.job_uuid)
+        api_response = self.__kubernetes_batch_instance.list_namespaced_job(
+            namespace=self.kubernetes_namespace, limit=10, label_selector="luigi_task_id=" + self.job_uuid)
         assert len(api_response.items) == 1, "Kubernetes job " + self.uu_name + " not found"
         return api_response.items[0]
 
@@ -418,7 +417,10 @@ class KubernetesJobTask(luigi.Task):
 
     def __delete_job_cascade(self, job):
         self.__logger.debug("Deleting Kubernetes job " + job.metadata.name + " upon request")
-        api_response = self.__kubernetes_batch_instance.delete_namespaced_job(job.metadata.name, self.kubernetes_namespace, body={"grace_period_seconds": 0, "propagation_policy": "Background"})
+        api_response = self.__kubernetes_batch_instance.delete_namespaced_job(
+            job.metadata.name,
+            self.kubernetes_namespace,
+            body={"grace_period_seconds": 0, "propagation_policy": "Background"})
         # Verify if we deleted properly
         if "succeeded': 1" in api_response.status:
             self.__logger.debug("Deleting Kubernetes job " + job.metadata.name + " succeeded")
@@ -475,7 +477,7 @@ class KubernetesJobTask(luigi.Task):
             api_response = self.__kubernetes_batch_instance.create_namespaced_job(self.kubernetes_namespace, body)
             self.__logger.info("Successfully Created Kubernetes Job uid: " + api_response.metadata.uid)
         except kubernetes_api.client.rest.ApiException as e:
-           print("Exception when calling BatchV1Api->create_namespaced_job: %s\n" % e)
+            print("Exception when calling BatchV1Api->create_namespaced_job: %s\n" % e)
 
         # Track the Job (wait while active)
         self.__logger.info("Start tracking Kubernetes Job: " + self.uu_name)

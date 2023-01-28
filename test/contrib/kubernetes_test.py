@@ -35,7 +35,7 @@ Written and maintained by Marco Capuccini (@mcapuccini).
 import unittest
 import luigi
 import logging
-import mock
+# import mock
 from luigi.contrib.kubernetes import KubernetesJobTask
 
 import pytest
@@ -46,6 +46,17 @@ try:
     import kubernetes as kubernetes_api
 except ImportError:
     raise unittest.SkipTest('kubernetes is not installed. This test requires kubernetes.')
+
+# Configs can be set in Configuration class directly or using helper utility, by default lets try to load in-cluster config
+# and if that fails cascade into using an kube config
+kubernetes_core_api = kubernetes_api.client.CoreV1Api()
+try:
+    kubernetes_api.config.load_incluster_config()
+except Exception:
+    try:
+        kubernetes_api.config.load_kube_config()
+    except Exception as ex:
+        raise ex
 
 
 class SuccessJob(KubernetesJobTask):
@@ -58,13 +69,14 @@ class SuccessJob(KubernetesJobTask):
         }]
     }
 
+
 class FailJob(KubernetesJobTask):
     name = "fail"
     spec_schema = {
         "containers": [{
             "name": "fail",
-             "image": "alpine:3.4",
-             "command": ["You",  "Shall", "Not", "Pass"]
+            "image": "alpine:3.4",
+            "command": ["You",  "Shall", "Not", "Pass"]
         }]
     }
 
@@ -121,7 +133,6 @@ class TestK8STask(unittest.TestCase):
     #     print(pods)
     #
 
-
     # def test_fail_job(self):
     #     fail = FailJob()
     #     self.assertRaises(RuntimeError, fail.run)
@@ -140,7 +151,6 @@ class TestK8STask(unittest.TestCase):
     #     kubernetes_job._KubernetesJobTask__track_job()
     #     # Make sure successful job signals
     #     self.assertTrue(mock_signal.called)
-
 
     # TODO:
     #

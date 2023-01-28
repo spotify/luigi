@@ -55,6 +55,7 @@ For more see: https://kubernetes.io/docs/tasks/access-application-cluster/config
 # import luigi
 from luigi.contrib.kubernetes import KubernetesJobTask
 
+
 class PerlPi(KubernetesJobTask):
 
     name = "pi"                         # The name (prefix) of the job that will be created for identification purposes
