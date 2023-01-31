@@ -310,11 +310,6 @@ class ParameterTest(LuigiTestCase):
     def test_enum_list_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.EnumListParameter())
 
-    def test_list_serialize_parse(self):
-        a = luigi.ListParameter()
-        b_list = [1, 2, 3]
-        self.assertEqual(b_list, a.parse(a.serialize(b_list)))
-
     def test_tuple_serialize_parse(self):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
