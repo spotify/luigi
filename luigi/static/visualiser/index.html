@@ -167,35 +167,53 @@
             {{/is_disabled}}
                 <div class="box-header with-border">
                     <h3 class="box-title">{{name}}</h3>
-                    <div class="box-tools pull-right">
-                      {{#num_unread_rpc_messages}}
-                      <span class="label-unread-worker-messages">{{num_unread_rpc_messages}} unread message(s)</span>
-                      {{/num_unread_rpc_messages}}
-                      {{^is_disabled}}
-                      {{#workers}}
-                      <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                          Workers: <span id="label-n-workers" data-worker="{{name}}">{{workers}}</span> <span class="caret"></span>
+                    <div class="pull-right">
+                      <span class="btn-group">
+                        <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-worker-custom-disconnect-delay" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          Custom disconnect delay: <span id="label-custom-disconnect-delay" data-worker="{{name}}">{{custom_disconnect_delay}}</span> <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu">
-                          <li><a href="#" id="btn-increment-workers" data-worker="{{name}}">
-                            <i class="glyphicon glyphicon-plus"></i> Add 1 worker
+                          <li><a href="#" id="btn-set-worker-custom-disconnect-delay-no" data-worker="{{name}}">
+                             no
                           </a></li>
-                          <li><a href="#" id="btn-decrement-workers" data-worker="{{name}}">
-                            <i class="glyphicon glyphicon-minus"></i> Remove 1 worker
+                          <li><a href="#" id="btn-set-worker-custom-disconnect-delay-60" data-worker="{{name}}">
+                             60s
                           </a></li>
-                          <li><a href="#" id="btn-set-workers" data-toggle="modal" data-target="#setWorkersModal" data-worker="{{name}}">
-                            <i class="glyphicon glyphicon-pencil"></i> Set workers ...
+                          <li><a href="#" id="btn-set-worker-custom-disconnect-delay-3600" data-worker="{{name}}">
+                             3600s
                           </a></li>
                         </ul>
-                      </div>
-                      {{/workers}}
-                      <div class="button-tooltip" data-toggle="tooltip" title="Disable Worker">
-                        <button type="button" class="btn btn-sm btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
-                          <i class="fa fa-fire-extinguisher"></i>
-                        </button>
-                      </div>
-                      {{/is_disabled}}
+                      </span>
+                      <span class="box-tools">
+                        {{#num_unread_rpc_messages}}
+                        <span class="label-unread-worker-messages">{{num_unread_rpc_messages}} unread message(s)</span>
+                        {{/num_unread_rpc_messages}}
+                        {{^is_disabled}}
+                        {{#workers}}
+                        <div class="btn-group">
+                          <button type="button" class="btn btn-sm btn-default dropdown-toggle btn-set-workers" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Workers: <span id="label-n-workers" data-worker="{{name}}">{{workers}}</span> <span class="caret"></span>
+                          </button>
+                          <ul class="dropdown-menu">
+                            <li><a href="#" id="btn-increment-workers" data-worker="{{name}}">
+                              <i class="glyphicon glyphicon-plus"></i> Add 1 worker
+                            </a></li>
+                            <li><a href="#" id="btn-decrement-workers" data-worker="{{name}}">
+                              <i class="glyphicon glyphicon-minus"></i> Remove 1 worker
+                            </a></li>
+                            <li><a href="#" id="btn-set-workers" data-toggle="modal" data-target="#setWorkersModal" data-worker="{{name}}">
+                              <i class="glyphicon glyphicon-pencil"></i> Set workers ...
+                            </a></li>
+                          </ul>
+                        </div>
+                        {{/workers}}
+                        <div class="button-tooltip" data-toggle="tooltip" title="Disable Worker">
+                          <button type="button" class="btn btn-sm btn-danger btn-disable-worker" data-toggle="modal" data-target="#disableWorkerModal" data-worker="{{name}}">
+                            <i class="fa fa-fire-extinguisher"></i>
+                          </button>
+                        </div>
+                        {{/is_disabled}}
+                      </span>
                     </div>
                 </div>
                 <div class="box-body">
