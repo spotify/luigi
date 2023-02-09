@@ -219,6 +219,55 @@ class TaskTest(unittest.TestCase):
                 )
 
 
+class TaskFlattenOutputTest(unittest.TestCase):
+    def test_single_task(self):
+        expected = [luigi.LocalTarget("f1.txt"), luigi.LocalTarget("f2.txt")]
+
+        class TestTask(luigi.ExternalTask):
+            def output(self):
+                return expected
+
+        self.assertListEqual(luigi.task.flatten_output(TestTask()), expected)
+
+    def test_wrapper_task(self):
+        expected = [luigi.LocalTarget("f1.txt"), luigi.LocalTarget("f2.txt")]
+
+        class Test1Task(luigi.ExternalTask):
+            def output(self):
+                return expected[0]
+
+        class Test2Task(luigi.ExternalTask):
+            def output(self):
+                return expected[1]
+
+        @luigi.util.requires(Test1Task, Test2Task)
+        class TestWrapperTask(luigi.WrapperTask):
+            pass
+
+        self.assertListEqual(luigi.task.flatten_output(TestWrapperTask()), expected)
+
+    def test_wrapper_tasks_diamond(self):
+        expected = [luigi.LocalTarget("file.txt")]
+
+        class TestTask(luigi.ExternalTask):
+            def output(self):
+                return expected
+
+        @luigi.util.requires(TestTask)
+        class LeftWrapperTask(luigi.WrapperTask):
+            pass
+
+        @luigi.util.requires(TestTask)
+        class RightWrapperTask(luigi.WrapperTask):
+            pass
+
+        @luigi.util.requires(LeftWrapperTask, RightWrapperTask)
+        class MasterWrapperTask(luigi.WrapperTask):
+            pass
+
+        self.assertListEqual(luigi.task.flatten_output(MasterWrapperTask()), expected)
+
+
 class ExternalizeTaskTest(LuigiTestCase):
 
     def test_externalize_taskclass(self):
