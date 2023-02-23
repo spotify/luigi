@@ -55,11 +55,12 @@ def _urljoin(base, url):
     """
     Join relative URLs to base URLs like urllib.parse.urljoin but support
     arbitrary URIs (esp. 'http+unix://').
+    base part is fixed or mounted point, every url contains full base part.
     """
     parsed = urlparse(base)
     scheme = parsed.scheme
     return urlparse(
-        urljoin(parsed._replace(scheme='http').geturl(), url)
+        urljoin(parsed._replace(scheme='http').geturl(), parsed.path + (url if url[0] == '/' else '/' + url))
     )._replace(scheme=scheme).geturl()
 
 
