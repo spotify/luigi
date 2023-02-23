@@ -1514,7 +1514,7 @@ class RangeInstantiationTest(LuigiTestCase):
 
     def test_old_instantiation(self):
         """
-        Verify that you can still programatically set of param as string
+        Verify that you can still programmatically set of param as string
         """
         class MyTask(luigi.Task):
             date_param = luigi.DateParameter()
