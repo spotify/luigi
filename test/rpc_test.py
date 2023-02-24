@@ -38,6 +38,14 @@ class RemoteSchedulerTest(unittest.TestCase):
                     s._fetch(suffix, '{}')
                     fetcher.fetch.assert_called_once_with('http://zorg.com/api/123', '{}', 42)
 
+    def testUrlArgumentVariationsNotRoot(self):
+        for url in ['http://zorg.com/subpath', 'http://zorg.com/subpath/']:
+            for suffix in ['api/123', '/api/123']:
+                s = luigi.rpc.RemoteScheduler(url, 42)
+                with mock.patch.object(s, '_fetcher') as fetcher:
+                    s._fetch(suffix, '{}')
+                    fetcher.fetch.assert_called_once_with('http://zorg.com/subpath/api/123', '{}', 42)
+
     def get_work(self, fetcher_side_effect):
         scheduler = luigi.rpc.RemoteScheduler('http://zorg.com', 42)
         scheduler._rpc_retry_wait = 1  # shorten wait time to speed up tests
