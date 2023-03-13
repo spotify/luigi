@@ -242,6 +242,15 @@ Graph = (function() {
         return element;
     }
 
+    function escapeHtml(unsafe) {
+        return unsafe
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+    }
+
     DependencyGraph.prototype.renderGraph = function() {
         var self = this;
 
@@ -269,7 +278,7 @@ Graph = (function() {
             $(svgLink(node.trackingUrl))
                 .append(
                     $(svgElement("text"))
-                    .text(node.name)
+                    .text(escapeHtml(node.name))
                     .attr("y", 3))
                 .attr("class","graph-node-a")
                 .attr("data-task-status", node.status)
@@ -284,7 +293,7 @@ Graph = (function() {
                     container: 'body',
                     html: true,
                     placement: 'top',
-                    content: content
+                    content: escapeHtml(content)
                 });
         });
 
@@ -313,7 +322,7 @@ Graph = (function() {
                 .appendTo(legend);
 
             $(svgElement("text"))
-                .text(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase().replace(/_./gi, function (x) { return " " + x[1].toUpperCase(); }))
+                .text(escapeHtml(key.charAt(0).toUpperCase() + key.substring(1).toLowerCase().replace(/_./gi, function (x) { return " " + x[1].toUpperCase(); })))
                 .attr("x", legendLineHeight + 14)
                 .attr("y", legendLineHeight+(x*legendLineHeight))
                 .appendTo(legend);
