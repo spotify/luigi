@@ -78,6 +78,10 @@ class DockerTask(luigi.Task):
         return None
 
     @property
+    def host_config_options(self):
+        return {}
+
+    @property
     def container_options(self):
         return {}
 
@@ -192,7 +196,8 @@ class DockerTask(luigi.Task):
                          % (self._image, self.command, self._binds))
 
             host_config = self._client.create_host_config(binds=self._binds,
-                                                          network_mode=self.network_mode)
+                                                          network_mode=self.network_mode,
+                                                          **self.host_config_options)
 
             container = self._client.create_container(self._image,
                                                       command=self.command,
