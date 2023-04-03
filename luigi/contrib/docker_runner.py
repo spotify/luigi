@@ -79,10 +79,22 @@ class DockerTask(luigi.Task):
 
     @property
     def host_config_options(self):
+        '''
+        Override this to specify host_config options like gpu requests or shm
+        size e.g. `{"device_requests": [docker.types.DeviceRequest(count=1, capabilities=[["gpu"]])]}`
+
+        See https://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_host_config
+        '''
         return {}
 
     @property
     def container_options(self):
+        '''
+        Override this to specify container options like user or ports e.g.
+        `{"user": f"{os.getuid()}:{os.getgid()}"}`
+
+        See https://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
+        '''
         return {}
 
     @property
