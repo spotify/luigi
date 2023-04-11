@@ -220,7 +220,7 @@ class TaskTest(unittest.TestCase):
 
     @with_config(
         {
-            "TaskA": {
+            "TaskEdgeCase": {
                 "camelParam": "camelCase",
                 "underscore_param": "underscore",
                 "dash-param": "dash",
@@ -228,7 +228,7 @@ class TaskTest(unittest.TestCase):
         }
     )
     def test_unconsumed_params_edge_cases(self):
-        class TaskA(luigi.Task):
+        class TaskEdgeCase(luigi.Task):
             camelParam = luigi.Parameter()
             underscore_param = luigi.Parameter()
             dash_param = luigi.Parameter()
@@ -243,11 +243,39 @@ class TaskTest(unittest.TestCase):
                 category=luigi.parameter.UnconsumedParameterWarning,
             )
 
-            task = TaskA()
+            task = TaskEdgeCase()
             assert len(w) == 0
             assert task.camelParam == "camelCase"
             assert task.underscore_param == "underscore"
             assert task.dash_param == "dash"
+
+    @with_config(
+        {
+            "TaskIgnoreUnconsumed": {
+                "a": "a",
+                "b": "b",
+                "c": "c",
+            },
+        }
+    )
+    def test_unconsumed_params_ignore_unconsumed(self):
+        class TaskIgnoreUnconsumed(luigi.Task):
+            ignore_unconsumed = {"b", "d"}
+
+            a = luigi.Parameter()
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.filterwarnings(
+                action="ignore",
+                category=Warning,
+            )
+            warnings.simplefilter(
+                action="always",
+                category=luigi.parameter.UnconsumedParameterWarning,
+            )
+
+            TaskIgnoreUnconsumed()
+            assert len(w) == 1
 
 
 class TaskFlattenOutputTest(unittest.TestCase):
