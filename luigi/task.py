@@ -438,6 +438,7 @@ class Task(metaclass=Register):
             cls._unconsumed_params = set()
         if task_family in conf.sections():
             for key, value in conf[task_family].items():
+                key = key.replace('-', '_')
                 composite_key = f"{task_family}_{key}"
                 if key not in result and composite_key not in cls._unconsumed_params:
                     warnings.warn(
