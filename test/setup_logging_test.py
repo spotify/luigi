@@ -31,10 +31,34 @@ class TestDaemonLogging(unittest.TestCase):
         self.assertFalse(result)
 
     def test_section(self):
-        self.cls.config = {'logging': {
-            'version': 1,
-            'disable_existing_loggers': False,
-        }}
+        self.cls.config = {
+            'logging': {
+                'version': 1,
+                'disable_existing_loggers': False,
+                'formatters': {
+                    'mockformatter': {
+                        'format': '{levelname}: {message}',
+                        'style': '{',
+                        'datefmt': '%Y-%m-%d %H:%M:%S',
+                    },
+                },
+                'handlers': {
+                    'mockhandler': {
+                        'class': 'logging.StreamHandler',
+                        'level': 'INFO',
+                        'formatter': 'mockformatter',
+                    },
+                },
+                'mockloggers': {
+                    'mocklogger': {
+                        'handlers': ('mockhandler',),
+                        'level': 'INFO',
+                        'disabled': False,
+                        'propagate': False,
+                    },
+                },
+            },
+        }
         result = self.cls._section(None)
         self.assertTrue(result)
 
