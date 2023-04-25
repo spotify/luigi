@@ -49,7 +49,7 @@ class TestDaemonLogging(unittest.TestCase):
                         'formatter': 'mockformatter',
                     },
                 },
-                'mockloggers': {
+                'loggers': {
                     'mocklogger': {
                         'handlers': ('mockhandler',),
                         'level': 'INFO',
