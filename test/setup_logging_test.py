@@ -49,7 +49,7 @@ class TestDaemonLogging(unittest.TestCase):
                         'formatter': 'mockformatter',
                     },
                 },
-                'mockloggers': {
+                'loggers': {
                     'mocklogger': {
                         'handlers': ('mockhandler',),
                         'level': 'INFO',
@@ -59,6 +59,11 @@ class TestDaemonLogging(unittest.TestCase):
                 },
             },
         }
+        result = self.cls._section(None)
+        self.assertTrue(result)
+
+        self.cls.config = LuigiTomlParser()
+        self.cls.config.read(['./test/testconfig/luigi_logging.toml'])
         result = self.cls._section(None)
         self.assertTrue(result)
 
