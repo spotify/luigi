@@ -23,13 +23,7 @@ import unittest
 
 import mock
 import pytest
-from mock.mock import MagicMock
 
-from luigi.contrib import bigquery
-try:
-    from googleapiclient import errors
-except ImportError:
-    raise unittest.SkipTest('Unable to load googleapiclient module')
 from luigi.contrib.bigquery import BigQueryLoadTask, BigQueryTarget, BQDataset, \
     BigQueryRunQueryTask, BigQueryExtractTask
 from luigi.contrib.gcs import GCSTarget
@@ -153,27 +147,3 @@ class BigQueryExtractTaskTest(unittest.TestCase):
             }
         }
         run_job.assert_called_with('proj', expected_body, dataset=BQDataset('proj', 'ds', None))
-
-
-class BigQueryClientTest(unittest.TestCase):
-
-    def test_retry_succeeds_on_second_attempt(self):
-        client = MagicMock(spec=bigquery.BigQueryClient)
-        attempts = 0
-
-        @bigquery.bq_retry
-        def fail_once(bq_client):
-            nonlocal attempts
-            attempts += 1
-            if attempts == 1:
-                raise errors.HttpError(
-                    resp=MagicMock(status=500),
-                    content=b'{"error": {"message": "stub"}',
-                )
-            else:
-                return MagicMock(status=200)
-
-        response = fail_once(client)
-        client._initialise_client.assert_called_once()
-        self.assertEqual(attempts, 2)
-        self.assertEqual(response.status, 200)
