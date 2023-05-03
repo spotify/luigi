@@ -174,6 +174,6 @@ class BigQueryClientTest(unittest.TestCase):
                 return MagicMock(status=200)
 
         response = fail_once(client)
-
+        client._initialise_client.assert_called_once()
         self.assertEqual(attempts, 2)
         self.assertEqual(response.status, 200)
