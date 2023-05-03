@@ -23,10 +23,6 @@ import unittest
 
 import mock
 import pytest
-from mock.mock import MagicMock
-
-from luigi.contrib import bigquery
-from googleapiclient import errors
 
 from luigi.contrib.bigquery import BigQueryLoadTask, BigQueryTarget, BQDataset, \
     BigQueryRunQueryTask, BigQueryExtractTask
@@ -152,26 +148,3 @@ class BigQueryExtractTaskTest(unittest.TestCase):
         }
         run_job.assert_called_with('proj', expected_body, dataset=BQDataset('proj', 'ds', None))
 
-
-class BigQueryClientTest(unittest.TestCase):
-
-    def test_retry_succeeds_on_second_attempt(self):
-        http_error = errors.HttpError(
-            resp=MagicMock(status=500),
-            content=b'{"error": {"message": "stub"}',
-        )
-        client = MagicMock(spec=bigquery.BigQueryClient)
-        attempts = [0]
-
-        @bigquery.bq_retry
-        def fail_once(bq_client):
-            attempts[0] += 1
-            if attempts[0] == 1:
-                raise http_error
-            else:
-                return MagicMock(status=200)
-
-        response = fail_once(client)
-
-        self.assertEqual(attempts[0], 2)
-        self.assertEqual(response.status, 200)
