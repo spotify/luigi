@@ -158,10 +158,6 @@ class BigQueryExtractTaskTest(unittest.TestCase):
 class BigQueryClientTest(unittest.TestCase):
 
     def test_retry_succeeds_on_second_attempt(self):
-        http_error = errors.HttpError(
-            resp=MagicMock(status=500),
-            content=b'{"error": {"message": "stub"}',
-        )
         client = MagicMock(spec=bigquery.BigQueryClient)
         attempts = [0]
 
@@ -169,7 +165,10 @@ class BigQueryClientTest(unittest.TestCase):
         def fail_once(bq_client):
             attempts[0] += 1
             if attempts[0] == 1:
-                raise http_error
+                raise errors.HttpError(
+                    resp=MagicMock(status=500),
+                    content=b'{"error": {"message": "stub"}',
+                )
             else:
                 return MagicMock(status=200)
 
