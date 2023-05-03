@@ -152,12 +152,9 @@ class BigQueryClient:
         self.descriptor = descriptor
         self.http_ = http_
 
-        self.__initialise_client()
+        self.initialise_client()
 
     def initialise_client(self):
-        self.__initialise_client()
-
-    def __initialise_client(self):
         authenticate_kwargs = gcp.get_authenticate_kwargs(self.oauth_credentials, self.http_)
 
         if self.descriptor:
