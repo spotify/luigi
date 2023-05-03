@@ -26,10 +26,7 @@ import pytest
 from mock.mock import MagicMock
 
 from luigi.contrib import bigquery
-try:
-    from googleapiclient import errors
-except ImportError:
-    raise unittest.SkipTest('Unable to load googleapiclient module')
+from googleapiclient import errors
 from luigi.contrib.bigquery import BigQueryLoadTask, BigQueryTarget, BQDataset, \
     BigQueryRunQueryTask, BigQueryExtractTask
 from luigi.contrib.gcs import GCSTarget
