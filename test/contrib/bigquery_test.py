@@ -160,8 +160,8 @@ class BigQueryClientTest(unittest.TestCase):
             resp=MagicMock(status=500),
             content=b'{"error": {"message": "stub"}',
         )
-        client = bigquery.BigQueryClient()
-        attempts = 0
+        client = MagicMock(spec=bigquery.BigQueryClient)
+        attempts = [0]
 
         @bigquery.bq_retry
         def fail_once(bq_client):
