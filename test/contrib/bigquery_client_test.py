@@ -16,7 +16,7 @@
 #
 
 """
-These are the unit tests for the BigQueryLoadAvro class.
+These are the unit tests for the BigQueryClient class.
 """
 
 import unittest
