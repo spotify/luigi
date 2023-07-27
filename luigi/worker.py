@@ -29,6 +29,7 @@ ways between versions. The exception is the exception types and the
 """
 
 import collections
+import collections.abc
 import datetime
 import getpass
 import importlib
@@ -47,7 +48,6 @@ import socket
 import threading
 import time
 import traceback
-import types
 
 from luigi import notifications
 from luigi.event import Event
@@ -137,7 +137,7 @@ class TaskProcess(multiprocessing.Process):
     def _run_get_new_deps(self):
         task_gen = self.task.run()
 
-        if not isinstance(task_gen, types.GeneratorType):
+        if not isinstance(task_gen, collections.abc.Generator):
             return None
 
         next_send = None
