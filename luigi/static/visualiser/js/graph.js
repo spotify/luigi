@@ -277,14 +277,14 @@ Graph = (function() {
                 .appendTo(g);
 
             var titleText = node.name;
-            var content = $.map(node.params, function (value, name) { return name + ": " + value; }).join("<br>");
+            var content = $.map(node.params, function (value, name) { return escapeHtml(name + ": " + value); }).join("<br>");
             g.attr("title", titleText)
                 .popover({
                     trigger: 'hover',
                     container: 'body',
                     html: true,
                     placement: 'top',
-                    content: escapeHtml(content)
+                    content: content
                 });
         });
 
