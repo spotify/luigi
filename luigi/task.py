@@ -437,9 +437,11 @@ class Task(metaclass=Register):
         if not hasattr(cls, "_unconsumed_params"):
             cls._unconsumed_params = set()
         if task_family in conf.sections():
+            ignore_unconsumed = getattr(cls, 'ignore_unconsumed', set())
             for key, value in conf[task_family].items():
+                key = key.replace('-', '_')
                 composite_key = f"{task_family}_{key}"
-                if key not in result and composite_key not in cls._unconsumed_params:
+                if key not in result and key not in ignore_unconsumed and composite_key not in cls._unconsumed_params:
                     warnings.warn(
                         "The configuration contains the parameter "
                         f"'{key}' with value '{value}' that is not consumed by the task "
