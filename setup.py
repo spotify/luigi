@@ -38,7 +38,7 @@ with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
 install_requires = [
-    'tornado>=4.0,<=5.1.0',
+    'tornado>=4.0,<=6.2',
     'python-daemon<3.0',
     'enum34>1.1.0 ; python_version < "3.4"'
 ]
@@ -52,7 +52,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.7.5+affirm.1.4.5',
+    version='2.7.5+affirm.1.4.6',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',
