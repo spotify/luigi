@@ -1,0 +1,18 @@
+[logging]
+version = 1
+disable_existing_loggers = false
+
+[logging.formatters.mockformatter]
+format = "{levelname}: {message}"
+style = "{"
+
+[logging.handlers.mockhandler]
+class = "logging.StreamHandler"
+level = "INFO"
+formatter = "mockformatter"
+
+[logging.loggers.mocklogger]
+handlers = ["mockhandler"]
+level = 'INFO'
+disabled = false
+propagate = false

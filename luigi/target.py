@@ -87,7 +87,7 @@ class FileSystem(metaclass=abc.ABCMeta):
     FileSystem abstraction used in conjunction with :py:class:`FileSystemTarget`.
 
     Typically, a FileSystem is associated with instances of a :py:class:`FileSystemTarget`. The
-    instances of the py:class:`FileSystemTarget` will delegate methods such as
+    instances of the :py:class:`FileSystemTarget` will delegate methods such as
     :py:meth:`FileSystemTarget.exists` and :py:meth:`FileSystemTarget.remove` to the FileSystem.
 
     Methods of FileSystem raise :py:class:`FileSystemException` if there is a problem completing the
@@ -284,7 +284,7 @@ class FileSystemTarget(Target):
                     with self.output().temporary_path() as self.temp_output_path:
                         run_some_external_command(output_path=self.temp_output_path)
         """
-        num = random.randrange(0, 1e10)
+        num = random.randrange(0, 10_000_000_000)
         slashless_path = self.path.rstrip('/').rstrip("\\")
         _temp_path = '{}-luigi-tmp-{:010}{}'.format(
             slashless_path,
@@ -328,7 +328,7 @@ class AtomicLocalFile(io.BufferedWriter):
         self.move_to_final_destination()
 
     def generate_tmp_path(self, path):
-        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 1e10))
+        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 10_000_000_000))
 
     def move_to_final_destination(self):
         raise NotImplementedError()

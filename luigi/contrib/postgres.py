@@ -19,6 +19,7 @@ Implements a subclass of :py:class:`~luigi.target.Target` that writes data to Po
 Also provides a helper task to copy data into a Postgres table.
 """
 
+import os
 import datetime
 import logging
 import re
@@ -29,12 +30,77 @@ from luigi.contrib import rdbms
 
 logger = logging.getLogger('luigi-interface')
 
-try:
-    import psycopg2
-    import psycopg2.errorcodes
-    import psycopg2.extensions
-except ImportError:
-    logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
+DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
+
+DB_ERROR_CODES = {}
+ERROR_DUPLICATE_TABLE = 'duplicate_table'
+ERROR_UNDEFINED_TABLE = 'undefined_table'
+
+dbapi = None
+
+if DB_DRIVER == 'psycopg2':
+    try:
+        import psycopg2 as dbapi
+
+        def update_error_codes():
+            import psycopg2.errorcodes
+
+            DB_ERROR_CODES.update({
+                psycopg2.errorcodes.DUPLICATE_TABLE: ERROR_DUPLICATE_TABLE,
+                psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
+            })
+        update_error_codes()
+    except ImportError:
+        pass
+
+if dbapi is None or DB_DRIVER == 'pg8000':
+    try:
+        import pg8000.dbapi as dbapi  # noqa: F811
+        import pg8000.core
+        # pg8000 doesn't have an error code catalog so we need to make our own
+        # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
+        DB_ERROR_CODES.update({'42P07': ERROR_DUPLICATE_TABLE, '42P01': ERROR_UNDEFINED_TABLE})
+    except ImportError:
+        pass
+
+
+if dbapi is None:
+    logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. "
+                   "Will crash at runtime if postgres functionality is used.")
+
+
+def _is_pg8000_error(exception):
+    try:
+        return isinstance(exception, dbapi.DatabaseError) and \
+            isinstance(exception.args, tuple) and \
+            isinstance(exception.args[0], dict) and \
+            pg8000.core.RESPONSE_CODE in exception.args[0]
+    except NameError:
+        return False
+
+
+def _pg8000_connection_reset(connection):
+    cursor = connection.cursor()
+    if connection.autocommit:
+        cursor.execute("DISCARD ALL")
+    else:
+        cursor.execute("ABORT")
+        cursor.execute("BEGIN TRANSACTION")
+    cursor.close()
+
+
+def db_error_code(exception):
+    try:
+        error_code = None
+        if hasattr(exception, 'pgcode'):
+            error_code = exception.pgcode
+        elif _is_pg8000_error(exception):
+            error_code = exception.args[0][pg8000.core.RESPONSE_CODE]
+
+        return DB_ERROR_CODES.get(error_code)
+    except TypeError as error:
+        error.__cause__ = exception
+        raise error
 
 
 class MultiReplacer:
@@ -61,7 +127,7 @@ class MultiReplacer:
         >>> MultiReplacer(replace_pairs)("ab")
         'xb'
     """
-# TODO: move to misc/util module
+    # TODO: move to misc/util module
 
     def __init__(self, replace_pairs):
         """
@@ -111,7 +177,7 @@ class PostgresTarget(luigi.Target):
     use_db_timestamps = True
 
     def __init__(
-        self, host, database, user, password, table, update_id, port=None
+            self, host, database, user, password, table, update_id, port=None
     ):
         """
         Args:
@@ -175,8 +241,8 @@ class PostgresTarget(luigi.Target):
                            (self.update_id,)
                            )
             row = cursor.fetchone()
-        except psycopg2.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE:
+        except dbapi.DatabaseError as e:
+            if db_error_code(e) == ERROR_UNDEFINED_TABLE:
                 row = None
             else:
                 raise
@@ -184,9 +250,9 @@ class PostgresTarget(luigi.Target):
 
     def connect(self):
         """
-        Get a psycopg2 connection object to the database where the table is.
+        Get a DBAPI 2.0 connection object to the database where the table is.
         """
-        connection = psycopg2.connect(
+        connection = dbapi.connect(
             host=self.host,
             port=self.port,
             database=self.database,
@@ -219,8 +285,8 @@ class PostgresTarget(luigi.Target):
 
         try:
             cursor.execute(sql)
-        except psycopg2.ProgrammingError as e:
-            if e.pgcode == psycopg2.errorcodes.DUPLICATE_TABLE:
+        except dbapi.DatabaseError as e:
+            if db_error_code(e) == ERROR_DUPLICATE_TABLE:
                 pass
             else:
                 raise
@@ -261,7 +327,7 @@ class CopyToTable(rdbms.CopyToTable):
         else:
             return default_escape(str(value))
 
-# everything below will rarely have to be overridden
+    # everything below will rarely have to be overridden
 
     def output(self):
         """
@@ -286,7 +352,18 @@ class CopyToTable(rdbms.CopyToTable):
             column_names = [c[0] for c in self.columns]
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
-        cursor.copy_from(file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
+
+        # cursor.copy_from is not available in pg8000
+        if hasattr(cursor, 'copy_from'):
+            cursor.copy_from(
+                file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
+        else:
+            copy_sql = (
+                "COPY {table} ({column_list}) FROM STDIN "
+                "WITH (FORMAT text, NULL '{null_string}', DELIMITER '{delimiter}')"
+            ).format(table=self.table, delimiter=self.column_separator, null_string=r'\\N',
+                     column_list=", ".join(column_names))
+            cursor.execute(copy_sql, stream=file)
 
     def run(self):
         """
@@ -327,11 +404,15 @@ class CopyToTable(rdbms.CopyToTable):
                 self.post_copy(connection)
                 if self.enable_metadata_columns:
                     self.post_copy_metacolumns(cursor)
-            except psycopg2.ProgrammingError as e:
-                if e.pgcode == psycopg2.errorcodes.UNDEFINED_TABLE and attempt == 0:
+            except dbapi.DatabaseError as e:
+                if db_error_code(e) == ERROR_UNDEFINED_TABLE and attempt == 0:
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)
-                    connection.reset()
+                    # reset() is a psycopg2-specific method
+                    if hasattr(connection, 'reset'):
+                        connection.reset()
+                    else:
+                        _pg8000_connection_reset(connection)
                     self.create_table(connection)
                 else:
                     raise

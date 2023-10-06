@@ -31,10 +31,39 @@ class TestDaemonLogging(unittest.TestCase):
         self.assertFalse(result)
 
     def test_section(self):
-        self.cls.config = {'logging': {
-            'version': 1,
-            'disable_existing_loggers': False,
-        }}
+        self.cls.config = {
+            'logging': {
+                'version': 1,
+                'disable_existing_loggers': False,
+                'formatters': {
+                    'mockformatter': {
+                        'format': '{levelname}: {message}',
+                        'style': '{',
+                        'datefmt': '%Y-%m-%d %H:%M:%S',
+                    },
+                },
+                'handlers': {
+                    'mockhandler': {
+                        'class': 'logging.StreamHandler',
+                        'level': 'INFO',
+                        'formatter': 'mockformatter',
+                    },
+                },
+                'loggers': {
+                    'mocklogger': {
+                        'handlers': ('mockhandler',),
+                        'level': 'INFO',
+                        'disabled': False,
+                        'propagate': False,
+                    },
+                },
+            },
+        }
+        result = self.cls._section(None)
+        self.assertTrue(result)
+
+        self.cls.config = LuigiTomlParser()
+        self.cls.config.read(['./test/testconfig/luigi_logging.toml'])
         result = self.cls._section(None)
         self.assertTrue(result)
 

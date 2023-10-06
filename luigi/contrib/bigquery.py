@@ -51,7 +51,7 @@ bq_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_ty
                  wait=wait_exponential(multiplier=1, min=1, max=10),
                  stop=stop_after_attempt(3),
                  reraise=True,
-                 after=lambda x: x.args[0].__initialise_client()
+                 after=lambda x: x.args[0]._initialise_client()
                  )
 
 
@@ -152,9 +152,9 @@ class BigQueryClient:
         self.descriptor = descriptor
         self.http_ = http_
 
-        self.__initialise_client()
+        self._initialise_client()
 
-    def __initialise_client(self):
+    def _initialise_client(self):
         authenticate_kwargs = gcp.get_authenticate_kwargs(self.oauth_credentials, self.http_)
 
         if self.descriptor:

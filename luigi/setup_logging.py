@@ -24,6 +24,7 @@ import logging.config
 import os.path
 
 from luigi.configuration import get_config, LuigiConfigParser
+from luigi.freezing import recursively_unfreeze
 
 from configparser import NoSectionError
 
@@ -40,7 +41,7 @@ class BaseLogging:
             logging_config = cls.config['logging']
         except (TypeError, KeyError, NoSectionError):
             return False
-        logging.config.dictConfig(logging_config)
+        logging.config.dictConfig(recursively_unfreeze(logging_config))
         return True
 
     @classmethod

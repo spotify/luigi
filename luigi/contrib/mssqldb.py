@@ -22,7 +22,7 @@ import luigi
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import _mssql
+    from pymssql import _mssql
 except ImportError:
     logger.warning("Loading MSSQL module without the python package pymssql. \
         This will crash at runtime if SQL Server functionality is used.")
@@ -107,7 +107,7 @@ class MSSqlTarget(luigi.Target):
                                             WHERE update_id = %s
                                     """.format(marker_table=self.marker_table),
                                          (self.update_id,))
-        except _mssql.MSSQLDatabaseException as e:
+        except _mssql.MssqlDatabaseException as e:
             # Error number for table doesn't exist
             if e.number == 208:
                 row = None
@@ -145,7 +145,7 @@ class MSSqlTarget(luigi.Target):
                 """
                 .format(marker_table=self.marker_table)
             )
-        except _mssql.MSSQLDatabaseException as e:
+        except _mssql.MssqlDatabaseException as e:
             # Table already exists code
             if e.number == 2714:
                 pass

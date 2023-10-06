@@ -145,6 +145,7 @@ class scheduler(Config):
     send_messages = parameter.BoolParameter(default=True)
 
     metrics_collector = parameter.EnumParameter(enum=MetricsCollectors, default=MetricsCollectors.default)
+    metrics_custom_import = parameter.OptionalStrParameter(default=None)
 
     stable_done_cooldown_secs = parameter.IntParameter(default=10,
                                                        description="Sets cooldown period to avoid running the same task twice")
@@ -695,7 +696,7 @@ class Scheduler:
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
 
-        self._state._metrics_collector = MetricsCollectors.get(self._config.metrics_collector)
+        self._state._metrics_collector = MetricsCollectors.get(self._config.metrics_collector, self._config.metrics_custom_import)
 
     def load(self):
         self._state.load()
@@ -1230,7 +1231,7 @@ class Scheduler:
 
         if len(batched_tasks) > 1:
             batch_string = '|'.join(task.id for task in batched_tasks)
-            batch_id = hashlib.md5(batch_string.encode('utf-8')).hexdigest()
+            batch_id = hashlib.new('md5', batch_string.encode('utf-8'), usedforsecurity=False).hexdigest()
             for task in batched_tasks:
                 self._state.set_batch_running(task, batch_id, worker_id)
 
@@ -1441,7 +1442,7 @@ class Scheduler:
             terms = search.split()
 
             def filter_func(t):
-                return all(term in t.pretty_id for term in terms)
+                return all(term.casefold() in t.pretty_id.casefold() for term in terms)
 
         tasks = self._state.get_active_tasks_by_status(status) if status else self._state.get_active_tasks()
         for task in filter(filter_func, tasks):
@@ -1560,7 +1561,9 @@ class Scheduler:
     def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
-            return {"taskId": task_id, "error": task.expl, 'displayName': task.pretty_id}
+            return {"taskId": task_id, "error": task.expl, 'displayName':
+                    task.pretty_id, 'taskParams': task.params, 'taskModule':
+                    task.module, 'taskFamily': task.family}
         else:
             return {"taskId": task_id, "error": ""}
 
