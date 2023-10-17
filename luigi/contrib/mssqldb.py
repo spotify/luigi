@@ -68,6 +68,9 @@ class MSSqlTarget(luigi.Target):
         self.table = table
         self.update_id = update_id
 
+    def __str__(self):
+        return self.table
+
     def touch(self, connection=None):
         """
         Mark this update as complete.

@@ -131,6 +131,9 @@ class PrestoTarget(luigi.Target):
         self._client = client
         self._count = None
 
+    def __str__(self):
+        return self.table
+
     @property
     def _count_query(self):
         partition = OrderedDict(self.partition or {1: 1})

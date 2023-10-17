@@ -485,6 +485,9 @@ class HivePartitionTarget(luigi.Target):
         self.client = client or get_default_client()
         self.fail_missing_table = fail_missing_table
 
+    def __str__(self):
+        return self.path
+
     def exists(self):
         """
         returns `True` if the partition/table exists
