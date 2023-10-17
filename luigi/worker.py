@@ -29,6 +29,7 @@ ways between versions. The exception is the exception types and the
 """
 
 import collections
+import collections.abc
 import datetime
 import getpass
 import importlib
@@ -39,6 +40,7 @@ import signal
 import subprocess
 import sys
 import contextlib
+import functools
 
 import queue as Queue
 import random
@@ -46,7 +48,6 @@ import socket
 import threading
 import time
 import traceback
-import types
 
 from luigi import notifications
 from luigi.event import Event
@@ -54,7 +55,7 @@ from luigi.task_register import load_task
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, UNKNOWN, Scheduler, RetryPolicy
 from luigi.scheduler import WORKER_STATE_ACTIVE, WORKER_STATE_DISABLED
 from luigi.target import Target
-from luigi.task import Task, flatten, getpaths, Config
+from luigi.task import Task, Config, DynamicRequirements
 from luigi.task_register import TaskClassException
 from luigi.task_status import RUNNING
 from luigi.parameter import BoolParameter, FloatParameter, IntParameter, OptionalParameter, Parameter, TimeDeltaParameter
@@ -117,7 +118,7 @@ class TaskProcess(multiprocessing.Process):
 
     def __init__(self, task, worker_id, result_queue, status_reporter,
                  use_multiprocessing=False, worker_timeout=0, check_unfulfilled_deps=True,
-                 check_complete_on_run=False):
+                 check_complete_on_run=False, task_completion_cache=None):
         super(TaskProcess, self).__init__()
         self.task = task
         self.worker_id = worker_id
@@ -128,11 +129,15 @@ class TaskProcess(multiprocessing.Process):
         self.use_multiprocessing = use_multiprocessing or self.timeout_time is not None
         self.check_unfulfilled_deps = check_unfulfilled_deps
         self.check_complete_on_run = check_complete_on_run
+        self.task_completion_cache = task_completion_cache
+
+        # completeness check using the cache
+        self.check_complete = functools.partial(check_complete_cached, completion_cache=task_completion_cache)
 
     def _run_get_new_deps(self):
         task_gen = self.task.run()
 
-        if not isinstance(task_gen, types.GeneratorType):
+        if not isinstance(task_gen, collections.abc.Generator):
             return None
 
         next_send = None
@@ -145,20 +150,27 @@ class TaskProcess(multiprocessing.Process):
             except StopIteration:
                 return None
 
-            new_req = flatten(requires)
-            if all(t.complete() for t in new_req):
-                next_send = getpaths(requires)
-            else:
+            # if requires is not a DynamicRequirements, create one to use its default behavior
+            if not isinstance(requires, DynamicRequirements):
+                requires = DynamicRequirements(requires)
+
+            if not requires.complete(self.check_complete):
+                # not all requirements are complete, return them which adds them to the tree
                 new_deps = [(t.task_module, t.task_family, t.to_str_params())
-                            for t in new_req]
+                            for t in requires.flat_requirements]
                 return new_deps
+
+            # get the next generator result
+            next_send = requires.paths
 
     def run(self):
         logger.info('[pid %s] Worker %s running   %s', os.getpid(), self.worker_id, self.task)
 
         if self.use_multiprocessing:
             # Need to have different random seeds if running in separate processes
-            random.seed((os.getpid(), time.time()))
+            processID = os.getpid()
+            currentTime = time.time()
+            random.seed(processID * currentTime)
 
         status = FAILED
         expl = ''
@@ -170,7 +182,7 @@ class TaskProcess(multiprocessing.Process):
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
             if self.check_unfulfilled_deps and not _is_external(self.task):
-                missing = [dep.task_id for dep in self.task.deps() if not dep.complete()]
+                missing = [dep.task_id for dep in self.task.deps() if not self.check_complete(dep)]
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
                     raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))
@@ -180,7 +192,7 @@ class TaskProcess(multiprocessing.Process):
 
             if _is_external(self.task):
                 # External task
-                if self.task.complete():
+                if self.check_complete(self.task):
                     status = DONE
                 else:
                     status = FAILED
@@ -190,7 +202,12 @@ class TaskProcess(multiprocessing.Process):
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
                 if not new_deps:
-                    if not self.check_complete_on_run or self.task.complete():
+                    if not self.check_complete_on_run:
+                        # update the cache
+                        if self.task_completion_cache is not None:
+                            self.task_completion_cache[self.task.task_id] = True
+                        status = DONE
+                    elif self.check_complete(self.task):
                         status = DONE
                     else:
                         raise TaskException("Task finished running, but complete() is still returning false.")
@@ -392,13 +409,29 @@ class TracebackWrapper:
         self.trace = trace
 
 
-def check_complete(task, out_queue):
+def check_complete_cached(task, completion_cache=None):
+    # check if cached and complete
+    cache_key = task.task_id
+    if completion_cache is not None and completion_cache.get(cache_key):
+        return True
+
+    # (re-)check the status
+    is_complete = task.complete()
+
+    # tell the cache when complete
+    if completion_cache is not None and is_complete:
+        completion_cache[cache_key] = is_complete
+
+    return is_complete
+
+
+def check_complete(task, out_queue, completion_cache=None):
     """
-    Checks if task is complete, puts the result to out_queue.
+    Checks if task is complete, puts the result to out_queue, optionally using the completion cache.
     """
     logger.debug("Checking if %s is complete", task)
     try:
-        is_complete = task.complete()
+        is_complete = check_complete_cached(task, completion_cache)
     except Exception:
         is_complete = TracebackWrapper(traceback.format_exc())
     out_queue.put((task, is_complete))
@@ -460,6 +493,11 @@ class worker(Config):
                                              'applied as a context manager around its run() call, so this can be '
                                              'used for obtaining high level customizable monitoring or logging of '
                                              'each individual Task run.')
+    cache_task_completion = BoolParameter(default=False,
+                                          description='If true, cache the response of successful completion checks '
+                                          'of tasks assigned to a worker. This can especially speed up tasks with '
+                                          'dynamic dependencies but assumes that the completion status does not change '
+                                          'after it was true the first time.')
 
 
 class KeepAliveThread(threading.Thread):
@@ -558,6 +596,11 @@ class Worker:
         self._running_tasks = {}
         self._idle_since = None
 
+        # mp-safe dictionary for caching completation checks across task processes
+        self._task_completion_cache = None
+        if self._config.cache_task_completion:
+            self._task_completion_cache = multiprocessing.Manager().dict()
+
         # Stuff for execution_summary
         self._add_task_history = []
         self._get_work_response_history = []
@@ -612,7 +655,7 @@ class Worker:
     def _generate_worker_info(self):
         # Generate as much info as possible about the worker
         # Some of these calls might not be available on all OS's
-        args = [('salt', '%09d' % random.randrange(0, 999999999)),
+        args = [('salt', '%09d' % random.randrange(0, 10_000_000_000)),
                 ('workers', self.worker_processes)]
         try:
             args += [('host', socket.gethostname())]
@@ -743,7 +786,7 @@ class Worker:
             queue = DequeQueue()
             pool = SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(check_complete, [task, queue])
+        pool.apply_async(check_complete, [task, queue, self._task_completion_cache])
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
@@ -757,7 +800,7 @@ class Worker:
                     if next.task_id not in seen:
                         self._validate_task(next)
                         seen.add(next.task_id)
-                        pool.apply_async(check_complete, [next, queue])
+                        pool.apply_async(check_complete, [next, queue, self._task_completion_cache])
                         queue_size += 1
         except (KeyboardInterrupt, TaskException):
             raise
@@ -1022,6 +1065,7 @@ class Worker:
             worker_timeout=self._config.timeout,
             check_unfulfilled_deps=self._config.check_unfulfilled_deps,
             check_complete_on_run=self._config.check_complete_on_run,
+            task_completion_cache=self._task_completion_cache,
         )
 
     def _purge_children(self):

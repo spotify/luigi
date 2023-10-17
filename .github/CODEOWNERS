@@ -4,7 +4,7 @@
 
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence,
-* @dlstadther @Tarrasch @spotify/dataex
+* @dlstadther @spotify/dataex
 
 # Specific files, directories, paths, or file types can be
 # assigned more specificially.

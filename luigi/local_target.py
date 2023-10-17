@@ -40,7 +40,7 @@ class atomic_file(AtomicLocalFile):
         os.rename(self.tmp_path, self.path)
 
     def generate_tmp_path(self, path):
-        return path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        return path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
 
 
 class LocalFileSystem(FileSystem):
@@ -186,5 +186,5 @@ class LocalTarget(FileSystemTarget):
         return self.path
 
     def __del__(self):
-        if self.is_tmp and self.exists():
+        if hasattr(self, "is_tmp") and self.is_tmp and self.exists():
             self.remove()

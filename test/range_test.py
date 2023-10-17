@@ -652,7 +652,7 @@ class RangeByMinutesBaseTest(unittest.TestCase):
                     ('CommonDateMinuteTask', 13),  # 20 intervals - 7 missing
                 ],
                 'event.tools.range.complete.fraction': [
-                    ('CommonDateMinuteTask', 13. / (13 + 7)),  # (exptected - missing) / expected
+                    ('CommonDateMinuteTask', 13. / (13 + 7)),  # (expected - missing) / expected
                 ],
             }
         )
@@ -1514,7 +1514,7 @@ class RangeInstantiationTest(LuigiTestCase):
 
     def test_old_instantiation(self):
         """
-        Verify that you can still programatically set of param as string
+        Verify that you can still programmatically set of param as string
         """
         class MyTask(luigi.Task):
             date_param = luigi.DateParameter()

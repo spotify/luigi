@@ -1,3 +1,5 @@
+import warnings
+
 import luigi
 import mock
 
@@ -102,3 +104,48 @@ class OptionalParameterTest(LuigiTestCase):
         choices = [0, 1, 2]
         self.actual_test(luigi.OptionalChoiceParameter, None, 1, "int", "bad data", var_type=int, choices=choices)
         self.actual_test(luigi.OptionalChoiceParameter, "default value", 1, "int", "bad data", var_type=int, choices=choices)
+
+    def test_warning(self):
+        class TestOptionalFloatParameterSingleType(
+            luigi.parameter.OptionalParameter, luigi.FloatParameter
+        ):
+            expected_type = float
+
+        class TestOptionalFloatParameterMultiTypes(
+            luigi.parameter.OptionalParameter, luigi.FloatParameter
+        ):
+            expected_type = (int, float)
+
+        class TestConfig(luigi.Config):
+            param_single = TestOptionalFloatParameterSingleType()
+            param_multi = TestOptionalFloatParameterMultiTypes()
+
+        with warnings.catch_warnings(record=True) as record:
+            TestConfig(param_single=0.0, param_multi=1.0)
+
+        assert len(record) == 0
+
+        with warnings.catch_warnings(record=True) as record:
+            warnings.filterwarnings(
+                action="ignore",
+                category=Warning,
+            )
+            warnings.simplefilter(
+                action="always",
+                category=luigi.parameter.OptionalParameterTypeWarning,
+            )
+            assert luigi.build(
+                [TestConfig(param_single="0", param_multi="1")], local_scheduler=True
+            )
+
+        assert len(record) == 2
+        assert issubclass(record[0].category, luigi.parameter.OptionalParameterTypeWarning)
+        assert issubclass(record[1].category, luigi.parameter.OptionalParameterTypeWarning)
+        assert str(record[0].message) == (
+            'TestOptionalFloatParameterSingleType "param_single" with value "0" is not of type '
+            '"float" or None.'
+        )
+        assert str(record[1].message) == (
+            'TestOptionalFloatParameterMultiTypes "param_multi" with value "1" is not of any '
+            'type in ["int", "float"] or None.'
+        )

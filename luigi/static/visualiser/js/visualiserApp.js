@@ -1018,8 +1018,8 @@ function visualiserApp(luigi) {
     function renderParams(params) {
         var htmls = [];
         for (var key in params) {
-            htmls.push('<span class="param-name">' + key +
-                '</span>=<span class="param-value">' + params[key] + '</span>');
+            htmls.push('<span class="param-name">' + escapeHtml(key) +
+                '</span>=<span class="param-value">' + escapeHtml(params[key]) + '</span>');
         }
         return htmls.join(', ');
     }

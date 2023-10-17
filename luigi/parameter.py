@@ -28,6 +28,12 @@ import json
 from json import JSONEncoder
 import operator
 from ast import literal_eval
+from pathlib import Path
+try:
+    import jsonschema
+    _JSONSCHEMA_ENABLED = True
+except ImportError:
+    _JSONSCHEMA_ENABLED = False
 
 from configparser import NoOptionError, NoSectionError
 
@@ -36,7 +42,7 @@ from luigi import task_register
 from luigi import configuration
 from luigi.cmdline_parser import CmdlineParser
 
-from .freezing import recursively_freeze, FrozenOrderedDict
+from .freezing import recursively_freeze, recursively_unfreeze, FrozenOrderedDict
 
 
 _no_value = object()
@@ -92,6 +98,10 @@ class OptionalParameterTypeWarning(UserWarning):
     Warning class for OptionalParameterMixin with wrong type.
     """
     pass
+
+
+class UnconsumedParameterWarning(UserWarning):
+    """Warning class for parameters that are not consumed by the task."""
 
 
 class Parameter:
@@ -367,10 +377,14 @@ class OptionalParameterMixin:
 
     def _warn_on_wrong_param_type(self, param_name, param_value):
         if not isinstance(param_value, self.expected_type) and param_value is not None:
+            try:
+                param_type = "any type in " + str([i.__name__ for i in self.expected_type]).replace("'", '"')
+            except TypeError:
+                param_type = f'type "{self.expected_type.__name__}"'
             warnings.warn(
                 (
                     f'{self.__class__.__name__} "{param_name}" with value '
-                    f'"{param_value}" is not of type "{self.expected_type.__name__}" or None.'
+                    f'"{param_value}" is not of {param_type} or None.'
                 ),
                 OptionalParameterTypeWarning,
             )
@@ -805,6 +819,7 @@ class TimeDeltaParameter(Parameter):
     """
     Class that maps to timedelta using strings in any of the following forms:
 
+     * A bare number is interpreted as duration in seconds.
      * ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
         Note: multiple arguments must be supplied in longest to shortest unit order
      * ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
@@ -852,6 +867,10 @@ class TimeDeltaParameter(Parameter):
 
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """
+        try:
+            return datetime.timedelta(seconds=float(input))
+        except ValueError:
+            pass
         result = self._parseIso8601(input)
         if not result:
             result = self._parseSimple(input)
@@ -1042,12 +1061,89 @@ class DictParameter(Parameter):
     It can be used to define dynamic parameters, when you do not know the exact list of your parameters (e.g. list of
     tags, that are dynamically constructed outside Luigi), or you have a complex parameter containing logically related
     values (like a database connection config).
+
+    It is possible to provide a JSON schema that should be validated by the given value:
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          tags = luigi.DictParameter(
+            schema={
+              "type": "object",
+              "patternProperties": {
+                ".*": {"type": "string", "enum": ["web", "staging"]},
+              }
+            }
+          )
+
+          def run(self):
+            logging.info("Find server with role: %s", self.tags['role'])
+            server = aws.ec2.find_my_resource(self.tags)
+
+    Using this schema, the following command will work:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --tags '{"role": "web", "env": "staging"}'
+
+    while this command will fail because the parameter is not valid:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --tags '{"role": "UNKNOWN_VALUE", "env": "staging"}'
+
+    Finally, the provided schema can be a custom validator:
+
+    .. code-block:: python
+
+        custom_validator = jsonschema.Draft4Validator(
+          schema={
+            "type": "object",
+            "patternProperties": {
+              ".*": {"type": "string", "enum": ["web", "staging"]},
+            }
+          }
+        )
+
+        class MyTask(luigi.Task):
+          tags = luigi.DictParameter(schema=custom_validator)
+
+          def run(self):
+            logging.info("Find server with role: %s", self.tags['role'])
+            server = aws.ec2.find_my_resource(self.tags)
+
     """
+
+    def __init__(
+        self,
+        *args,
+        schema=None,
+        **kwargs,
+    ):
+        if schema is not None and not _JSONSCHEMA_ENABLED:
+            warnings.warn(
+                "The 'jsonschema' package is not installed so the parameter can not be validated "
+                "even though a schema is given."
+            )
+            self.schema = None
+        else:
+            self.schema = schema
+        super().__init__(
+            *args,
+            **kwargs,
+        )
 
     def normalize(self, value):
         """
         Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
+        if self.schema is not None:
+            unfrozen_value = recursively_unfreeze(value)
+            try:
+                self.schema.validate(unfrozen_value)
+                value = unfrozen_value  # Validators may update the instance inplace
+            except AttributeError:
+                jsonschema.validate(instance=unfrozen_value, schema=self.schema)
         return recursively_freeze(value)
 
     def parse(self, source):
@@ -1105,7 +1201,88 @@ class ListParameter(Parameter):
     .. code-block:: console
 
         $ luigi --module my_tasks MyTask --grades '[100,70]'
+
+    It is possible to provide a JSON schema that should be validated by the given value:
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+          grades = luigi.ListParameter(
+            schema={
+              "type": "array",
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10
+              },
+              "minItems": 1
+            }
+          )
+
+          def run(self):
+                sum = 0
+                for element in self.grades:
+                    sum += element
+                avg = sum / len(self.grades)
+
+    Using this schema, the following command will work:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --numbers '[1, 8.7, 6]'
+
+    while these commands will fail because the parameter is not valid:
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --numbers '[]'  # must have at least 1 element
+        $ luigi --module my_tasks MyTask --numbers '[-999, 999]'  # elements must be in [0, 10]
+
+    Finally, the provided schema can be a custom validator:
+
+    .. code-block:: python
+
+        custom_validator = jsonschema.Draft4Validator(
+          schema={
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 10
+            },
+            "minItems": 1
+          }
+        )
+
+        class MyTask(luigi.Task):
+          grades = luigi.ListParameter(schema=custom_validator)
+
+          def run(self):
+                sum = 0
+                for element in self.grades:
+                    sum += element
+                avg = sum / len(self.grades)
+
     """
+
+    def __init__(
+        self,
+        *args,
+        schema=None,
+        **kwargs,
+    ):
+        if schema is not None and not _JSONSCHEMA_ENABLED:
+            warnings.warn(
+                "The 'jsonschema' package is not installed so the parameter can not be validated "
+                "even though a schema is given."
+            )
+            self.schema = None
+        else:
+            self.schema = schema
+        super().__init__(
+            *args,
+            **kwargs,
+        )
 
     def normalize(self, x):
         """
@@ -1114,6 +1291,13 @@ class ListParameter(Parameter):
         :param str x: the value to parse.
         :return: the normalized (hashable/immutable) value.
         """
+        if self.schema is not None:
+            unfrozen_value = recursively_unfreeze(x)
+            try:
+                self.schema.validate(unfrozen_value)
+                x = unfrozen_value  # Validators may update the instance inplace
+            except AttributeError:
+                jsonschema.validate(instance=unfrozen_value, schema=self.schema)
         return recursively_freeze(x)
 
     def parse(self, x):
@@ -1354,3 +1538,61 @@ class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.expected_type = self._var_type
+
+
+class PathParameter(Parameter):
+    """
+    Parameter whose value is a path.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            existing_file_path = luigi.PathParameter(exists=True)
+            new_file_path = luigi.PathParameter()
+
+            def run(self):
+                # Get data from existing file
+                with self.existing_file_path.open("r", encoding="utf-8") as f:
+                    data = f.read()
+
+                # Output message in new file
+                self.new_file_path.parent.mkdir(parents=True, exist_ok=True)
+                with self.new_file_path.open("w", encoding="utf-8") as f:
+                    f.write("hello from a PathParameter => ")
+                    f.write(data)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --existing-file-path <path> --new-file-path <path>
+    """
+
+    def __init__(self, *args, absolute=False, exists=False, **kwargs):
+        """
+        :param bool absolute: If set to ``True``, the given path is converted to an absolute path.
+        :param bool exists: If set to ``True``, a :class:`ValueError` is raised if the path does not exist.
+        """
+        super().__init__(*args, **kwargs)
+
+        self.absolute = absolute
+        self.exists = exists
+
+    def normalize(self, x):
+        """
+        Normalize the given value to a :class:`pathlib.Path` object.
+        """
+        path = Path(x)
+        if self.absolute:
+            path = path.absolute()
+        if self.exists and not path.exists():
+            raise ValueError(f"The path {path} does not exist.")
+        return path
+
+
+class OptionalPathParameter(OptionalParameter, PathParameter):
+    """Class to parse optional path parameters."""
+
+    expected_type = (str, Path)

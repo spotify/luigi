@@ -19,7 +19,7 @@ The abstract :py:class:`Task` class.
 It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
-
+from collections import deque, OrderedDict
 from contextlib import contextmanager
 import logging
 import traceback
@@ -32,9 +32,11 @@ import functools
 
 import luigi
 
+from luigi import configuration
 from luigi import parameter
 from luigi.task_register import Register
 from luigi.parameter import ParameterVisibility
+from luigi.parameter import UnconsumedParameterWarning
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')
@@ -123,7 +125,7 @@ def task_id_str(task_family, params):
     # task_id is a concatenation of task family, the first values of the first 3 parameters
     # sorted by parameter name and a md5hash of the family/parameters as a cananocalised json.
     param_str = json.dumps(params, separators=(',', ':'), sort_keys=True)
-    param_hash = hashlib.md5(param_str.encode('utf-8')).hexdigest()
+    param_hash = hashlib.new('md5', param_str.encode('utf-8'), usedforsecurity=False).hexdigest()
 
     param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
                              for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
@@ -302,7 +304,7 @@ class Task(metaclass=Register):
 
     task_namespace = __not_user_specified
     """
-    This value can be overriden to set the namespace that will be used.
+    This value can be overridden to set the namespace that will be used.
     (See :ref:`Task.namespaces_famlies_and_ids`)
     If it's not specified and you try to read this value anyway, it will return
     garbage. Please use :py:meth:`get_task_namespace` to read the namespace.
@@ -429,6 +431,25 @@ class Task(metaclass=Register):
                 return tuple(x)
             else:
                 return x
+
+        # Check for unconsumed parameters
+        conf = configuration.get_config()
+        if not hasattr(cls, "_unconsumed_params"):
+            cls._unconsumed_params = set()
+        if task_family in conf.sections():
+            ignore_unconsumed = getattr(cls, 'ignore_unconsumed', set())
+            for key, value in conf[task_family].items():
+                key = key.replace('-', '_')
+                composite_key = f"{task_family}_{key}"
+                if key not in result and key not in ignore_unconsumed and composite_key not in cls._unconsumed_params:
+                    warnings.warn(
+                        "The configuration contains the parameter "
+                        f"'{key}' with value '{value}' that is not consumed by the task "
+                        f"'{task_family}'.",
+                        UnconsumedParameterWarning,
+                    )
+                    cls._unconsumed_params.add(composite_key)
+
         # Sort it by the correct order and make a list
         return [(param_name, list_to_tuple(result[param_name])) for param_name, param_obj in params]
 
@@ -746,6 +767,87 @@ class MixinNaiveBulkComplete:
         return generated_tuples
 
 
+class DynamicRequirements(object):
+    """
+    Wraps dynamic requirements yielded in tasks's run methods to control how completeness checks of
+    (e.g.) large chunks of tasks are performed. Besides the wrapped *requirements*, instances of
+    this class can be passed an optional function *custom_complete* that might implement an
+    optimized check for completeness. If set, the function will be called with a single argument,
+    *complete_fn*, which should be used to perform the per-task check. Example:
+
+    .. code-block:: python
+
+        class SomeTaskWithDynamicRequirements(luigi.Task):
+            ...
+
+            def run(self):
+                large_chunk_of_tasks = [OtherTask(i=i) for i in range(10000)]
+
+                def custom_complete(complete_fn):
+                    # example: assume OtherTask always write into the same directory, so just check
+                    #          if the first task is complete, and compare basenames for the rest
+                    if not complete_fn(large_chunk_of_tasks[0]):
+                        return False
+                    paths = [task.output().path for task in large_chunk_of_tasks]
+                    basenames = os.listdir(os.path.dirname(paths[0]))  # a single fs call
+                    return all(os.path.basename(path) in basenames for path in paths)
+
+                yield DynamicRequirements(large_chunk_of_tasks, custom_complete)
+
+    .. py:attribute:: requirements
+
+        The original, wrapped requirements.
+
+    .. py:attribute:: flat_requirements
+
+        Flattened view of the wrapped requirements (via :py:func:`flatten`). Read only.
+
+    .. py:attribute:: paths
+
+        Outputs of the requirements in the identical structure (via :py:func:`getpaths`). Read only.
+
+    .. py:attribute:: custom_complete
+
+       The optional, custom function performing the completeness check of the wrapped requirements.
+    """
+
+    def __init__(self, requirements, custom_complete=None):
+        super().__init__()
+
+        # store attributes
+        self.requirements = requirements
+        self.custom_complete = custom_complete
+
+        # cached flat requirements and paths
+        self._flat_requirements = None
+        self._paths = None
+
+    @property
+    def flat_requirements(self):
+        if self._flat_requirements is None:
+            self._flat_requirements = flatten(self.requirements)
+        return self._flat_requirements
+
+    @property
+    def paths(self):
+        if self._paths is None:
+            self._paths = getpaths(self.requirements)
+        return self._paths
+
+    def complete(self, complete_fn=None):
+        # default completeness check
+        if complete_fn is None:
+            def complete_fn(task):
+                return task.complete()
+
+        # use the custom complete function when set
+        if self.custom_complete:
+            return self.custom_complete(complete_fn)
+
+        # default implementation
+        return all(complete_fn(t) for t in self.flat_requirements)
+
+
 class ExternalTask(Task):
     """
     Subclass for references to external dependencies.
@@ -855,7 +957,7 @@ def getpaths(struct):
 
 def flatten(struct):
     """
-    Creates a flat list of all all items in structured output (dicts, lists, items):
+    Creates a flat list of all items in structured output (dicts, lists, items):
 
     .. code-block:: python
 
@@ -892,14 +994,19 @@ def flatten(struct):
 def flatten_output(task):
     """
     Lists all output targets by recursively walking output-less (wrapper) tasks.
-
-    FIXME order consistently.
     """
-    r = flatten(task.output())
-    if not r:
-        for dep in flatten(task.requires()):
-            r += flatten_output(dep)
-    return r
+
+    output_tasks = OrderedDict()  # OrderedDict used as ordered set
+    tasks_to_process = deque([task])
+    while tasks_to_process:
+        current_task = tasks_to_process.popleft()
+        if flatten(current_task.output()):
+            if current_task not in output_tasks:
+                output_tasks[current_task] = None
+        else:
+            tasks_to_process.extend(flatten(current_task.requires()))
+
+    return flatten(task.output() for task in output_tasks)
 
 
 def _task_wraps(task_class):

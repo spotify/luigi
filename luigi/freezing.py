@@ -56,3 +56,14 @@ def recursively_freeze(value):
     elif isinstance(value, list) or isinstance(value, tuple):
         return tuple(recursively_freeze(v) for v in value)
     return value
+
+
+def recursively_unfreeze(value):
+    """
+    Recursively walks ``FrozenOrderedDict``s and ``tuple``s and converts them to ``dict`` and ``list``, respectively.
+    """
+    if isinstance(value, Mapping):
+        return dict(((k, recursively_unfreeze(v)) for k, v in value.items()))
+    elif isinstance(value, list) or isinstance(value, tuple):
+        return list(recursively_unfreeze(v) for v in value)
+    return value
