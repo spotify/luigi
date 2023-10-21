@@ -187,7 +187,7 @@ class TaskProcess(multiprocessing.Process):
                     if not self.check_complete(dep):
                         nonexistent_outputs = [output for output in dep.output() if not output.exists()]
                         if nonexistent_outputs:
-                            missing.append('%s (%s)' % (dep.task_id, ', '.join(map(str, nonexistent_outputs))))
+                            missing.append(f'{dep.task_id} ({", ".join(map(str, nonexistent_outputs))})')
                         else:
                             missing.append(dep.task_id)
                 if missing:

@@ -36,7 +36,7 @@ class MongoTarget(Target):
         self._collection = collection
 
     def __str__(self):
-        return '%s/%s' % (self._index, self._collection)
+        return f'{self._index}/{self._collection}'
 
     def get_collection(self):
         """

@@ -190,7 +190,7 @@ class SQLAlchemyTarget(luigi.Target):
         self.marker_table_bound = None
 
     def __str__(self):
-        return self.marker_table_bound or self.connection_string
+        return self.target_table
 
     @property
     def engine(self):
