@@ -182,7 +182,14 @@ class TaskProcess(multiprocessing.Process):
             # checking completeness of self.task so outputs of dependencies are
             # irrelevant.
             if self.check_unfulfilled_deps and not _is_external(self.task):
-                missing = [dep.task_id for dep in self.task.deps() if not self.check_complete(dep)]
+                missing = []
+                for dep in self.task.deps():
+                    if not self.check_complete(dep):
+                        nonexistent_outputs = [output for output in dep.output() if not output.exists()]
+                        if nonexistent_outputs:
+                            missing.append(f'{dep.task_id} ({", ".join(map(str, nonexistent_outputs))})')
+                        else:
+                            missing.append(dep.task_id)
                 if missing:
                     deps = 'dependency' if len(missing) == 1 else 'dependencies'
                     raise RuntimeError('Unfulfilled %s at run time: %s' % (deps, ', '.join(missing)))

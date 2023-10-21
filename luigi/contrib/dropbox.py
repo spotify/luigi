@@ -298,6 +298,9 @@ class DropboxTarget(FileSystemTarget):
         self.client = DropboxClient(token, user_agent)
         self.format = format or luigi.format.get_default_format()
 
+    def __str__(self):
+        return self.path
+
     @property
     def fs(self):
         return self.client

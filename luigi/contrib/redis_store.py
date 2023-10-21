@@ -73,6 +73,9 @@ class RedisTarget(Target):
             socket_timeout=self.socket_timeout,
         )
 
+    def __str__(self):
+        return self.marker_key()
+
     def marker_key(self):
         """
         Generate a key for the indicator hash.

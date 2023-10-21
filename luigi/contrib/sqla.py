@@ -189,6 +189,9 @@ class SQLAlchemyTarget(luigi.Target):
         self.connect_args = connect_args
         self.marker_table_bound = None
 
+    def __str__(self):
+        return self.target_table
+
     @property
     def engine(self):
         """
