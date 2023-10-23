@@ -61,7 +61,7 @@ class TestClientDropbox(unittest.TestCase):
     def setUp(self):
         self.luigiconn = DropboxClient(DROPBOX_APP_TOKEN)
 
-        self.dropbox_api = dropbox.dropbox.Dropbox(DROPBOX_APP_TOKEN)
+        self.dropbox_api = dropbox.dropbox_client.Dropbox(DROPBOX_APP_TOKEN)
         self.dropbox_api.files_upload(b'hello', DROPBOX_TEST_SIMPLE_FILE)
         self.dropbox_api.files_upload(b'hello2', DROPBOX_TEST_FILE_IN_DIR)
         self.dropbox_api.files_upload(b'hello3', DROPBOX_TEST_FILE_TO_MOVE_ORIG)
@@ -163,7 +163,7 @@ class TestClientDropbox(unittest.TestCase):
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
 
     def test_mkdir_new_dir_two_slashes(self):
-        with self.assertRaises(dropbox.dropbox.ApiError):
+        with self.assertRaises(dropbox.dropbox_client.ApiError):
             self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '//')
 
     def test_mkdir_recreate_dir(self):
@@ -245,7 +245,7 @@ class TestClientDropbox(unittest.TestCase):
 class TestDropboxTarget(unittest.TestCase):
     def setUp(self):
         self.luigiconn = DropboxClient(DROPBOX_APP_TOKEN)
-        self.dropbox_api = dropbox.dropbox.Dropbox(DROPBOX_APP_TOKEN)
+        self.dropbox_api = dropbox.dropbox_client.Dropbox(DROPBOX_APP_TOKEN)
 
         self.initial_contents = b'\x00hello\xff\x00-\xe2\x82\x28'  # Binary invalid-utf8 sequence
         self.dropbox_api.files_upload(self.initial_contents, DROPBOX_TEST_SIMPLE_FILE)
