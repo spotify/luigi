@@ -30,7 +30,7 @@ from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import dropbox.dropbox
+    import dropbox.dropbox_client
     import dropbox.exceptions
     import dropbox.files
 except ImportError:
@@ -76,7 +76,7 @@ class DropboxClient(FileSystem):
             raise ValueError("The token parameter must contain a valid Dropbox Oauth2 Token")
 
         try:
-            conn = dropbox.dropbox.Dropbox(oauth2_access_token=token, user_agent=user_agent)
+            conn = dropbox.dropbox_client.Dropbox(oauth2_access_token=token, user_agent=user_agent)
         except Exception as e:
             raise Exception("Cannot connect to Dropbox. Check your Internet connection and the token. \n" + repr(e))
 
