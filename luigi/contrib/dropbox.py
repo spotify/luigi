@@ -133,9 +133,9 @@ class DropboxClient(FileSystem):
                 raise e
 
     @accept_trailing_slash_in_existing_dirpaths
-    def listdir(self, path, **kwargs):
+    def listdir(self, path, recursive=True, **kwargs):
         dirs = []
-        lister = self.conn.files_list_folder(path, recursive=True, **kwargs)
+        lister = self.conn.files_list_folder(path, recursive, **kwargs)
         dirs.extend(lister.entries)
         while lister.has_more:
             lister = self.conn.files_list_folder_continue(lister.cursor)

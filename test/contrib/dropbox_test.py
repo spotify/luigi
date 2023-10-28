@@ -87,19 +87,33 @@ class TestClientDropbox(unittest.TestCase):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH)
         self.assertTrue('/' not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
-        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
+        self.assertTrue(DROPBOX_TEST_SIMPLE_DIR in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_FILE_IN_DIR in list_of_dirs)  # we verify recursivity
 
     def test_listdir_simple_with_one_slash(self):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + '/')
         self.assertTrue('/' not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
-        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
+        self.assertTrue(DROPBOX_TEST_SIMPLE_DIR in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_FILE_IN_DIR in list_of_dirs)  # we verify recursivity
 
     def test_listdir_multiple(self):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH, limit=2)
         self.assertTrue('/' not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
-        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
+        self.assertTrue(DROPBOX_TEST_SIMPLE_DIR in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_FILE_IN_DIR in list_of_dirs)  # we verify recursivity
+
+    def test_listdir_non_recursive(self):
+        list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH, recursive=False)
+        self.assertTrue('/' not in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_PATH not in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_DIR in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)
+        self.assertTrue(DROPBOX_TEST_FILE_IN_DIR not in list_of_dirs)
 
     def test_listdir_nonexisting(self):
         with self.assertRaises(dropbox.exceptions.ApiError):
