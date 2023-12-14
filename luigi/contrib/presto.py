@@ -104,7 +104,7 @@ class WithPrestoClient(Register):
                 ```
                 after py2-deprecation
                 """
-                args = inspect.getargspec(Cursor.__init__)[0][1:]
+                args = inspect.getfullargspec(Cursor.__init__)[0][1:]
                 for parameter in args:
                     val = getattr(self, parameter)
                     if val:
