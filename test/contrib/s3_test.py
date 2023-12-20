@@ -20,7 +20,8 @@ import sys
 import tempfile
 
 import boto3
-from boto.s3 import key
+if sys.version_info[:2] <= (3, 11):
+    from boto.s3 import key
 from botocore.exceptions import ClientError
 from mock import patch
 
