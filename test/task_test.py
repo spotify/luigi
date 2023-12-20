@@ -577,4 +577,4 @@ class InitSubclassTest(LuigiTestCase):
 
         class Receiver(ReceivesClassKwargs, x=1):
             pass
-        self.assertEquals(Receiver.x, 1)
+        self.assertEqual(Receiver.x, 1)

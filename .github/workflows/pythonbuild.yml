@@ -25,6 +25,8 @@ jobs:
             tox-env: py310-core
           - python-version: "3.11"
             tox-env: py311-core
+          - python-version: "3.12"
+            tox-env: py312-core
 
     steps:
       - uses: actions/checkout@v2
@@ -92,6 +94,8 @@ jobs:
             tox-env: py310-postgres
           - python-version: "3.11"
             tox-env: py311-postgres
+          - python-version: "3.12"
+            tox-env: py312-postgres
 
     steps:
       - uses: actions/checkout@v2
@@ -145,6 +149,8 @@ jobs:
             tox-env: py310-aws
           - python-version: "3.11"
             tox-env: py311-aws
+          - python-version: "3.12"
+            tox-env: py312-aws
 
           - python-version: "3.6"
             tox-env: py36-unixsocket
@@ -164,6 +170,9 @@ jobs:
           - python-version: "3.11"
             tox-env: py311-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
+          - python-version: "3.12"
+            tox-env: py312-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
 
           - python-version: "3.6"
             tox-env: py36-apache
@@ -177,6 +186,8 @@ jobs:
             tox-env: py310-apache
           - python-version: "3.11"
             tox-env: py311-apache
+          - python-version: "3.12"
+            tox-env: py312-apache
 
           - python-version: "3.6"
             tox-env: py36-azureblob
@@ -190,6 +201,8 @@ jobs:
             tox-env: py310-azureblob
           - python-version: "3.11"
             tox-env: py311-azureblob
+          - python-version: "3.12"
+            tox-env: py312-azureblob
 
 
           - python-version: 3.9

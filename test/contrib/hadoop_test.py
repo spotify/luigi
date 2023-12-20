@@ -200,7 +200,7 @@ class CommonTests:
         job = WordFreqJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
         c = read_wordcount_output(job.output())
-        test_case.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
+        test_case.assertAlmostEqual(float(c['jk']), 6.0 / 33.0)
 
     @staticmethod
     def test_map_only(test_case):
