@@ -108,6 +108,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         t = self.create_target(encrypt_key=True)
         self.assertRaises(FileNotFoundException, t.open)
 
+    @unittest.skipIf(tuple(sys.version_info) >= (3, 12), "boto is not supported on Python 3.12+")
     def test_read_iterator_long(self):
         # write a file that is 5X the boto buffersize
         # to test line buffering
