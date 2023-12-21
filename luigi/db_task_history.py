@@ -58,10 +58,10 @@ if sqlalchemy.__version__.startswith('2'):
     logger.warning('SQLAlchemy 2.x is not tested with luigi.db_task_history.DbTaskHistory')
     from sqlalchemy import text
 
-else : 
+else:
     def text(sql):
         return sql
-    
+
 
 class DbTaskHistory(task_history.TaskHistory):
     """
