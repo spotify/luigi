@@ -49,12 +49,19 @@ import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
 from sqlalchemy.engine import reflection
-from sqlalchemy import text
 
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')
 
+if sqlalchemy.__version__.startswith('2'):
+    logger.warning('SQLAlchemy 2.x is not tested with luigi.db_task_history.DbTaskHistory')
+    from sqlalchemy import text
+
+else : 
+    def text(sql):
+        return sql
+    
 
 class DbTaskHistory(task_history.TaskHistory):
     """
