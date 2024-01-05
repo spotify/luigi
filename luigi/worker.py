@@ -213,7 +213,7 @@ class TaskProcess(multiprocessing.Process):
                         # update the cache
                         if self.task_completion_cache is not None:
                             self.task_completion_cache[self.task.task_id] = True
-                        status = DONE
+                        status = DONE if self.task.complete() else FAILED
                     elif self.check_complete(self.task):
                         status = DONE
                     else:
