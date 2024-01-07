@@ -3,6 +3,7 @@
 import sys
 import warnings
 import luigi.cmdline
+import json
 
 
 def main(argv):
