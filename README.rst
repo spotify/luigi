@@ -14,6 +14,10 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
+.. image:: https://readthedocs.org/projects/luigi/badge/?version=stable
+    :target: https://luigi.readthedocs.io/en/stable/?badge=stable
+    :alt: Documentation Status
+
 Luigi is a Python (3.6, 3.7, 3.8, 3.9, 3.10, 3.11 tested) package that helps you build complex
 pipelines of batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much more.
