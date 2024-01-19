@@ -716,6 +716,10 @@ worker_disconnect_delay
   scheduler before removing it and marking all of its running tasks as
   failed. Defaults to 60.
 
+pause_enabled
+  If false, disables pause/unpause operations and hides the pause toggle from
+  the visualiser.
+
 
 [sendgrid]
 ----------

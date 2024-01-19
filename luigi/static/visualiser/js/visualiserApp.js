@@ -1011,7 +1011,11 @@ function visualiserApp(luigi) {
     $(document).ready(function() {
         loadTemplates();
 
-        luigi.isPaused(createPauseToggle);
+        luigi.isPauseEnabled(function(enabled) {
+            if (enabled) {
+                luigi.isPaused(createPauseToggle);
+            }
+        });
 
         luigi.getWorkerList(function(workers) {
             $("#workerList").append(renderWorkers(workers));
