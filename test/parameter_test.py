@@ -533,6 +533,14 @@ class TestParametersHashability(LuigiTestCase):
         self.assertEqual(hash(Foo(args=(('foo', 'bar'), ('doge', 'wow'))).args),
                          hash(p.normalize(p.parse('(("foo", "bar"), ("doge", "wow"))'))))
 
+    def test_tuple_string_with_json(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.TupleParameter()
+
+        p = luigi.parameter.TupleParameter()
+        self.assertEqual(hash(Foo(args=('foo', 'bar')).args),
+                         hash(p.normalize(p.parse('["foo", "bar"]'))))
+
     def test_task(self):
         class Bar(luigi.Task):
             pass
