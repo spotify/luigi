@@ -342,7 +342,7 @@ class TestS3Client(unittest.TestCase):
         s3_client.get('s3://mybucket/putMe', tmp_file_path)
         with open(tmp_file_path, 'r') as f:
             content = f.read()
-        self.assertEquals(content, self.tempFileContents.decode("utf-8"))
+        self.assertEqual(content, self.tempFileContents.decode("utf-8"))
         tmp_file.close()
 
     def test_get_as_bytes(self):
@@ -352,7 +352,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_bytes('s3://mybucket/putMe')
 
-        self.assertEquals(contents, self.tempFileContents)
+        self.assertEqual(contents, self.tempFileContents)
 
     def test_get_as_string(self):
         create_bucket()
@@ -361,7 +361,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe2')
 
-        self.assertEquals(contents, self.tempFileContents.decode('utf-8'))
+        self.assertEqual(contents, self.tempFileContents.decode('utf-8'))
 
     def test_get_as_string_latin1(self):
         create_bucket()
@@ -370,7 +370,7 @@ class TestS3Client(unittest.TestCase):
 
         contents = s3_client.get_as_string('s3://mybucket/putMe3', encoding='ISO-8859-1')
 
-        self.assertEquals(contents, self.tempFileContents.decode('ISO-8859-1'))
+        self.assertEqual(contents, self.tempFileContents.decode('ISO-8859-1'))
 
     def test_get_key(self):
         create_bucket()

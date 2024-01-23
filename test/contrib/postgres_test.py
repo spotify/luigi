@@ -132,11 +132,11 @@ class PostgresQueryTest(unittest.TestCase):
 
     def test_override_port(self):
         output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
-        self.assertEquals(output.port, 1234)
+        self.assertEqual(output.port, 1234)
 
     def test_port_encoded_in_host(self):
         output = DummyPostgresQueryWithPortEncodedInHost(date=datetime.datetime(1991, 3, 24)).output()
-        self.assertEquals(output.port, '1234')
+        self.assertEqual(output.port, '1234')
 
 
 @pytest.mark.postgres
