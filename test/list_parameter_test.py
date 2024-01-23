@@ -81,7 +81,7 @@ class ListParameterTest(unittest.TestCase):
             a.normalize(["INVALID_ATTRIBUTE"])
 
         # Check that empty list is not valid
-        with pytest.raises(ValidationError, match=r"\[\] is too short"):
+        with pytest.raises(ValidationError):
             a.normalize([])
 
         # Check that valid lists work

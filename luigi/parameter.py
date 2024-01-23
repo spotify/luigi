@@ -1379,9 +1379,14 @@ class TupleParameter(ListParameter):
         # ast.literal_eval(t_str) == t
         try:
             # loop required to parse tuple of tuples
-            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
+            return tuple(self._convert_iterable_to_tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
             return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
+
+    def _convert_iterable_to_tuple(self, x):
+        if isinstance(x, str):
+            return x
+        return tuple(x)
 
 
 class OptionalTupleParameter(OptionalParameterMixin, TupleParameter):
