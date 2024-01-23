@@ -100,7 +100,7 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
     # Create a pid file if it does not exist
     try:
         os.mkdir(pid_dir)
-        os.chmod(pid_dir, 0o777)
+        os.chmod(pid_dir, 0o775)
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise
@@ -153,8 +153,8 @@ def _write_pids_file(pid_file, pids_set):
     with open(pid_file, 'w') as f:
         f.writelines('{}\n'.format(pid) for pid in pids_set)
 
-    # Make the .pid-file writable by all (when the os allows for it)
+    # Make the .pid-file writable by user or group (when the os allows for it)
     if os.name != 'nt':
         s = os.stat(pid_file)
         if os.getuid() == s.st_uid:
-            os.chmod(pid_file, s.st_mode | 0o777)
+            os.chmod(pid_file, 0o664)
