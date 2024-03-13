@@ -162,6 +162,21 @@ class TestEventCallbacks(unittest.TestCase):
         t, result = self._run_processing_time_handler(True)
         self.assertEqual(result, [])
 
+    def test_remove_event_handler(self):
+        run_cnt = 0
+
+        @EmptyTask.event_handler(luigi.Event.START)
+        def handler(task):
+            nonlocal run_cnt
+            run_cnt += 1
+
+        task = EmptyTask()
+        build([task], local_scheduler=True)
+        assert run_cnt == 1
+        EmptyTask.remove_event_handler(luigi.Event.START, handler)
+        build([task], local_scheduler=True)
+        assert run_cnt == 1
+
 
 #        A
 #      /   \
