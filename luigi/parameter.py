@@ -309,7 +309,7 @@ class Parameter:
         """
         return x  # default impl
 
-    def next_in_enumeration(self, _value):
+    def next_in_enumeration(self, value):
         """
         If your Parameter type has an enumerable ordering of values. You can
         choose to override this method. This method is used by the
@@ -388,6 +388,9 @@ class OptionalParameterMixin:
                 ),
                 OptionalParameterTypeWarning,
             )
+
+    def next_in_enumeration(self, value):
+        return None
 
 
 class OptionalParameter(OptionalParameterMixin, Parameter):
@@ -1379,9 +1382,14 @@ class TupleParameter(ListParameter):
         # ast.literal_eval(t_str) == t
         try:
             # loop required to parse tuple of tuples
-            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
+            return tuple(self._convert_iterable_to_tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
             return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
+
+    def _convert_iterable_to_tuple(self, x):
+        if isinstance(x, str):
+            return x
+        return tuple(x)
 
 
 class OptionalTupleParameter(OptionalParameterMixin, TupleParameter):
