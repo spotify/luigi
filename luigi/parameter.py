@@ -309,7 +309,7 @@ class Parameter:
         """
         return x  # default impl
 
-    def next_in_enumeration(self, _value):
+    def next_in_enumeration(self, value):
         """
         If your Parameter type has an enumerable ordering of values. You can
         choose to override this method. This method is used by the
@@ -388,6 +388,9 @@ class OptionalParameterMixin:
                 ),
                 OptionalParameterTypeWarning,
             )
+
+    def next_in_enumeration(self, value):
+        return None
 
 
 class OptionalParameter(OptionalParameterMixin, Parameter):

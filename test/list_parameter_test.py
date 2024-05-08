@@ -90,7 +90,7 @@ class ListParameterTest(unittest.TestCase):
 
         # Check that invalid lists raise correct errors
         invalid_list_type = ["NOT AN INT"]
-        invalid_list_value = [-999, 999]
+        invalid_list_value = [-999, 4]
 
         with pytest.raises(ValidationError, match="'NOT AN INT' is not of type 'number'"):
             a.normalize(invalid_list_type)
