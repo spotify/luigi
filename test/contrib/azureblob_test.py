@@ -30,8 +30,9 @@ from luigi.contrib.azureblob import AzureBlobClient, AzureBlobTarget
 account_name = os.environ.get("ACCOUNT_NAME")
 account_key = os.environ.get("ACCOUNT_KEY")
 sas_token = os.environ.get("SAS_TOKEN")
-is_emulated = False if account_name else True
-client = AzureBlobClient(account_name, account_key, sas_token, is_emulated=is_emulated)
+custom_domain = os.environ.get("CUSTOM_DOMAIN")
+protocol = os.environ.get("PROTOCOL")
+client = AzureBlobClient(account_name, account_key, sas_token, custom_domain=custom_domain, protocol=protocol)
 
 
 @pytest.mark.azureblob
@@ -96,7 +97,7 @@ class AzureBlobClientTest(unittest.TestCase):
             self.assertTrue(self.client.exists(from_path))
 
         # copy
-        self.assertIn(self.client.copy(from_path, to_path).status, ["success", "pending"])
+        self.assertIn(self.client.copy(from_path, to_path)["copy_status"], ["success", "pending"])
         self.assertTrue(self.client.exists(to_path))
 
         # remove
@@ -121,7 +122,7 @@ class MovieScriptTask(luigi.Task):
         return AzureBlobTarget("luigi-test", "movie-cheesy.txt", client, download_when_reading=False)
 
     def run(self):
-        client.connection.create_container("luigi-test")
+        client.create_container("luigi-test")
         with self.output().open("w") as op:
             op.write("I'm going to make him an offer he can't refuse.\n")
             op.write("Toto, I've got a feeling we're not in Kansas anymore.\n")
