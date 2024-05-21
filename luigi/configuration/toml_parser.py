@@ -56,6 +56,8 @@ class LuigiTomlParser(BaseParser, ConfigParser):
 
         # freeze dict params
         for section, content in self.data.items():
+            if section.lower() == 'logging':
+                continue
             for key, value in content.items():
                 if isinstance(value, dict):
                     self.data[section][key] = recursively_freeze(value)
