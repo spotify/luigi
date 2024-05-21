@@ -115,7 +115,7 @@ class ServerTest(ServerTestBase):
     def test_root_redirect(self):
         response = self.fetch("/", follow_redirects=False)
         self.assertEqual(response.code, 302)
-        self.assertEqual(response.headers['Location'], 'static/visualiser/index.html')  # assert that doesnt beging with leading slash !
+        self.assertEqual(response.headers['Location'], 'static/visualiser/index.html')  # assert that doesnt begin with leading slash !
 
     def test_api_preflight_cors_headers(self):
         response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
