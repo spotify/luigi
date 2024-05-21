@@ -76,6 +76,7 @@ class LuigiRunResult:
     def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
         summary_dict = _summary_dict(worker)
+        self.summary_dict = summary_dict
         self.summary_text = _summary_wrap(_summary_format(summary_dict, worker))
         self.status = _tasks_status(summary_dict)
         self.one_line_summary = _create_one_line_summary(self.status)

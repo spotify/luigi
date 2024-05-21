@@ -193,6 +193,44 @@ class InterfaceTest(LuigiTestCase):
         with patch.object(sys, 'argv', ['my_module.py', '--no-lock', '--my-param', 'my_value', '--local-scheduler']):
             luigi.run(main_task_cls=MyOtherTestTask)
 
+    def test_handle_failure_when_wrapper_task_failed_by_upstream_task(self):
+        result = []
+
+        class FailTask(luigi.Task):
+            def run(self):
+                raise Exception("Fail task")
+
+        class WrapperTask(luigi.WrapperTask):
+            def requires(self):
+                yield FailTask()
+
+            def on_upstream_failure(self):
+                result.append(0)
+
+        self.assertEqual(len(result), 0)
+        with patch.object(sys, 'argv', ['my_module.py', '--no-lock', '--local-scheduler']):
+            luigi.run(main_task_cls=WrapperTask)
+        self.assertEqual(len(result), 1)
+
+    def test_do_nothing_if_wrapper_task_success(self):
+        result = []
+
+        class FailTask(luigi.Task):
+            def run(self):
+                pass
+
+        class WrapperTask(luigi.WrapperTask):
+            def requires(self):
+                yield FailTask()
+
+            def on_upstream_failure(self):
+                result.append(0)
+
+        self.assertEqual(len(result), 0)
+        with patch.object(sys, 'argv', ['my_module.py', '--no-lock', '--local-scheduler']):
+            luigi.run(main_task_cls=WrapperTask)
+        self.assertEqual(len(result), 0)
+
     def _run_interface(self, **env_params):
         return luigi.interface.build(
                                     [self.task_a, self.task_b],
