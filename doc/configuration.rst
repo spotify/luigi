@@ -438,7 +438,7 @@ traceback_max_length
 Parameters controlling the contents of batch notifications sent from the
 scheduler
 
-email_interval_minutes
+email_interval
   Number of minutes between e-mail sends. Making this larger results in
   fewer, bigger e-mails.
   Defaults to 60.
