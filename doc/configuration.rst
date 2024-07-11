@@ -432,7 +432,7 @@ traceback_max_length
   Maximum length for traceback included in error email. Default is 5000.
 
 
-[batch_notifier]
+[batch_email]
 ----------------
 
 Parameters controlling the contents of batch notifications sent from the
