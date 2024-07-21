@@ -25,7 +25,7 @@ def get_static_files(path):
                         "*.eot", "*.svg", "*.ttf", "*.woff", "*.woff2"]]
 
 
-luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), [])
+luigi_package_data = sum(map(get_static_files, ["luigi/static", "luigi/templates"]), ["py.typed"])
 
 readme_note = """
 .. note::
