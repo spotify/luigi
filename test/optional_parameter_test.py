@@ -21,6 +21,10 @@ class OptionalParameterTest(LuigiTestCase):
         # Test parsing empty string (should be None)
         self.assertIsNone(cls(**kwargs).parse(''))
 
+        # Test next_in_enumeration always returns None for summary
+        self.assertIsNone(TestConfig.param.next_in_enumeration(expected_value))
+        self.assertIsNone(TestConfig.param.next_in_enumeration(None))
+
         # Test that warning is raised only with bad type
         with mock.patch('luigi.parameter.warnings') as warnings:
             TestConfig()

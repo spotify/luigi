@@ -264,6 +264,13 @@ class Task(metaclass=Register):
             return callback
         return wrapped
 
+    @classmethod
+    def remove_event_handler(cls, event, callback):
+        """
+        Function to remove the event handler registered previously by the cls.event_handler decorator.
+        """
+        cls._event_callbacks[cls][event].remove(callback)
+
     def trigger_event(self, event, *args, **kwargs):
         """
         Trigger that calls all of the specified events associated with this class.

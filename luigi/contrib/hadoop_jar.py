@@ -20,8 +20,8 @@ Provides functionality to run a Hadoop job using a Jar
 
 import logging
 import os
-import pipes
 import random
+import shlex
 import warnings
 
 import luigi.contrib.hadoop
@@ -110,7 +110,7 @@ class HadoopJarJobRunner(luigi.contrib.hadoop.JobRunner):
                 arglist += ['-o', 'UserKnownHostsFile=/dev/null',
                             '-o', 'StrictHostKeyChecking=no']
             arglist.append('{}@{}'.format(username, host))
-            hadoop_arglist = [pipes.quote(arg) for arg in hadoop_arglist]
+            hadoop_arglist = [shlex.quote(arg) for arg in hadoop_arglist]
             arglist.append(' '.join(hadoop_arglist))
         else:
             if not os.path.exists(job.jar()):
