@@ -146,8 +146,8 @@ Graph = (function() {
                 $.each(n.deps, function(i, dep) {
                     if (nodeIndex[dep]) {
                         var next_node = nodes[nodeIndex[dep]]
-                        var depth = (selfDependencies ? depth + 1 : classDepths[next_node.name])
-                        placeNodes(next_node, depth);
+                        var next_depth = (selfDependencies ? depth + 1 : classDepths[next_node.name])
+                        placeNodes(next_node, next_depth);
                     }
                 });
             }
