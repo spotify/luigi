@@ -310,6 +310,25 @@ class ParameterTest(LuigiTestCase):
     def test_enum_list_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.EnumListParameter())
 
+    def test_choice_list_param_valid(self):
+        p = luigi.parameter.ChoiceListParameter(choices=["1", "2", "3"])
+        self.assertEqual((), p.parse(''))
+        self.assertEqual(("1",), p.parse('1'))
+        self.assertEqual(("1", "3"), p.parse('1,3'))
+
+    def test_choice_list_param_invalid(self):
+        p = luigi.parameter.ChoiceListParameter(choices=["1", "2", "3"])
+        self.assertRaises(ValueError, lambda: p.parse('1,4'))
+
+    def test_invalid_choice_type(self):
+        self.assertRaises(
+            AssertionError,
+            lambda: luigi.ChoiceListParameter(var_type=int, choices=[1, 2, "3"]),
+        )
+
+    def test_choice_list_param_missing(self):
+        self.assertRaises(ParameterException, lambda: luigi.parameter.ChoiceListParameter())
+
     def test_tuple_serialize_parse(self):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
@@ -468,6 +487,13 @@ class TestParametersHashability(LuigiTestCase):
             args = luigi.parameter.EnumListParameter(enum=MyEnum, default=[MyEnum.C])
 
         self.assertEqual(FooWithDefault().args, p.parse('C'))
+
+    def test_choice_list(self):
+        class Foo(luigi.Task):
+            args = luigi.ChoiceListParameter(var_type=str, choices=["1", "2", "3"])
+
+        p = luigi.ChoiceListParameter(var_type=str, choices=["3", "2", "1"])
+        self.assertEqual(hash(Foo(args=("3",)).args), hash(p.parse("3")))
 
     def test_dict(self):
         class Foo(luigi.Task):

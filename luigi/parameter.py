@@ -1540,6 +1540,52 @@ class ChoiceParameter(Parameter):
                 var=var, choices=self._choices))
 
 
+class ChoiceListParameter(ChoiceParameter):
+    """
+    A parameter which takes two values:
+        1. an instance of :class:`~collections.Iterable` and
+        2. the class of the variables to convert to.
+
+    Values are taken to be a list, i.e. order is preserved, duplicates may occur, and empty list is possible.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            my_param = luigi.ChoiceListParameter(choices=['foo', 'bar', 'baz'], var_type=str)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param foo,bar
+
+    Consider using :class:`~luigi.EnumListParameter` for a typed, structured
+    alternative.  This class can perform the same role when all choices are the
+    same type and transparency of parameter value on the command line is
+    desired.
+    """
+
+    _sep = ','
+
+    def __init__(self, *args, **kwargs):
+        super(ChoiceListParameter, self).__init__(*args, **kwargs)
+
+    def parse(self, s):
+        values = [] if s == '' else s.split(self._sep)
+        return self.normalize(map(self._var_type, values))
+
+    def normalize(self, var):
+        values = []
+        for v in var:
+            values.append(super().normalize(v))
+        return tuple(values)
+
+    def serialize(self, values):
+        return self._sep.join(values)
+
+
 class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
     """Class to parse optional choice parameters."""
 
