@@ -100,7 +100,7 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
     # Create a pid file if it does not exist
     try:
         os.mkdir(pid_dir)
-        os.chmod(pid_dir, 0o777)
+        os.chmod(pid_dir, 0o700)
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise
