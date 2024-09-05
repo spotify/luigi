@@ -239,7 +239,7 @@ class PaiTask(luigi.Task):
 
         request_json = json.dumps({'username': self.__openpai.username, 'password': self.__openpai.password,
                                    'expiration': self.__openpai.expiration})
-        logger.debug('Get token request {0}'.format(request_json))
+        logger.debug('Requesting token from OpenPai')
         response = rs.post(urljoin(self.__openpai.pai_url, '/api/v1/token'),
                            headers={'Content-Type': 'application/json'}, data=request_json)
         logger.debug('Get token response {0}'.format(response.text))
