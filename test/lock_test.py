@@ -100,7 +100,7 @@ class LockTest(unittest.TestCase):
         self.assertTrue(acquired)
 
         s = os.stat(self.pid_file)
-        self.assertEqual(s.st_mode & 0o777, 0o777)
+        self.assertEqual(s.st_mode & 0o700, 0o700)
 
     def test_acquiring_lock_from_missing_process(self):
         fake_pid = 99999
@@ -111,7 +111,7 @@ class LockTest(unittest.TestCase):
         self.assertTrue(acquired)
 
         s = os.stat(self.pid_file)
-        self.assertEqual(s.st_mode & 0o777, 0o777)
+        self.assertEqual(s.st_mode & 0o700, 0o700)
 
     @mock.patch('os.kill')
     def test_take_lock_with_kill(self, kill_fn):
