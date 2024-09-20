@@ -205,9 +205,9 @@ jobs:
             tox-env: py312-azureblob
 
 
-          - python-version: 3.9
+          - python-version: "3.10"
             tox-env: flake8
-          - python-version: 3.9
+          - python-version: "3.10"
             tox-env: docs
 
     steps:
