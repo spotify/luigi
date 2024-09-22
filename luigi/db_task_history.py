@@ -188,7 +188,7 @@ class DbTaskHistory(task_history.TaskHistory):
             return session.query(TaskRecord).get(id)
 
 
-class TaskParameter(Base):
+class TaskParameter(Base):  # type: ignore
     """
     Table to track luigi.Parameter()s of a Task.
     """
@@ -201,7 +201,7 @@ class TaskParameter(Base):
         return "TaskParameter(task_id=%d, name=%s, value=%s)" % (self.task_id, self.name, self.value)
 
 
-class TaskEvent(Base):
+class TaskEvent(Base):  # type: ignore
     """
     Table to track when a task is scheduled, starts, finishes, and fails.
     """
@@ -215,7 +215,7 @@ class TaskEvent(Base):
         return "TaskEvent(task_id=%s, event_name=%s, ts=%s" % (self.task_id, self.event_name, self.ts)
 
 
-class TaskRecord(Base):
+class TaskRecord(Base):  # type: ignore
     """
     Base table to track information about a luigi.Task.
 

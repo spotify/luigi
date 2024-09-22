@@ -117,7 +117,7 @@ class CombinedInterpolation(Interpolation):
 class LuigiConfigParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
     enabled = True
-    optionxform = str
+    optionxform = str  # type: ignore
     _instance = None
     _config_paths = [
         '/etc/luigi/client.cfg',  # Deprecated old-style global luigi config
