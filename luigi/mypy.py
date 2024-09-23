@@ -7,6 +7,7 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 from __future__ import annotations
 
 import re
+import sys
 from typing import Callable, Dict, Final, Iterator, List, Literal, Optional
 
 from mypy.expandtype import expand_type, expand_type_by_instance
@@ -60,7 +61,13 @@ from mypy.typevars import fill_typevars
 
 METADATA_TAG: Final[str] = "task"
 
-PARAMETER_FULLNAME_MATCHER: Final = re.compile(r"^luigi(\.parameter)?\.\w*Parameter$")
+PARAMETER_FULLNAME_MATCHER: Final[re.Pattern] = re.compile(
+    r"^luigi(\.parameter)?\.\w*Parameter$"
+)
+
+if sys.version_info[:2] < (3, 8):
+    # This plugin uses the walrus operator, which is only available in Python 3.8+
+    raise RuntimeError("This plugin requires Python 3.8+")
 
 
 class TaskPlugin(Plugin):
