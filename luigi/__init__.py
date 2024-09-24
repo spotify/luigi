@@ -40,9 +40,9 @@ from luigi.parameter import (
     DateIntervalParameter, TimeDeltaParameter,
     IntParameter, FloatParameter, BoolParameter, PathParameter,
     TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter, EnumListParameter,
-    NumericalParameter, ChoiceParameter, OptionalParameter, OptionalStrParameter,
-    OptionalIntParameter, OptionalFloatParameter, OptionalBoolParameter, OptionalPathParameter,
-    OptionalDictParameter, OptionalListParameter, OptionalTupleParameter,
+    NumericalParameter, ChoiceParameter, ChoiceListParameter, OptionalParameter,
+    OptionalStrParameter, OptionalIntParameter, OptionalFloatParameter, OptionalBoolParameter,
+    OptionalPathParameter, OptionalDictParameter, OptionalListParameter, OptionalTupleParameter,
     OptionalChoiceParameter, OptionalNumericalParameter,
 )
 
@@ -66,9 +66,9 @@ __all__ = [
     'FloatParameter', 'BoolParameter', 'PathParameter', 'TaskParameter',
     'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter', 'EnumListParameter',
     'configuration', 'interface', 'local_target', 'run', 'build', 'event', 'Event',
-    'NumericalParameter', 'ChoiceParameter', 'OptionalParameter', 'OptionalStrParameter',
-    'OptionalIntParameter', 'OptionalFloatParameter', 'OptionalBoolParameter', 'OptionalPathParameter',
-    'OptionalDictParameter', 'OptionalListParameter', 'OptionalTupleParameter',
+    'NumericalParameter', 'ChoiceParameter', 'ChoiceListParameter', 'OptionalParameter',
+    'OptionalStrParameter', 'OptionalIntParameter', 'OptionalFloatParameter', 'OptionalBoolParameter',
+    'OptionalPathParameter', 'OptionalDictParameter', 'OptionalListParameter', 'OptionalTupleParameter',
     'OptionalChoiceParameter', 'OptionalNumericalParameter', 'LuigiStatusCode',
     '__version__',
 ]
