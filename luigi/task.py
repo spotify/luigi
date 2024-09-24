@@ -29,6 +29,7 @@ import hashlib
 import re
 import copy
 import functools
+from typing import Any, Dict
 
 import luigi
 
@@ -170,7 +171,7 @@ class Task(metaclass=Register):
 
     """
 
-    _event_callbacks = {}
+    _event_callbacks: Dict[Any, Any] = {}
 
     #: Priority of the task: the scheduler should favor available
     #: tasks with higher priority values first.
@@ -180,7 +181,7 @@ class Task(metaclass=Register):
 
     #: Resources used by the task. Should be formatted like {"scp": 1} to indicate that the
     #: task requires 1 unit of the scp resource.
-    resources = {}
+    resources: Dict[str, Any] = {}
 
     #: Number of seconds after which to time out the run function.
     #: No timeout if set to 0.

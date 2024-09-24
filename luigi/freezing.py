@@ -8,7 +8,7 @@ from collections import OrderedDict
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 import operator
 import functools
 

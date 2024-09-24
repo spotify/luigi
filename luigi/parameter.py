@@ -1649,4 +1649,4 @@ class PathParameter(Parameter):
 class OptionalPathParameter(OptionalParameter, PathParameter):
     """Class to parse optional path parameters."""
 
-    expected_type = (str, Path)
+    expected_type = (str, Path)  # type: ignore

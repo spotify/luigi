@@ -22,6 +22,7 @@ Table of Contents
    configuration.rst
    logging.rst
    design_and_limitations.rst
+   mypy.rst
 
 API Reference
 -------------

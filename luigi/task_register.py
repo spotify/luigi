@@ -19,8 +19,9 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 """
 
 import abc
-
 import logging
+from typing import Any, Dict, List
+
 logger = logging.getLogger('luigi-interface')
 
 
@@ -46,9 +47,9 @@ class Register(abc.ABCMeta):
        same object.
     2. Keep track of all subclasses of :py:class:`Task` and expose them.
     """
-    __instance_cache = {}
-    _default_namespace_dict = {}
-    _reg = []
+    __instance_cache: Dict[str, Any] = {}
+    _default_namespace_dict: Dict[str, Any] = {}
+    _reg: List[Any] = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`_get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
