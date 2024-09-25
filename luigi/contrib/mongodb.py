@@ -95,6 +95,14 @@ class MongoCellTarget(MongoTarget):
         """
         Write value to the target
         """
+        self.get_collection().insert_one(
+            value
+        )
+
+    def update(self, value):
+        """
+        Update value to the target
+        """
         self.get_collection().update_one(
             {'_id': self._document_id},
             {'$set': {self._path: value}},
