@@ -68,9 +68,10 @@ class DropboxClient(FileSystem):
     Dropbox client for authentication, designed to be used by the :py:class:`DropboxTarget` class.
     """
 
-    def __init__(self, token, user_agent="Luigi"):
+    def __init__(self, token, user_agent="Luigi", root_namespace_id=None):
         """
         :param str token: Dropbox Oauth2 Token. See :class:`DropboxTarget` for more information about generating a token
+        :param str root_namespace_id: Root namespace ID for interacting with Team Spaces
         """
         if not token:
             raise ValueError("The token parameter must contain a valid Dropbox Oauth2 Token")
@@ -79,6 +80,9 @@ class DropboxClient(FileSystem):
             conn = dropbox.dropbox_client.Dropbox(oauth2_access_token=token, user_agent=user_agent)
         except Exception as e:
             raise Exception("Cannot connect to Dropbox. Check your Internet connection and the token. \n" + repr(e))
+
+        if root_namespace_id:
+            conn = conn.with_path_root(dropbox.common.PathRoot.root(root_namespace_id))
 
         self.token = token
         self.conn = conn
@@ -257,7 +261,7 @@ class DropboxTarget(FileSystemTarget):
     A Dropbox filesystem target.
     """
 
-    def __init__(self, path, token, format=None, user_agent="Luigi"):
+    def __init__(self, path, token, format=None, user_agent="Luigi", root_namespace_id=None):
         """
         Create an Dropbox Target for storing data in a dropbox.com account
 
@@ -285,6 +289,7 @@ class DropboxTarget(FileSystemTarget):
         :param str path: Remote path in Dropbox (starting with '/').
         :param str token: a valid OAuth2 Dropbox token.
         :param luigi.Format format: the luigi format to use (e.g. `luigi.format.Nop`)
+        :param str root_namespace_id: Root namespace ID for interacting with Team Spaces
 
 
         """
@@ -295,7 +300,7 @@ class DropboxTarget(FileSystemTarget):
 
         self.path = path
         self.token = token
-        self.client = DropboxClient(token, user_agent)
+        self.client = DropboxClient(token, user_agent, root_namespace_id)
         self.format = format or luigi.format.get_default_format()
 
     def __str__(self):
