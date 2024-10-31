@@ -187,6 +187,13 @@ class DbTaskHistory(task_history.TaskHistory):
         with self._session(session) as session:
             return session.query(TaskRecord).get(id)
 
+    def find_task_by_task_id(self, task_id, session=None):
+        """
+        Find task with the given task ID.
+        """
+        with self._session(session) as session:
+            return session.query(TaskRecord).filter(TaskRecord.task_id==task_id).all()[-1]
+
 
 class TaskParameter(Base):  # type: ignore
     """
