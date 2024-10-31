@@ -189,7 +189,7 @@ class DbTaskHistory(task_history.TaskHistory):
 
     def find_task_by_task_id(self, task_id, session=None):
         """
-        Find task with the given record ID.
+        Find task with the given task ID.
         """
         with self._session(session) as session:
             return session.query(TaskRecord).filter(TaskRecord.task_id==task_id).all()[-1]
