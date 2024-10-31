@@ -15,20 +15,23 @@
 # limitations under the License.
 #
 import os.path
+from configparser import ConfigParser
+from typing import Any, Dict
 
 try:
     import toml
+    toml_enabled = True
 except ImportError:
-    toml = False
+    toml_enabled = False
 
 from .base_parser import BaseParser
 from ..freezing import recursively_freeze
 
 
-class LuigiTomlParser(BaseParser):
+class LuigiTomlParser(BaseParser, ConfigParser):
     NO_DEFAULT = object()
-    enabled = bool(toml)
-    data = dict()
+    enabled = bool(toml_enabled)
+    data: Dict[str, Any] = dict()
     _instance = None
     _config_paths = [
         '/etc/luigi/luigi.toml',

@@ -28,7 +28,7 @@ try:
 except ImportError:
     import pickle
 import logging
-import tarfile
+from luigi.safe_extractor import SafeExtractor
 
 
 def do_work_on_compute_node(work_dir):
@@ -52,10 +52,8 @@ def extract_packages_archive(work_dir):
     curdir = os.path.abspath(os.curdir)
 
     os.chdir(work_dir)
-    tar = tarfile.open(package_file)
-    for tarinfo in tar:
-        tar.extract(tarinfo)
-    tar.close()
+    extractor = SafeExtractor(work_dir)
+    extractor.safe_extract(package_file)
     if '' not in sys.path:
         sys.path.insert(0, '')
 

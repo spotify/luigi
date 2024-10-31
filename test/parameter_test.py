@@ -21,6 +21,7 @@ from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
 from datetime import timedelta
 import enum
 import mock
+import pytest
 
 import luigi
 import luigi.date_interval
@@ -309,10 +310,24 @@ class ParameterTest(LuigiTestCase):
     def test_enum_list_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.EnumListParameter())
 
-    def test_list_serialize_parse(self):
-        a = luigi.ListParameter()
-        b_list = [1, 2, 3]
-        self.assertEqual(b_list, a.parse(a.serialize(b_list)))
+    def test_choice_list_param_valid(self):
+        p = luigi.parameter.ChoiceListParameter(choices=["1", "2", "3"])
+        self.assertEqual((), p.parse(''))
+        self.assertEqual(("1",), p.parse('1'))
+        self.assertEqual(("1", "3"), p.parse('1,3'))
+
+    def test_choice_list_param_invalid(self):
+        p = luigi.parameter.ChoiceListParameter(choices=["1", "2", "3"])
+        self.assertRaises(ValueError, lambda: p.parse('1,4'))
+
+    def test_invalid_choice_type(self):
+        self.assertRaises(
+            AssertionError,
+            lambda: luigi.ChoiceListParameter(var_type=int, choices=[1, 2, "3"]),
+        )
+
+    def test_choice_list_param_missing(self):
+        self.assertRaises(ParameterException, lambda: luigi.parameter.ChoiceListParameter())
 
     def test_tuple_serialize_parse(self):
         a = luigi.TupleParameter()
@@ -357,13 +372,21 @@ class ParameterTest(LuigiTestCase):
         TestConfig(param="str")
         warnings.warn.assert_not_called()
 
-    @mock.patch('luigi.parameter.warnings')
-    def test_no_warn_on_none_in_optional(self, warnings):
+    def test_no_warn_on_none_in_optional(self):
         class TestConfig(luigi.Config):
             param = luigi.OptionalParameter(default=None)
 
-        TestConfig()
-        warnings.warn.assert_not_called()
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig()
+            warnings.warn.assert_not_called()
+
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig(param=None)
+            warnings.warn.assert_not_called()
+
+        with mock.patch('luigi.parameter.warnings') as warnings:
+            TestConfig(param="")
+            warnings.warn.assert_not_called()
 
     @mock.patch('luigi.parameter.warnings')
     def test_no_warn_on_string_in_optional(self, warnings):
@@ -379,7 +402,10 @@ class ParameterTest(LuigiTestCase):
             param = luigi.OptionalParameter()
 
         TestConfig(param=1)
-        warnings.warn.assert_called_once_with('OptionalParameter "param" with value "1" is not of type string or None.')
+        warnings.warn.assert_called_once_with(
+            'OptionalParameter "param" with value "1" is not of type "str" or None.',
+            luigi.parameter.OptionalParameterTypeWarning
+        )
 
     def test_optional_parameter_parse_none(self):
         self.assertIsNone(luigi.OptionalParameter().parse(''))
@@ -462,6 +488,13 @@ class TestParametersHashability(LuigiTestCase):
 
         self.assertEqual(FooWithDefault().args, p.parse('C'))
 
+    def test_choice_list(self):
+        class Foo(luigi.Task):
+            args = luigi.ChoiceListParameter(var_type=str, choices=["1", "2", "3"])
+
+        p = luigi.ChoiceListParameter(var_type=str, choices=["3", "2", "1"])
+        self.assertEqual(hash(Foo(args=("3",)).args), hash(p.parse("3")))
+
     def test_dict(self):
         class Foo(luigi.Task):
             args = luigi.parameter.DictParameter()
@@ -525,6 +558,14 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.TupleParameter()
         self.assertEqual(hash(Foo(args=(('foo', 'bar'), ('doge', 'wow'))).args),
                          hash(p.normalize(p.parse('(("foo", "bar"), ("doge", "wow"))'))))
+
+    def test_tuple_string_with_json(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.TupleParameter()
+
+        p = luigi.parameter.TupleParameter()
+        self.assertEqual(hash(Foo(args=('foo', 'bar')).args),
+                         hash(p.normalize(p.parse('["foo", "bar"]'))))
 
     def test_task(self):
         class Bar(luigi.Task):
@@ -821,22 +862,36 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(weeks=5), _value(p))
 
+    @mock.patch('luigi.parameter.ParameterException')
     @with_config({"foo": {"bar": "P3Y6M4DT12H30M5S"}})
-    def testTimeDelta8601YearMonthNotSupported(self):
+    def testTimeDelta8601YearMonthNotSupported(self, exc):
         def f():
             return _value(luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar")))
-        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with years or months are not supported
+        self.assertRaises(ValueError, f)  # ISO 8601 durations with years or months are not supported
+        exc.assert_called_once_with("Invalid time delta - could not parse P3Y6M4DT12H30M5S")
 
     @with_config({"foo": {"bar": "PT6M"}})
     def testTimeDelta8601MAfterT(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(minutes=6), _value(p))
 
+    @mock.patch('luigi.parameter.ParameterException')
     @with_config({"foo": {"bar": "P6M"}})
-    def testTimeDelta8601MBeforeT(self):
+    def testTimeDelta8601MBeforeT(self, exc):
         def f():
             return _value(luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar")))
-        self.assertRaises(luigi.parameter.ParameterException, f)  # ISO 8601 durations with months are not supported
+        self.assertRaises(ValueError, f)  # ISO 8601 durations with months are not supported
+        exc.assert_called_once_with("Invalid time delta - could not parse P6M")
+
+    @with_config({"foo": {"bar": "12.34"}})
+    def testTimeDeltaFloat(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=12.34), _value(p))
+
+    @with_config({"foo": {"bar": "56789"}})
+    def testTimeDeltaInt(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(seconds=56789), _value(p))
 
     def testHasDefaultNoSection(self):
         self.assertRaises(luigi.parameter.MissingParameterException,
@@ -1239,3 +1294,67 @@ class TaskAsParameterName1335Test(LuigiTestCase):
             task = luigi.IntParameter()
 
         self.assertTrue(self.run_locally_split('MyTask --task 5'))
+
+
+class TestPathParameter:
+
+    @pytest.fixture(params=[None, "not_existing_dir"])
+    def default(self, request):
+        return request.param
+
+    @pytest.fixture(params=[True, False])
+    def absolute(self, request):
+        return request.param
+
+    @pytest.fixture(params=[True, False])
+    def exists(self, request):
+        return request.param
+
+    @pytest.fixture()
+    def path_parameter(self, tmpdir, default, absolute, exists):
+        class TaskPathParameter(luigi.Task):
+
+            a = luigi.PathParameter(
+                default=str(tmpdir / default) if default is not None else str(tmpdir),
+                absolute=absolute,
+                exists=exists,
+            )
+            b = luigi.OptionalPathParameter(
+                default=str(tmpdir / default) if default is not None else str(tmpdir),
+                absolute=absolute,
+                exists=exists,
+            )
+            c = luigi.OptionalPathParameter(default=None)
+            d = luigi.OptionalPathParameter(default="not empty default")
+
+            def run(self):
+                # Use the parameter as a Path object
+                new_file = self.a / "test.file"
+                new_optional_file = self.b / "test_optional.file"
+                if default is not None:
+                    new_file.parent.mkdir(parents=True)
+                new_file.touch()
+                new_optional_file.touch()
+                assert new_file.exists()
+                assert new_optional_file.exists()
+                assert self.c is None
+                assert self.d is None
+
+            def output(self):
+                return luigi.LocalTarget("not_existing_file")
+
+        return {
+            "tmpdir": tmpdir,
+            "default": default,
+            "absolute": absolute,
+            "exists": exists,
+            "cls": TaskPathParameter,
+        }
+
+    @with_config({"TaskPathParameter": {"d": ""}})
+    def test_exists(self, path_parameter):
+        if path_parameter["default"] is not None and path_parameter["exists"]:
+            with pytest.raises(ValueError, match="The path .* does not exist"):
+                luigi.build([path_parameter["cls"]()], local_scheduler=True)
+        else:
+            assert luigi.build([path_parameter["cls"]()], local_scheduler=True)

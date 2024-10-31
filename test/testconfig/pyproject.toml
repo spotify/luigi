@@ -1,0 +1,3 @@
+[tool.mypy]
+plugins = ["luigi.mypy"]
+ignore_missing_imports = true

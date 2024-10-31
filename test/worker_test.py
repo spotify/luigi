@@ -26,7 +26,7 @@ import threading
 import time
 
 import psutil
-from helpers import (unittest, with_config, skipOnTravis, LuigiTestCase,
+from helpers import (unittest, with_config, skipOnTravisAndGithubActions, LuigiTestCase,
                      temporary_unloaded_module)
 
 import luigi.notifications
@@ -59,6 +59,7 @@ class DummyTask(Task):
 
 class DynamicDummyTask(Task):
     p = luigi.Parameter()
+    sleep = luigi.FloatParameter(default=0.5, significant=False)
 
     def output(self):
         return luigi.LocalTarget(self.p)
@@ -66,7 +67,7 @@ class DynamicDummyTask(Task):
     def run(self):
         with self.output().open('w') as f:
             f.write('Done!')
-        time.sleep(0.5)  # so we can benchmark & see if parallelization works
+        time.sleep(self.sleep)  # so we can benchmark & see if parallelization works
 
 
 class DynamicDummyTaskWithNamespace(DynamicDummyTask):
@@ -93,6 +94,37 @@ class DynamicRequires(Task):
             for i, d in enumerate(dummy_targets):
                 for line in d.open('r'):
                     print('%d: %s' % (i, line.strip()), file=f)
+
+
+class DynamicRequiresWrapped(Task):
+    p = luigi.Parameter()
+
+    def output(self):
+        return luigi.LocalTarget(os.path.join(self.p, 'parent'))
+
+    def run(self):
+        reqs = [
+            DynamicDummyTask(p=os.path.join(self.p, '%s.txt' % i), sleep=0.0)
+            for i in range(10)
+        ]
+
+        # yield again as DynamicRequires
+        yield luigi.DynamicRequirements(reqs)
+
+        # and again with a custom complete function that does base name comparisons
+        def custom_complete(complete_fn):
+            if not complete_fn(reqs[0]):
+                return False
+            paths = [task.output().path for task in reqs]
+            basenames = os.listdir(os.path.dirname(paths[0]))
+            self._custom_complete_called = True
+            self._custom_complete_result = all(os.path.basename(path) in basenames for path in paths)
+            return self._custom_complete_result
+
+        yield luigi.DynamicRequirements(reqs, custom_complete)
+
+        with self.output().open('w') as f:
+            f.write('Done!')
 
 
 class DynamicRequiresOtherModule(Task):
@@ -433,6 +465,88 @@ class WorkerTest(LuigiTestCase):
             self.assertTrue(b2.complete())
             self.assertEqual(a2.complete_count, 2)
             self.assertEqual(b2.complete_count, 2)
+
+    def test_cache_task_completion_config(self):
+        class A(Task):
+
+            i = luigi.IntParameter()
+
+            def __init__(self, *args, **kwargs):
+                super(A, self).__init__(*args, **kwargs)
+                self.complete_count = 0
+                self.has_run = False
+
+            def complete(self):
+                self.complete_count += 1
+                return self.has_run
+
+            def run(self):
+                self.has_run = True
+
+        class B(A):
+
+            def run(self):
+                yield A(i=self.i + 0)
+                yield A(i=self.i + 1)
+                yield A(i=self.i + 2)
+                self.has_run = True
+
+        # test with enabled cache_task_completion
+        with Worker(scheduler=self.sch, worker_id='2', cache_task_completion=True) as w:
+            b0 = B(i=0)
+            a0 = A(i=0)
+            a1 = A(i=1)
+            a2 = A(i=2)
+            self.assertTrue(w.add(b0))
+            # a's are required dynamically, so their counts must be 0
+            self.assertEqual(b0.complete_count, 1)
+            self.assertEqual(a0.complete_count, 0)
+            self.assertEqual(a1.complete_count, 0)
+            self.assertEqual(a2.complete_count, 0)
+            w.run()
+            # the complete methods of a's yielded first in b's run method were called equally often
+            self.assertEqual(b0.complete_count, 1)
+            self.assertEqual(a0.complete_count, 2)
+            self.assertEqual(a1.complete_count, 2)
+            self.assertEqual(a2.complete_count, 2)
+
+        # test with disabled cache_task_completion
+        with Worker(scheduler=self.sch, worker_id='2', cache_task_completion=False) as w:
+            b10 = B(i=10)
+            a10 = A(i=10)
+            a11 = A(i=11)
+            a12 = A(i=12)
+            self.assertTrue(w.add(b10))
+            # a's are required dynamically, so their counts must be 0
+            self.assertEqual(b10.complete_count, 1)
+            self.assertEqual(a10.complete_count, 0)
+            self.assertEqual(a11.complete_count, 0)
+            self.assertEqual(a12.complete_count, 0)
+            w.run()
+            # the complete methods of a's yielded first in b's run method were called more often
+            self.assertEqual(b10.complete_count, 1)
+            self.assertEqual(a10.complete_count, 5)
+            self.assertEqual(a11.complete_count, 4)
+            self.assertEqual(a12.complete_count, 3)
+
+        # test with enabled check_complete_on_run
+        with Worker(scheduler=self.sch, worker_id='2', check_complete_on_run=True) as w:
+            b20 = B(i=20)
+            a20 = A(i=20)
+            a21 = A(i=21)
+            a22 = A(i=22)
+            self.assertTrue(w.add(b20))
+            # a's are required dynamically, so their counts must be 0
+            self.assertEqual(b20.complete_count, 1)
+            self.assertEqual(a20.complete_count, 0)
+            self.assertEqual(a21.complete_count, 0)
+            self.assertEqual(a22.complete_count, 0)
+            w.run()
+            # the complete methods of a's yielded first in b's run method were called more often
+            self.assertEqual(b20.complete_count, 2)
+            self.assertEqual(a20.complete_count, 6)
+            self.assertEqual(a21.complete_count, 5)
+            self.assertEqual(a22.complete_count, 4)
 
     def test_gets_missed_work(self):
         class A(Task):
@@ -1071,6 +1185,13 @@ class DynamicDependenciesTest(unittest.TestCase):
         luigi.build([t], local_scheduler=True, workers=self.n_workers)
         self.assertTrue(t.complete())
 
+    def test_wrapped_dynamic_requirements(self):
+        t = DynamicRequiresWrapped(p=self.p)
+        luigi.build([t], local_scheduler=True, workers=1)
+        self.assertTrue(t.complete())
+        self.assertTrue(getattr(t, '_custom_complete_called', False))
+        self.assertTrue(getattr(t, '_custom_complete_result', False))
+
 
 class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):
     n_workers = 100
@@ -1151,13 +1272,7 @@ class WorkerEmailTest(LuigiTestCase):
     @email_patch
     def test_connection_error(self, emails):
         sch = RemoteScheduler('http://tld.invalid:1337', connect_timeout=1)
-
-        self.waits = 0
-
-        def dummy_wait():
-            self.waits += 1
-
-        sch._wait = dummy_wait
+        sch._rpc_retry_wait = 1  # shorten wait time to speed up tests
 
         class A(DummyTask):
             pass
@@ -1167,8 +1282,8 @@ class WorkerEmailTest(LuigiTestCase):
         with Worker(scheduler=sch) as worker:
             try:
                 worker.add(a)
-            except RPCError:
-                self.assertEqual(self.waits, 2)  # should attempt to add it 3 times
+            except RPCError as e:
+                self.assertTrue(str(e).find("Errors (3 attempts)") != -1)
                 self.assertNotEqual(emails, [])
                 self.assertTrue(emails[0].find("Luigi: Framework error while scheduling %s" % (a,)) != -1)
             else:
@@ -1244,8 +1359,8 @@ class WorkerEmailTest(LuigiTestCase):
         worker = Worker(scheduler)
         a = A()
 
-        with mock.patch.object(worker._scheduler, 'announce_scheduling_failure', side_effect=Exception('Unexpected')),\
-                self.assertRaises(Exception):
+        with mock.patch.object(worker._scheduler, 'announce_scheduling_failure',
+                               side_effect=Exception('Unexpected')), self.assertRaises(Exception):
             worker.add(a)
         self.assertTrue(len(emails) == 2)  # One for `complete` error, one for exception in announcing.
         self.assertTrue('Luigi: Framework error while scheduling' in emails[1])
@@ -1329,6 +1444,17 @@ class WorkerEmailTest(LuigiTestCase):
         luigi.build([a], workers=1, local_scheduler=True)
         self.assertEqual(1, len(emails))
         self.assertTrue(emails[0].find("Luigi: %s FAILED" % (a,)) != -1)
+
+    @email_patch
+    def test_run_error_long_traceback(self, emails):
+        class A(luigi.Task):
+            def run(self):
+                raise Exception("b0rk"*10500)
+
+        a = A()
+        luigi.build([a], workers=1, local_scheduler=True)
+        self.assertTrue(len(emails[0]) < 10000)
+        self.assertTrue(emails[0].find("Traceback exceeds max length and has been truncated"))
 
     @with_config({'batch_email': {'email_interval': '0'}, 'worker': {'send_failure_email': 'False'}})
     @email_patch
@@ -1572,7 +1698,7 @@ class MultipleWorkersTest(unittest.TestCase):
     def test_time_out_hung_single_worker(self):
         luigi.build([HangTheWorkerTask(0.1)], workers=1, local_scheduler=True)
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953986')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/72953986')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_default_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)
@@ -1589,7 +1715,7 @@ class MultipleWorkersTest(unittest.TestCase):
         w._handle_next_task()
         self.assertEqual(0, len(w._running_tasks))
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/76645264')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/76645264')
     @mock.patch('luigi.worker.time')
     def test_purge_hung_worker_override_timeout_time(self, mock_time):
         w = Worker(worker_processes=2, wait_interval=0.01, timeout=5)

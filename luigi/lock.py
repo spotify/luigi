@@ -80,7 +80,7 @@ def get_info(pid_dir, my_pid=None):
 
     my_cmd = getpcmd(my_pid)
     cmd_hash = my_cmd.encode('utf8')
-    pid_file = os.path.join(pid_dir, hashlib.md5(cmd_hash).hexdigest()) + '.pid'
+    pid_file = os.path.join(pid_dir, hashlib.new('md5', cmd_hash, usedforsecurity=False).hexdigest()) + '.pid'
 
     return my_pid, my_cmd, pid_file
 
@@ -100,7 +100,7 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
     # Create a pid file if it does not exist
     try:
         os.mkdir(pid_dir)
-        os.chmod(pid_dir, 0o777)
+        os.chmod(pid_dir, 0o700)
     except OSError as exc:
         if exc.errno != errno.EEXIST:
             raise

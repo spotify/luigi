@@ -18,7 +18,7 @@ import luigi.contrib.postgres
 from luigi.tools.range import RangeDaily
 from helpers import unittest
 import mock
-from nose.plugins.attrib import attr
+import pytest
 
 
 def datetime_to_epoch(dt):
@@ -58,7 +58,7 @@ class DummyPostgresImporter(luigi.contrib.postgres.CopyToTable):
     )
 
 
-@attr('postgres')
+@pytest.mark.postgres
 class DailyCopyToTableTest(unittest.TestCase):
     maxDiff = None
 
@@ -106,7 +106,7 @@ class DummyPostgresQueryWithPortEncodedInHost(DummyPostgresQuery):
     host = 'dummy_host:1234'
 
 
-@attr('postgres')
+@pytest.mark.postgres
 class PostgresQueryTest(unittest.TestCase):
     maxDiff = None
 
@@ -132,14 +132,14 @@ class PostgresQueryTest(unittest.TestCase):
 
     def test_override_port(self):
         output = DummyPostgresQueryWithPort(date=datetime.datetime(1991, 3, 24)).output()
-        self.assertEquals(output.port, 1234)
+        self.assertEqual(output.port, 1234)
 
     def test_port_encoded_in_host(self):
         output = DummyPostgresQueryWithPortEncodedInHost(date=datetime.datetime(1991, 3, 24)).output()
-        self.assertEquals(output.port, '1234')
+        self.assertEqual(output.port, '1234')
 
 
-@attr('postgres')
+@pytest.mark.postgres
 class TestCopyToTableWithMetaColumns(unittest.TestCase):
     @mock.patch("luigi.contrib.postgres.CopyToTable.enable_metadata_columns", new_callable=mock.PropertyMock, return_value=True)
     @mock.patch("luigi.contrib.postgres.CopyToTable._add_metadata_columns")

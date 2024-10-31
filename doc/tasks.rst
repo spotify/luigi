@@ -134,6 +134,8 @@ LocalTarget. Following the above example:
 
 .. code:: python
 
+    from luigi.format import Nop
+
     class GenerateWords(luigi.Task):
 
         def output(self):
@@ -151,6 +153,13 @@ LocalTarget. Following the above example:
 
             with self.output().open('w') as f:
                 pickle.dump(words, f)
+
+
+It is your responsibility to ensure that after running :func:`~luigi.task.Task.run`, the task is
+complete, i.e. :func:`~luigi.task.Task.complete` returns ``True``. Unless you have overridden
+:func:`~luigi.task.Task.complete`, :func:`~luigi.task.Task.run` should generate all the targets
+defined as outputs. Luigi verifies that you adhere to the contract before running downstream
+dependencies, and reports ``Unfulfilled dependencies at run time`` if a violation is detected.
 
 .. _Task.input:
 
@@ -189,8 +198,8 @@ You can also yield a list of tasks.
         def run(self):
             other_target = yield OtherTask()
 
-	    # dynamic dependencies resolve into targets
-	    f = other_target.open('r')
+            # dynamic dependencies resolve into targets
+            f = other_target.open('r')
 
 
 This mechanism is an alternative to Task.requires_ in case
@@ -199,6 +208,10 @@ It does come with some constraints:
 the Task.run_ method will resume from scratch each time a new task is yielded.
 In other words, you should make sure your Task.run_ method is idempotent.
 (This is good practice for all Tasks in Luigi, but especially so for tasks with dynamic dependencies).
+As this might entail redundant calls to tasks' :func:`~luigi.task.Task.complete` methods,
+you should consider setting the "cache_task_completion" option in the :ref:`worker-config`.
+To further control how dynamic task requirements are handled internally by worker nodes,
+there is also the option to wrap dependent tasks by :class:`~luigi.task.DynamicRequirements`.
 
 For an example of a workflow using dynamic dependencies, see
 `examples/dynamic_requirements.py <https://github.com/spotify/luigi/blob/master/examples/dynamic_requirements.py>`_.

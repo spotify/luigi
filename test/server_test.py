@@ -21,7 +21,7 @@ import shutil
 import signal
 import time
 import tempfile
-from helpers import unittest, skipOnTravis
+from helpers import unittest, skipOnTravisAndGithubActions
 import luigi.rpc
 import luigi.server
 import luigi.cmdline
@@ -33,7 +33,7 @@ from urllib.parse import (
 
 import tornado.ioloop
 from tornado.testing import AsyncHTTPTestCase
-from nose.plugins.attrib import attr
+import pytest
 
 try:
     from unittest import mock
@@ -115,7 +115,7 @@ class ServerTest(ServerTestBase):
     def test_root_redirect(self):
         response = self.fetch("/", follow_redirects=False)
         self.assertEqual(response.code, 302)
-        self.assertEqual(response.headers['Location'], 'static/visualiser/index.html')  # assert that doesnt beging with leading slash !
+        self.assertEqual(response.headers['Location'], 'static/visualiser/index.html')  # assert that doesnt begin with leading slash !
 
     def test_api_preflight_cors_headers(self):
         response = self.fetch('/api/graph', method='OPTIONS', headers={'Origin': 'foo'})
@@ -324,24 +324,24 @@ class _ServerTest(unittest.TestCase):
     def tearDown(self):
         self.stop_server()
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/78315794')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/78315794')
     def test_ping(self):
         self.sch.ping(worker='xyz')
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/78023665')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/78023665')
     def test_raw_ping(self):
         self.sch._request('/api/ping', {'worker': 'xyz'})
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/78023665')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/78023665')
     def test_raw_ping_extended(self):
         self.sch._request('/api/ping', {'worker': 'xyz', 'foo': 'bar'})
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/166833694')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/166833694')
     def test_404(self):
         with self.assertRaises(luigi.rpc.RPCError):
             self.sch._request('/api/fdsfds', {'dummy': 1})
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/72953884')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/72953884')
     def test_save_state(self):
         self.sch.add_task(worker='X', task_id='B', deps=('A',))
         self.sch.add_task(worker='X', task_id='A')
@@ -352,7 +352,7 @@ class _ServerTest(unittest.TestCase):
         self.assertEqual(work['task_id'], 'A')
 
 
-@attr('unixsocket')
+@pytest.mark.unixsocket
 class UNIXServerTest(_ServerTest):
     class ServerClient:
         def __init__(self):
@@ -390,6 +390,10 @@ class INETServerClient:
 
 
 class _INETServerTest(_ServerTest):
+    # HACK: nose ignores class whose name starts with underscore
+    # see: https://github.com/nose-devs/nose/blob/6f9dada1a5593b2365859bab92c7d1e468b64b7b/nose/selector.py#L72
+    # This hack affects derived classes of this class e.g. INETProcessServerTest, INETLuigidServerTest, INETLuigidDaemonServerTest.
+    __test__ = False
 
     def test_with_cmdline(self):
         """
@@ -400,6 +404,8 @@ class _INETServerTest(_ServerTest):
 
 
 class INETProcessServerTest(_INETServerTest):
+    __test__ = True
+
     class ServerClient(INETServerClient):
         def run_server(self):
             luigi.server.run(api_port=self.port, address='127.0.0.1')
@@ -413,7 +419,7 @@ class INETURLLibServerTest(INETProcessServerTest):
     def start_server(self, *args, **kwargs):
         super(INETURLLibServerTest, self).start_server(*args, **kwargs)
 
-    @skipOnTravis('https://travis-ci.org/spotify/luigi/jobs/81022689')
+    @skipOnTravisAndGithubActions('https://travis-ci.org/spotify/luigi/jobs/81022689')
     def patching_test(self):
         """
         Check that HAS_REQUESTS patching is meaningful
@@ -426,6 +432,8 @@ class INETURLLibServerTest(INETProcessServerTest):
 
 
 class INETLuigidServerTest(_INETServerTest):
+    __test__ = True
+
     class ServerClient(INETServerClient):
         def run_server(self):
             # I first tried to things like "subprocess.call(['luigid', ...]),
@@ -437,6 +445,7 @@ class INETLuigidServerTest(_INETServerTest):
 
 
 class INETLuigidDaemonServerTest(_INETServerTest):
+    __test__ = True
 
     class ServerClient(INETServerClient):
         def __init__(self):

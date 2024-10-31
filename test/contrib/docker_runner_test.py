@@ -35,7 +35,7 @@ import luigi
 import logging
 from luigi.contrib.docker_runner import DockerTask
 
-from nose.plugins.attrib import attr
+import pytest
 
 logger = logging.getLogger('luigi-interface')
 
@@ -49,7 +49,7 @@ except ImportError:
 except Exception:
     raise unittest.SkipTest('Unable to connect to docker daemon')
 
-tempfile.tempdir = '/tmp'  # set it explicitely to make it work out of the box in mac os
+tempfile.tempdir = '/tmp'  # set it explicitly to make it work out of the box in mac os
 local_file = NamedTemporaryFile()
 local_file.write(b'this is a test file\n')
 local_file.flush()
@@ -127,7 +127,7 @@ class MultipleDockerTaskRedefProperties(luigi.WrapperTask):
                 for opt in ['one', 'two', 'three']]
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class TestDockerTask(unittest.TestCase):
 
     # def tearDown(self):

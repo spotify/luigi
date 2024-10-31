@@ -2,14 +2,11 @@
    :alt: Luigi Logo
    :align: center
 
-.. image:: https://img.shields.io/travis/spotify/luigi/master.svg?style=flat
-    :target: https://travis-ci.org/spotify/luigi
+.. image:: https://img.shields.io/endpoint.svg?url=https%3A%2F%2Factions-badge.atrox.dev%2Fspotify%2Fluigi%2Fbadge&label=build&logo=none&%3Fref%3Dmaster&style=flat
+    :target: https://actions-badge.atrox.dev/spotify/luigi/goto?ref=master
 
 .. image:: https://img.shields.io/codecov/c/github/spotify/luigi/master.svg?style=flat
     :target: https://codecov.io/gh/spotify/luigi?branch=master
-
-.. image:: https://landscape.io/github/spotify/luigi/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/spotify/luigi/master
 
 .. image:: https://img.shields.io/pypi/v/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
@@ -17,7 +14,11 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python (3.6, 3.7 tested) package that helps you build complex
+.. image:: https://readthedocs.org/projects/luigi/badge/?version=stable
+    :target: https://luigi.readthedocs.io/en/stable/?badge=stable
+    :alt: Documentation Status
+
+Luigi is a Python (3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12 tested) package that helps you build complex
 pipelines of batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much more.
 
@@ -103,7 +104,7 @@ Conceptually, Luigi is similar to `GNU
 Make <http://www.gnu.org/software/make/>`_ where you have certain tasks
 and these tasks in turn may have dependencies on other tasks. There are
 also some similarities to `Oozie <http://oozie.apache.org/>`_
-and `Azkaban <http://data.linkedin.com/opensource/azkaban>`_. One major
+and `Azkaban <https://azkaban.github.io/>`_. One major
 difference is that Luigi is not just built specifically for Hadoop, and
 it's easy to extend it with other kinds of tasks.
 
@@ -134,7 +135,7 @@ or held presentations about Luigi:
 * `Foursquare <https://foursquare.com/>`_ `(presentation, 2013) <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`__
 * `Mortar Data (Datadog) <https://www.datadoghq.com/>`_ `(documentation / tutorial) <http://help.mortardata.com/technologies/luigi>`__
 * `Stripe <https://stripe.com/>`_ `(presentation, 2014) <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`__
-* `Buffer <https://buffer.com/>`_ `(blog, 2014) <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`__
+* `Buffer <https://buffer.com/>`_ `(blog, 2014) <https://buffer.com/resources/buffers-new-data-architecture/>`__
 * `SeatGeek <https://seatgeek.com/>`_ `(blog, 2015) <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`__
 * `Treasure Data <https://www.treasuredata.com/>`_ `(blog, 2015) <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`__
 * `Growth Intelligence <http://growthintel.com/>`_ `(presentation, 2015) <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`__
@@ -189,6 +190,10 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Jodel <https://www.jodel.com/>`_
 * `Mekar <https://mekar.id/en/>`_
 * `M3 <https://corporate.m3.com/en/>`_
+* `Assist Digital <https://www.assistdigital.com/>`_
+* `Meltwater <https://www.meltwater.com/>`_
+* `DevSamurai <https://www.devsamurai.com/>`_
+* `Veridas <https://veridas.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
@@ -208,5 +213,5 @@ Luigi was built at `Spotify <https://www.spotify.com>`_, mainly by
 `Elias Freider <https://github.com/freider>`_.
 `Many other people <https://github.com/spotify/luigi/graphs/contributors>`_
 have contributed since open sourcing in late 2012.
-`Arash Rouhani <https://github.com/tarrasch>`_ is currently the chief
-maintainer of Luigi.
+`Arash Rouhani <https://github.com/tarrasch>`_ was the chief maintainer from 2015 to 2019, and now
+Spotify's Data Team maintains Luigi.

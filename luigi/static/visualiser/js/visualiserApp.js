@@ -325,6 +325,9 @@ function visualiserApp(luigi) {
 
     function showErrorTrace(data) {
         data.error = decodeError(data.error);
+        if (data.taskParams) {
+          data.taskParams = Object.entries(data.taskParams).map(([k,v]) => `--${k.replace(/_/g, '-')} ${JSON.stringify(v)}`).join(" ");
+        }
         $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});
     }
@@ -1015,8 +1018,8 @@ function visualiserApp(luigi) {
     function renderParams(params) {
         var htmls = [];
         for (var key in params) {
-            htmls.push('<span class="param-name">' + key +
-                '</span>=<span class="param-value">' + params[key] + '</span>');
+            htmls.push('<span class="param-name">' + escapeHtml(key) +
+                '</span>=<span class="param-value">' + escapeHtml(params[key]) + '</span>');
         }
         return htmls.join(', ');
     }

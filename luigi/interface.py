@@ -18,7 +18,7 @@
 This module contains the bindings for command line integration and dynamic loading of tasks
 
 If you don't want to run luigi from the command line. You may use the methods
-defined in this module to programatically run luigi.
+defined in this module to programmatically run luigi.
 """
 
 import logging
@@ -49,6 +49,10 @@ class core(task.Config):
     This is arguably a bit of a hack.
     '''
     use_cmdline_section = False
+    ignore_unconsumed = {
+        'autoload_range',
+        'no_configure_logging',
+    }
 
     local_scheduler = parameter.BoolParameter(
         default=False,
@@ -146,7 +150,7 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
 
     kill_signal = signal.SIGUSR1 if env_params.take_lock else None
     if (not env_params.no_lock and
-            not(lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
+            not (lock.acquire_for(env_params.lock_pid_dir, env_params.lock_size, kill_signal))):
         raise PidLockAlreadyTakenExit()
 
     if env_params.local_scheduler:
@@ -173,6 +177,8 @@ def _schedule_and_run(tasks, worker_scheduler_factory=None, override_defaults=No
         success &= worker.run()
     luigi_run_result = LuigiRunResult(worker, success)
     logger.info(luigi_run_result.summary_text)
+    if hasattr(sch, 'close'):
+        sch.close()
     return luigi_run_result
 
 

@@ -29,7 +29,7 @@ import luigi.notifications
 import mock
 from luigi.mock import MockTarget
 from io import StringIO
-from nose.plugins.attrib import attr
+import pytest
 
 luigi.notifications.DEBUG = True
 
@@ -200,7 +200,7 @@ class CommonTests:
         job = WordFreqJob(use_hdfs=test_case.use_hdfs)
         luigi.build([job], local_scheduler=True)
         c = read_wordcount_output(job.output())
-        test_case.assertAlmostEquals(float(c['jk']), 6.0 / 33.0)
+        test_case.assertAlmostEqual(float(c['jk']), 6.0 / 33.0)
 
     @staticmethod
     def test_map_only(test_case):
@@ -241,7 +241,7 @@ class CommonTests:
         test_case.assertFalse(success)
 
 
-@attr('apache')
+@pytest.mark.apache
 class MapreduceLocalTest(unittest.TestCase):
     use_hdfs = False
 
@@ -286,7 +286,7 @@ class MapreduceLocalTest(unittest.TestCase):
         MockTarget.fs.clear()
 
 
-@attr('apache')
+@pytest.mark.apache
 class CreatePackagesArchive(unittest.TestCase):
 
     def setUp(self):
@@ -318,42 +318,49 @@ class CreatePackagesArchive(unittest.TestCase):
     @mock.patch('tarfile.open')
     def test_create_packages_archive_module(self, tar):
         module = __import__("module", None, None, 'dummy')
+        module.__file__ = os.path.relpath(module.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([module], '/dev/null')
         self._assert_module(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package(self, tar):
         package = __import__("package", None, None, 'dummy')
+        package.__path__[0] = os.path.relpath(package.__path__[0], os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule(self, tar):
         package_submodule = __import__("package.submodule", None, None, 'dummy')
+        package_submodule.__file__ = os.path.relpath(package_submodule.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_submodule], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule_with_absolute_import(self, tar):
         package_submodule_with_absolute_import = __import__("package.submodule_with_absolute_import", None, None, 'dummy')
+        package_submodule_with_absolute_import.__file__ = os.path.relpath(package_submodule_with_absolute_import.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_submodule_with_absolute_import], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_submodule_without_imports(self, tar):
         package_submodule_without_imports = __import__("package.submodule_without_imports", None, None, 'dummy')
+        package_submodule_without_imports.__file__ = os.path.relpath(package_submodule_without_imports.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_submodule_without_imports], '/dev/null')
         self._assert_package(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_subpackage(self, tar):
         package_subpackage = __import__("package.subpackage", None, None, 'dummy')
+        package_subpackage.__path__[0] = os.path.relpath(package_subpackage.__path__[0], os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_subpackage], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
 
     @mock.patch('tarfile.open')
     def test_create_packages_archive_package_subpackage_submodule(self, tar):
         package_subpackage_submodule = __import__("package.subpackage.submodule", None, None, 'dummy')
+        package_subpackage_submodule.__file__ = os.path.relpath(package_subpackage_submodule.__file__, os.getcwd())
         luigi.contrib.hadoop.create_packages_archive([package_subpackage_submodule], '/dev/null')
         self._assert_package_subpackage(tar.return_value.add)
 
@@ -381,7 +388,7 @@ class KeyboardInterruptedMockProcess(MockProcess):
             raise KeyboardInterrupt
 
 
-@attr('apache')
+@pytest.mark.apache
 class JobRunnerTest(unittest.TestCase):
     def setUp(self):
         self.tracking_urls = []

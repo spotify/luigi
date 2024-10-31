@@ -104,7 +104,7 @@ class WithPrestoClient(Register):
                 ```
                 after py2-deprecation
                 """
-                args = inspect.getargspec(Cursor.__init__)[0][1:]
+                args = inspect.getfullargspec(Cursor.__init__)[0][1:]
                 for parameter in args:
                     val = getattr(self, parameter)
                     if val:
@@ -130,6 +130,9 @@ class PrestoTarget(luigi.Target):
         self.partition = partition
         self._client = client
         self._count = None
+
+    def __str__(self):
+        return self.table
 
     @property
     def _count_query(self):

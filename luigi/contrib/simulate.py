@@ -79,11 +79,14 @@ class RunAnywayTarget(luigi.Target):
                     shutil.rmtree(path)
                     logger.debug('Deleted temporary directory %s', path)
 
+    def __str__(self):
+        return self.task_id
+
     def get_path(self):
         """
         Returns a temporary file path based on a MD5 hash generated with the task's name and its arguments
         """
-        md5_hash = hashlib.md5(self.task_id.encode()).hexdigest()
+        md5_hash = hashlib.new('md5', self.task_id.encode(), usedforsecurity=False).hexdigest()
         logger.debug('Hash %s corresponds to task %s', md5_hash, self.task_id)
 
         return os.path.join(self.temp_dir, str(self.unique.value), md5_hash)

@@ -19,7 +19,7 @@ import itertools
 import mock
 import time
 from helpers import unittest
-from nose.plugins.attrib import attr
+import pytest
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
     UNKNOWN, RUNNING, BATCH_RUNNING, UPSTREAM_RUNNING, Scheduler
@@ -28,7 +28,7 @@ luigi.notifications.DEBUG = True
 WORKER = 'myworker'
 
 
-@attr('scheduler')
+@pytest.mark.scheduler
 class SchedulerApiTest(unittest.TestCase):
 
     def setUp(self):
@@ -1774,6 +1774,8 @@ class SchedulerApiTest(unittest.TestCase):
         self.add_task('ClassA', day='2016-02-01', val='5')
 
         self.search_pending('ClassA 2016-02-01 num', {expected})
+        # ensure that the task search is case insensitive
+        self.search_pending('classa 2016-02-01 num', {expected})
 
     def test_upstream_beyond_limit(self):
         sch = Scheduler(max_shown_tasks=3)

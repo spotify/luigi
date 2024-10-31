@@ -35,6 +35,9 @@ class MongoTarget(Target):
         self._index = index
         self._collection = collection
 
+    def __str__(self):
+        return f'{self._index}/{self._collection}'
+
     def get_collection(self):
         """
         Return targeted mongo collection to query on

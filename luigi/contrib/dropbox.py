@@ -30,7 +30,7 @@ from luigi.target import FileSystem, FileSystemTarget, AtomicLocalFile
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import dropbox.dropbox
+    import dropbox.dropbox_client
     import dropbox.exceptions
     import dropbox.files
 except ImportError:
@@ -76,7 +76,7 @@ class DropboxClient(FileSystem):
             raise ValueError("The token parameter must contain a valid Dropbox Oauth2 Token")
 
         try:
-            conn = dropbox.dropbox.Dropbox(oauth2_access_token=token, user_agent=user_agent)
+            conn = dropbox.dropbox_client.Dropbox(oauth2_access_token=token, user_agent=user_agent)
         except Exception as e:
             raise Exception("Cannot connect to Dropbox. Check your Internet connection and the token. \n" + repr(e))
 
@@ -298,6 +298,9 @@ class DropboxTarget(FileSystemTarget):
         self.client = DropboxClient(token, user_agent)
         self.format = format or luigi.format.get_default_format()
 
+    def __str__(self):
+        return self.path
+
     @property
     def fs(self):
         return self.client
@@ -305,7 +308,7 @@ class DropboxTarget(FileSystemTarget):
     @contextmanager
     def temporary_path(self):
         tmp_dir = tempfile.mkdtemp()
-        num = random.randrange(0, 1e10)
+        num = random.randrange(0, 10_000_000_000)
         temp_path = '{}{}luigi-tmp-{:010}{}'.format(
             tmp_dir, os.sep,
             num, ntpath.basename(self.path))

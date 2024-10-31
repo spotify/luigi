@@ -19,8 +19,9 @@ Define the centralized register of all :class:`~luigi.task.Task` classes.
 """
 
 import abc
-
 import logging
+from typing import Any, Dict, List
+
 logger = logging.getLogger('luigi-interface')
 
 
@@ -46,15 +47,15 @@ class Register(abc.ABCMeta):
        same object.
     2. Keep track of all subclasses of :py:class:`Task` and expose them.
     """
-    __instance_cache = {}
-    _default_namespace_dict = {}
-    _reg = []
+    __instance_cache: Dict[str, Any] = {}
+    _default_namespace_dict: Dict[str, Any] = {}
+    _reg: List[Any] = []
     AMBIGUOUS_CLASS = object()  # Placeholder denoting an error
     """If this value is returned by :py:meth:`_get_reg` then there is an
     ambiguous task name (two :py:class:`Task` have the same name). This denotes
     an error."""
 
-    def __new__(metacls, classname, bases, classdict):
+    def __new__(metacls, classname, bases, classdict, **kwargs):
         """
         Custom class creation for namespacing.
 
@@ -63,7 +64,7 @@ class Register(abc.ABCMeta):
         When the set or inherited namespace evaluates to ``None``, set the task namespace to
         whatever the currently declared namespace is.
         """
-        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict)
+        cls = super(Register, metacls).__new__(metacls, classname, bases, classdict, **kwargs)
         cls._namespace_at_class_time = metacls._get_namespace(cls.__module__)
         metacls._reg.append(cls)
         return cls
@@ -118,10 +119,11 @@ class Register(abc.ABCMeta):
         """
         Internal note: This function will be deleted soon.
         """
-        if not cls.get_task_namespace():
+        task_namespace = cls.get_task_namespace()
+        if not task_namespace:
             return cls.__name__
         else:
-            return "{}.{}".format(cls.get_task_namespace(), cls.__name__)
+            return f"{task_namespace}.{cls.__name__}"
 
     @classmethod
     def _get_reg(cls):

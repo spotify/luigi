@@ -25,10 +25,8 @@ from luigi.scheduler import Scheduler
 import scheduler_api_test
 import luigi.server
 from server_test import ServerTestBase
-import time
 import socket
 from multiprocessing import Process, Queue
-import requests
 
 
 class RemoteSchedulerTest(unittest.TestCase):
@@ -40,16 +38,17 @@ class RemoteSchedulerTest(unittest.TestCase):
                     s._fetch(suffix, '{}')
                     fetcher.fetch.assert_called_once_with('http://zorg.com/api/123', '{}', 42)
 
+    def testUrlArgumentVariationsNotRoot(self):
+        for url in ['http://zorg.com/subpath', 'http://zorg.com/subpath/']:
+            for suffix in ['api/123', '/api/123']:
+                s = luigi.rpc.RemoteScheduler(url, 42)
+                with mock.patch.object(s, '_fetcher') as fetcher:
+                    s._fetch(suffix, '{}')
+                    fetcher.fetch.assert_called_once_with('http://zorg.com/subpath/api/123', '{}', 42)
+
     def get_work(self, fetcher_side_effect):
-        class ShorterWaitRemoteScheduler(luigi.rpc.RemoteScheduler):
-            """
-            A RemoteScheduler which waits shorter than usual before retrying (to speed up tests).
-            """
-
-            def _wait(self):
-                time.sleep(1)
-
-        scheduler = ShorterWaitRemoteScheduler('http://zorg.com', 42)
+        scheduler = luigi.rpc.RemoteScheduler('http://zorg.com', 42)
+        scheduler._rpc_retry_wait = 1  # shorten wait time to speed up tests
 
         with mock.patch.object(scheduler, '_fetcher') as fetcher:
             fetcher.raises = socket.timeout, socket.gaierror
@@ -83,8 +82,10 @@ class RemoteSchedulerTest(unittest.TestCase):
         self.assertEqual([
             mock.call.warning('Failed connecting to remote scheduler %r', 'http://zorg.com', exc_info=True),
             mock.call.info('Retrying attempt 2 of 3 (max)'),
+            mock.call.info('Wait for 1 seconds'),
             mock.call.warning('Failed connecting to remote scheduler %r', 'http://zorg.com', exc_info=True),
             mock.call.info('Retrying attempt 3 of 3 (max)'),
+            mock.call.info('Wait for 1 seconds'),
         ], mock_logger.mock_calls)
 
     @with_config({'core': {'rpc-log-retries': 'false'}})
@@ -153,8 +154,8 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
 
 class RequestsFetcherTest(ServerTestBase):
     def test_fork_changes_session(self):
-        session = requests.Session()
-        fetcher = luigi.rpc.RequestsFetcher(session)
+        fetcher = luigi.rpc.RequestsFetcher()
+        session = fetcher.session
 
         q = Queue()
 

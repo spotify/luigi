@@ -30,7 +30,7 @@ from luigi.contrib.external_program import ExternalProgramRunError
 from mock import patch, call
 from subprocess import Popen
 import mock
-from nose.plugins.attrib import attr
+import pytest
 
 
 def poll_generator():
@@ -75,7 +75,7 @@ class TestEchoTask(ExternalProgramTask):
         return ['echo', self.MESSAGE]
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class ExternalProgramTaskTest(unittest.TestCase):
     @patch('luigi.contrib.external_program.subprocess.Popen')
     def test_run(self, proc):
@@ -296,7 +296,7 @@ class TestExternalPythonProgramTask(ExternalPythonProgramTask):
         return luigi.LocalTarget('output')
 
 
-@attr('contrib')
+@pytest.mark.contrib
 class ExternalPythonProgramTaskTest(unittest.TestCase):
     @patch.dict('os.environ', {'OTHERVAR': 'otherval'}, clear=True)
     @patch('luigi.contrib.external_program.subprocess.Popen')
