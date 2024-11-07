@@ -266,8 +266,9 @@ class ByIdHandler(BaseTaskHistoryHandler):
 
 class ByTaskIdHandler(BaseTaskHistoryHandler):
     def get(self, task_id):
-        task = self._scheduler.task_history.find_task_by_task_id(task_id)
-        self.render("show.html", task=task)
+        with self._scheduler.task_history._session(None) as session:
+            task = self._scheduler.task_history.find_task_by_task_id(task_id, session)
+            self.render("show.html", task=task)
 
 
 class ByParamsHandler(BaseTaskHistoryHandler):
