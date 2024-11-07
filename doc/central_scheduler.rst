@@ -101,4 +101,8 @@ The task history has the following pages:
   ``luigi.Task`` instance or via `luigi.task.task_id_str
   <https://luigi.readthedocs.io/en/stable/api/luigi.task.html#luigi.task.task_id_str>`_.
   This kind of representation is useful for concisely recording URLs in a history tree.
+  Example screenshot:
+
+    .. figure:: history_by_task_id.png
+       :alt: By task_id screenshot
   
