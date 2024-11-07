@@ -96,10 +96,9 @@ The task history has the following pages:
   The ``params`` is a json blob describing the parameters,
   e.g. ``data={"foo": "bar"}`` looks for a task with ``foo=bar``.
 * ``/history/by_task_id/{task_id}``
-  a listing of all runs of a task given the ``{task_id}``. It is different from just ``{id}``
+  the latest run of a task given the ``{task_id}``. It is different from just ``{id}``
   and is a derivative of ``params``. It is available via ``{task_id}`` property of a 
   ``luigi.Task`` instance or via `luigi.task.task_id_str
   <https://luigi.readthedocs.io/en/stable/api/luigi.task.html#luigi.task.task_id_str>`_.
-  This kind of representation is useful for concisely recording URLs in a history tree
-  than recording lengthy ``params``.
+  This kind of representation is useful for concisely recording URLs in a history tree.
   
