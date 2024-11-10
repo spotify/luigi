@@ -192,7 +192,7 @@ class DbTaskHistory(task_history.TaskHistory):
         Find task with the given task ID.
         """
         with self._session(session) as session:
-            return session.query(TaskRecord).filter(TaskRecord.task_id==task_id).all()[-1]
+            return session.query(TaskRecord).filter(TaskRecord.task_id == task_id).all()[-1]
 
 
 class TaskParameter(Base):  # type: ignore
