@@ -33,6 +33,7 @@ Requires:
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
 import logging
+import os
 import time
 import uuid
 from datetime import datetime
@@ -54,7 +55,7 @@ class kubernetes(luigi.Config):
         default="kubeconfig",
         description="Authorization method to access the cluster")
     kubeconfig_path = luigi.Parameter(
-        default="~/.kube/config",
+        default=os.getenv("KUBECONFIG", "~/.kube/config"),
         description="Path to kubeconfig file for cluster authentication")
     max_retrials = luigi.IntParameter(
         default=0,
