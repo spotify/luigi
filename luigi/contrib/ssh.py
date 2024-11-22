@@ -270,7 +270,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
         self._scp("%s:%s" % (self.remote_context._host_ref(), path), tmp_local_path)
-        os.rename(tmp_local_path, local_path)
+        os.replace(tmp_local_path, local_path)
 
 
 class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
