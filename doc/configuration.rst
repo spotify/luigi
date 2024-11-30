@@ -32,7 +32,7 @@ These files are meant for both the client and ``luigid``.
 If you decide to specify your own configuration you should make sure
 that both the client and ``luigid`` load it properly.
 
-.. _ConfigParser.read: https://docs.python.org/3.6/library/configparser.html#configparser.ConfigParser.read
+.. _ConfigParser.read: https://docs.python.org/3/library/configparser.html#configparser.ConfigParser.read
 
 The config file is broken into sections, each controlling a different part of the config.
 

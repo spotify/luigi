@@ -13,8 +13,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.6"
-            tox-env: py36-core
           - python-version: "3.7"
             tox-env: py37-core
           - python-version: "3.8"
@@ -82,8 +80,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.6"
-            tox-env: py36-postgres
           - python-version: "3.7"
             tox-env: py37-postgres
           - python-version: "3.8"
@@ -137,8 +133,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.6"
-            tox-env: py36-aws
           - python-version: "3.7"
             tox-env: py37-aws
           - python-version: "3.8"
@@ -152,9 +146,6 @@ jobs:
           - python-version: "3.12"
             tox-env: py312-aws
 
-          - python-version: "3.6"
-            tox-env: py36-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
           - python-version: "3.7"
             tox-env: py37-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
@@ -174,8 +165,6 @@ jobs:
             tox-env: py312-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
 
-          - python-version: "3.6"
-            tox-env: py36-apache
           - python-version: "3.7"
             tox-env: py37-apache
           - python-version: "3.8"
@@ -189,8 +178,6 @@ jobs:
           - python-version: "3.12"
             tox-env: py312-apache
 
-          - python-version: "3.6"
-            tox-env: py36-azureblob
           - python-version: "3.7"
             tox-env: py37-azureblob
           - python-version: "3.8"
