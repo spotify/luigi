@@ -567,6 +567,18 @@ class TestParametersHashability(LuigiTestCase):
         self.assertEqual(hash(Foo(args=('foo', 'bar')).args),
                          hash(p.normalize(p.parse('["foo", "bar"]'))))
 
+    def test_tuple_invalid_string(self):
+        param = luigi.TupleParameter()
+        self.assertRaises(ValueError, lambda: param.parse('("abcd")'))
+
+    def test_tuple_invalid_string_in_tuple(self):
+        param = luigi.TupleParameter()
+        self.assertRaises(ValueError, lambda: param.parse('(("abcd"))'))
+
+    def test_parse_invalid_format(self):
+        param = luigi.TupleParameter()
+        self.assertRaises(SyntaxError, lambda: param.parse('((1,2),(3,4'))
+
     def test_task(self):
         class Bar(luigi.Task):
             pass
@@ -1225,6 +1237,7 @@ class LocalParameters1304Test(LuigiTestCase):
 
     https://github.com/spotify/luigi/issues/1304#issuecomment-148402284
     """
+
     def test_local_params(self):
 
         class MyTask(RunOnceTask):
