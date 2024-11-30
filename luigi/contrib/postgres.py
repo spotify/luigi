@@ -356,16 +356,15 @@ class CopyToTable(rdbms.CopyToTable):
         else:
             raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
 
-        # cursor.copy_from is not available in pg8000
-        if hasattr(cursor, 'copy_from'):
-            cursor.copy_from(
-                file, self.table, null=r'\\N', sep=self.column_separator, columns=column_names)
+        copy_sql = (
+            "COPY {table} ({column_list}) FROM STDIN "
+            "WITH (FORMAT text, NULL '{null_string}', DELIMITER '{delimiter}')"
+        ).format(table=self.table, delimiter=self.column_separator, null_string=r'\\N',
+                 column_list=", ".join(column_names))
+        # cursor.copy_expert is not available in pg8000
+        if hasattr(cursor, 'copy_expert'):
+            cursor.copy_expert(copy_sql, file)
         else:
-            copy_sql = (
-                "COPY {table} ({column_list}) FROM STDIN "
-                "WITH (FORMAT text, NULL '{null_string}', DELIMITER '{delimiter}')"
-            ).format(table=self.table, delimiter=self.column_separator, null_string=r'\\N',
-                     column_list=", ".join(column_names))
             cursor.execute(copy_sql, stream=file)
 
     def run(self):
