@@ -1384,7 +1384,12 @@ class TupleParameter(ListParameter):
             # loop required to parse tuple of tuples
             return tuple(self._convert_iterable_to_tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
-            return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
+            result = literal_eval(x)
+            # t_str = '("abcd")'
+            # Ensure that the result is not a string to avoid cases like ('a','b','c','d')
+            if isinstance(result, str):
+                raise ValueError("Parsed result cannot be a string")
+            return tuple(result)  # if this causes an error, let that error be raised.
 
     def _convert_iterable_to_tuple(self, x):
         if isinstance(x, str):
