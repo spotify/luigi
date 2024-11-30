@@ -152,16 +152,16 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
             err.errno = EXDEV
             raise err
 
-        real_rename = os.rename
+        real_rename = os.replace
 
-        def mockrename(src, dst):
+        def mockreplace(src, dst):
             if '-across-fs' in src:
                 real_rename(src, dst)
             else:
                 rename_across_filesystems(src, dst)
 
         copy = '%s-across-fs' % self.copy
-        with mock.patch('os.rename', mockrename):
+        with mock.patch('os.replace', mockreplace):
             t.move(copy)
 
         self.assertFalse(os.path.exists(self.path))
