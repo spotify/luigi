@@ -37,7 +37,7 @@ readme_note = """
 with open('README.rst') as fobj:
     long_description = "\n\n" + readme_note + "\n\n" + fobj.read()
 
-install_requires = ['python-dateutil>=2.7.5,<3', 'tenacity>=8,<9']
+install_requires = ['python-dateutil>=2.7.5,<3', 'tenacity>=8,<9', 'tornado>=5.0,<7']
 
 # Can't use python-daemon>=2.2.0 if on windows
 #     See https://pagure.io/python-daemon/issue/18
@@ -45,19 +45,6 @@ if sys.platform == 'nt':
     install_requires.append('python-daemon<2.2.0')
 else:
     install_requires.append('python-daemon')
-
-# Start from tornado 6, the minimum supported Python version is 3.5.2.
-if sys.version_info[:3] >= (3, 5, 2):
-    install_requires.append('tornado>=5.0,<7')
-else:
-    install_requires.append('tornado>=5.0,<6')
-
-# Note: To support older versions of setuptools, we're explicitly not
-#   using conditional syntax (i.e. 'enum34>1.1.0;python_version<"3.4"').
-#   This syntax is a problem for setuptools as recent as `20.1.1`,
-#   published Feb 16, 2016.
-if sys.version_info[:2] < (3, 4):
-    install_requires.append('enum34>1.1.0')
 
 if os.environ.get('READTHEDOCS', None) == 'True':
     # So that we can build documentation for luigi.db_task_history and luigi.contrib.sqla
@@ -111,8 +98,6 @@ setup(
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
         'License :: OSI Approved :: Apache Software License',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
