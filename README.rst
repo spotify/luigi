@@ -194,6 +194,7 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Meltwater <https://www.meltwater.com/>`_
 * `DevSamurai <https://www.devsamurai.com/>`_
 * `Veridas <https://veridas.com/>`_
+* `Aidentified <https://www.aidentified.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 
