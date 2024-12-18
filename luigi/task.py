@@ -29,7 +29,7 @@ import hashlib
 import re
 import copy
 import functools
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import luigi
 
@@ -186,7 +186,7 @@ class Task(metaclass=Register):
     #: Number of seconds after which to time out the run function.
     #: No timeout if set to 0.
     #: Defaults to 0 or worker-timeout value in config
-    worker_timeout = None
+    worker_timeout: Optional[int] = None
 
     #: Maximum number of tasks to run together as a batch. Infinite by default
     max_batch_size = float('inf')
