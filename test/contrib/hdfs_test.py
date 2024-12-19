@@ -168,7 +168,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         self.assertFalse(files.glob_exists(3))
         self.assertFalse(files.glob_exists(1))
 
-    def assertRegexpMatches(self, text, expected_regexp, msg=None):
+    def assertRegex(self, text, expected_regexp, msg=None):
         """Python 2.7 backport."""
         if isinstance(expected_regexp, str):
             expected_regexp = re.compile(expected_regexp)
@@ -201,22 +201,22 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         res9 = hdfs.tmppath(path9, include_unix_username=False)
 
         # Then: I should get correct results relative to Luigi temporary directory
-        self.assertRegexpMatches(res1, "^/tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegex(res1, "^/tmp/dir1/dir2/file-luigitemp-\\d+")
         # it would be better to see hdfs:///path instead of hdfs:/path, but single slash also works well
-        self.assertRegexpMatches(res2, "^hdfs:/tmp/dir1/dir2/file-luigitemp-\\d+")
-        self.assertRegexpMatches(res3, "^hdfs://somehost/tmp/dir1/dir2/file-luigitemp-\\d+")
-        self.assertRegexpMatches(res4, "^file:///tmp/dir1/dir2/file-luigitemp-\\d+")
-        self.assertRegexpMatches(res5, "^/tmp/dir/file-luigitemp-\\d+")
+        self.assertRegex(res2, "^hdfs:/tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegex(res3, "^hdfs://somehost/tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegex(res4, "^file:///tmp/dir1/dir2/file-luigitemp-\\d+")
+        self.assertRegex(res5, "^/tmp/dir/file-luigitemp-\\d+")
         # known issue with duplicated "tmp" if schema is present
-        self.assertRegexpMatches(res6, "^file:///tmp/tmp/dir/file-luigitemp-\\d+")
+        self.assertRegex(res6, "^file:///tmp/tmp/dir/file-luigitemp-\\d+")
         # known issue with duplicated "tmp" if schema is present
-        self.assertRegexpMatches(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\\d+")
-        self.assertRegexpMatches(res8, "^/tmp/luigitemp-\\d+")
-        self.assertRegexpMatches(res9, "/tmp/tmpdir/file")
+        self.assertRegex(res7, "^hdfs://somehost/tmp/tmp/dir/file-luigitemp-\\d+")
+        self.assertRegex(res8, "^/tmp/luigitemp-\\d+")
+        self.assertRegex(res9, "/tmp/tmpdir/file")
 
     def test_tmppath_username(self):
-        self.assertRegexpMatches(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
-                                 "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\\d+")
+        self.assertRegex(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
+                         "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\\d+")
 
     def test_pickle(self):
         t = hdfs.HdfsTarget("/tmp/dir")
