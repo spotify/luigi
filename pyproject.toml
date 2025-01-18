@@ -1,0 +1,81 @@
+[build-system]
+requires = ['hatchling', 'hatch-fancy-pypi-readme']
+build-backend = 'hatchling.build'
+
+[project]
+name = "luigi"
+description = "Workflow mgmgt + task scheduling + dependency resolution."
+authors = [
+  {name = "The Luigi Authors"}
+]
+license = "Apache-2.0"
+requires-python = ">=3.7.0, <3.13"
+dependencies = [
+  "python-dateutil>=2.7.5,<3",
+  "tenacity>=8,<9",
+  "tornado>=5.0,<7",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Monitoring",
+]
+dynamic = ["version", "readme"]
+
+[project.urls]
+Homepage = "https://github.com/spotify/luigi"
+
+[project.scripts]
+luigi = "luigi.cmdline:luigi_run"
+luigid = "luigi.cmdline:luigid"
+luigi-grep = "luigi.tools.luigi_grep:main"
+luigi-deps = "luigi.tools.deps:main"
+luigi-deps-tree = "luigi.tools.deps_tree:main"
+
+[project.optional-dependencies]
+jsonschema = ["jsonschema"]
+prometheus = ["prometheus-client>=0.5,<0.15"]
+toml = ["toml<2.0.0"]
+
+[dependency-groups]
+docs = [
+  "sqlalchemy",
+  "sphinx>=1.4.4",
+]
+
+dev = [
+  "python-daemon<2.2.0; sys_platform == 'nt'",
+  "python-daemon; sys_platform != 'nt'",
+]
+
+[tool.uv]
+default-groups = ['dev']
+
+[tool.hatch.version]
+path = "luigi/__meta__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/README.rst",
+  "bin",
+  "/luigi",
+  "/test",
+]
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/x-rst"
+# construct the PyPI readme from README.md and HISTORY.md
+fragments = [
+  {text = "\n.. note::\n\nFor the latest source, discussion, etc, please visit the\n`GitHub repository <https://github.com/spotify/luigi>`_\n"},
+  {path = "README.rst"},
+]
