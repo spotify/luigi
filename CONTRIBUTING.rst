@@ -18,7 +18,7 @@ If you do want to run the tests locally you'll need to run the commands below
    pipx install uv
    uv tool install tox --with tox-uv
 
-You will need a ``tox --version`` of at least 4.2.
+You will need a ``tox --version`` of at least 4.22.
 
 .. code:: bash
 
