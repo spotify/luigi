@@ -47,7 +47,7 @@ jobs:
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: uvx --with tox-uv tox run
+        run: uvx --with tox-uv tox run -e ${{ matrix.tox-env}}
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
