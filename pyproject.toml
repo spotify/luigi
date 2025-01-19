@@ -155,14 +155,14 @@ lint = [
 ]
 
 docs = [
-  "sqlalchemy>=2",
-  "boto3",
-  "jinja2==3.0.3",
-  "Sphinx>=1.4.4,<2.0",
+  "sqlalchemy",
+  "jinja2",
+  "Sphinx",
   "sphinx_rtd_theme",
   "azure-storage-blob<=12.20.0",
   "prometheus-client==0.5.0",
-  "alabaster<0.7.13",
+  "alabaster",
+  "mypy",
 ]
 
 # for local development

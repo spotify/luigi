@@ -1303,7 +1303,6 @@ wheels = [
 
 [[package]]
 name = "luigi"
-version = "3.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "python-daemon" },
@@ -1447,9 +1446,9 @@ docs = [
     { name = "alabaster" },
     { name = "azure-storage-blob", version = "12.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "azure-storage-blob", version = "12.20.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
-    { name = "boto3", version = "1.33.13", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
-    { name = "boto3", version = "1.36.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "jinja2" },
+    { name = "mypy", version = "1.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "mypy", version = "1.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "prometheus-client" },
     { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
@@ -1887,14 +1886,14 @@ dev = [
     { name = "types-toml" },
 ]
 docs = [
-    { name = "alabaster", specifier = "<0.7.13" },
+    { name = "alabaster" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto3" },
-    { name = "jinja2", specifier = "==3.0.3" },
+    { name = "jinja2" },
+    { name = "mypy" },
     { name = "prometheus-client", specifier = "==0.5.0" },
-    { name = "sphinx", specifier = ">=1.4.4,<2.0" },
+    { name = "sphinx" },
     { name = "sphinx-rtd-theme" },
-    { name = "sqlalchemy", specifier = ">=2" },
+    { name = "sqlalchemy" },
 ]
 dropbox = [{ name = "dropbox", specifier = ">=11.0.0" }]
 gcloud = [
