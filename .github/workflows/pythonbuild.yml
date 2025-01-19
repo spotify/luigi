@@ -28,13 +28,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }} using uv
+      - name: Set up the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed tox --with "tox-uv>=1.19"
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv python install --python-preference only-managed ${{ matrix.python-version }}
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
@@ -87,13 +89,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }} using uv
+      - name: Set up the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed tox --with tox-uv
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv python install --python-preference only-managed ${{ matrix.python-version }}
 
       - name: Create PSQL database
         run: |
@@ -184,13 +188,15 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }} using uv
+      - name: Set up the latest version of uv
         uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed tox --with tox-uv
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv python install --python-preference only-managed ${{ matrix.python-version }}
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
