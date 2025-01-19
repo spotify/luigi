@@ -37,7 +37,7 @@ jobs:
           cache-local-path: ~/.cache/pip
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed "tox<4" codecov
+          uv tool install --python-preference only-managed tox --with tox-uv
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
@@ -47,12 +47,12 @@ jobs:
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: tox
-      - name: Codecov
-        env:
-          COVERAGE_PROCESS_START: .coveragerc
-        run: |
-          codecov -e ${{ matrix.tox-env }}
+        run: uvx --with tox-uv tox run
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          verbose: true
 
   postgres:
     runs-on: ubuntu-20.04
@@ -99,19 +99,20 @@ jobs:
           cache-local-path: ~/.cache/pip
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed "tox<4" codecov
+          uv tool install --python-preference only-managed tox --with tox-uv
+
       - name: Create PSQL database
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: tox
-      - name: Codecov
-        env:
-          COVERAGE_PROCESS_START: .coveragerc
-        run: |
-          codecov -e ${{ matrix.tox-env }}
+        run: uvx --with tox-uv tox run
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          verbose: true
 
   base:
     runs-on: ubuntu-20.04
@@ -198,15 +199,16 @@ jobs:
           cache-local-path: ~/.cache/pip
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed "tox<4" codecov
+          uv tool install --python-preference only-managed tox --with tox-uv
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
           OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
-        run: tox
-      - name: Codecov
+        run: uvx --with tox-uv tox run
+      - name: Upload coverage to Codecov
         if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
-        env:
-          COVERAGE_PROCESS_START: .coveragerc
-        run: |
-          codecov -e ${{ matrix.tox-env }}
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          verbose: true
+

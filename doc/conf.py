@@ -67,7 +67,10 @@ def _warn_node(self, msg, node, *args, **kwargs):
 
 sphinx.environment.BuildEnvironment.warn_node = _warn_node
 
-if os.environ.get('READTHEDOCS', None) == 'True':
+# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+if on_rtd:
     # Run sphinx-apidoc automatically in readthedocs
     # Taken from this: https://lists.torproject.org/pipermail/tor-commits/2012-September/046695.html
     os.system('sphinx-apidoc -o api -T ../luigi --separate')
@@ -166,9 +169,6 @@ autodoc_member_order = 'bysource'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:
