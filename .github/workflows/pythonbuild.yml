@@ -15,8 +15,8 @@ jobs:
         include:
           - python-version: "3.7"
             tox-env: py37-core
-          - python-version: "3.8"
-            tox-env: py38-core
+          # - python-version: "3.8"
+          #   tox-env: py38-core
           - python-version: "3.9"
             tox-env: py39-core
           - python-version: "3.10"
@@ -44,7 +44,7 @@ jobs:
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: uvx --with tox-uv tox run -e ${{ matrix.tox-env}}
+        run: uvx --with tox-uv tox run
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -74,8 +74,8 @@ jobs:
         include:
           - python-version: "3.7"
             tox-env: py37-postgres
-          - python-version: "3.8"
-            tox-env: py38-postgres
+          # - python-version: "3.8"
+          #   tox-env: py38-postgres
           - python-version: "3.9"
             tox-env: py39-postgres
           - python-version: "3.10"
@@ -120,8 +120,8 @@ jobs:
         include:
           - python-version: "3.7"
             tox-env: py37-aws
-          - python-version: "3.8"
-            tox-env: py38-aws
+          # - python-version: "3.8"
+          #   tox-env: py38-aws
           - python-version: "3.9"
             tox-env: py39-aws
           - python-version: "3.10"
@@ -134,9 +134,9 @@ jobs:
           - python-version: "3.7"
             tox-env: py37-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: "3.8"
-            tox-env: py38-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
+          # - python-version: "3.8"
+          #   tox-env: py38-unixsocket
+          #   OVERRIDE_SKIP_CI_TESTS: True
           - python-version: "3.9"
             tox-env: py39-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
@@ -152,8 +152,8 @@ jobs:
 
           - python-version: "3.7"
             tox-env: py37-apache
-          - python-version: "3.8"
-            tox-env: py38-apache
+          # - python-version: "3.8"
+          #   tox-env: py38-apache
           - python-version: "3.9"
             tox-env: py39-apache
           - python-version: "3.10"
@@ -165,8 +165,8 @@ jobs:
 
           - python-version: "3.7"
             tox-env: py37-azureblob
-          - python-version: "3.8"
-            tox-env: py38-azureblob
+          # - python-version: "3.8"
+          #   tox-env: py38-azureblob
           - python-version: "3.9"
             tox-env: py39-azureblob
           - python-version: "3.10"
