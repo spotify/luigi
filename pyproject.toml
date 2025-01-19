@@ -88,7 +88,7 @@ common = [
   "boto3>=1.11.0",
   "pyhive[presto]==0.6.1",
   "s3transfer>=0.3,<4.0",
-  "sqlalchemy<1.4",
+  "sqlalchemy",
   "elasticsearch>=1.0.0,<2.0.0",
   "psutil<4.0",
   "mysql-connector-python>=8.0.12",
