@@ -34,7 +34,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed tox --with tox-uv
+          uv tool install --python-preference only-managed tox --with "tox-uv>=0.19"
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
