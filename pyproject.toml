@@ -155,7 +155,7 @@ lint = [
 ]
 
 docs = [
-  "sqlalchemy",
+  "sqlalchemy>=2",
   "boto3",
   "jinja2==3.0.3",
   "Sphinx>=1.4.4,<2.0",

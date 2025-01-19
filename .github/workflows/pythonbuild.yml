@@ -180,12 +180,6 @@ jobs:
           - python-version: "3.12"
             tox-env: py312-azureblob
 
-
-          - python-version: "3.10"
-            tox-env: flake8
-          - python-version: "3.10"
-            tox-env: docs
-
     steps:
       - uses: actions/checkout@v4
       - name: Set up the latest version of uv
@@ -197,6 +191,39 @@ jobs:
         run: |
           uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
           uv python install --python-preference only-managed ${{ matrix.python-version }}
+      - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+          OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
+        run: uvx --with tox-uv tox run
+      - name: Upload coverage to Codecov
+        if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          verbose: true
+  others:
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        include:
+          - python-version: "3.10"
+            tox-env: flake8
+          - python-version: "3.10"
+            tox-env: docs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Install dependencies
+        run: |
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv python install --python-preference only-managed ${{ matrix.python-version }}
+          uv python pin ${{ matrix.python-version }}
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
