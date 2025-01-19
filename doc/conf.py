@@ -83,7 +83,7 @@ autoclass_content = 'both'
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.4.4'  # Value mirrored in doc/conf.py
+needs_sphinx = '1.4.4'  # Value mirrored in pyproject.toml
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
