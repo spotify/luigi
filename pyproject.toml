@@ -113,42 +113,33 @@ common = [
   "types-requests",
 ]
 
-# for test dependencies
+# for tox test dependencies
 test_dropbox = [
   {include-group = "dropbox"},
-  {include-group = "test"},
+  {include-group = "common"},
 ]
 
 test_cdh = [
   {include-group = "cdh"},
-  {include-group = "test"},
+  {include-group = "common"},
 ]
 
 test_hdp = [
   {include-group = "hdp"},
-  {include-group = "test"},
+  {include-group = "common"},
 ]
 
 test_gcloud = [
   {include-group = "gcloud"},
-  {include-group = "test"},
+  {include-group = "common"},
 ]
 
 test_postgres = [
   {include-group = "postgres"},
-  {include-group = "test"},
+  {include-group = "common"},
 ]
 
 test_unixsocket = [
-  {include-group = "unixsocket"},
-  {include-group = "test"},
-]
-
-test = [
-  {include-group = "gcloud"},
-  {include-group = "postgres"},
-  {include-group = "dropbox"},
-  {include-group = "cdh"}, # same deps as hdp
   {include-group = "unixsocket"},
   {include-group = "common"},
 ]
@@ -176,7 +167,12 @@ docs = [
 
 # for local development
 dev = [
-  {include-group = "test"},
+  {include-group = "gcloud"},
+  {include-group = "postgres"},
+  {include-group = "dropbox"},
+  {include-group = "cdh"}, # same deps as hdp
+  {include-group = "unixsocket"},
+  {include-group = "common"},
   {include-group = "lint"},
 ]
 

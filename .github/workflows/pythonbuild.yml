@@ -32,9 +32,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
-          # This path is specific to Ubuntu
-          cache-local-path: ~/.cache/pip
       - name: Install dependencies
         run: |
           uv tool install --python-preference only-managed tox --with tox-uv
@@ -94,9 +91,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
-          # This path is specific to Ubuntu
-          cache-local-path: ~/.cache/pip
       - name: Install dependencies
         run: |
           uv tool install --python-preference only-managed tox --with tox-uv
@@ -194,9 +188,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: ${{ matrix.python-version }}
-          enable-cache: true
-          # This path is specific to Ubuntu
-          cache-local-path: ~/.cache/pip
       - name: Install dependencies
         run: |
           uv tool install --python-preference only-managed tox --with tox-uv
