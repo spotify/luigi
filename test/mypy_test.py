@@ -12,14 +12,21 @@ class TestMyMypyPlugin(unittest.TestCase):
 
         test_code = """
 import luigi
+from uuid import UUID
+
+
+class UUIDParameter(luigi.Parameter):
+    def parse(self, s):
+        return UUID(s)
 
 
 class MyTask(luigi.Task):
     foo: int = luigi.IntParameter()
     bar: str = luigi.Parameter()
+    uniq: UUID = UUIDParameter()
     baz: str = luigi.Parameter(default="baz")
 
-MyTask(foo=1, bar='bar')
+MyTask(foo=1, bar='bar', uniq=UUID("9b0591d7-a167-4978-bc6d-41f7d84a288c"))
 """
 
         with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
