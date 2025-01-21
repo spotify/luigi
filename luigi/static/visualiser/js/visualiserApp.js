@@ -1042,6 +1042,21 @@ function visualiserApp(luigi) {
     }
 
     /**
+     * Updates the custom disconnect delay of a worker
+     * @param worker: the id of the worker
+     * @param n: delay, in seconds
+     */
+    function updateWorkerCustomDisconnectDelay(worker, n) {
+        // the spinner is just for visual feedback
+        var $label = $('#workerList').find('#label-custom-disconnect-delay[data-worker="' + worker + '"]');
+        $label.html('<i class="fa fa-spinner fa-spin" aria-hidden="true"></i>');
+
+        luigi.setWorkerCustomDisconnectDelay(worker, n, function() {
+            $label.text(n);
+        });
+    }
+
+    /**
      * Updates the number of units of a given resource available in the scheduler
      * @param resource: the name of the resource
      * @param n: the number of units to set the resource limit to
@@ -1425,6 +1440,24 @@ function visualiserApp(luigi) {
             if (!isNaN(n)) {
                 updateWorkerProcesses(worker, n - 1);
             }
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('click', '#btn-set-worker-custom-disconnect-delay-no', function($event) {
+            var worker = $(this).data("worker");
+                updateWorkerCustomDisconnectDelay(worker, null);
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('click', '#btn-set-worker-custom-disconnect-delay-60', function($event) {
+            var worker = $(this).data("worker");
+                updateWorkerCustomDisconnectDelay(worker, 60);
+            $event.preventDefault();
+        });
+
+        $('#workerList').on('click', '#btn-set-worker-custom-disconnect-delay-3600', function($event) {
+            var worker = $(this).data("worker");
+                updateWorkerCustomDisconnectDelay(worker, 3600);
             $event.preventDefault();
         });
 

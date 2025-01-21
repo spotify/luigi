@@ -353,9 +353,13 @@ class Worker:
         self.info = {}
         self.disabled = False
         self.rpc_messages = []
+        self.custom_disconnect_delay = None
 
     def add_info(self, info):
         self.info.update(info)
+
+    def set_custom_disconnect_delay(self, delay):
+        self.custom_disconnect_delay = delay
 
     def update(self, worker_reference, get_work=False):
         if worker_reference:
@@ -366,7 +370,12 @@ class Worker:
 
     def prune(self, config):
         # Delete workers that haven't said anything for a while (probably killed)
-        if self.last_active + config.worker_disconnect_delay < time.time():
+        if self.custom_disconnect_delay:
+            disconnect_delay = self.custom_disconnect_delay
+        else:
+            disconnect_delay = config.worker_disconnect_delay
+        if self.last_active + disconnect_delay < time.time():
+            logger.debug("Worker %s timed out (no contact for >=%ss)", self, disconnect_delay)
             return True
 
     def get_tasks(self, state, *statuses):
@@ -718,7 +727,6 @@ class Scheduler:
         remove_workers = []
         for worker in self._state.get_active_workers():
             if worker.prune(self._config):
-                logger.debug("Worker %s timed out (no contact for >=%ss)", worker, self._config.worker_disconnect_delay)
                 remove_workers.append(worker.id)
 
         self._state.inactivate_workers(remove_workers)
@@ -962,6 +970,10 @@ class Scheduler:
     @rpc_method()
     def set_worker_processes(self, worker, n):
         self._state.get_worker(worker).add_rpc_message('set_worker_processes', n=n)
+
+    @rpc_method()
+    def set_worker_custom_disconnect_delay(self, worker, n):
+        self._state.get_worker(worker).set_custom_disconnect_delay(n)
 
     @rpc_method()
     def send_scheduler_message(self, worker, task, content):
@@ -1471,6 +1483,7 @@ class Scheduler:
                 state=worker.state,
                 first_task_display_name=self._first_task_display_name(worker),
                 num_unread_rpc_messages=len(worker.rpc_messages),
+                custom_disconnect_delay=worker.custom_disconnect_delay,
                 **worker.info
             ) for worker in self._state.get_active_workers()]
         workers.sort(key=lambda worker: worker['started'], reverse=True)
