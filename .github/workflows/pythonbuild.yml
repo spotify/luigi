@@ -13,8 +13,8 @@ jobs:
     strategy:
       matrix:
         include:
-          # - python-version: "3.7"
-          #   tox-env: py37-core
+          - python-version: "3.7"
+            tox-env: py37-core
           - python-version: "3.8"
             tox-env: py38-core
           - python-version: "3.9"
