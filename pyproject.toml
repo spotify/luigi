@@ -156,12 +156,12 @@ lint = [
 
 docs = [
   "sqlalchemy",
-  "jinja2",
-  "Sphinx",
+  "jinja2==3.0.3",
+  "Sphinx>=1.4.4,<2.0",
   "sphinx_rtd_theme",
   "azure-storage-blob<=12.20.0",
   "prometheus-client==0.5.0",
-  "alabaster",
+  "alabaster<0.7.13",
   "mypy",
 ]
 
