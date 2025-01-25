@@ -31,10 +31,15 @@ jobs:
         if: ${{ matrix.tox-env == 'py37-core' }}
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: 3.7
       - name: Install dependencies
+        if: ${{ matrix.tox-env != 'py37-core' }}
         run: |
           uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+      - name: Install dependencies for Python 3.7
+        if: ${{ matrix.tox-env == 'py37-core' }}
+        run: |
+          uv pip install --system tox
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
@@ -46,11 +51,11 @@ jobs:
         env:
           TOXENV: ${{ matrix.tox-env }}
         run: uvx --with tox-uv tox run
-      - name: Build
+      - name: Build for Python 3.7
         if: ${{ matrix.tox-env == 'py37-core' }}
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: uvx --python-preference only-system tox run
+        run: uv run --python-preference only-system tox run
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
