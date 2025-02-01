@@ -45,6 +45,8 @@ jobs:
         with:
           fail_ci_if_error: true
           verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   postgres:
     runs-on: ubuntu-20.04
@@ -96,6 +98,8 @@ jobs:
         with:
           fail_ci_if_error: true
           verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   base:
     runs-on: ubuntu-20.04
@@ -191,3 +195,5 @@ jobs:
         with:
           fail_ci_if_error: true
           verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
