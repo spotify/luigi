@@ -19,22 +19,36 @@ Example Kubernetes Job Task.
 
 Requires:
 
-- pykube: ``pip install pykube-ng``
-- A local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
-
-**WARNING**: For Python versions < 3.5 the kubeconfig file must point to a Kubernetes API
-hostname, and NOT to an IP address.
+- Official kubernetes-client python library: ``pip install kubernetes``
+    - See: https://github.com/kubernetes-client/python/
+- Run Within' an Kubernetes cluster with an ClusterRole granting it access to Kubernetes APIs
+- OR A working kubectl configuration and that is active and functional
+    - This can be your kubectl config setup for EKS with `aws eks update-kubeconfig --name clustername`
+    - Or access to any other hosted/managed/self-setup Kubernetes cluster
+    - For devs can a local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
+    - Or for devs Docker Desktop has support for minikube: https://www.docker.com/products/docker-desktop
 
 You can run this code example like this:
 
     .. code:: console
-        $ luigi --module examples.kubernetes_job PerlPi --local-scheduler
+        $ PYTHONPATH=. luigi --module examples.kubernetes_job PerlPi --local-scheduler
+        # Or alternatively...
+        $ python -m luigi --module examples.kubernetes PerlPi --local-scheduler
 
 Running this code will create a pi-luigi-uuid kubernetes job within the cluster
-pointed to by the default context in "~/.kube/config".
+of whatever your current context is for kubectl.  The login herein will auto-detect if this
+is running in an Kubernetes Cluster and has functional access to the local cluster's APIs
+via an ClusterRole, and if not it will then try to use the kubeconfig and its various environment
+variables to support configuring and tweaking kubectl.
 
-If running within a kubernetes cluster, set auth_method = "service-account" to
-access the local cluster.
+DEPRECATION NOTE: The previous version of the kubernetes library had you configure your kubectl configuration file
+as an property in the config file.  This was removed in favor of using the kubectl standards.  To specify a config use
+the env variable KUBECONFIG.  For example:
+
+    .. code:: console
+        $ KUBECONFIG=~/.kube/my-custom-config PYTHONPATH=. luigi --module examples.kubernetes_job PerlPi --local-scheduler
+
+For more see: https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/
 """
 
 # import os
@@ -44,13 +58,30 @@ from luigi.contrib.kubernetes import KubernetesJobTask
 
 class PerlPi(KubernetesJobTask):
 
-    name = "pi"
-    max_retrials = 3
-    spec_schema = {
+    name = "pi"                         # The name (prefix) of the job that will be created for identification purposes
+    kubernetes_namespace = "default"    # This is the kubernetes namespace you wish to run, if not specified it uses "default"
+    labels = {"job_name": "pi"}         # This is to add labels in Kubernetes to help identify it, this is on top of the internal luigi labels
+    backoff_limit = 0                   # This is the number of retries incase there is a pod/node/code failure, default 6
+    active_deadline_seconds = None      # This is a "timeout" in seconds, how long to wait for the pods to schedule and execute before failing, default None
+    poll_interval = 1                   # To poll more regularly reduce this number, default 5
+    print_pod_logs_on_exit = False      # Set this to True if you wish to see the logs of this run after completion, False by default
+    print_pod_logs_during_run = True    # Set this to True if you wish to see the logs of this run while it is running, False by default
+    delete_on_success = True            # Set this to False to keep the job after it finishes successfully, for debugging purposes, True by default
+    spec_schema = {                     # This is the standard "spec" of the containers in this job, this is a good sane example with resource requests/limits
         "containers": [{
             "name": "pi",
             "image": "perl",
-            "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
+            "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"],
+            "resources": {
+                "requests": {
+                    "cpu": "50m",
+                    "memory": "50Mi"
+                },
+                "limits": {
+                    "cpu": "100m",
+                    "memory": "100Mi"
+                }
+            }
         }]
     }
 
