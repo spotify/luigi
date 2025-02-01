@@ -32,12 +32,6 @@ wheels = [
 ]
 
 [[package]]
-name = "atomicwrites"
-version = "1.4.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/87/c6/53da25344e3e3a9c01095a89f16dbcda021c609ddb42dd6d7c0528236fb2/atomicwrites-1.4.1.tar.gz", hash = "sha256:81b2c9071a49367a7f770170e5eec8cb66567cfbbc8c73d20ce5ca4a8d71cf11", size = 14227 }
-
-[[package]]
 name = "attrs"
 version = "24.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -55,7 +49,7 @@ wheels = [
 
 [[package]]
 name = "attrs"
-version = "24.3.0"
+version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.10' and sys_platform == 'nt'",
@@ -67,9 +61,9 @@ resolution-markers = [
     "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform != 'nt'",
     "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform != 'nt'",
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/48/c8/6260f8ccc11f0917360fc0da435c5c9c7504e3db174d5a12a1494887b045/attrs-24.3.0.tar.gz", hash = "sha256:8f5c07333d543103541ba7be0e2ce16eeee8130cb0b3f9238ab904ce1e85baff", size = 805984 }
+sdist = { url = "https://files.pythonhosted.org/packages/49/7c/fdf464bcc51d23881d110abd74b512a42b3d5d376a55a831b44c603ae17f/attrs-25.1.0.tar.gz", hash = "sha256:1c97078a80c814273a76b2a298a932eb681c87415c11dee0a6921de7f1b02c3e", size = 810562 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/89/aa/ab0f7891a01eeb2d2e338ae8fecbe57fcebea1a24dbb64d45801bfab481d/attrs-24.3.0-py3-none-any.whl", hash = "sha256:ac96cd038792094f438ad1f6ff80837353805ac950cd2aa0e0625ef19850c308", size = 63397 },
+    { url = "https://files.pythonhosted.org/packages/fc/30/d4986a882011f9df997a55e6becd864812ccfcd821d64aac8570ee39f719/attrs-25.1.0-py3-none-any.whl", hash = "sha256:c75a69e28a550a7e93789579c22aa26b0f5b83b75dc4e08fe092980051e1090a", size = 63152 },
 ]
 
 [[package]]
@@ -593,6 +587,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/93/ac/02bc6a60304a8a58383386f7675f6ebae0d2f49f162dda318e57bd95c746/coverage-5.5-pp37-none-any.whl", hash = "sha256:2a3859cb82dcbda1cfd3e6f71c27081d18aa251d20a17d87d26d4cd216fb0af4", size = 199998 },
 ]
 
+[package.optional-dependencies]
+toml = [
+    { name = "toml" },
+]
+
 [[package]]
 name = "cryptography"
 version = "44.0.0"
@@ -974,7 +973,7 @@ resolution-markers = [
     "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform != 'nt'",
 ]
 dependencies = [
-    { name = "attrs", version = "24.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
+    { name = "attrs", version = "25.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
     { name = "exceptiongroup", marker = "python_full_version == '3.8.*'" },
     { name = "sortedcontainers", marker = "python_full_version == '3.8.*'" },
 ]
@@ -985,7 +984,7 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.124.4"
+version = "6.124.7"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.10' and sys_platform == 'nt'",
@@ -994,13 +993,13 @@ resolution-markers = [
     "python_full_version == '3.9.*' and sys_platform != 'nt'",
 ]
 dependencies = [
-    { name = "attrs", version = "24.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "attrs", version = "25.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "exceptiongroup", marker = "python_full_version >= '3.9' and python_full_version < '3.11'" },
     { name = "sortedcontainers", marker = "python_full_version >= '3.9'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/29/eb/713a72e6fa269fc4ffd256efe4d702e984901e0737f42f39c18420de61a9/hypothesis-6.124.4.tar.gz", hash = "sha256:8ed74c7ee5d44fc3676e6f5dfbf934ebffb25fd8bf694423b419161ded1712dc", size = 415849 }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/ef/6e3736663ee67369f7f5b697674bfbd3efc91e7096ddd4452bbbc80065ff/hypothesis-6.124.7.tar.gz", hash = "sha256:8ed6c6ae47e7d26d869c1dc3dee04e8fc50c95240715bb9915ded88d6d920f0e", size = 416938 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/0b/f6a242dc3530806addc6cd424e9f05ee573a4a1b7e6bd22ecd54fe84d263/hypothesis-6.124.4-py3-none-any.whl", hash = "sha256:1e39366db08a6b0ea3aba5ec03c1dc97dd151b383c3ac321d662d6ba9e83dd18", size = 478234 },
+    { url = "https://files.pythonhosted.org/packages/03/48/2412d4aacf1c50882126910ce036c92a838784915e3de66fb603a75c05ec/hypothesis-6.124.7-py3-none-any.whl", hash = "sha256:a6e1f66de84de3152d57f595a187a123ce3ecdea9dc8ef51ff8dcaa069137085", size = 479518 },
 ]
 
 [[package]]
@@ -1176,13 +1175,13 @@ resolution-markers = [
     "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform != 'nt'",
 ]
 dependencies = [
-    { name = "attrs", version = "24.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "attrs", version = "25.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "importlib-resources", version = "6.4.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
     { name = "jsonschema-specifications", version = "2023.12.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
     { name = "jsonschema-specifications", version = "2024.10.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "pkgutil-resolve-name", marker = "python_full_version == '3.8.*'" },
     { name = "referencing", version = "0.35.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "referencing", version = "0.36.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "referencing", version = "0.36.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "rpds-py", version = "0.20.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
     { name = "rpds-py", version = "0.22.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
@@ -1221,7 +1220,7 @@ resolution-markers = [
     "python_full_version == '3.9.*' and sys_platform != 'nt'",
 ]
 dependencies = [
-    { name = "referencing", version = "0.36.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "referencing", version = "0.36.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/db/58f950c996c793472e336ff3655b13fbcf1e3b359dcf52dcf3ed3b52c352/jsonschema_specifications-2024.10.1.tar.gz", hash = "sha256:0f38b83639958ce1152d02a7f062902c41c8fd20d558b0c34344292d417ae272", size = 15561 }
 wheels = [
@@ -1239,6 +1238,7 @@ wheels = [
 
 [[package]]
 name = "luigi"
+version = "3.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "python-daemon" },
@@ -1282,7 +1282,7 @@ common = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1298,8 +1298,10 @@ common = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "responses", version = "0.25.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
@@ -1339,7 +1341,7 @@ dev = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "isort", version = "5.11.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "isort", version = "5.13.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
@@ -1361,8 +1363,10 @@ dev = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "requests-unixsocket" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
@@ -1432,7 +1436,7 @@ test-cdh = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1448,8 +1452,10 @@ test-cdh = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "responses", version = "0.25.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
@@ -1482,7 +1488,7 @@ test-dropbox = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1498,8 +1504,10 @@ test-dropbox = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "responses", version = "0.25.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
@@ -1534,7 +1542,7 @@ test-gcloud = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1550,8 +1558,10 @@ test-gcloud = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "responses", version = "0.25.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
@@ -1584,7 +1594,7 @@ test-hdp = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1600,8 +1610,10 @@ test-hdp = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "responses", version = "0.25.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
@@ -1633,7 +1645,7 @@ test-postgres = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1653,8 +1665,10 @@ test-postgres = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "responses", version = "0.25.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
@@ -1686,7 +1700,7 @@ test-unixsocket = [
     { name = "httpretty" },
     { name = "hypothesis", version = "6.79.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "hypothesis", version = "6.113.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
-    { name = "hypothesis", version = "6.124.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "hypothesis", version = "6.124.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "jsonschema", version = "4.17.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
     { name = "jsonschema", version = "4.23.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "mock" },
@@ -1702,8 +1716,10 @@ test-unixsocket = [
     { name = "pygments", version = "2.19.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "pyhive", extra = ["presto"] },
     { name = "pymongo" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pytest-cov", version = "4.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pytest-cov", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
     { name = "requests" },
     { name = "requests-unixsocket" },
     { name = "responses", version = "0.23.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
@@ -1764,8 +1780,8 @@ common = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "responses", specifier = "<1.0.0" },
     { name = "s3transfer", specifier = ">=0.3,<4.0" },
@@ -1808,8 +1824,8 @@ dev = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "requests-unixsocket", specifier = "<1.0" },
     { name = "responses", specifier = "<1.0.0" },
@@ -1870,8 +1886,8 @@ test-cdh = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "responses", specifier = "<1.0.0" },
     { name = "s3transfer", specifier = ">=0.3,<4.0" },
@@ -1906,8 +1922,8 @@ test-dropbox = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "responses", specifier = "<1.0.0" },
     { name = "s3transfer", specifier = ">=0.3,<4.0" },
@@ -1944,8 +1960,8 @@ test-gcloud = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "responses", specifier = "<1.0.0" },
     { name = "s3transfer", specifier = ">=0.3,<4.0" },
@@ -1980,8 +1996,8 @@ test-hdp = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "responses", specifier = "<1.0.0" },
     { name = "s3transfer", specifier = ">=0.3,<4.0" },
@@ -2017,8 +2033,8 @@ test-postgres = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "responses", specifier = "<1.0.0" },
     { name = "s3transfer", specifier = ">=0.3,<4.0" },
@@ -2052,8 +2068,8 @@ test-unixsocket = [
     { name = "pygments" },
     { name = "pyhive", extras = ["presto"], specifier = "==0.6.1" },
     { name = "pymongo", specifier = "==3.4.0" },
-    { name = "pytest", specifier = "<7.0" },
-    { name = "pytest-cov", specifier = ">=2.0,<3.0" },
+    { name = "pytest" },
+    { name = "pytest-cov" },
     { name = "requests", specifier = ">=2.20.0,<=2.31.0" },
     { name = "requests-unixsocket", specifier = "<1.0" },
     { name = "responses", specifier = "<1.0.0" },
@@ -2747,15 +2763,6 @@ wheels = [
 ]
 
 [[package]]
-name = "py"
-version = "1.11.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/98/ff/fec109ceb715d2a6b4c4a85a61af3b40c723a961e8828319fbcb15b868dc/py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719", size = 207796 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/f0/10642828a8dfb741e5f3fbaac830550a518a775c7fff6f04a007259b0548/py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378", size = 98708 },
-]
-
-[[package]]
 name = "pyasn1"
 version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3064,39 +3071,91 @@ wheels = [
 
 [[package]]
 name = "pytest"
-version = "6.2.5"
+version = "7.4.4"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "atomicwrites", marker = "sys_platform == 'win32'" },
-    { name = "attrs", version = "24.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
-    { name = "attrs", version = "24.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "importlib-metadata", marker = "python_full_version < '3.8'" },
-    { name = "iniconfig" },
-    { name = "packaging", version = "24.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
-    { name = "packaging", version = "24.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
-    { name = "pluggy", version = "1.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
-    { name = "pluggy", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
-    { name = "py" },
-    { name = "toml" },
+resolution-markers = [
+    "python_full_version < '3.8' and sys_platform == 'nt'",
+    "python_full_version < '3.8' and sys_platform != 'nt'",
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/24/7d1f2d2537de114bdf1e6875115113ca80091520948d370c964b88070af2/pytest-6.2.5.tar.gz", hash = "sha256:131b36680866a76e6781d13f101efb86cf674ebb9762eb70d3082b6f29889e89", size = 1118720 }
+dependencies = [
+    { name = "colorama", marker = "python_full_version < '3.8' and sys_platform == 'win32'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.8'" },
+    { name = "importlib-metadata", marker = "python_full_version < '3.8'" },
+    { name = "iniconfig", marker = "python_full_version < '3.8'" },
+    { name = "packaging", version = "24.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "pluggy", version = "1.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+    { name = "tomli", version = "2.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/80/1f/9d8e98e4133ffb16c90f3b405c43e38d3abb715bb5d7a63a5a684f7e46a3/pytest-7.4.4.tar.gz", hash = "sha256:2cf0005922c6ace4a3e2ec8b4080eb0d9753fdc93107415332f50ce9e7994280", size = 1357116 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/76/86f886e750b81a4357b6ed606b2bcf0ce6d6c27ad3c09ebf63ed674fc86e/pytest-6.2.5-py3-none-any.whl", hash = "sha256:7310f8d27bc79ced999e760ca304d69f6ba6c6649c0b60fb0e04a4a77cacc134", size = 280654 },
+    { url = "https://files.pythonhosted.org/packages/51/ff/f6e8b8f39e08547faece4bd80f89d5a8de68a38b2d179cc1c4490ffa3286/pytest-7.4.4-py3-none-any.whl", hash = "sha256:b090cdf5ed60bf4c45261be03239c2c1c22df034fbffe691abe93cd80cea01d8", size = 325287 },
+]
+
+[[package]]
+name = "pytest"
+version = "8.3.4"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.10' and sys_platform == 'nt'",
+    "python_full_version == '3.9.*' and sys_platform == 'nt'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform == 'nt'",
+    "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform == 'nt'",
+    "python_full_version >= '3.10' and sys_platform != 'nt'",
+    "python_full_version == '3.9.*' and sys_platform != 'nt'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform != 'nt'",
+    "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform != 'nt'",
+]
+dependencies = [
+    { name = "colorama", marker = "python_full_version >= '3.8' and sys_platform == 'win32'" },
+    { name = "exceptiongroup", marker = "python_full_version >= '3.8' and python_full_version < '3.11'" },
+    { name = "iniconfig", marker = "python_full_version >= '3.8'" },
+    { name = "packaging", version = "24.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "pluggy", version = "1.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+    { name = "tomli", version = "2.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8' and python_full_version < '3.11'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/05/35/30e0d83068951d90a01852cb1cef56e5d8a09d20c7f511634cc2f7e0372a/pytest-8.3.4.tar.gz", hash = "sha256:965370d062bce11e73868e0335abac31b4d3de0e82f4007408d242b4f8610761", size = 1445919 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/11/92/76a1c94d3afee238333bc0a42b82935dd8f9cf8ce9e336ff87ee14d9e1cf/pytest-8.3.4-py3-none-any.whl", hash = "sha256:50e16d954148559c9a74109af1eaf0c945ba2d8f30f0a3d3335edde19788b6f6", size = 343083 },
 ]
 
 [[package]]
 name = "pytest-cov"
-version = "2.12.1"
+version = "4.1.0"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "coverage" },
-    { name = "pytest" },
-    { name = "toml" },
+resolution-markers = [
+    "python_full_version < '3.8' and sys_platform == 'nt'",
+    "python_full_version < '3.8' and sys_platform != 'nt'",
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/63/3a/747e953051fd6eb5fb297907a825aad43d94c556d3b9938fc21f3172879f/pytest-cov-2.12.1.tar.gz", hash = "sha256:261ceeb8c227b726249b376b8526b600f38667ee314f910353fa318caa01f4d7", size = 60395 }
+dependencies = [
+    { name = "coverage", extra = ["toml"], marker = "python_full_version < '3.8'" },
+    { name = "pytest", version = "7.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.8'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7a/15/da3df99fd551507694a9b01f512a2f6cf1254f33601605843c3775f39460/pytest-cov-4.1.0.tar.gz", hash = "sha256:3904b13dfbfec47f003b8e77fd5b589cd11904a21ddf1ab38a64f204d6a10ef6", size = 63245 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ba/84/576b071aef9ac9301e5c0ff35d117e12db50b87da6f12e745e9c5f745cc2/pytest_cov-2.12.1-py2.py3-none-any.whl", hash = "sha256:261bb9e47e65bd099c89c3edf92972865210c36813f80ede5277dceb77a4a62a", size = 20441 },
+    { url = "https://files.pythonhosted.org/packages/a7/4b/8b78d126e275efa2379b1c2e09dc52cf70df16fc3b90613ef82531499d73/pytest_cov-4.1.0-py3-none-any.whl", hash = "sha256:6ba70b9e97e69fcc3fb45bfeab2d0a138fb65c4d0d6a41ef33983ad114be8c3a", size = 21949 },
+]
+
+[[package]]
+name = "pytest-cov"
+version = "5.0.0"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.10' and sys_platform == 'nt'",
+    "python_full_version == '3.9.*' and sys_platform == 'nt'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform == 'nt'",
+    "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform == 'nt'",
+    "python_full_version >= '3.10' and sys_platform != 'nt'",
+    "python_full_version == '3.9.*' and sys_platform != 'nt'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform != 'nt'",
+    "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform != 'nt'",
+]
+dependencies = [
+    { name = "coverage", extra = ["toml"], marker = "python_full_version >= '3.8'" },
+    { name = "pytest", version = "8.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.8'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/67/00efc8d11b630c56f15f4ad9c7f9223f1e5ec275aaae3fa9118c6a223ad2/pytest-cov-5.0.0.tar.gz", hash = "sha256:5837b58e9f6ebd335b0f8060eecce69b662415b16dc503883a02f45dfeb14857", size = 63042 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/78/3a/af5b4fa5961d9a1e6237b530eb87dd04aea6eb83da09d2a4073d81b54ccf/pytest_cov-5.0.0-py3-none-any.whl", hash = "sha256:4f0764a1219df53214206bf1feea4633c3b558a2925c8b59f144f682861ce652", size = 21990 },
 ]
 
 [[package]]
@@ -3286,7 +3345,7 @@ resolution-markers = [
     "python_full_version >= '3.8' and python_full_version < '3.8.1' and sys_platform != 'nt'",
 ]
 dependencies = [
-    { name = "attrs", version = "24.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
+    { name = "attrs", version = "25.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
     { name = "rpds-py", version = "0.20.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.8.*'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/99/5b/73ca1f8e72fff6fa52119dbd185f73a907b1989428917b24cff660129b6d/referencing-0.35.1.tar.gz", hash = "sha256:25b42124a6c8b632a425174f24087783efb348a6f1e0008e63cd4466fedf703c", size = 62991 }
@@ -3296,7 +3355,7 @@ wheels = [
 
 [[package]]
 name = "referencing"
-version = "0.36.1"
+version = "0.36.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.10' and sys_platform == 'nt'",
@@ -3305,13 +3364,13 @@ resolution-markers = [
     "python_full_version == '3.9.*' and sys_platform != 'nt'",
 ]
 dependencies = [
-    { name = "attrs", version = "24.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
+    { name = "attrs", version = "25.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "rpds-py", version = "0.22.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
     { name = "typing-extensions", version = "4.12.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.9'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/27/32/fd98246df7a0f309b58cae68b10b6b219ef2eb66747f00dfb34422687087/referencing-0.36.1.tar.gz", hash = "sha256:ca2e6492769e3602957e9b831b94211599d2aade9477f5d44110d2530cf9aade", size = 74661 }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/db/98b5c277be99dd18bfd91dd04e1b759cad18d1a338188c936e92f921c7e2/referencing-0.36.2.tar.gz", hash = "sha256:df2e89862cd09deabbdba16944cc3f10feb6b3e6f18e902f7cc25609a34775aa", size = 74744 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cc/fa/9f193ef0c9074b659009f06d7cbacc6f25b072044815bcf799b76533dbb8/referencing-0.36.1-py3-none-any.whl", hash = "sha256:363d9c65f080d0d70bc41c721dce3c7f3e77fc09f269cd5c8813da18069a6794", size = 26777 },
+    { url = "https://files.pythonhosted.org/packages/c1/b1/3baf80dc6d2b7bc27a95a67752d0208e410351e3feb4eb78de5f77454d8d/referencing-0.36.2-py3-none-any.whl", hash = "sha256:e8699adbbf8b5c7de96d8ffa0eb5c158b3beafce084968e2ea8bb08c6794dcd0", size = 26775 },
 ]
 
 [[package]]
