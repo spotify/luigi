@@ -50,16 +50,59 @@ prometheus = ["prometheus-client>=0.5,<0.15"]
 toml = ["toml<2.0.0"]
 
 [dependency-groups]
-dropbox = [
-  "dropbox>=11.0.0",
-]
-
+# groups and dependencies should be sort in lexicographical order
 cdh = [
   "hdfs>=2.0.4,<3.0.0",
 ]
 
-hdp = [
-  "hdfs>=2.0.4,<3.0.0",
+common = [
+  "avro-python3",
+  "azure-storage-blob<=12.20.0",
+  "boto>=2.42,<3.0",
+  "boto3>=1.11.0",
+  "codecov>=1.4.0",
+  "coverage>=5.0,<6",
+  "datadog==0.22.0",
+  "docker>=2.1.0",
+  "elasticsearch>=1.0.0,<2.0.0",
+  "google-compute-engine",
+  "HTTPretty==0.8.10",
+  "hypothesis>=6.7.0,<7.0.0",
+  "jsonschema",
+  "mock<2.0",
+  "moto>=1.3.10,<5.0",
+  "mypy",
+  "prometheus-client>=0.5.0,<0.15",
+  "psutil<4.0",
+  "pygments",
+  "pyhive[presto]==0.6.1",
+  "pymongo==3.4.0",
+  "pytest",
+  "pytest-cov",
+  "requests>=2.20.0,<=2.31.0",
+  "responses<1.0.0",
+  "s3transfer>=0.3,<4.0",
+  "selenium==3.0.2",
+  "sqlalchemy<1.4",
+  "toml<2.0.0",
+  "types-python-dateutil",
+  "types-requests",
+  "types-toml",
+]
+
+docs = [
+  "alabaster<0.7.13",
+  "azure-storage-blob<=12.20.0",
+  "jinja2==3.0.3",
+  "mypy",
+  "prometheus-client==0.5.0",
+  "Sphinx>=1.4.4,<2.0",
+  "sphinx_rtd_theme",
+  "sqlalchemy",
+]
+
+dropbox = [
+  "dropbox>=11.0.0",
 ]
 
 gcloud = [
@@ -68,69 +111,41 @@ gcloud = [
   "google-auth-httplib2==0.0.3",
 ]
 
+hdp = [
+  "hdfs>=2.0.4,<3.0.0",
+]
+
+lint = [
+  "flake8>=3.2.0",
+  "isort"
+]
+
 postgres = [
-  "psycopg2<3.0",
   "pg8000>=1.23.0",
+  "psycopg2<3.0",
 ]
 
 unixsocket = [
   "requests-unixsocket<1.0",
 ]
 
-common = [
-  "pytest",
-  "pytest-cov",
-  "mock<2.0",
-  "moto>=1.3.10,<5.0",
-  "HTTPretty==0.8.10",
-  "docker>=2.1.0",
-  "boto>=2.42,<3.0",
-  "boto3>=1.11.0",
-  "pyhive[presto]==0.6.1",
-  "s3transfer>=0.3,<4.0",
-  "sqlalchemy<1.4",
-  "elasticsearch>=1.0.0,<2.0.0",
-  "psutil<4.0",
-  "mysql-connector-python>=8.0.12",
-  "avro-python3",
-  "google-compute-engine",
-  "coverage>=5.0,<6",
-  "codecov>=1.4.0",
-  "requests>=2.20.0,<=2.31.0",
-  "pygments",
-  "hypothesis>=6.7.0,<7.0.0",
-  "selenium==3.0.2",
-  "pymongo==3.4.0",
-  "toml<2.0.0",
-  "responses<1.0.0",
-  "azure-storage-blob<=12.20.0",
-  "datadog==0.22.0",
-  "prometheus-client>=0.5.0,<0.15",
-  "jsonschema",
-  "mypy",
-  "types-toml",
-  "types-python-dateutil",
-  "types-requests",
-]
-
 # for tox test dependencies
-test_dropbox = [
-  {include-group = "dropbox"},
-  {include-group = "common"},
-]
-
 test_cdh = [
   {include-group = "cdh"},
   {include-group = "common"},
 ]
 
-test_hdp = [
-  {include-group = "hdp"},
+test_dropbox = [
+  {include-group = "dropbox"},
   {include-group = "common"},
 ]
 
 test_gcloud = [
   {include-group = "gcloud"},
+  {include-group = "common"},
+]
+test_hdp = [
+  {include-group = "hdp"},
   {include-group = "common"},
 ]
 
@@ -147,22 +162,6 @@ test_unixsocket = [
 visualizer = [
   "mock<2.0",
   "selenium==3.0.2"
-]
-
-lint = [
-  "flake8>=3.2.0",
-  "isort"
-]
-
-docs = [
-  "sqlalchemy",
-  "jinja2==3.0.3",
-  "Sphinx>=1.4.4,<2.0",
-  "sphinx_rtd_theme",
-  "azure-storage-blob<=12.20.0",
-  "prometheus-client==0.5.0",
-  "alabaster<0.7.13",
-  "mypy",
 ]
 
 # for local development
