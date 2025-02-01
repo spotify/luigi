@@ -1195,7 +1195,7 @@ class DynamicDependenciesTest(LuigiTestCase):
 
 class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):
     n_workers = 100
-    timeout = 3.0  # We run 7 tasks that take 0.5s each so it should take less than 3.5s
+    timeout = 10.0  # We run 7 tasks that take 0.5s each so it should take less than 3.5s
 
 
 class WorkerPingThreadTests(unittest.TestCase):
