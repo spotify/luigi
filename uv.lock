@@ -1238,7 +1238,6 @@ wheels = [
 
 [[package]]
 name = "luigi"
-version = "3.6.0"
 source = { editable = "." }
 dependencies = [
     { name = "python-daemon" },

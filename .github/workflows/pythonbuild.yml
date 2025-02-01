@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         include:
-          #- tox-env: py37-core
+          - tox-env: py37-core
           - tox-env: py38-core
           - tox-env: py39-core
           - tox-env: py310-core
