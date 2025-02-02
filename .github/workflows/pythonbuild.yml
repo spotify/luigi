@@ -13,7 +13,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py37-core
           - tox-env: py38-core
           - tox-env: py39-core
           - tox-env: py310-core
@@ -29,7 +28,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
@@ -69,7 +68,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py37-postgres
           - tox-env: py38-postgres
           - tox-env: py39-postgres
           - tox-env: py310-postgres
@@ -85,7 +83,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Create PSQL database
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
@@ -111,15 +109,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py37-aws
           - tox-env: py38-aws
           - tox-env: py39-aws
           - tox-env: py310-aws
           - tox-env: py311-aws
           - tox-env: py312-aws
 
-          - tox-env: py37-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
           - tox-env: py38-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
           - tox-env: py39-unixsocket
@@ -131,14 +126,12 @@ jobs:
           - tox-env: py312-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
 
-          - tox-env: py37-apache
           - tox-env: py38-apache
           - tox-env: py39-apache
           - tox-env: py310-apache
           - tox-env: py311-apache
           - tox-env: py312-apache
 
-          - tox-env: py37-azureblob
           - tox-env: py38-azureblob
           - tox-env: py39-azureblob
           - tox-env: py310-azureblob
@@ -154,7 +147,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
@@ -183,7 +176,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv # we need latest uv, tox, and tox-uv
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}

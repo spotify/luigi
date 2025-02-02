@@ -9,7 +9,7 @@ authors = [
   {name = "The Luigi Authors"}
 ]
 license = {file = "LICENSE"}
-requires-python = ">=3.7.0, <3.13"
+requires-python = ">=3.8.0, <3.13"
 dependencies = [
   "python-dateutil>=2.7.5,<3",
   "tenacity>=8,<9",
@@ -24,7 +24,6 @@ classifiers = [
   "Intended Audience :: Developers",
   "Intended Audience :: System Administrators",
   "License :: OSI Approved :: Apache Software License",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
@@ -72,6 +71,7 @@ common = [
   "mock<2.0",
   "moto>=1.3.10,<5.0",
   "mypy",
+  "mysql-connector-python",
   "prometheus-client>=0.5.0,<0.15",
   "psutil<4.0",
   "pygments",
@@ -116,7 +116,7 @@ hdp = [
 ]
 
 lint = [
-  "flake8>=3.2.0",
+  "flake8",
   "isort"
 ]
 
