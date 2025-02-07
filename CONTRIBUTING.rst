@@ -15,7 +15,7 @@ patch locally before submitting it.
 
 If you do want to run the tests locally you'll need to run the commands below
 .. code:: bash
-   pipx install uv
+   curl -LsSf https://astral.sh/uv/install.sh | sh
    uv tool install tox --with tox-uv
 
 You will need a ``tox --version`` of at least 4.22.
