@@ -154,7 +154,6 @@ jobs:
           OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
         run: uvx --with tox-uv tox run
       - name: Upload coverage to Codecov
-        if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
@@ -182,11 +181,3 @@ jobs:
           TOXENV: ${{ matrix.tox-env }}
           OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
         run: uvx --with tox-uv tox run
-      - name: Upload coverage to Codecov
-        if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
-        uses: codecov/codecov-action@v5
-        with:
-          fail_ci_if_error: true
-          verbose: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
