@@ -26,6 +26,7 @@ from time import sleep
 import luigi
 import luigi.date_interval
 import luigi.notifications
+from luigi.mock import MockTarget
 from luigi.worker import TaskException, TaskProcess
 from luigi.scheduler import DONE, FAILED
 
@@ -104,6 +105,42 @@ class TaskProcessTest(LuigiTestCase):
                 StringContaining("finished running, but complete() is still returning false"),
                 [],
                 None
+            ))
+
+    def test_fail_on_unfulfilled_dependencies(self):
+        class NeverCompleteTask(luigi.Task):
+            def complete(self):
+                return False
+
+        class A(NeverCompleteTask):
+            def output(self):
+                return []
+
+        class B(NeverCompleteTask):
+            def output(self):
+                return MockTarget("foo-B")
+
+        class C(NeverCompleteTask):
+            def output(self):
+                return [MockTarget("foo-C1"), MockTarget("foo-C2")]
+
+        class Main(NeverCompleteTask):
+            def requires(self):
+                return [A(), B(), C()]
+
+        task = Main()
+        result_queue = multiprocessing.Queue()
+        task_process = TaskProcess(task, 1, result_queue, mock.Mock())
+
+        with mock.patch.object(result_queue, 'put') as mock_put:
+            task_process.run()
+            expected_missing = [A().task_id, f"{B().task_id} (foo-B)", f"{C().task_id} (foo-C1, foo-C2)"]
+            mock_put.assert_called_once_with((
+                task.task_id,
+                FAILED,
+                StringContaining(f"Unfulfilled dependencies at run time: {', '.join(expected_missing)}"),
+                expected_missing,
+                [],
             ))
 
     def test_cleanup_children_on_terminate(self):

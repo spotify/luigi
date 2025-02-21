@@ -84,7 +84,7 @@ _retry_policy_fields = [
     "disable_hard_timeout",
     "disable_window",
 ]
-RetryPolicy = collections.namedtuple("RetryPolicy", _retry_policy_fields)
+RetryPolicy = collections.namedtuple("RetryPolicy", _retry_policy_fields)  # type: ignore
 
 
 def _get_empty_retry_policy():

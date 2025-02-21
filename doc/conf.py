@@ -338,6 +338,8 @@ texinfo_documents = [
 # If true, do not generate a @detailmenu in the "Top" node's menu.
 #texinfo_no_detailmenu = False
 
+autodoc_mock_imports = ["mypy"]
+
 # Some regression introduced
 # https://github.com/sphinx-doc/sphinx/issues/2330
 # https://github.com/spotify/luigi/pull/1555

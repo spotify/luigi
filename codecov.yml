@@ -14,13 +14,14 @@ coverage:
       default: false  # disable the default status that measures entire project
       core:
         target: 92%
-        paths: "luigi/*.py" 
+        paths:
+          - "luigi/*.py"
     patch:  # Just copied from default
       default:
         if_no_uploads: error
 
     changes: true  # Just copied from default
-  
+
   ignore:
     - "examples/"
     - "luigi/tools"  # These are tested as actual run commands without coverage

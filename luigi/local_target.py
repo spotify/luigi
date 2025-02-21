@@ -37,7 +37,7 @@ class atomic_file(AtomicLocalFile):
     """
 
     def move_to_final_destination(self):
-        os.rename(self.tmp_path, self.path)
+        os.replace(self.tmp_path, self.path)
 
     def generate_tmp_path(self, path):
         return path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
@@ -109,12 +109,12 @@ class LocalFileSystem(FileSystem):
         if d and not os.path.exists(d):
             self.mkdir(d)
         try:
-            os.rename(old_path, new_path)
+            os.replace(old_path, new_path)
         except OSError as err:
             if err.errno == errno.EXDEV:
                 new_path_tmp = '%s-%09d' % (new_path, random.randint(0, 999999999))
                 shutil.copy(old_path, new_path_tmp)
-                os.rename(new_path_tmp, new_path)
+                os.replace(new_path_tmp, new_path)
                 os.remove(old_path)
             else:
                 raise err

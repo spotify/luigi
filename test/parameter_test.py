@@ -310,6 +310,25 @@ class ParameterTest(LuigiTestCase):
     def test_enum_list_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.EnumListParameter())
 
+    def test_choice_list_param_valid(self):
+        p = luigi.parameter.ChoiceListParameter(choices=["1", "2", "3"])
+        self.assertEqual((), p.parse(''))
+        self.assertEqual(("1",), p.parse('1'))
+        self.assertEqual(("1", "3"), p.parse('1,3'))
+
+    def test_choice_list_param_invalid(self):
+        p = luigi.parameter.ChoiceListParameter(choices=["1", "2", "3"])
+        self.assertRaises(ValueError, lambda: p.parse('1,4'))
+
+    def test_invalid_choice_type(self):
+        self.assertRaises(
+            AssertionError,
+            lambda: luigi.ChoiceListParameter(var_type=int, choices=[1, 2, "3"]),
+        )
+
+    def test_choice_list_param_missing(self):
+        self.assertRaises(ParameterException, lambda: luigi.parameter.ChoiceListParameter())
+
     def test_tuple_serialize_parse(self):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
@@ -469,6 +488,13 @@ class TestParametersHashability(LuigiTestCase):
 
         self.assertEqual(FooWithDefault().args, p.parse('C'))
 
+    def test_choice_list(self):
+        class Foo(luigi.Task):
+            args = luigi.ChoiceListParameter(var_type=str, choices=["1", "2", "3"])
+
+        p = luigi.ChoiceListParameter(var_type=str, choices=["3", "2", "1"])
+        self.assertEqual(hash(Foo(args=("3",)).args), hash(p.parse("3")))
+
     def test_dict(self):
         class Foo(luigi.Task):
             args = luigi.parameter.DictParameter()
@@ -532,6 +558,26 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.TupleParameter()
         self.assertEqual(hash(Foo(args=(('foo', 'bar'), ('doge', 'wow'))).args),
                          hash(p.normalize(p.parse('(("foo", "bar"), ("doge", "wow"))'))))
+
+    def test_tuple_string_with_json(self):
+        class Foo(luigi.Task):
+            args = luigi.parameter.TupleParameter()
+
+        p = luigi.parameter.TupleParameter()
+        self.assertEqual(hash(Foo(args=('foo', 'bar')).args),
+                         hash(p.normalize(p.parse('["foo", "bar"]'))))
+
+    def test_tuple_invalid_string(self):
+        param = luigi.TupleParameter()
+        self.assertRaises(ValueError, lambda: param.parse('("abcd")'))
+
+    def test_tuple_invalid_string_in_tuple(self):
+        param = luigi.TupleParameter()
+        self.assertRaises(ValueError, lambda: param.parse('(("abcd"))'))
+
+    def test_parse_invalid_format(self):
+        param = luigi.TupleParameter()
+        self.assertRaises(SyntaxError, lambda: param.parse('((1,2),(3,4'))
 
     def test_task(self):
         class Bar(luigi.Task):
@@ -1191,6 +1237,7 @@ class LocalParameters1304Test(LuigiTestCase):
 
     https://github.com/spotify/luigi/issues/1304#issuecomment-148402284
     """
+
     def test_local_params(self):
 
         class MyTask(RunOnceTask):

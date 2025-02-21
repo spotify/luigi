@@ -2,18 +2,27 @@ module("graph.js");
 
 test("nodeFromTask", function() {
     var task = {
-        deps: ["B","C"],
-        taskId: "A",
-        status: "DONE"
+        deps: ["B1","C1"],
+        taskId: "A1",
+        status: "DONE",
+        name: "A",
+        params: {},
+        priority: 0,
     };
     var expected = {
-        taskId: "A",
+        taskId: "A1",
         status: "DONE",
-        trackingUrl: "#A",
-        deps: ["B","C"],
-        depth: -1
+        trackingUrl: "#A1",
+        deps: ["B1","C1"],
+        depth: -1,
+        name: "A",
+        params: {},
+        priority: 0,
     };
-    deepEqual(Graph.testableMethods.nodeFromTask(task), expected);
+    let graph = {
+        hashBase: "#"
+    }
+    deepEqual(Graph.testableMethods.nodeFromTask.bind(graph)(task), expected);
 });
 
 test("uniqueIndexByProperty", function() {
@@ -70,7 +79,7 @@ test("computeRowsSelfDeps", function () {
     var rowSizes = Graph.testableMethods.computeRows(nodes, nodeIndex)
     equal(A1.depth, 0)
     equal(A2.depth, 1)
-    equal(rowSizes, [1, 1])
+    deepEqual(rowSizes, [1, 1])
 });
 
 test("computeRowsGrouped", function() {
@@ -83,6 +92,8 @@ test("computeRowsGrouped", function() {
     var D2 = {name: "D", taskId: "D2", deps: [], depth: -1}
     var E1 = {name: "E", taskId: "E1", deps: [], depth: -1}
     var E2 = {name: "E", taskId: "E2", deps: [], depth: -1}
+    var nodes = [A0, B0, C1, C2, D0, D1, D2, E1, E2]
+    var nodeIndex = {"A0": 0, "B0": 1, "C1": 2, "C2": 3, "D0": 4, "D1": 5, "D2": 6, "E1": 7, "E2": 8}
     var rowSizes = Graph.testableMethods.computeRows(nodes, nodeIndex)
     equal(A0.depth, 0)
     equal(B0.depth, 1)
@@ -93,7 +104,7 @@ test("computeRowsGrouped", function() {
     equal(D2.depth, 3)
     equal(E1.depth, 4)
     equal(E2.depth, 4)
-    equal(rowSizes, [1, 1, 2, 3, 2])
+    deepEqual(rowSizes, [1, 1, 2, 3, 2])
 });
 
 test("createGraph", function() {

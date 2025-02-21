@@ -309,7 +309,7 @@ class Parameter:
         """
         return x  # default impl
 
-    def next_in_enumeration(self, _value):
+    def next_in_enumeration(self, value):
         """
         If your Parameter type has an enumerable ordering of values. You can
         choose to override this method. This method is used by the
@@ -388,6 +388,9 @@ class OptionalParameterMixin:
                 ),
                 OptionalParameterTypeWarning,
             )
+
+    def next_in_enumeration(self, value):
+        return None
 
 
 class OptionalParameter(OptionalParameterMixin, Parameter):
@@ -1379,9 +1382,19 @@ class TupleParameter(ListParameter):
         # ast.literal_eval(t_str) == t
         try:
             # loop required to parse tuple of tuples
-            return tuple(tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
+            return tuple(self._convert_iterable_to_tuple(x) for x in json.loads(x, object_pairs_hook=FrozenOrderedDict))
         except (ValueError, TypeError):
-            return tuple(literal_eval(x))  # if this causes an error, let that error be raised.
+            result = literal_eval(x)
+            # t_str = '("abcd")'
+            # Ensure that the result is not a string to avoid cases like ('a','b','c','d')
+            if isinstance(result, str):
+                raise ValueError("Parsed result cannot be a string")
+            return tuple(result)  # if this causes an error, let that error be raised.
+
+    def _convert_iterable_to_tuple(self, x):
+        if isinstance(x, str):
+            return x
+        return tuple(x)
 
 
 class OptionalTupleParameter(OptionalParameterMixin, TupleParameter):
@@ -1532,6 +1545,52 @@ class ChoiceParameter(Parameter):
                 var=var, choices=self._choices))
 
 
+class ChoiceListParameter(ChoiceParameter):
+    """
+    A parameter which takes two values:
+        1. an instance of :class:`~collections.Iterable` and
+        2. the class of the variables to convert to.
+
+    Values are taken to be a list, i.e. order is preserved, duplicates may occur, and empty list is possible.
+
+    In the task definition, use
+
+    .. code-block:: python
+
+        class MyTask(luigi.Task):
+            my_param = luigi.ChoiceListParameter(choices=['foo', 'bar', 'baz'], var_type=str)
+
+    At the command line, use
+
+    .. code-block:: console
+
+        $ luigi --module my_tasks MyTask --my-param foo,bar
+
+    Consider using :class:`~luigi.EnumListParameter` for a typed, structured
+    alternative.  This class can perform the same role when all choices are the
+    same type and transparency of parameter value on the command line is
+    desired.
+    """
+
+    _sep = ','
+
+    def __init__(self, *args, **kwargs):
+        super(ChoiceListParameter, self).__init__(*args, **kwargs)
+
+    def parse(self, s):
+        values = [] if s == '' else s.split(self._sep)
+        return self.normalize(map(self._var_type, values))
+
+    def normalize(self, var):
+        values = []
+        for v in var:
+            values.append(super().normalize(v))
+        return tuple(values)
+
+    def serialize(self, values):
+        return self._sep.join(values)
+
+
 class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
     """Class to parse optional choice parameters."""
 
@@ -1595,4 +1654,4 @@ class PathParameter(Parameter):
 class OptionalPathParameter(OptionalParameter, PathParameter):
     """Class to parse optional path parameters."""
 
-    expected_type = (str, Path)
+    expected_type = (str, Path)  # type: ignore

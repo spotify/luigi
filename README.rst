@@ -14,7 +14,11 @@
 .. image:: https://img.shields.io/pypi/l/luigi.svg?style=flat
    :target: https://pypi.python.org/pypi/luigi
 
-Luigi is a Python (3.6, 3.7, 3.8, 3.9, 3.10, 3.11 tested) package that helps you build complex
+.. image:: https://readthedocs.org/projects/luigi/badge/?version=stable
+    :target: https://luigi.readthedocs.io/en/stable/?badge=stable
+    :alt: Documentation Status
+
+Luigi is a Python (3.7, 3.8, 3.9, 3.10, 3.11, 3.12 tested) package that helps you build complex
 pipelines of batch jobs. It handles dependency resolution, workflow management,
 visualization, handling failures, command line integration, and much more.
 
@@ -131,7 +135,7 @@ or held presentations about Luigi:
 * `Foursquare <https://foursquare.com/>`_ `(presentation, 2013) <http://www.slideshare.net/OpenAnayticsMeetup/luigi-presentation-17-23199897>`__
 * `Mortar Data (Datadog) <https://www.datadoghq.com/>`_ `(documentation / tutorial) <http://help.mortardata.com/technologies/luigi>`__
 * `Stripe <https://stripe.com/>`_ `(presentation, 2014) <http://www.slideshare.net/PyData/python-as-part-of-a-production-machine-learning-stack-by-michael-manapat-pydata-sv-2014>`__
-* `Buffer <https://buffer.com/>`_ `(blog, 2014) <https://overflow.bufferapp.com/2014/10/31/buffers-new-data-architecture/>`__
+* `Buffer <https://buffer.com/>`_ `(blog, 2014) <https://buffer.com/resources/buffers-new-data-architecture/>`__
 * `SeatGeek <https://seatgeek.com/>`_ `(blog, 2015) <http://chairnerd.seatgeek.com/building-out-the-seatgeek-data-pipeline/>`__
 * `Treasure Data <https://www.treasuredata.com/>`_ `(blog, 2015) <http://blog.treasuredata.com/blog/2015/02/25/managing-the-data-pipeline-with-git-luigi/>`__
 * `Growth Intelligence <http://growthintel.com/>`_ `(presentation, 2015) <http://www.slideshare.net/growthintel/a-beginners-guide-to-building-data-pipelines-with-luigi>`__
@@ -189,6 +193,8 @@ Some more companies are using Luigi but haven't had a chance yet to write about 
 * `Assist Digital <https://www.assistdigital.com/>`_
 * `Meltwater <https://www.meltwater.com/>`_
 * `DevSamurai <https://www.devsamurai.com/>`_
+* `Veridas <https://veridas.com/>`_
+* `Aidentified <https://www.aidentified.com/>`_
 
 We're more than happy to have your company added here. Just send a PR on GitHub.
 

@@ -309,7 +309,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         self._close()
 
-        os.rename(tmp_local_path, local_path)
+        os.replace(tmp_local_path, local_path)
 
     def _sftp_get(self, path, tmp_local_path):
         self.conn.get(path, tmp_local_path)
