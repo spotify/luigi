@@ -13,29 +13,31 @@ We are always happy to receive Pull Requests. When you open a PR, it will
 automatically build on Travis. So you're not strictly required to test the
 patch locally before submitting it.
 
-If you do want to run the tests locally you'll need to ``pip install tox`` and
-then run one of the tox commands below.
+If you do want to run the tests locally you'll need to run the commands below
+.. code:: bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   uv tool install tox --with tox-uv
 
-You will need a ``tox --version`` of at least 2.0.
+You will need a ``tox --version`` of at least 4.22.
 
 .. code:: bash
 
     # These commands are pretty fast and will tell if you've
     # broken something major:
-    tox -e flake8
-    tox -e py37-core
+    tox run -e flake8
+    tox run -e py38-core
 
     # You can also test particular files for even faster iterations
-    tox -e py37-core test/rpc_test.py
+    tox run -e py38-core -- test/rpc_test.py
 
     # The visualiser tests require phantomjs to be installed on your path
-    tox -e visualiser
+    tox run -e visualiser
 
     # And some of the others involve downloading and running Hadoop:
-    tox -e py33-cdh
-    tox -e py34-hdp
+    tox run -e py38-cdh
+    tox run -e py39-hdp
 
-Where ``flake8`` is the lint checking, ``py37`` is obviously Python 3.7.
+Where ``flake8`` is the lint checking, ``py38`` is obviously Python 3.8.
 ``core`` are tests that do not require external components and ``cdh`` and
 ``hdp`` are two different hadoop distributions. For most local development it's
 usually enough to run the lint checking and a python version for ``core``
@@ -45,7 +47,7 @@ For `cdh` and `hdp`, tox will download the hadoop distribution for you. You
 however have to have Java installed and the `JAVA_HOME` environment variable
 set.
 
-For more details, check out the ``.travis.yml`` and ``tox.ini`` files.
+For more details, check out the ``.github/workflows/pythonbuild.yml`` and ``tox.ini`` files.
 
 Writing documentation
 =====================
@@ -59,7 +61,7 @@ You verify that your documentation code compiles by running
 
 .. code:: bash
 
-    tox -e docs
+    tox run -e docs
 
 After that, you can check how it renders locally with your browser
 

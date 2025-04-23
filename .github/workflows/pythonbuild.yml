@@ -13,35 +13,22 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.7"
-            tox-env: py37-core
-          - python-version: "3.8"
-            tox-env: py38-core
-          - python-version: "3.9"
-            tox-env: py39-core
-          - python-version: "3.10"
-            tox-env: py310-core
-          - python-version: "3.11"
-            tox-env: py311-core
-          - python-version: "3.12"
-            tox-env: py312-core
+          - tox-env: py38-core
+          - tox-env: py39-core
+          - tox-env: py310-core
+          - tox-env: py311-core
+          - tox-env: py312-core
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up the latest version of uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          # This path is specific to Ubuntu
-          path: ~/.cache/pip
-          # Look to see if there is a cache hit for the corresponding requirements files
-          key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 'tox<4.0'
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
@@ -51,7 +38,7 @@ jobs:
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: tox
+        run: uvx --with tox-uv tox run
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -81,42 +68,29 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.7"
-            tox-env: py37-postgres
-          - python-version: "3.8"
-            tox-env: py38-postgres
-          - python-version: "3.9"
-            tox-env: py39-postgres
-          - python-version: "3.10"
-            tox-env: py310-postgres
-          - python-version: "3.11"
-            tox-env: py311-postgres
-          - python-version: "3.12"
-            tox-env: py312-postgres
+          - tox-env: py38-postgres
+          - tox-env: py39-postgres
+          - tox-env: py310-postgres
+          - tox-env: py311-postgres
+          - tox-env: py312-postgres
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up the latest version of uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          # This path is specific to Ubuntu
-          path: ~/.cache/pip
-          # Look to see if there is a cache hit for the corresponding requirements files
-          key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 'tox<4.0'
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Create PSQL database
         run: |
           PGPASSWORD=postgres psql -h localhost -p 5432 -c 'create database spotify;' -U postgres
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
-        run: tox
+        run: uvx --with tox-uv tox run
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
@@ -135,96 +109,75 @@ jobs:
     strategy:
       matrix:
         include:
-          - python-version: "3.7"
-            tox-env: py37-aws
-          - python-version: "3.8"
-            tox-env: py38-aws
-          - python-version: "3.9"
-            tox-env: py39-aws
-          - python-version: "3.10"
-            tox-env: py310-aws
-          - python-version: "3.11"
-            tox-env: py311-aws
-          - python-version: "3.12"
-            tox-env: py312-aws
+          - tox-env: py38-aws
+          - tox-env: py39-aws
+          - tox-env: py310-aws
+          - tox-env: py311-aws
+          - tox-env: py312-aws
 
-          - python-version: "3.7"
-            tox-env: py37-unixsocket
+          - tox-env: py38-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: "3.8"
-            tox-env: py38-unixsocket
+          - tox-env: py39-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: "3.9"
-            tox-env: py39-unixsocket
+          - tox-env: py310-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: "3.10"
-            tox-env: py310-unixsocket
+          - tox-env: py311-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: "3.11"
-            tox-env: py311-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
-          - python-version: "3.12"
-            tox-env: py312-unixsocket
+          - tox-env: py312-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
 
-          - python-version: "3.7"
-            tox-env: py37-apache
-          - python-version: "3.8"
-            tox-env: py38-apache
-          - python-version: "3.9"
-            tox-env: py39-apache
-          - python-version: "3.10"
-            tox-env: py310-apache
-          - python-version: "3.11"
-            tox-env: py311-apache
-          - python-version: "3.12"
-            tox-env: py312-apache
+          - tox-env: py38-apache
+          - tox-env: py39-apache
+          - tox-env: py310-apache
+          - tox-env: py311-apache
+          - tox-env: py312-apache
 
-          - python-version: "3.7"
-            tox-env: py37-azureblob
-          - python-version: "3.8"
-            tox-env: py38-azureblob
-          - python-version: "3.9"
-            tox-env: py39-azureblob
-          - python-version: "3.10"
-            tox-env: py310-azureblob
-          - python-version: "3.11"
-            tox-env: py311-azureblob
-          - python-version: "3.12"
-            tox-env: py312-azureblob
-
-
-          - python-version: "3.10"
-            tox-env: flake8
-          - python-version: "3.10"
-            tox-env: docs
+          - tox-env: py38-azureblob
+          - tox-env: py39-azureblob
+          - tox-env: py310-azureblob
+          - tox-env: py311-azureblob
+          - tox-env: py312-azureblob
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
+      - name: Set up the latest version of uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          # This path is specific to Ubuntu
-          path: ~/.cache/pip
-          # Look to see if there is a cache hit for the corresponding requirements files
-          key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', format('requirements{0}.txt', matrix.spark-version-suffix))) }}
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip 'tox<4.0'
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Build
         env:
           TOXENV: ${{ matrix.tox-env }}
           OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
-        run: tox
+        run: uvx --with tox-uv tox run
       - name: Upload coverage to Codecov
-        if: ${{ matrix.tox-env != 'flake8' && matrix.tox-env != 'docs' }}
         uses: codecov/codecov-action@v5
         with:
           fail_ci_if_error: true
           verbose: true
+  others:
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        include:
+          - tox-env: flake8
+          - tox-env: docs
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Install dependencies
+        run: |
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
+      - name: Build
         env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          TOXENV: ${{ matrix.tox-env }}
+          OVERRIDE_SKIP_CI_TESTS: ${{ matrix.OVERRIDE_SKIP_CI_TESTS }}
+        run: uvx --with tox-uv tox run

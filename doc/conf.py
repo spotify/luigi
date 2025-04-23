@@ -67,7 +67,10 @@ def _warn_node(self, msg, node, *args, **kwargs):
 
 sphinx.environment.BuildEnvironment.warn_node = _warn_node
 
-if os.environ.get('READTHEDOCS', None) == 'True':
+# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
+on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+
+if on_rtd:
     # Run sphinx-apidoc automatically in readthedocs
     # Taken from this: https://lists.torproject.org/pipermail/tor-commits/2012-September/046695.html
     os.system('sphinx-apidoc -o api -T ../luigi --separate')
@@ -83,7 +86,7 @@ autoclass_content = 'both'
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.4.4'  # Value mirrored in doc/conf.py
+needs_sphinx = '1.4.4'  # Value mirrored in pyproject.toml
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -166,9 +169,6 @@ autodoc_member_order = 'bysource'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     try:

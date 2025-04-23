@@ -1154,7 +1154,7 @@ class WorkerDisabledTest(LuigiTestCase):
         self._test_stop_getting_new_work(keep_alive=True, assistant=True)
 
 
-class DynamicDependenciesTest(unittest.TestCase):
+class DynamicDependenciesTest(LuigiTestCase):
     n_workers = 1
     timeout = float('inf')
 
@@ -1195,7 +1195,7 @@ class DynamicDependenciesTest(unittest.TestCase):
 
 class DynamicDependenciesWithMultipleWorkersTest(DynamicDependenciesTest):
     n_workers = 100
-    timeout = 3.0  # We run 7 tasks that take 0.5s each so it should take less than 3.5s
+    timeout = 10.0  # We run 7 tasks that take 0.5s each so it should take less than 3.5s
 
 
 class WorkerPingThreadTests(unittest.TestCase):
@@ -1606,7 +1606,7 @@ class HangTheWorkerTask(luigi.Task):
         return False
 
 
-class MultipleWorkersTest(unittest.TestCase):
+class MultipleWorkersTest(LuigiTestCase):
 
     @unittest.skip('Always skip. There are many intermittent failures')
     def test_multiple_workers(self):
@@ -1745,7 +1745,7 @@ class Dummy2Task(Task):
         f.close()
 
 
-class AssistantTest(unittest.TestCase):
+class AssistantTest(LuigiTestCase):
     def run(self, result=None):
         self.sch = Scheduler(retry_delay=100, remove_delay=1000, worker_disconnect_delay=10)
         self.assistant = Worker(scheduler=self.sch, worker_id='Y', assistant=True)

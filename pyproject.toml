@@ -1,0 +1,200 @@
+[build-system]
+requires = ['hatchling', 'hatch-fancy-pypi-readme']
+build-backend = 'hatchling.build'
+
+[project]
+name = "luigi"
+description = "Workflow mgmgt + task scheduling + dependency resolution."
+authors = [
+  {name = "The Luigi Authors"}
+]
+license = {file = "LICENSE"}
+requires-python = ">=3.8.0, <3.13"
+dependencies = [
+  "python-dateutil>=2.7.5,<3",
+  "tenacity>=8,<9",
+  "tornado>=5.0,<7",
+  "python-daemon<2.2.0; sys_platform == 'nt'",
+  "python-daemon; sys_platform != 'nt'",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: System :: Monitoring",
+]
+dynamic = ["version", "readme"]
+
+[project.urls]
+Homepage = "https://github.com/spotify/luigi"
+
+[project.scripts]
+luigi = "luigi.cmdline:luigi_run"
+luigid = "luigi.cmdline:luigid"
+luigi-grep = "luigi.tools.luigi_grep:main"
+luigi-deps = "luigi.tools.deps:main"
+luigi-deps-tree = "luigi.tools.deps_tree:main"
+
+[project.optional-dependencies]
+jsonschema = ["jsonschema"]
+prometheus = ["prometheus-client>=0.5,<0.15"]
+toml = ["toml<2.0.0"]
+
+[dependency-groups]
+# groups and dependencies should be sort in lexicographical order
+cdh = [
+  "hdfs>=2.0.4,<3.0.0",
+]
+
+common = [
+  "avro-python3",
+  "azure-storage-blob<=12.20.0",
+  "boto>=2.42,<3.0",
+  "boto3>=1.11.0",
+  "codecov>=1.4.0",
+  "coverage>=5.0,<6",
+  "datadog==0.22.0",
+  "docker>=2.1.0",
+  "elasticsearch>=1.0.0,<2.0.0",
+  "google-compute-engine",
+  "HTTPretty==0.8.10",
+  "hypothesis>=6.7.0,<7.0.0",
+  "jsonschema",
+  "mock<2.0",
+  "moto>=1.3.10,<5.0",
+  "mypy",
+  "mysql-connector-python",
+  "prometheus-client>=0.5.0,<0.15",
+  "psutil<4.0",
+  "pygments",
+  "pyhive[presto]==0.6.1",
+  "pymongo==3.4.0",
+  "pytest",
+  "pytest-cov",
+  "requests>=2.20.0,<=2.31.0",
+  "responses<1.0.0",
+  "s3transfer>=0.3,<4.0",
+  "selenium==3.0.2",
+  "sqlalchemy<1.4",
+  "toml<2.0.0",
+  "types-python-dateutil",
+  "types-requests",
+  "types-toml",
+]
+
+docs = [
+  "alabaster<0.7.13",
+  "azure-storage-blob<=12.20.0",
+  "jinja2==3.0.3",
+  "mypy",
+  "prometheus-client==0.5.0",
+  "Sphinx>=1.4.4,<2.0",
+  "sphinx_rtd_theme",
+  "sqlalchemy",
+]
+
+dropbox = [
+  "dropbox>=11.0.0",
+]
+
+gcloud = [
+  "google-api-python-client>=1.6.6,<2.0",
+  "google-auth==1.4.1",
+  "google-auth-httplib2==0.0.3",
+]
+
+hdp = [
+  "hdfs>=2.0.4,<3.0.0",
+]
+
+lint = [
+  "flake8",
+  "isort"
+]
+
+postgres = [
+  "pg8000>=1.23.0",
+  "psycopg2<3.0",
+]
+
+unixsocket = [
+  "requests-unixsocket<1.0",
+]
+
+# for tox test dependencies
+test_cdh = [
+  {include-group = "cdh"},
+  {include-group = "common"},
+]
+
+test_dropbox = [
+  {include-group = "dropbox"},
+  {include-group = "common"},
+]
+
+test_gcloud = [
+  {include-group = "gcloud"},
+  {include-group = "common"},
+]
+test_hdp = [
+  {include-group = "hdp"},
+  {include-group = "common"},
+]
+
+test_postgres = [
+  {include-group = "postgres"},
+  {include-group = "common"},
+]
+
+test_unixsocket = [
+  {include-group = "unixsocket"},
+  {include-group = "common"},
+]
+
+visualizer = [
+  "mock<2.0",
+  "selenium==3.0.2"
+]
+
+# for local development
+dev = [
+  {include-group = "gcloud"},
+  {include-group = "postgres"},
+  {include-group = "dropbox"},
+  {include-group = "cdh"}, # same deps as hdp
+  {include-group = "unixsocket"},
+  {include-group = "common"},
+  {include-group = "lint"},
+]
+
+[tool.uv]
+default-groups = ['dev']
+cache-keys = [ { file = "pyproject.toml" }, { git = true } ]
+
+[tool.hatch.version]
+path = "luigi/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/LICENSE",
+  "/README.rst",
+  "/examples",
+  "/luigi",
+  "/test",
+]
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/x-rst"
+# construct the PyPI readme from README.md and HISTORY.md
+fragments = [
+  {text = "\n.. note::\n\nFor the latest source, discussion, etc, please visit the\n`GitHub repository <https://github.com/spotify/luigi>`_\n"},
+  {path = "README.rst"},
+]
