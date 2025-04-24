@@ -65,6 +65,12 @@ class ExternalProgramTask(luigi.Task):
     """
 
     capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
+    debug_environment = luigi.BoolParameter(
+        default=True,
+        significant=False,
+        positional=False,
+        description="If True, all environment variables will be debugged if the execution raises an error. While "
+                    "this is helpful for debugging errors, it can reveal private information in production scenarios.")
 
     stream_for_searching_tracking_url = luigi.parameter.ChoiceParameter(
         var_type=str, choices=['none', 'stdout', 'stderr'], default='none',
@@ -162,7 +168,10 @@ class ExternalProgramTask(luigi.Task):
             if not success:
                 raise ExternalProgramRunError(
                     'Program failed with return code={}:'.format(proc.returncode),
-                    args, env=env, stdout=stdout, stderr=stderr)
+                    args,
+                    env=env if self.debug_environment else None,
+                    stdout=stdout,
+                    stderr=stderr)
         finally:
             if self.capture_output:
                 tmp_stderr.close()
