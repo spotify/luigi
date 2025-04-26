@@ -66,6 +66,9 @@ class MetricsCollector(metaclass=abc.ABCMeta):
     def handle_task_done(self, task):
         pass
 
+    def handle_task_statistics(self, task, statistics):
+        pass
+
     def generate_latest(self):
         return
 

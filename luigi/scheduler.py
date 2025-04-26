@@ -1646,3 +1646,9 @@ class Scheduler:
     @rpc_method()
     def update_metrics_task_started(self, task):
         self._state._metrics_collector.handle_task_started(task)
+
+    @rpc_method()
+    def report_task_statistics(self, task_id, statistics):
+        if self._state.has_task(task_id):
+            task = self._state.get_task(task_id)
+            self._state._metrics_collector.handle_task_statistics(task, statistics)
