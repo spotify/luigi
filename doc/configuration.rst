@@ -271,6 +271,10 @@ task_limit
   thus far. Prevents incidents due to spamming of the scheduler, usually
   accidental. Default: no limit.
 
+task_process_context
+  An optional setting allowing Luigi to import a custom context manager
+  used to wrap the execution of tasks' run methods. Default: no context manager.
+
 timeout
   .. versionadded:: 1.0.20
 
