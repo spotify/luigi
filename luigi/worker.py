@@ -339,6 +339,9 @@ class TaskStatusReporter:
     def decrease_running_resources(self, decrease_resources):
         self._scheduler.decrease_running_task_resources(self._task_id, decrease_resources)
 
+    def report_task_statistics(self, statistics):
+        self._scheduler.report_task_statistics(self._task_id, statistics)
+
 
 class SchedulerMessage:
     """
