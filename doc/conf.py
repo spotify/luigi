@@ -17,7 +17,7 @@ import os
 import datetime
 import sphinx.environment
 from docutils.utils import get_source_line
-from pkg_resources import get_distribution
+from importlib.metadata import Distribution
 
 
 try:
@@ -118,7 +118,7 @@ copyright = u"2011-{}, {}".format(datetime.datetime.now().year, authors)
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-__version__ = get_distribution('luigi').version  # assume luigi is already installed
+__version__ = Distribution.from_name('luigi').version  # assume luigi is already installed
 # The short X.Y version.
 version = ".".join(__version__.split(".")[0:2])
 # The full version, including alpha/beta/rc tags.
