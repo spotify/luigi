@@ -39,7 +39,7 @@ def getpcmd(pid):
         with os.popen(cmd, 'r') as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
             if lines:
-                _, val = lines
+                val = lines[-1]
                 return val
     elif sys.platform == "darwin":
         # Use pgrep instead of /proc on macOS.
