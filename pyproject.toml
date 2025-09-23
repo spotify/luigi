@@ -76,7 +76,7 @@ common = [
   "psutil<4.0",
   "pygments",
   "pyhive[presto]==0.6.1",
-  "pymongo==3.4.0",
+  "pymongo>=4.15.1",
   "pytest",
   "pytest-cov",
   "requests>=2.20.0,<=2.31.0",
