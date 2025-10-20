@@ -40,7 +40,8 @@ class atomic_file(AtomicLocalFile):
         os.replace(self.tmp_path, self.path)
 
     def generate_tmp_path(self, path):
-        return path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
+        path, ext = os.path.splitext(path)
+        return path + '-luigi-tmp-%09d%s' % (random.randrange(0, 10_000_000_000), ext)
 
 
 class LocalFileSystem(FileSystem):

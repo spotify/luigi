@@ -288,10 +288,11 @@ class FileSystemTarget(Target):
                         run_some_external_command(output_path=self.temp_output_path)
         """
         num = random.randrange(0, 10_000_000_000)
-        slashless_path = self.path.rstrip('/').rstrip("\\")
-        _temp_path = '{}-luigi-tmp-{:010}{}'.format(
+        slashless_path, ext = os.path.splitext(self.path.rstrip('/').rstrip("\\"))
+        _temp_path = '{}-luigi-tmp-{:010}{}{}'.format(
             slashless_path,
             num,
+            ext,
             self._trailing_slash())
         # TODO: os.path doesn't make sense here as it's os-dependent
         tmp_dir = os.path.dirname(slashless_path)
@@ -331,7 +332,8 @@ class AtomicLocalFile(io.BufferedWriter):
         self.move_to_final_destination()
 
     def generate_tmp_path(self, path):
-        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 10_000_000_000))
+        path, ext = os.path.split(path)
+        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d%s' % (random.randrange(0, 10_000_000_000), ext))
 
     def move_to_final_destination(self):
         raise NotImplementedError()
