@@ -16,6 +16,7 @@ dependencies = [
   "tornado>=5.0,<7",
   "python-daemon<2.2.0; sys_platform == 'nt'",
   "python-daemon; sys_platform != 'nt'",
+  "typing-extensions>=4.12.2",
 ]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
