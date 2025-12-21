@@ -97,32 +97,39 @@ class TaskPlugin(Plugin):
 
         In particular:
         * Retrieve the type of the argument which is specified, and use it as return type for the function.
-        * If no default argument is specified, return AnyType with unannotated type instead of parameter types like `luigi.Parameter()`
-          This makes mypy avoid conflict between the type annotation and the parameter type.
+        * If no default argument is specified, use the __new__ method's return type from the Parameter class
           e.g.
           ```python
-          foo: int = luigi.IntParameter()
+          foo: int = luigi.IntParameter()  # IntParameter.__new__ returns int
           ```
         """
+        # Try to get the return type from __new__ method
+        default_type = ctx.default_return_type
+        if isinstance(default_type, Instance):
+            # Find the Parameter base with its type argument
+            for base in default_type.type.bases:
+                if isinstance(base, Instance) and base.type.fullname == "luigi.parameter.Parameter":
+                    # base.args contains the type argument (e.g., [int] for IntParameter)
+                    if len(base.args) == 1:
+                        return base.args[0]
+                    break
+
         try:
             default_idx = ctx.callee_arg_names.index("default")
-        # if no `default` argument is found, return AnyType with unannotated type.
         except ValueError:
+            # If we couldn't infer from __new__, return Any
             return AnyType(TypeOfAny.unannotated)
 
         default_args = ctx.args[default_idx]
 
         if default_args:
-            default_type = ctx.arg_types[0][0]
+            default_type = ctx.arg_types[default_idx][0]
             default_arg = default_args[0]
 
             # Fallback to default Any type if the field is required
             if not isinstance(default_arg, EllipsisExpr):
                 return default_type
-        # NOTE: This is a workaround to avoid the error between type annotation and parameter type.
-        #       As the following code snippet, the type of `foo` is `int` but the assigned value is `luigi.IntParameter()`.
-        #       foo: int = luigi.IntParameter()
-        # TODO: infer mypy type from the parameter type.
+
         return AnyType(TypeOfAny.unannotated)
 
 
