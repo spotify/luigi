@@ -41,7 +41,7 @@ except ImportError:
 
 from configparser import NoOptionError, NoSectionError
 
-import luigi.task
+import luigi
 from luigi import configuration, date_interval, task_register
 from luigi.cmdline_parser import CmdlineParser
 
