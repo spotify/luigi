@@ -1,3 +1,31 @@
+# mypy: disable-error-code="misc"
+"""
+Type stub file for luigi.parameter
+
+This stub file provides type hints to improve type inference when using Luigi parameters.
+The primary goal is to enable correct type checking for Task definitions like:
+
+    class MyTask(luigi.Task):
+        s: str = luigi.Parameter()
+        i: int = luigi.IntParameter()
+        e: MyEnum = luigi.EnumParameter(enum=MyEnum)
+
+Maintaining this stub file:
+1. Run stubtest to validate against implementation:
+   uv run python -m mypy.stubtest luigi.parameter --allowlist test/stubtest-allowlist.txt
+
+2. If you add new Parameter classes or modify existing ones:
+   - Add the corresponding stub definitions
+   - Update class variables (like expected_type, date_format, etc.) if they're user-facing
+   - Re-run stubtest and update test/stubtest-allowlist.txt if needed
+
+3. The allowlist contains intentional differences:
+   - Internal methods (parse, serialize, normalize) not included in stubs
+   - __init__ signature differences (stubs use __new__ for type inference)
+   - TypeVars that exist only in stubs for type inference
+
+4. CI runs stubtest on every PR to ensure consistency
+"""
 from enum import Enum, IntEnum
 from pathlib import Path
 from typing import Any, Callable, Generic, Optional, Type, Union, List, Tuple, Dict, TypedDict
@@ -5,6 +33,7 @@ from typing_extensions import TypeVar, Unpack
 import datetime
 
 from luigi import date_interval
+from luigi.freezing import FrozenOrderedDict
 import luigi.task
 
 
@@ -16,6 +45,11 @@ class ParameterVisibility(IntEnum):
     PUBLIC = 0
     HIDDEN = 1
     PRIVATE = 2
+
+    @classmethod
+    def has_value(cls, value: int) -> bool: ...
+
+    def serialize(self) -> int: ...
 
 class ParameterException(Exception): ...
 
@@ -53,33 +87,48 @@ class Parameter(Generic[_T]):
 
 class _OptionalParameterBase(Parameter[Union[_T, None]]): ...
 
-class OptionalParameter(_OptionalParameterBase[str]): ...
+class OptionalParameter(_OptionalParameterBase[str]):
+    expected_type: type[str]
 
-class OptionalStrParameter(_OptionalParameterBase[str]): ...
+class OptionalStrParameter(_OptionalParameterBase[str]):
+    expected_type: type[str]
 
-class DateParameter(Parameter[datetime.date]): ...
+class DateParameter(Parameter[datetime.date]):
+    date_format: str
 
-class MonthParameter(DateParameter): ...
+class MonthParameter(DateParameter):
+    date_format: str
 
-class YearParameter(DateParameter): ...
+class YearParameter(DateParameter):
+    date_format: str
 
-class DateHourParameter(Parameter[datetime.datetime]): ...
+class DateHourParameter(Parameter[datetime.datetime]):
+    date_format: str
 
-class DateMinuteParameter(Parameter[datetime.datetime]): ...
+class DateMinuteParameter(Parameter[datetime.datetime]):
+    date_format: str
+    deprecated_date_format: str
 
-class DateSecondParameter(Parameter[datetime.datetime]): ...
+class DateSecondParameter(Parameter[datetime.datetime]):
+    date_format: str
 
 class IntParameter(Parameter[int]): ...
 
-class OptionalIntParameter(_OptionalParameterBase[int]): ...
+class OptionalIntParameter(_OptionalParameterBase[int]):
+    expected_type: type[int]
 
 class FloatParameter(Parameter[float]): ...
 
-class OptionalFloatParameter(_OptionalParameterBase[float]): ...
+class OptionalFloatParameter(_OptionalParameterBase[float]):
+    expected_type: type[float]
 
-class BoolParameter(Parameter[bool]): ...
+class BoolParameter(Parameter[bool]):
+    IMPLICIT_PARSING: str
+    EXPLICIT_PARSING: str
+    parsing: str
 
-class OptionalBoolParameter(_OptionalParameterBase[bool]): ...
+class OptionalBoolParameter(_OptionalParameterBase[bool]):
+    expected_type: type[bool]
 
 class DateIntervalParameter(Parameter[date_interval.DateInterval]): ...
 
@@ -108,7 +157,8 @@ class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
 
 class DictParameter(Parameter[Dict[Any, Any]]): ...
 
-class OptionalDictParameter(Parameter[Union[Dict[Any, Any], None]]): ...
+class OptionalDictParameter(Parameter[Union[Dict[Any, Any], None]]):
+    expected_type: type[FrozenOrderedDict]
 
 class _ListParameterKwargs(_BaseParameterKwargs[Tuple[_T, ...]], Generic[_T], total=False):
     schema: Any
@@ -120,6 +170,7 @@ class ListParameter(Parameter[Tuple[_T, ...]]):
     ) -> Tuple[_T, ...]: ...
 
 class OptionalListParameter(Parameter[Optional[Tuple[_T, ...]]]):
+    expected_type: type[tuple]
     def __new__(
         cls,
         **kwargs: Unpack[_ListParameterKwargs[_T]]
@@ -132,6 +183,7 @@ class TupleParameter(Parameter[Tuple[_T, ...]]):
     ) -> Tuple[_T, ...]: ...
 
 class OptionalTupleParameter(Parameter[Optional[Tuple[_T, ...]]]):
+    expected_type: type[tuple]
     def __new__(
         cls,
         **kwargs: Unpack[_ListParameterKwargs[_T]]
@@ -184,3 +236,6 @@ class OptionalChoiceParameter(_OptionalParameterBase[ChoiceType]):
     ) -> Optional[ChoiceType]: ...
 
 class PathParameter(Parameter[Path]): ...
+
+class OptionalPathParameter(_OptionalParameterBase[Path]):
+    expected_type: Tuple[type[str], type[Path]]
