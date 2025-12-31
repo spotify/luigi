@@ -28,7 +28,7 @@ Maintaining this stub file:
 """
 from enum import Enum, IntEnum
 from pathlib import Path
-from typing import Any, Callable, Generic, Optional, Type, Union, List, Tuple, Dict, TypedDict
+from typing import Any, Callable, Generic, Optional, Type, Union, List, Tuple, Dict, TypedDict, overload
 from typing_extensions import TypeVar, Unpack
 import datetime
 
@@ -64,11 +64,11 @@ class OptionalParameterTypeWarning(UserWarning): ...
 class UnconsumedParameterWarning(UserWarning): ...
 
 
-_T = TypeVar("_T", default=str)
+T = TypeVar("T", default=str)
 
 # TypedDict for common parameter kwargs
-class _BaseParameterKwargs(TypedDict, Generic[_T], total=False):
-    default: Optional[_T]
+class _BaseParameterKwargs(TypedDict, Generic[T], total=False):
+    default: Optional[T]
     is_global: bool
     significant: bool
     description: Optional[str]
@@ -79,13 +79,21 @@ class _BaseParameterKwargs(TypedDict, Generic[_T], total=False):
     visibility: Optional[int]
 
 # Parameter inherits from str to allow s: str = Parameter()
-class Parameter(Generic[_T]):
+class Parameter(Generic[T]):
     def __new__(
         cls,
-        **kwargs: Unpack[_BaseParameterKwargs[_T]]
-    ) -> _T: ...
+        **kwargs: Unpack[_BaseParameterKwargs[T]]
+    ) -> T: ...
 
-class _OptionalParameterBase(Parameter[Union[_T, None]]): ...
+    @overload
+    def __get__(self, instance: None, owner: Any) -> "Parameter[T]": ...
+
+    @overload
+    def __get__(self, instance: Any, owner: Any) -> T: ...
+
+    def __get__(self, instance: Any, owner: Any) -> Any: ...
+
+class _OptionalParameterBase(Parameter[Union[T, None]]): ...
 
 class OptionalParameter(_OptionalParameterBase[str]):
     expected_type: type[str]
@@ -140,7 +148,7 @@ class TaskParameter(Parameter[Type[TaskType]]): ...
 
 EnumParameterType = TypeVar('EnumParameterType', bound=Enum)
 
-class _EnumParameterKwargs(_BaseParameterKwargs[_T], Generic[EnumParameterType, _T], total=False):
+class _EnumParameterKwargs(_BaseParameterKwargs[T], Generic[EnumParameterType, T], total=False):
     enum: Type[EnumParameterType]
 
 class EnumParameter(Parameter[EnumParameterType]):
@@ -160,34 +168,34 @@ class DictParameter(Parameter[Dict[Any, Any]]): ...
 class OptionalDictParameter(Parameter[Union[Dict[Any, Any], None]]):
     expected_type: type[FrozenOrderedDict]
 
-class _ListParameterKwargs(_BaseParameterKwargs[Tuple[_T, ...]], Generic[_T], total=False):
+class _ListParameterKwargs(_BaseParameterKwargs[Tuple[T, ...]], Generic[T], total=False):
     schema: Any
 
-class ListParameter(Parameter[Tuple[_T, ...]]):
+class ListParameter(Parameter[Tuple[T, ...]]):
     def __new__(
         cls,
-        **kwargs: Unpack[_ListParameterKwargs[_T]]
-    ) -> Tuple[_T, ...]: ...
+        **kwargs: Unpack[_ListParameterKwargs[T]]
+    ) -> Tuple[T, ...]: ...
 
-class OptionalListParameter(Parameter[Optional[Tuple[_T, ...]]]):
+class OptionalListParameter(Parameter[Optional[Tuple[T, ...]]]):
     expected_type: type[tuple]
     def __new__(
         cls,
-        **kwargs: Unpack[_ListParameterKwargs[_T]]
-    ) -> Optional[Tuple[_T, ...]]: ...
+        **kwargs: Unpack[_ListParameterKwargs[T]]
+    ) -> Optional[Tuple[T, ...]]: ...
 
-class TupleParameter(Parameter[Tuple[_T, ...]]):
+class TupleParameter(Parameter[Tuple[T, ...]]):
     def __new__(
         cls,
-        **kwargs: Unpack[_ListParameterKwargs[_T]]
-    ) -> Tuple[_T, ...]: ...
+        **kwargs: Unpack[_ListParameterKwargs[T]]
+    ) -> Tuple[T, ...]: ...
 
-class OptionalTupleParameter(Parameter[Optional[Tuple[_T, ...]]]):
+class OptionalTupleParameter(Parameter[Optional[Tuple[T, ...]]]):
     expected_type: type[tuple]
     def __new__(
         cls,
-        **kwargs: Unpack[_ListParameterKwargs[_T]]
-    ) -> Optional[Tuple[_T, ...]]: ...
+        **kwargs: Unpack[_ListParameterKwargs[T]]
+    ) -> Optional[Tuple[T, ...]]: ...
 
 NumericalType = TypeVar("NumericalType", int, float)
 
@@ -213,7 +221,7 @@ class OptionalNumericalParameter(_OptionalParameterBase[NumericalType]):
 
 ChoiceType = TypeVar("ChoiceType", default=str)
 
-class _ChoiceParameterKwargs(_BaseParameterKwargs[_T], Generic[_T, ChoiceType], total=False):
+class _ChoiceParameterKwargs(_BaseParameterKwargs[T], Generic[T, ChoiceType], total=False):
     choices: List[ChoiceType]
     var_type: Type[ChoiceType]
 

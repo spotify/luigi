@@ -8,7 +8,6 @@ luigi.parameter.ChoiceListParameter.serialize
 luigi.parameter.ChoiceParameter.__init__
 luigi.parameter.ChoiceParameter.normalize
 luigi.parameter.ChoiceParameter.parse
-luigi.parameter.ChoiceType
 luigi.parameter.DateIntervalParameter.parse
 luigi.parameter.DateMinuteParameter.parse
 luigi.parameter.DateParameter.next_in_enumeration
@@ -23,7 +22,6 @@ luigi.parameter.EnumListParameter.serialize
 luigi.parameter.EnumParameter.__init__
 luigi.parameter.EnumParameter.parse
 luigi.parameter.EnumParameter.serialize
-luigi.parameter.EnumParameterType
 luigi.parameter.FloatParameter.parse
 luigi.parameter.IntParameter.next_in_enumeration
 luigi.parameter.IntParameter.parse
@@ -35,7 +33,6 @@ luigi.parameter.MonthParameter.next_in_enumeration
 luigi.parameter.MonthParameter.normalize
 luigi.parameter.NumericalParameter.__init__
 luigi.parameter.NumericalParameter.parse
-luigi.parameter.NumericalType
 luigi.parameter.OptionalChoiceParameter.__init__
 luigi.parameter.OptionalDictParameter.expected_type
 luigi.parameter.OptionalNumericalParameter.__init__
@@ -51,7 +48,6 @@ luigi.parameter.PathParameter.__init__
 luigi.parameter.PathParameter.normalize
 luigi.parameter.TaskParameter.parse
 luigi.parameter.TaskParameter.serialize
-luigi.parameter.TaskType
 luigi.parameter.TimeDeltaParameter.parse
 luigi.parameter.TimeDeltaParameter.serialize
 luigi.parameter.TupleParameter.parse
