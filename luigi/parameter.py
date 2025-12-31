@@ -22,13 +22,17 @@ See :ref:`Parameter` for more info on how to define parameters.
 
 import abc
 import datetime
-import warnings
-from enum import IntEnum
 import json
-from json import JSONEncoder
 import operator
+import warnings
 from ast import literal_eval
+from enum import Enum, IntEnum
+from json import JSONEncoder
 from pathlib import Path
+from typing import Any, Dict, Generic, Optional, Sequence, Tuple, Type, overload
+
+from typing_extensions import TypeVar
+
 try:
     import jsonschema
     _JSONSCHEMA_ENABLED = True
@@ -37,13 +41,11 @@ except ImportError:
 
 from configparser import NoOptionError, NoSectionError
 
-from luigi import date_interval
-from luigi import task_register
-from luigi import configuration
+import luigi
+from luigi import configuration, date_interval, task_register
 from luigi.cmdline_parser import CmdlineParser
 
-from .freezing import recursively_freeze, recursively_unfreeze, FrozenOrderedDict
-
+from .freezing import FrozenOrderedDict, recursively_freeze, recursively_unfreeze
 
 _no_value = object()
 
@@ -104,7 +106,10 @@ class UnconsumedParameterWarning(UserWarning):
     """Warning class for parameters that are not consumed by the task."""
 
 
-class Parameter:
+T = TypeVar("T", default=str)
+
+
+class Parameter(Generic[T]):
     """
     Parameter whose value is a ``str``, and a base class for other parameter types.
 
@@ -198,6 +203,15 @@ class Parameter:
 
         self._counter = Parameter._counter  # We need to keep track of this to get the order right (see Task class)
         Parameter._counter += 1
+
+    @overload
+    def __get__(self, instance: None, owner: Any) -> "Parameter[T]": ...
+
+    @overload
+    def __get__(self, instance: Any, owner: Any) -> T: ...
+
+    def __get__(self, instance: Any, owner: Any) -> Any:
+        return self
 
     def _get_value_from_config(self, section, name):
         """Loads the default from the config. Returns _no_value if it doesn't exist"""
@@ -347,6 +361,15 @@ class OptionalParameterMixin:
 
     expected_type = type(None)
 
+    @overload
+    def __get__(self: "Parameter[T]", instance: None, owner: Any) -> "Parameter[Optional[T]]": ...
+
+    @overload
+    def __get__(self: "Parameter[T]", instance: Any, owner: Any) -> Optional[T]: ...
+
+    def __get__(self, instance: Any, owner: Any) -> Any:
+        return super().__get__(instance, owner)
+
     def serialize(self, x):
         """
         Parse the given value if the value is not None else return an empty string.
@@ -393,13 +416,13 @@ class OptionalParameterMixin:
         return None
 
 
-class OptionalParameter(OptionalParameterMixin, Parameter):
+class OptionalParameter(OptionalParameterMixin, Parameter[Optional[str]]):
     """Class to parse optional parameters."""
 
     expected_type = str
 
 
-class OptionalStrParameter(OptionalParameterMixin, Parameter):
+class OptionalStrParameter(OptionalParameterMixin, Parameter[Optional[str]]):
     """Class to parse optional str parameters."""
 
     expected_type = str
@@ -408,7 +431,7 @@ class OptionalStrParameter(OptionalParameterMixin, Parameter):
 _UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
 
 
-class _DateParameterBase(Parameter):
+class _DateParameterBase(Parameter[datetime.date]):
     """
     Base class Parameter for date (not datetime).
     """
@@ -553,7 +576,7 @@ class YearParameter(DateParameter):
         return datetime.date(year=value.year - delta, month=1, day=1)
 
 
-class _DatetimeParameterBase(Parameter):
+class _DatetimeParameterBase(Parameter[datetime.datetime]):
     """
     Base class Parameter for datetime
     """
@@ -674,7 +697,7 @@ class DateSecondParameter(_DatetimeParameterBase):
     _timedelta = datetime.timedelta(seconds=1)
 
 
-class IntParameter(Parameter):
+class IntParameter(Parameter[int]):
     """
     Parameter whose value is an ``int``.
     """
@@ -695,7 +718,7 @@ class OptionalIntParameter(OptionalParameterMixin, IntParameter):
     expected_type = int
 
 
-class FloatParameter(Parameter):
+class FloatParameter(Parameter[float]):
     """
     Parameter whose value is a ``float``.
     """
@@ -713,7 +736,7 @@ class OptionalFloatParameter(OptionalParameterMixin, FloatParameter):
     expected_type = float
 
 
-class BoolParameter(Parameter):
+class BoolParameter(Parameter[bool]):
     """
     A Parameter whose value is a ``bool``. This parameter has an implicit default value of
     ``False``. For the command line interface this means that the value is ``False`` unless you
@@ -789,7 +812,7 @@ class OptionalBoolParameter(OptionalParameterMixin, BoolParameter):
     expected_type = bool
 
 
-class DateIntervalParameter(Parameter):
+class DateIntervalParameter(Parameter[date_interval.DateInterval]):
     """
     A Parameter whose value is a :py:class:`~luigi.date_interval.DateInterval`.
 
@@ -818,7 +841,7 @@ class DateIntervalParameter(Parameter):
         raise ValueError('Invalid date interval - could not be parsed')
 
 
-class TimeDeltaParameter(Parameter):
+class TimeDeltaParameter(Parameter[datetime.timedelta]):
     """
     Class that maps to timedelta using strings in any of the following forms:
 
@@ -903,7 +926,10 @@ class TimeDeltaParameter(Parameter):
             warnings.warn('Parameter "{}" with value "{}" is not of type timedelta.'.format(param_name, param_value))
 
 
-class TaskParameter(Parameter):
+TaskType = TypeVar("TaskType", bound="luigi.task.Task")
+
+
+class TaskParameter(Parameter[Type[TaskType]]):
     """
     A parameter that takes another luigi task class.
 
@@ -935,7 +961,10 @@ class TaskParameter(Parameter):
         return cls.get_task_family()
 
 
-class EnumParameter(Parameter):
+EnumParameterType = TypeVar('EnumParameterType', bound=Enum)
+
+
+class EnumParameter(Parameter[EnumParameterType]):
     """
     A parameter whose value is an :class:`~enum.Enum`.
 
@@ -958,10 +987,10 @@ class EnumParameter(Parameter):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        if 'enum' not in kwargs:
+    def __init__(self, *args, enum: Optional[Type[EnumParameterType]] = None, **kwargs):
+        if enum is None:
             raise ParameterException('An enum class must be specified.')
-        self._enum = kwargs.pop('enum')
+        self._enum = enum
         super(EnumParameter, self).__init__(*args, **kwargs)
 
     def parse(self, s):
@@ -974,7 +1003,7 @@ class EnumParameter(Parameter):
         return e.name
 
 
-class EnumListParameter(Parameter):
+class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
     """
     A parameter whose value is a comma-separated list of :class:`~enum.Enum`. Values should come from the same enum.
 
@@ -1001,10 +1030,10 @@ class EnumListParameter(Parameter):
 
     _sep = ','
 
-    def __init__(self, *args, **kwargs):
-        if 'enum' not in kwargs:
+    def __init__(self, *args, enum: Optional[Type[EnumParameterType]] = None, **kwargs):
+        if enum is None:
             raise ParameterException('An enum class must be specified.')
-        self._enum = kwargs.pop('enum')
+        self._enum = enum
         super(EnumListParameter, self).__init__(*args, **kwargs)
 
     def parse(self, s):
@@ -1033,7 +1062,7 @@ class _DictParamEncoder(JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class DictParameter(Parameter):
+class DictParameter(Parameter[Dict[Any, Any]]):
     """
     Parameter whose value is a ``dict``.
 
@@ -1175,7 +1204,7 @@ class OptionalDictParameter(OptionalParameterMixin, DictParameter):
     expected_type = FrozenOrderedDict
 
 
-class ListParameter(Parameter):
+class ListParameter(Parameter[Tuple[Any, ...]]):
     """
     Parameter whose value is a ``list``.
 
@@ -1403,7 +1432,10 @@ class OptionalTupleParameter(OptionalParameterMixin, TupleParameter):
     expected_type = tuple
 
 
-class NumericalParameter(Parameter):
+NumericalType = TypeVar("NumericalType", int, float)
+
+
+class NumericalParameter(Parameter[NumericalType]):
     """
     Parameter whose value is a number of the specified type, e.g. ``int`` or
     ``float`` and in the range specified.
@@ -1425,7 +1457,10 @@ class NumericalParameter(Parameter):
         $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
     """
 
-    def __init__(self, left_op=operator.le, right_op=operator.lt, *args, **kwargs):
+    def __init__(self, *args, var_type: Optional[NumericalType] = None,
+                 min_value: Optional[NumericalType] = None,
+                 max_value: Optional[NumericalType] = None,
+                 left_op=operator.le, right_op=operator.lt, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. int or float.
         :param min_value: The minimum value permissible in the accepted values
@@ -1445,15 +1480,15 @@ class NumericalParameter(Parameter):
                                   ``operator.lt`` or ``operator.le``.
                                   Default: ``operator.lt``.
         """
-        if "var_type" not in kwargs:
+        if var_type is None:
             raise ParameterException("var_type must be specified")
-        self._var_type = kwargs.pop("var_type")
-        if "min_value" not in kwargs:
+        self._var_type = var_type
+        if min_value is None:
             raise ParameterException("min_value must be specified")
-        self._min_value = kwargs.pop("min_value")
-        if "max_value" not in kwargs:
+        self._min_value = min_value
+        if max_value is None:
             raise ParameterException("max_value must be specified")
-        self._max_value = kwargs.pop("max_value")
+        self._max_value = max_value
         self._left_op = left_op
         self._right_op = right_op
         self._permitted_range = (
@@ -1487,7 +1522,10 @@ class OptionalNumericalParameter(OptionalParameterMixin, NumericalParameter):
         self.expected_type = self._var_type
 
 
-class ChoiceParameter(Parameter):
+ChoiceType = TypeVar("ChoiceType", default=str)
+
+
+class ChoiceParameter(Parameter[ChoiceType]):
     """
     A parameter which takes two values:
         1. an instance of :class:`~collections.Iterable` and
@@ -1512,7 +1550,7 @@ class ChoiceParameter(Parameter):
     desired.
     """
 
-    def __init__(self, var_type=str, *args, **kwargs):
+    def __init__(self, *args, choices: Optional[Sequence[ChoiceType]] = None, var_type: Type[ChoiceType] = str, **kwargs):
         """
         :param function var_type: The type of the input variable, e.g. str, int,
                                   float, etc.
@@ -1520,9 +1558,9 @@ class ChoiceParameter(Parameter):
         :param choices: An iterable, all of whose elements are of `var_type` to
                         restrict parameter choices to.
         """
-        if "choices" not in kwargs:
+        if choices is None:
             raise ParameterException("A choices iterable must be specified")
-        self._choices = set(kwargs.pop("choices"))
+        self._choices = set(choices)
         self._var_type = var_type
         assert all(type(choice) is self._var_type for choice in self._choices), "Invalid type in choices"
         super(ChoiceParameter, self).__init__(*args, **kwargs)
@@ -1545,7 +1583,7 @@ class ChoiceParameter(Parameter):
                 var=var, choices=self._choices))
 
 
-class ChoiceListParameter(ChoiceParameter):
+class ChoiceListParameter(ChoiceParameter[ChoiceType]):
     """
     A parameter which takes two values:
         1. an instance of :class:`~collections.Iterable` and
@@ -1574,8 +1612,17 @@ class ChoiceListParameter(ChoiceParameter):
 
     _sep = ','
 
-    def __init__(self, *args, **kwargs):
-        super(ChoiceListParameter, self).__init__(*args, **kwargs)
+    @overload
+    def __get__(self, instance: None, owner: Any) -> "Parameter[Tuple[ChoiceType, ...]]": ...
+
+    @overload
+    def __get__(self, instance: Any, owner: Any) -> Tuple[ChoiceType, ...]: ...
+
+    def __get__(self, instance: Any, owner: Any) -> Any:
+        return super().__get__(instance, owner)
+
+    def __init__(self, var_type: Type[ChoiceType] = str, *args, **kwargs):
+        super(ChoiceListParameter, self).__init__(var_type=var_type, *args, **kwargs)
 
     def parse(self, s):
         values = [] if s == '' else s.split(self._sep)
@@ -1591,15 +1638,15 @@ class ChoiceListParameter(ChoiceParameter):
         return self._sep.join(values)
 
 
-class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter):
+class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter[ChoiceType]):
     """Class to parse optional choice parameters."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, var_type: Type[ChoiceType] = str, *args, **kwargs):
+        super().__init__(var_type=var_type, *args, **kwargs)
         self.expected_type = self._var_type
 
 
-class PathParameter(Parameter):
+class PathParameter(Parameter[Path]):
     """
     Parameter whose value is a path.
 
