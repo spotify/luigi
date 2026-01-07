@@ -30,6 +30,7 @@ import re
 import copy
 import functools
 from typing import Any, Dict, Optional
+from typing_extensions import dataclass_transform
 
 import luigi
 
@@ -145,6 +146,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
     pass
 
 
+@dataclass_transform(eq_default=False, order_default=False, kw_only_default=True, field_specifiers=(Parameter,))
 class Task(metaclass=Register):
     """
     This is the base class of all Luigi Tasks, the base unit of work in Luigi.
