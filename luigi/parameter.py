@@ -26,7 +26,8 @@ import warnings
 from enum import IntEnum
 import json
 from json import JSONEncoder
-from collections import OrderedDict, Mapping
+from collections import OrderedDict
+from collections.abc import Mapping
 import operator
 import functools
 from ast import literal_eval

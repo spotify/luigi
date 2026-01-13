@@ -96,7 +96,7 @@ def rpc_method(**request_args):
     def _rpc_method(fn):
         # If request args are passed, return this function again for use as
         # the decorator function with the request args attached.
-        fn_args = inspect.getargspec(fn)
+        fn_args = inspect.getfullargspec(fn)
 
         assert not fn_args.varargs
         assert fn_args.args[0] == 'self'
@@ -208,7 +208,7 @@ def _get_default(x, default):
         return default
 
 
-class OrderedSet(collections.MutableSet):
+class OrderedSet(collections.abc.MutableSet):
     """
     Standard Python OrderedSet recipe found at http://code.activestate.com/recipes/576694/
 

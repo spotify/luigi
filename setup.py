@@ -40,6 +40,7 @@ with open('README.rst') as fobj:
 install_requires = [
     'tornado>=6.0,<7',
     'python-daemon<3.0',
+    'requests',
     'enum34>1.1.0 ; python_version < "3.4"'
 ]
 
