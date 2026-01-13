@@ -1467,12 +1467,12 @@ class Scheduler(object):
                 name=resource,
                 num_total=r_dict['total'],
                 num_used=r_dict['used']
-            ) for resource, r_dict in six.iteritems(self.resources())]
+            ) for resource, r_dict in self.resources().items()]
         if self._resources is not None:
             consumers = collections.defaultdict(dict)
             for task in self._state.get_active_tasks_by_status(RUNNING):
                 if task.status == RUNNING and task.resources:
-                    for resource, amount in six.iteritems(task.resources):
+                    for resource, amount in task.resources.items():
                         consumers[resource][task.id] = self._serialize_task(task.id, include_deps=False)
             for resource in resources:
                 tasks = consumers[resource['name']]
@@ -1484,7 +1484,7 @@ class Scheduler(object):
         ''' get total resources and available ones '''
         used_resources = self._used_resources()
         ret = collections.defaultdict(dict)
-        for resource, total in six.iteritems(self._resources):
+        for resource, total in self._resources.items():
             ret[resource]['total'] = total
             if resource in used_resources:
                 ret[resource]['used'] = used_resources[resource]

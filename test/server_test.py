@@ -26,9 +26,7 @@ import luigi.rpc
 import luigi.server
 import luigi.cmdline
 from luigi.scheduler import Scheduler
-from luigi.six.moves.urllib.parse import (
-    urlencode, ParseResult, quote as urlquote
-)
+from urllib.parse import urlencode, ParseResult, quote as urlquote
 
 import tornado.ioloop
 from tornado.testing import AsyncHTTPTestCase

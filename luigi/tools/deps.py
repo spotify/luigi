@@ -118,7 +118,7 @@ def main():
 
         if isinstance(task_output, dict):
             output_descriptions = [get_task_output_description(output) for label, output in task_output.items()]
-        elif isinstance(task_output, collections.Iterable):
+        elif isinstance(task_output, collections.abc.Iterable):
             output_descriptions = [get_task_output_description(output) for output in task_output]
         else:
             output_descriptions = [get_task_output_description(task_output)]

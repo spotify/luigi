@@ -21,12 +21,11 @@ Provides access to HDFS using the :py:class:`HdfsTarget`, a subclass of :py:clas
 import luigi
 import random
 import warnings
+from urllib import parse as urlparse
 from luigi.target import FileSystemTarget
 from luigi.contrib.hdfs.config import tmppath
 from luigi.contrib.hdfs import format as hdfs_format
 from luigi.contrib.hdfs import clients as hdfs_clients
-from luigi.six.moves.urllib import parse as urlparse
-from luigi.six.moves import range
 
 
 class HdfsTarget(FileSystemTarget):

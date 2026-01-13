@@ -25,9 +25,9 @@ import logging
 import socket
 import time
 
-from luigi.six.moves.urllib.parse import urljoin, urlencode, urlparse
-from luigi.six.moves.urllib.request import urlopen
-from luigi.six.moves.urllib.error import URLError
+from urllib.parse import urljoin, urlencode, urlparse
+from urllib.request import urlopen
+from urllib.error import URLError
 
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS
