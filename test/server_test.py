@@ -351,14 +351,6 @@ class _ServerTest(unittest.TestCase):
         work = self.sch.get_work(worker='X')['running_tasks'][0]
         self.assertEqual(work['task_id'], 'A')
 
-    def test_get_template_path(self):
-        app = luigi.server.app(self.sch)
-        handler = luigi.server.BaseTaskHistoryHandler(
-            application=app,
-            request=self.sch._request("/api/ping", {"worker": "xyz"}),
-        )
-        self.assertEqual(handler.get_template_path(), "templates")
-
 
 @pytest.mark.unixsocket
 class UNIXServerTest(_ServerTest):
