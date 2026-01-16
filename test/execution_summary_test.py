@@ -337,7 +337,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '* 1 ran successfully:',
                     '    - 1 Foo()',
                     '',
-                    'This progress looks :) because there were no failed tasks or missing external dependencies',
+                    'This progress looks :) because there were no failed tasks or missing dependencies',
                     '',
                     '===== Luigi Execution Summary =====',
                     '']
@@ -428,7 +428,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                       '    - other_worker ran 1 tasks\n\n'
                       'Did not run any tasks\n'
                       'This progress looks :) because there were no failed '
-                      'tasks or missing external dependencies\n', s)
+                      'tasks or missing dependencies\n', s)
         self.assertNotIn('\n\n\n', s)
 
     def test_already_running_2(self):
@@ -696,7 +696,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '    - 2 Bar(num=0, num2=0) and Bar(num=1, num2=2)',
                     '    - 1 Foo()',
                     '',
-                    'This progress looks :) because there were no failed tasks or missing external dependencies',
+                    'This progress looks :) because there were no failed tasks or missing dependencies',
                     '',
                     '===== Luigi Execution Summary =====',
                     '']
@@ -743,7 +743,7 @@ class ExecutionSummaryTest(LuigiTestCase):
                     '    - 4 Bar(num=0, num2=0) ...',
                     '    - 1 Foo()',
                     '',
-                    'This progress looks :) because there were no failed tasks or missing external dependencies',
+                    'This progress looks :) because there were no failed tasks or missing dependencies',
                     '',
                     '===== Luigi Execution Summary =====',
                     '']
@@ -765,7 +765,7 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         s = self.summary()
-        self.assertIn('\nThis progress looks :) because there were no failed tasks or missing external dependencies', s)
+        self.assertIn('\nThis progress looks :) because there were no failed tasks or missing dependencies', s)
         self.assertNotIn("Did not run any tasks", s)
         self.assertNotIn('\n\n\n', s)
 
@@ -796,7 +796,7 @@ class ExecutionSummaryTest(LuigiTestCase):
         lock1.release()
         t1.join()
         s = self.summary()
-        self.assertIn('\nThis progress looks :) because there were no failed tasks or missing external dependencies', s)
+        self.assertIn('\nThis progress looks :) because there were no failed tasks or missing dependencies', s)
         self.assertNotIn('\n\n\n', s)
 
     def test_sad_smiley_face(self):

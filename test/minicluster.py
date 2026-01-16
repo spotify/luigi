@@ -20,7 +20,7 @@ import os
 
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
-from nose.plugins.attrib import attr
+from helpers import attr
 
 import unittest
 

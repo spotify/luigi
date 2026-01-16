@@ -18,6 +18,7 @@
 import os
 import subprocess
 import tempfile
+import time
 import mock
 from helpers import unittest
 
@@ -59,6 +60,8 @@ class LockTest(unittest.TestCase):
     def test_get_info(self):
         try:
             p = subprocess.Popen(["yes", u"à我ф"], stdout=subprocess.PIPE)
+            # Give the process a moment to start so /proc/{pid}/cmdline is readable
+            time.sleep(0.1)
             pid, cmd, pid_file = luigi.lock.get_info(self.pid_dir, p.pid)
         finally:
             p.kill()

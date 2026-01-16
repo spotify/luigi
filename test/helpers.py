@@ -29,6 +29,22 @@ from luigi import six
 import os
 
 import unittest
+import pytest
+
+
+def attr(*args, **kwargs):
+    """
+    Replacement for nose.plugins.attrib.attr decorator.
+    In pytest, we use pytest.mark instead. This creates a compatible decorator.
+    """
+    def decorator(func_or_class):
+        # Apply pytest marks for each attribute
+        for arg in args:
+            func_or_class = pytest.mark.__getattr__(arg)(func_or_class)
+        for key, value in kwargs.items():
+            func_or_class = pytest.mark.__getattr__(key)(func_or_class)
+        return func_or_class
+    return decorator
 
 
 def skipOnTravis(reason):

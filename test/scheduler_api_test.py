@@ -18,8 +18,7 @@
 import itertools
 import mock
 import time
-from helpers import unittest
-from nose.plugins.attrib import attr
+from helpers import unittest, attr
 import luigi.notifications
 from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
     UNKNOWN, RUNNING, BATCH_RUNNING, UPSTREAM_RUNNING, Scheduler

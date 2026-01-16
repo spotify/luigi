@@ -16,6 +16,7 @@
 #
 from __future__ import print_function
 
+import sys
 try:
     import ConfigParser
 except ImportError:
@@ -126,7 +127,11 @@ class CmdlineTest(unittest.TestCase):
             if six.PY2:
                 error = ConfigParser.NoSectionError
             else:
-                error = KeyError
+                # Python 3.12+ raises FileNotFoundError for missing config files
+                if sys.version_info >= (3, 12):
+                    error = FileNotFoundError
+                else:
+                    error = KeyError
             self.assertRaises(error, luigi.interface.setup_interface_logging, '/blah')
 
     @mock.patch("warnings.warn")
@@ -158,7 +163,11 @@ class CmdlineTest(unittest.TestCase):
 
     def test_luigid_logging_conf(self):
         with mock.patch('luigi.server.run') as server_run, \
-                mock.patch('logging.config.fileConfig') as fileConfig:
+                mock.patch('logging.config.fileConfig') as fileConfig, \
+                mock.patch('luigi.configuration.get_config') as get_config, \
+                mock.patch('os.path.exists', return_value=True):
+            get_config.return_value.getboolean.return_value = False  # no_configure_logging=False
+            get_config.return_value.get.return_value = "test/testconfig/logging.cfg"
             luigi.cmdline.luigid([])
             self.assertTrue(server_run.called)
             # the default test configuration specifies a logging conf file

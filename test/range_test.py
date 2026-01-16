@@ -1064,7 +1064,7 @@ class RangeByMinutesTest(unittest.TestCase):
 
             @classmethod
             def bulk_complete(cls, parameter_tuples):
-                return parameter_tuples[:-2]
+                return list(parameter_tuples)[:-2]
 
             def output(self):
                 raise RuntimeError("Shouldn't get called while resolving deps via bulk_complete")
@@ -1091,6 +1091,7 @@ class RangeByMinutesTest(unittest.TestCase):
 
             @classmethod
             def bulk_complete(cls, parameter_tuples):
+                parameter_tuples = list(parameter_tuples)
                 for t in map(cls, parameter_tuples):
                     assert t.arbitrary_argument
                 return parameter_tuples[:-2]
