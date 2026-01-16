@@ -98,11 +98,12 @@ class ServerTest(ServerTestBase):
         self._test_404('/api/foo')
 
 
-class _ServerTest(unittest.TestCase):
+class _ServerTest:
     """
-    Test to start and stop the server in a more "standard" way
+    Test to start and stop the server in a more "standard" way.
+    Mixin class - subclasses must also inherit from unittest.TestCase.
     """
-    server_client_class = "To be defined by subclasses"
+    server_client_class = None  # To be defined by subclasses
 
     def start_server(self):
         self._process = multiprocessing.Process(
@@ -156,8 +157,9 @@ class _ServerTest(unittest.TestCase):
         self.assertEqual(work['task_id'], 'A')
 
 
+@unittest.skipUnless(luigi.rpc.HAS_UNIX_SOCKET, 'requests-unixsocket is not installed')
 @attr('unixsocket')
-class UNIXServerTest(_ServerTest):
+class UNIXServerTest(_ServerTest, unittest.TestCase):
     class ServerClient(object):
         def __init__(self):
             self.tempdir = tempfile.mkdtemp()
@@ -193,7 +195,8 @@ class INETServerClient(object):
         return luigi.rpc.RemoteScheduler('http://localhost:' + str(self.port))
 
 
-class _INETServerTest(_ServerTest):
+class _INETServerTest(_ServerTest, unittest.TestCase):
+    __test__ = False  # Don't run this class directly
 
     def test_with_cmdline(self):
         """
