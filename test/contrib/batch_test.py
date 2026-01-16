@@ -16,12 +16,12 @@
 #
 
 from helpers import unittest
+from unittest import mock
 
 import luigi.contrib.batch as batch
 
 try:
     import boto3
-    client = boto3.client('batch')
 except ImportError:
     raise unittest.SkipTest('boto3 is not installed. BatchTasks require boto3')
 
@@ -100,9 +100,9 @@ class MockBotoLogsClient(object):
 class BatchClientTest(unittest.TestCase):
 
     def setUp(self):
-        self.bc = batch.BatchClient(poll_time=10)
-        self.bc._client = MockBotoBatchClient()
-        self.bc._log_client = MockBotoLogsClient()
+        with mock.patch('boto3.client') as mock_boto_client:
+            mock_boto_client.side_effect = [MockBotoBatchClient(), MockBotoLogsClient()]
+            self.bc = batch.BatchClient(poll_time=10)
 
     def test_get_active_queue(self):
         self.assertEqual(self.bc.get_active_queue(), 'test_queue')

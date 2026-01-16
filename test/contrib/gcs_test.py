@@ -33,7 +33,7 @@ import unittest
 
 from luigi.contrib import gcs
 from target_test import FileSystemTargetTestMixin
-from nose.plugins.attrib import attr
+from helpers import attr
 
 # In order to run this test, you should set these to your GCS project/bucket.
 # Unfortunately there's no mock

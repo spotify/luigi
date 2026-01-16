@@ -30,8 +30,7 @@ import luigi
 import sqlalchemy
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
-from nose.plugins.attrib import attr
-from helpers import skipOnTravis
+from helpers import skipOnTravis, attr
 
 if six.PY3:
     unicode = str

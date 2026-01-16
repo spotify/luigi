@@ -15,9 +15,7 @@
 # limitations under the License.
 #
 
-from nose.plugins.attrib import attr
-
-from helpers import with_config
+from helpers import with_config, attr
 from webhdfs_minicluster import WebHdfsMiniClusterTestCase
 from contrib.hdfs_test import HdfsTargetTestMixin
 from luigi.contrib.hdfs import WebHdfsClient

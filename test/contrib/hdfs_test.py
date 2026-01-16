@@ -33,7 +33,7 @@ from luigi.contrib.hdfs.hadoopcli_clients import HdfsClient
 from luigi.contrib.hdfs.format import HdfsAtomicWriteError, HdfsReadPipe
 from luigi.contrib.target import CascadingClient
 from minicluster import MiniClusterTestCase
-from nose.plugins.attrib import attr
+from helpers import attr
 import luigi.contrib.hdfs.clients
 
 from target_test import FileSystemTargetTestMixin
