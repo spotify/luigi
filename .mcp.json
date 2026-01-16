@@ -1,0 +1,51 @@
+{
+  "mcpServers": {
+    "microsoft/markitdown": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "markitdown-mcp==0.0.1a4"
+      ],
+      "gallery": "https://api.mcp.github.com",
+      "version": "1.0.0"
+    },
+    "Context7": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ]
+    },
+    "spark-history-server": {
+      "type": "http",
+      "url": "http://localhost:18888/mcp",
+      "env": {
+        "SHS_MCP_TRANSPORT": "stdio"
+      }
+    },
+    "memory-bank": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+ssh://git@github.com/Affirm/ai-memory-bank-mcp",
+        "mcp_memory_bank_setup"
+      ]
+    },
+    "notion": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://mcp.notion.com/mcp"
+      ]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    }
+  },
+  "inputs": []
+}

@@ -744,7 +744,7 @@ class WorkerTest(LuigiTestCase):
             self.assertFalse(task.batched_params != {'value': [i]} and task.value < 9)
 
         # Task number 9 should have batched_params of all tasks values
-        self.assertEquals(tasks[-1].batched_params, {'value': list(range(10))})
+        self.assertEqual(tasks[-1].batched_params, {'value': list(range(10))})
 
     def test_run_batch_jobs_which_overlap_subset_batch(self):
         completed = set()
@@ -782,10 +782,10 @@ class WorkerTest(LuigiTestCase):
             self.assertFalse(task.batched_params != {'value': [i]} and task.value not in (4,9))
         
         #Task number 4 should have batched_params of the first batch
-        self.assertEquals(tasks[-1].batched_params, {'value' : list(range(5))})
+        self.assertEqual(tasks[-1].batched_params, {'value' : list(range(5))})
 
         #Task number 9 should have batched_params of all remaining tasks
-        self.assertEquals(tasks_batch_2[-1].batched_params, {'value' : list(range(5, 10))})
+        self.assertEqual(tasks_batch_2[-1].batched_params, {'value' : list(range(5, 10))})
 
     def test_run_batch_jobs_which_overlap_superset_batch(self):
         completed = set()
@@ -823,7 +823,7 @@ class WorkerTest(LuigiTestCase):
             self.assertFalse(task.batched_params != {'value': [i]} and task.value != 9)
 
         #Task number 9 should have batched_params of all tasks
-        self.assertEquals(tasks_batch_2[-1].batched_params, {'value' : list(range(10))})
+        self.assertEqual(tasks_batch_2[-1].batched_params, {'value' : list(range(10))})
 
     def test_run_batch_job_unbatched(self):
         completed = set()
@@ -966,8 +966,8 @@ class WorkerKeepAliveTests(LuigiTestCase):
             time.sleep(0.1)
 
             try:
-                self.assertEqual(first_should_live, t1.isAlive())
-                self.assertEqual(second_should_live, t2.isAlive())
+                self.assertEqual(first_should_live, t1.is_alive())
+                self.assertEqual(second_should_live, t2.is_alive())
 
             finally:
                 # mark the task done so the worker threads will die

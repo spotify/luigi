@@ -23,7 +23,7 @@ import unittest
 
 import luigi.target
 from luigi import six
-from nose.plugins.attrib import attr
+from helpers import attr
 
 if six.PY3:
     raise unittest.SkipTest("snakebite doesn't work on Python 3 yet.")
