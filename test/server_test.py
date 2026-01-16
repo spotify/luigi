@@ -83,7 +83,7 @@ class ServerTestBase(AsyncHTTPTestCase):
 
 class ServerTest(ServerTestBase):
 
-    def test_visualizer(self):
+    def test_visualiser(self):
         page = self.fetch('/').body
         self.assertTrue(page.find(b'<title>') != -1)
 
