@@ -40,7 +40,8 @@ class atomic_file(AtomicLocalFile):
         os.rename(self.tmp_path, self.path)
 
     def generate_tmp_path(self, path):
-        return path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        # Use randrange with int (not float) for Python 3.12 compatibility
+        return path + '-luigi-tmp-%09d' % random.randrange(0, 10**10)
 
 
 class LocalFileSystem(FileSystem):

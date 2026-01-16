@@ -169,7 +169,8 @@ class TaskProcess(multiprocessing.Process):
 
         if self.use_multiprocessing:
             # Need to have different random seeds if running in separate processes
-            random.seed((os.getpid(), time.time()))
+            # Python 3.12+ no longer accepts tuples as seeds, so we hash the combination
+            random.seed(hash((os.getpid(), time.time())))
 
         status = FAILED
         expl = ''
