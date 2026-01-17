@@ -196,6 +196,6 @@ include = [
 content-type = "text/x-rst"
 # construct the PyPI readme from README.md and HISTORY.md
 fragments = [
-  {text = "\n.. note::\n\nFor the latest source, discussion, etc, please visit the\n`GitHub repository <https://github.com/spotify/luigi>`_\n"},
+  {text = "\n.. note::\n\tFor the latest source, discussion, etc, please visit the\n\t`GitHub repository <https://github.com/spotify/luigi>`_\n"},
   {path = "README.rst"},
 ]
