@@ -617,6 +617,16 @@ max_retrials
 .. _minikube: http://kubernetes.io/docs/getting-started-guides/minikube
 
 
+[duckdb]
+--------
+
+Parameters controlling use of DuckDB targets
+
+marker_table
+  Table in which to store status of table updates. This table will be
+  created if it doesn't already exist. Defaults to "table_updates".
+
+
 [mysql]
 -------
 
