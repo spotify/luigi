@@ -110,15 +110,38 @@ class MonthParameter(DateParameter):
 class YearParameter(DateParameter):
     date_format: str
 
+# TypedDict for DateHour/DateMinute/DateSecond parameter kwargs
+class _DateTimeParameterKwargs(_BaseParameterKwargs[datetime.datetime], total=False):
+    interval: int
+    start: Optional[datetime.datetime]
+
 class DateHourParameter(Parameter[datetime.datetime]):
     date_format: str
+    interval: int
+    start: datetime.datetime | None
+    def __new__(
+        cls,
+        **kwargs: Unpack[_DateTimeParameterKwargs]
+    ) -> datetime.datetime: ...
 
 class DateMinuteParameter(Parameter[datetime.datetime]):
     date_format: str
     deprecated_date_format: str
+    interval: int
+    start: datetime.datetime | None
+    def __new__(
+        cls,
+        **kwargs: Unpack[_DateTimeParameterKwargs]
+    ) -> datetime.datetime: ...
 
 class DateSecondParameter(Parameter[datetime.datetime]):
     date_format: str
+    interval: int
+    start: datetime.datetime | None
+    def __new__(
+        cls,
+        **kwargs: Unpack[_DateTimeParameterKwargs]
+    ) -> datetime.datetime: ...
 
 class IntParameter(Parameter[int]): ...
 
