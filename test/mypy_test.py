@@ -93,3 +93,38 @@ MyTask(foo='1', bar="bar", unknown="unknown")
                 stdout,
             )  # check unknown argument
             self.assertIn("Found 3 errors in 1 file (checked 1 source file)", stdout)
+
+    def test_plugin_custom_parameter_subclass_without_default_arg(self):
+        """Test for issue #3376: Custom Parameter subclass without 'default' in __init__"""
+        if sys.version_info[:2] < (3, 8):
+            return
+
+        test_code = """
+import luigi
+
+
+class CustomPathParameter(luigi.PathParameter):
+    \"\"\"A PathParameter subclass that doesn't expose 'default' in its signature.\"\"\"
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+class MyTask(luigi.Task):
+    path = CustomPathParameter()
+"""
+
+        with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
+            test_file.write(test_code.encode("utf-8"))
+            test_file.flush()
+            stdout, stderr, exitcode = api.run(
+                [
+                    "--no-incremental",
+                    "--cache-dir=/dev/null",
+                    "--show-traceback",
+                    "--config-file",
+                    "test/testconfig/pyproject.toml",
+                    test_file.name,
+                ]
+            )
+            self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
+            self.assertIn("Success: no issues found", stdout)
