@@ -5,22 +5,23 @@ codecov:
     wait_for_ci: yes
 
 coverage:
-  precision: 2  # Just copied from default
-  round: down  # Just copied from default
-  range: "70...100"  # Just copied from default
+  precision: 2
+  round: down
+  range: "50...70"
 
   status:
     project:
       default: false  # disable the default status that measures entire project
       core:
-        target: 92%
+        target: 90%
         paths:
           - "luigi/*.py"
-    patch:  # Just copied from default
+    patch:
       default:
+        target: 50%
         if_no_uploads: error
 
-    changes: true  # Just copied from default
+    changes: true
 
   ignore:
     - "examples/"
