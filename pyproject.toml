@@ -200,8 +200,8 @@ fragments = [
   {path = "README.rst"},
 ]
 
-[tool.pytest]
+[tool.pytest.ini_options]
 filterwarnings = [
   "default",
-  'ignore:(.*)outputs has no custom(.*):UserWarning',
+  'ignore:.*outputs has no custom.*:UserWarning',
 ]
