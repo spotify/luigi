@@ -23,6 +23,8 @@ import mock
 from mock import MagicMock, patch
 import unittest
 
+import pytest
+
 
 class TestDataflowParamKeys(beam_dataflow.DataflowParamKeys):
     runner = "runner"
@@ -133,6 +135,7 @@ class DummyCmdLineTestTask(beam_dataflow.BeamDataflowJobTask):
         return ['echo', '"hello world"']
 
 
+@pytest.mark.gcloud
 class BeamDataflowTest(unittest.TestCase):
 
     def test_dataflow_simple_cmd_line_args(self):

@@ -199,3 +199,9 @@ fragments = [
   {text = "\n.. note::\n\tFor the latest source, discussion, etc, please visit the\n\t`GitHub repository <https://github.com/spotify/luigi>`_\n"},
   {path = "README.rst"},
 ]
+
+[tool.pytest]
+filterwarnings = [
+  "default",
+  'ignore:(.*)outputs has no custom(.*):UserWarning',
+]
