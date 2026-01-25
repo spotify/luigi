@@ -26,15 +26,19 @@ coverage:
   ignore:
     - "examples/"
     - "luigi/tools"  # These are tested as actual run commands without coverage
-    # List modules who's tests are not run by Travis or
-    # are run in a subprocesses (like on cluster).
-    - "luigi/contrib/gcs.py"
+    # List modules who's tests are not run by CI or are run in a subprocesses (like on cluster).
     - "luigi/contrib/bigquery.py"
     - "luigi/contrib/bigquery_avro.py"
-    - "luigi/contrib/hdfs/"
+    - "luigi/contrib/dataproc.py"
+    - "luigi/contrib/dropbox.py"
+    - "luigi/contrib/ftp.py"
+    - "luigi/contrib/gcs.py"
     - "luigi/contrib/hadoop.py"
-    - "luigi/contrib/mrrunner.py"
+    - "luigi/contrib/hdfs/"
     - "luigi/contrib/kubernetes.py"
+    - "luigi/contrib/mrrunner.py"
+    - "luigi/contrib/sparkey.py"
+    - "luigi/contrib/webhdfs.py"
 
 # For luigi we do not want any comments
 comment: false
