@@ -13,4 +13,4 @@ def pytest_collection_modifyitems(items: List[pytest.Item]) -> None:
     for item in items:
         # Check if the item has any markers (custom or builtin)
         if not any(item.iter_markers()):
-            item.add_marker("unmarked")
+            item.add_marker(pytest.mark.unmarked)
