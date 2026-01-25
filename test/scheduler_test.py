@@ -20,6 +20,7 @@ import tempfile
 import time
 import os
 import shutil
+import signal
 from multiprocessing import Process
 from helpers import unittest
 
@@ -332,6 +333,14 @@ class FailingOnDoubleRunTask(luigi.Task):
         open(self.file_name, 'w').close()
 
 
+def _run_task_in_process(output_dir):
+    """Standalone function to run task - can be pickled for multiprocessing."""
+    return luigi.build([FailingOnDoubleRunTask(output_dir=output_dir)],
+                       detailed_summary=True,
+                       parallel_scheduling=True,
+                       parallel_scheduling_processes=2)
+
+
 class StableDoneCooldownSecsTest(unittest.TestCase):
 
     def setUp(self):
@@ -340,36 +349,40 @@ class StableDoneCooldownSecsTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.p)
 
-    def run_task(self):
-        return luigi.build([FailingOnDoubleRunTask(output_dir=self.p)],
-                           detailed_summary=True,
-                           parallel_scheduling=True,
-                           parallel_scheduling_processes=2)
-
     @with_config({'worker': {'keep_alive': 'false'}})
     def get_second_run_result_on_double_run(self):
         server_process = Process(target=luigi.server.run)
-        process = Process(target=self.run_task)
+        process = Process(target=_run_task_in_process, args=(self.p,))
         try:
             # scheduler is started
             server_process.start()
             # first run is started
             process.start()
+            # Wait for first process to complete
             time.sleep(FailingOnDoubleRunTask.time_to_run_secs + FailingOnDoubleRunTask.time_to_check_secs)
             # second run of the same task is started
-            second_run_result = self.run_task()
+            # expect the scheduler to return None
+            second_run_result = _run_task_in_process(self.p)
             return second_run_result
         finally:
+            process.terminate()
             process.join(1)
+            if process.is_alive():
+                os.kill(process.pid, signal.SIGKILL)
+
             server_process.terminate()
             server_process.join(1)
+            if server_process.is_alive():
+                os.kill(server_process.pid, signal.SIGKILL)
 
     @with_config({'scheduler': {'stable_done_cooldown_secs': '5'}})
     def test_sending_same_task_twice_with_cooldown_does_not_lead_to_double_run(self):
         second_run_result = self.get_second_run_result_on_double_run()
+        self.assertIsNotNone(second_run_result, "Task execution should have completed")
         self.assertEqual(second_run_result.scheduling_succeeded, True)
 
     @with_config({'scheduler': {'stable_done_cooldown_secs': '0'}})
     def test_sending_same_task_twice_without_cooldown_leads_to_double_run(self):
         second_run_result = self.get_second_run_result_on_double_run()
+        self.assertIsNotNone(second_run_result, "Task execution should have completed")
         self.assertEqual(second_run_result.scheduling_succeeded, False)
