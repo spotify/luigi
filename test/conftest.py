@@ -1,7 +1,9 @@
+from typing import List
+
 import pytest
 
 
-def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+def pytest_collection_modifyitems(items: List[pytest.Item]) -> None:
     """
     Automatically add the equivalent of pytest.mark.unmarked to any test which has no markers
 
