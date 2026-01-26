@@ -38,7 +38,7 @@ HAS_REQUESTS = True
 
 try:
     import requests_unixsocket as requests
-except ImportError:
+except Exception:
     HAS_UNIX_SOCKET = False
     try:
         import requests
