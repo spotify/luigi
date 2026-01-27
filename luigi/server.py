@@ -44,7 +44,8 @@ import sys
 import datetime
 import time
 
-import pkg_resources
+from importlib.resources import files
+
 import tornado.httpserver
 import tornado.ioloop
 import tornado.netutil
@@ -87,7 +88,7 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
         self._scheduler = scheduler
 
     def get_template_path(self):
-        return pkg_resources.resource_filename(__name__, 'templates')
+        return str(files('luigi').joinpath('templates'))
 
 
 class AllRunHandler(BaseTaskHistoryHandler):

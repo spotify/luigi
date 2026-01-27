@@ -42,6 +42,8 @@ install_requires = [
     'python-daemon<3.0',
     'requests>=2.31',
     'urllib3>=2.0',
+    'setuptools>=68',
+    'packaging>=23',
     'enum34>1.1.0 ; python_version < "3.4"'
 ]
 
