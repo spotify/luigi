@@ -500,15 +500,15 @@ class DateParameter(_DateParameterBase):
     def next_in_enumeration(self, value):
         return value + datetime.timedelta(days=self.interval)
 
-    def normalize(self, value):
-        if value is None:
+    def normalize(self, x):
+        if x is None:
             return None
 
-        if isinstance(value, datetime.datetime):
-            value = value.date()
+        if isinstance(x, datetime.datetime):
+            x = x.date()
 
-        delta = (value - self.start).days % self.interval
-        return value - datetime.timedelta(days=delta)
+        delta = (x - self.start).days % self.interval
+        return x - datetime.timedelta(days=delta)
 
 
 class MonthParameter(DateParameter):
@@ -538,14 +538,14 @@ class MonthParameter(DateParameter):
     def next_in_enumeration(self, value):
         return self._add_months(value, self.interval)
 
-    def normalize(self, value):
-        if value is None:
+    def normalize(self, x):
+        if x is None:
             return None
 
-        if isinstance(value, date_interval.Month):
-            value = value.date_a
+        if isinstance(x, date_interval.Month):
+            x = x.date_a
 
-        months_since_start = (value.year - self.start.year) * 12 + (value.month - self.start.month)
+        months_since_start = (x.year - self.start.year) * 12 + (x.month - self.start.month)
         months_since_start -= months_since_start % self.interval
 
         return self._add_months(self.start, months_since_start)
@@ -565,15 +565,15 @@ class YearParameter(DateParameter):
     def next_in_enumeration(self, value):
         return value.replace(year=value.year + self.interval)
 
-    def normalize(self, value):
-        if value is None:
+    def normalize(self, x):
+        if x is None:
             return None
 
-        if isinstance(value, date_interval.Year):
-            value = value.date_a
+        if isinstance(x, date_interval.Year):
+            x = x.date_a
 
-        delta = (value.year - self.start.year) % self.interval
-        return datetime.date(year=value.year - delta, month=1, day=1)
+        delta = (x.year - self.start.year) % self.interval
+        return datetime.date(year=x.year - delta, month=1, day=1)
 
 
 class _DatetimeParameterBase(Parameter[datetime.datetime]):
@@ -669,9 +669,9 @@ class DateMinuteParameter(_DatetimeParameterBase):
     _timedelta = datetime.timedelta(minutes=1)
     deprecated_date_format = '%Y-%m-%dT%HH%M'
 
-    def parse(self, s):
+    def parse(self, x):
         try:
-            value = datetime.datetime.strptime(s, self.deprecated_date_format)
+            value = datetime.datetime.strptime(x, self.deprecated_date_format)
             warnings.warn(
                 'Using "H" between hours and minutes is deprecated, omit it instead.',
                 DeprecationWarning,
@@ -679,7 +679,7 @@ class DateMinuteParameter(_DatetimeParameterBase):
             )
             return value
         except ValueError:
-            return super(DateMinuteParameter, self).parse(s)
+            return super(DateMinuteParameter, self).parse(x)
 
 
 class DateSecondParameter(_DatetimeParameterBase):
@@ -702,11 +702,11 @@ class IntParameter(Parameter[int]):
     Parameter whose value is an ``int``.
     """
 
-    def parse(self, s):
+    def parse(self, x):
         """
         Parses an ``int`` from the string using ``int()``.
         """
-        return int(s)
+        return int(x)
 
     def next_in_enumeration(self, value):
         return value + 1
@@ -723,11 +723,11 @@ class FloatParameter(Parameter[float]):
     Parameter whose value is a ``float``.
     """
 
-    def parse(self, s):
+    def parse(self, x):
         """
         Parses a ``float`` from the string using ``float()``.
         """
-        return float(s)
+        return float(x)
 
 
 class OptionalFloatParameter(OptionalParameterMixin, FloatParameter):
@@ -776,21 +776,21 @@ class BoolParameter(Parameter[bool]):
         if self._default == _no_value:
             self._default = False
 
-    def parse(self, val):
+    def parse(self, x):
         """
         Parses a ``bool`` from the string, matching 'true' or 'false' ignoring case.
         """
-        s = str(val).lower()
+        s = str(x).lower()
         if s == "true":
             return True
         elif s == "false":
             return False
         else:
-            raise ValueError("cannot interpret '{}' as boolean".format(val))
+            raise ValueError("cannot interpret '{}' as boolean".format(x))
 
-    def normalize(self, value):
+    def normalize(self, x):
         try:
-            return self.parse(value)
+            return self.parse(x)
         except ValueError:
             return None
 
@@ -822,7 +822,7 @@ class DateIntervalParameter(Parameter[date_interval.DateInterval]):
     provided as two dates separated with a dash (eg. "2015-11-04-2015-12-04").
     """
 
-    def parse(self, s):
+    def parse(self, x):
         """
         Parses a :py:class:`~luigi.date_interval.DateInterval` from the input.
 
@@ -834,7 +834,7 @@ class DateIntervalParameter(Parameter[date_interval.DateInterval]):
         from luigi import date_interval as d
 
         for cls in [d.Year, d.Month, d.Week, d.Date, d.Custom]:
-            i = cls.parse(s)
+            i = cls.parse(x)
             if i:
                 return i
 
@@ -887,23 +887,23 @@ class TimeDeltaParameter(Parameter[datetime.timedelta]):
         regex = "".join([r"((?P<%s>\d+) ?%s(%s)?(%s)? ?)?" % (k, k[0], k[1:-1], k[-1]) for k in keys])
         return self._apply_regex(regex, input)
 
-    def parse(self, input):
+    def parse(self, x):
         """
         Parses a time delta from the input.
 
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """
         try:
-            return datetime.timedelta(seconds=float(input))
+            return datetime.timedelta(seconds=float(x))
         except ValueError:
             pass
-        result = self._parseIso8601(input)
+        result = self._parseIso8601(x)
         if not result:
-            result = self._parseSimple(input)
+            result = self._parseSimple(x)
         if result is not None:
             return result
         else:
-            raise ParameterException("Invalid time delta - could not parse %s" % input)
+            raise ParameterException("Invalid time delta - could not parse %s" % x)
 
     def serialize(self, x):
         """
@@ -948,17 +948,17 @@ class TaskParameter(Parameter[Type[TaskType]]):
     The value will always be a task class (and not a string).
     """
 
-    def parse(self, input):
+    def parse(self, x):
         """
         Parse a task_famly using the :class:`~luigi.task_register.Register`
         """
-        return task_register.Register.get_task_cls(input)
+        return task_register.Register.get_task_cls(x)
 
-    def serialize(self, cls):
+    def serialize(self, x):
         """
         Converts the :py:class:`luigi.task.Task` (sub) class to its family name.
         """
-        return cls.get_task_family()
+        return x.get_task_family()
 
 
 EnumParameterType = TypeVar('EnumParameterType', bound=Enum)
@@ -993,14 +993,14 @@ class EnumParameter(Parameter[EnumParameterType]):
         self._enum = enum
         super(EnumParameter, self).__init__(*args, **kwargs)
 
-    def parse(self, s):
+    def parse(self, x):
         try:
-            return self._enum[s]
+            return self._enum[x]
         except KeyError:
             raise ValueError('Invalid enum value - could not be parsed')
 
-    def serialize(self, e):
-        return e.name
+    def serialize(self, x):
+        return x.name
 
 
 class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
@@ -1036,8 +1036,8 @@ class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
         self._enum = enum
         super(EnumListParameter, self).__init__(*args, **kwargs)
 
-    def parse(self, s):
-        values = [] if s == '' else s.split(self._sep)
+    def parse(self, x):
+        values = [] if x == '' else x.split(self._sep)
 
         for i, v in enumerate(values):
             try:
@@ -1047,8 +1047,8 @@ class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
 
         return tuple(values)
 
-    def serialize(self, enum_values):
-        return self._sep.join([e.name for e in enum_values])
+    def serialize(self, x):
+        return self._sep.join([e.name for e in x])
 
 
 class _DictParamEncoder(JSONEncoder):
@@ -1165,20 +1165,20 @@ class DictParameter(Parameter[Dict[Any, Any]]):
             **kwargs,
         )
 
-    def normalize(self, value):
+    def normalize(self, x):
         """
         Ensure that dictionary parameter is converted to a FrozenOrderedDict so it can be hashed.
         """
         if self.schema is not None:
-            unfrozen_value = recursively_unfreeze(value)
+            unfrozen_value = recursively_unfreeze(x)
             try:
                 self.schema.validate(unfrozen_value)
-                value = unfrozen_value  # Validators may update the instance inplace
+                x = unfrozen_value  # Validators may update the instance inplace
             except AttributeError:
                 jsonschema.validate(instance=unfrozen_value, schema=self.schema)
-        return recursively_freeze(value)
+        return recursively_freeze(x)
 
-    def parse(self, source):
+    def parse(self, x):
         """
         Parses an immutable and ordered ``dict`` from a JSON string using standard JSON library.
 
@@ -1190,9 +1190,9 @@ class DictParameter(Parameter[Dict[Any, Any]]):
         :param s: String to be parse
         """
         # TOML based config convert params to python types itself.
-        if not isinstance(source, str):
-            return source
-        return json.loads(source, object_pairs_hook=FrozenOrderedDict)
+        if not isinstance(x, str):
+            return x
+        return json.loads(x, object_pairs_hook=FrozenOrderedDict)
 
     def serialize(self, x):
         return json.dumps(x, cls=_DictParamEncoder)
@@ -1504,14 +1504,14 @@ class NumericalParameter(Parameter[NumericalType]):
             self.description = ""
         self.description += "permitted values: " + self._permitted_range
 
-    def parse(self, s):
-        value = self._var_type(s)
+    def parse(self, x):
+        value = self._var_type(x)
         if (self._left_op(self._min_value, value) and self._right_op(value, self._max_value)):
             return value
         else:
             raise ValueError(
                 "{s} is not in the set of {permitted_range}".format(
-                    s=s, permitted_range=self._permitted_range))
+                    s=x, permitted_range=self._permitted_range))
 
 
 class OptionalNumericalParameter(OptionalParameterMixin, NumericalParameter):
@@ -1571,16 +1571,16 @@ class ChoiceParameter(Parameter[ChoiceType]):
         self.description += (
             "Choices: {" + ", ".join(str(choice) for choice in self._choices) + "}")
 
-    def parse(self, s):
-        var = self._var_type(s)
+    def parse(self, x):
+        var = self._var_type(x)
         return self.normalize(var)
 
-    def normalize(self, var):
-        if var in self._choices:
-            return var
+    def normalize(self, x):
+        if x in self._choices:
+            return x
         else:
             raise ValueError("{var} is not a valid choice from {choices}".format(
-                var=var, choices=self._choices))
+                var=x, choices=self._choices))
 
 
 class ChoiceListParameter(ChoiceParameter[ChoiceType]):
@@ -1624,18 +1624,18 @@ class ChoiceListParameter(ChoiceParameter[ChoiceType]):
     def __init__(self, var_type: Type[ChoiceType] = str, *args, **kwargs):
         super(ChoiceListParameter, self).__init__(var_type=var_type, *args, **kwargs)
 
-    def parse(self, s):
-        values = [] if s == '' else s.split(self._sep)
+    def parse(self, x):
+        values = [] if x == '' else x.split(self._sep)
         return self.normalize(map(self._var_type, values))
 
-    def normalize(self, var):
+    def normalize(self, x):
         values = []
-        for v in var:
+        for v in x:
             values.append(super().normalize(v))
         return tuple(values)
 
-    def serialize(self, values):
-        return self._sep.join(values)
+    def serialize(self, x):
+        return self._sep.join(x)
 
 
 class OptionalChoiceParameter(OptionalParameterMixin, ChoiceParameter[ChoiceType]):

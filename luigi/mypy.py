@@ -114,7 +114,12 @@ class TaskPlugin(Plugin):
                         return base.args[0]
                     break
 
-        default_idx = ctx.callee_arg_names.index("default")
+        try:
+            default_idx = ctx.callee_arg_names.index("default")
+        except ValueError:
+            # If we couldn't infer from __new__, return Any
+            return AnyType(TypeOfAny.unannotated)
+
         default_args = ctx.args[default_idx]
 
         if default_args:
