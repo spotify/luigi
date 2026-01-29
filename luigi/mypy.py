@@ -52,6 +52,7 @@ from mypy.types import (
     CallableType,
     Instance,
     NoneType,
+    TupleType,
     Type,
     TypeOfAny,
     get_proper_type,
@@ -106,6 +107,17 @@ class TaskPlugin(Plugin):
         # Try to get the return type from __new__ method
         default_type = ctx.default_return_type
         if isinstance(default_type, Instance):
+            # Handle some special parameters using a TypeVar first
+            if default_type.type.fullname in ("luigi.parameter.ChoiceListParameter", "luigi.parameter.EnumListParameter"):
+                return TupleType(
+                    list(default_type.args),
+                    ctx.api.named_generic_type(
+                        "builtins.tuple", [AnyType(TypeOfAny.unannotated)]
+                    ),
+                )
+            elif default_type.type.fullname in ("luigi.parameter.ChoiceParameter", "luigi.parameter.EnumParameter"):
+                return default_type.args[0]
+
             # Find the Parameter base with its type argument
             for base in default_type.type.bases:
                 if isinstance(base, Instance) and base.type.fullname == "luigi.parameter.Parameter":
