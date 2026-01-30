@@ -319,15 +319,18 @@ class FailingOnDoubleRunTask(luigi.Task):
     def __init__(self, *args, **kwargs):
         super(FailingOnDoubleRunTask, self).__init__(*args, **kwargs)
         self.file_name = os.path.join(self.output_dir, "AnyTask")
+        print(f"Initializing - {self.task_id} - {self.file_name}")
 
     def complete(self):
         time.sleep(self.time_to_check_secs)  # e.g., establish connection
         exists = os.path.exists(self.file_name)
+        print(f"Checking Complete - {self.task_id} - {self.file_name} - {exists}")
         time.sleep(self.time_to_check_secs)  # e.g., close connection
         return exists
 
     def run(self):
         time.sleep(self.time_to_run_secs)
+        print(f"Running - {self.task_id} - {self.file_name} - {os.path.exists(self.file_name)}")
         if os.path.exists(self.file_name):
             raise FileAlreadyExists(self.file_name)
         open(self.file_name, 'w').close()
