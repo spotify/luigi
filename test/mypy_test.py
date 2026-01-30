@@ -11,22 +11,70 @@ class TestMyMypyPlugin(unittest.TestCase):
             return
 
         test_code = """
+from datetime import date, datetime, timedelta
+from enum import Enum
 import luigi
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Type
 from uuid import UUID
 
+class MyEnum(Enum):
+    A = 1
+    B = 2
+    C = 3
 
 class UUIDParameter(luigi.Parameter[UUID]):
     def parse(self, s):
         return UUID(s)
 
+class OtherTask(luigi.Task):
+    pass
 
 class MyTask(luigi.Task):
-    foo: int = luigi.IntParameter()
-    bar: str = luigi.Parameter()
-    uniq: UUID = UUIDParameter()
-    baz: str = luigi.Parameter(default="baz")
+    bool_p: bool = luigi.BoolParameter()
+    choice_int_p: int = luigi.parameter.ChoiceParameter(choices=[1, 2, 3])
+    choice_list_int_p: Tuple[int, ...] = luigi.parameter.ChoiceListParameter(choices=[1, 2, 3])
+    choice_list_str_p: Tuple[str, ...] = luigi.parameter.ChoiceListParameter(choices=["foo", "bar", "baz"])
+    choice_str_p: str = luigi.parameter.ChoiceParameter(choices=["foo", "bar", "baz"])
+    date_p: date = luigi.DateParameter()
+    datetime_p: datetime = luigi.DateSecondParameter()
+    dict_p: Dict[str, str] = luigi.DictParameter()
+    enum_p: MyEnum = luigi.parameter.EnumParameter(enum=MyEnum)
+    enums_p: Tuple[MyEnum, ...] = luigi.parameter.EnumListParameter(enum=MyEnum)
+    int_p: int = luigi.IntParameter()
+    list_float_p: Tuple[Any, ...] = luigi.ListParameter()
+    numeric_p: float = luigi.NumericalParameter(var_type=float, min_value=-3.0, max_value=7.0)
+    opt_p: Optional[str] = luigi.OptionalParameter()
+    path_p: Path = luigi.PathParameter()
+    str_p: str = luigi.Parameter()
+    str_p_default: str = luigi.Parameter(default="baz")
+    task_p: Type[luigi.Task] = luigi.TaskParameter()
+    timedelta_p: timedelta = luigi.TimeDeltaParameter()
+    tuple_int_p: Tuple[Any, ...] = luigi.TupleParameter()
+    uuid_p: UUID = UUIDParameter()
 
-MyTask(foo=1, bar='bar', uniq=UUID("9b0591d7-a167-4978-bc6d-41f7d84a288c"))
+MyTask(
+    bool_p=True,
+    choice_int_p=3,
+    choice_list_int_p=(2, 3),
+    choice_list_str_p=("foo", "baz"),
+    choice_str_p="foo",
+    date_p=date.today(),
+    datetime_p=datetime.now(),
+    dict_p={"foo": "bar"},
+    enum_p=MyEnum.B,
+    enums_p=(MyEnum.A, MyEnum.C),
+    int_p=1,
+    list_float_p=(0.1, 0.2),
+    numeric_p=4.0,
+    opt_p=None,
+    path_p=Path("/tmp"),
+    str_p='bar',
+    task_p=OtherTask,
+    timedelta_p=timedelta(hours=1),
+    tuple_int_p=(1, 2),
+    uuid_p=UUID("9b0591d7-a167-4978-bc6d-41f7d84a288c"),
+)
 """
 
         with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
