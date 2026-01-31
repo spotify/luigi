@@ -1,7 +1,6 @@
 codecov:
   require_ci_to_pass: true
   notify:
-    after_n_builds: 24
     wait_for_ci: true
 
 coverage:
@@ -27,6 +26,7 @@ coverage:
     - "examples/"
     - "luigi/tools"  # These are tested as actual run commands without coverage
     # List modules who's tests are not run by CI or are run in a subprocesses (like on cluster).
+    - "luigi/contrib/beam_dataflow.py"
     - "luigi/contrib/bigquery.py"
     - "luigi/contrib/bigquery_avro.py"
     - "luigi/contrib/dataproc.py"
