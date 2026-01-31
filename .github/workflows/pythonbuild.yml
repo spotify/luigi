@@ -29,6 +29,40 @@ jobs:
       - name: Install dependencies
         run: |
           uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
+      - name: Build
+        env:
+          TOXENV: ${{ matrix.tox-env }}
+        run: uvx --with tox-uv tox run
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  mysql:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        include:
+          - tox-env: py38-mysql
+          - tox-env: py39-mysql
+          - tox-env: py310-mysql
+          - tox-env: py311-mysql
+          - tox-env: py312-mysql
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "pyproject.toml"
+      - name: Install dependencies
+        run: |
+          uv tool install --python-preference only-managed --python 3.12 tox --with tox-uv
       - name: Setup MySQL DB
         run: |
           sudo /etc/init.d/mysql start
@@ -138,6 +172,12 @@ jobs:
           - tox-env: py311-azureblob
           - tox-env: py312-azureblob
 
+          - tox-env: py38-contrib
+          - tox-env: py39-contrib
+          - tox-env: py310-contrib
+          - tox-env: py311-contrib
+          - tox-env: py312-contrib
+
     steps:
       - uses: actions/checkout@v4
       - name: Set up the latest version of uv
@@ -160,6 +200,7 @@ jobs:
           verbose: true
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
   others:
     runs-on: ubuntu-22.04
 
