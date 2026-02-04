@@ -52,7 +52,7 @@ from mypy.types import (
     CallableType,
     Instance,
     NoneType,
-    TupleType,
+
     Type,
     TypeOfAny,
     get_proper_type,
@@ -107,16 +107,28 @@ class TaskPlugin(Plugin):
         # Try to get the return type from __new__ method
         default_type = ctx.default_return_type
         if isinstance(default_type, Instance):
-            # Handle some special parameters using a TypeVar first
-            if default_type.type.fullname in ("luigi.parameter.ChoiceListParameter", "luigi.parameter.EnumListParameter"):
-                return TupleType(
-                    list(default_type.args),
-                    ctx.api.named_generic_type(
-                        "builtins.tuple", [AnyType(TypeOfAny.unannotated)]
-                    ),
+            # Handle Choice/Enum parameters by inferring from var_type or choices argument
+            if default_type.type.fullname in (
+                "luigi.parameter.ChoiceListParameter", "luigi.parameter.EnumListParameter",
+                "luigi.parameter.ChoiceParameter", "luigi.parameter.EnumParameter",
+            ):
+                element_type: Type = default_type.args[0] if default_type.args else AnyType(TypeOfAny.unannotated)
+
+                # Infer from choices argument (may be in **kwargs, so search all arg groups)
+                for i, names in enumerate(ctx.arg_names):
+                    for j, name in enumerate(names):
+                        if name == "choices":
+                            choices_type = get_proper_type(ctx.arg_types[i][j])
+                            if isinstance(choices_type, Instance) and choices_type.args:
+                                element_type = choices_type.args[0]
+
+                is_list = default_type.type.fullname in (
+                    "luigi.parameter.ChoiceListParameter", "luigi.parameter.EnumListParameter",
                 )
-            elif default_type.type.fullname in ("luigi.parameter.ChoiceParameter", "luigi.parameter.EnumParameter"):
-                return default_type.args[0]
+                if is_list:
+                    return ctx.api.named_generic_type("builtins.tuple", [element_type])
+                else:
+                    return element_type
 
             # Find the Parameter base with its type argument
             for base in default_type.type.bases:

@@ -1457,7 +1457,7 @@ class NumericalParameter(Parameter[NumericalType]):
         $ luigi --module my_tasks MyTask --my-param-1 -3 --my-param-2 -2
     """
 
-    def __init__(self, *args, var_type: Optional[NumericalType] = None,
+    def __init__(self, *args, var_type: Optional[Type[NumericalType]] = None,
                  min_value: Optional[NumericalType] = None,
                  max_value: Optional[NumericalType] = None,
                  left_op=operator.le, right_op=operator.lt, **kwargs):

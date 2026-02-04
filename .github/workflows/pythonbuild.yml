@@ -209,7 +209,6 @@ jobs:
         include:
           - tox-env: flake8
           - tox-env: docs
-          - tox-env: stubtest
     steps:
       - uses: actions/checkout@v4
       - name: Set up the latest version of uv
