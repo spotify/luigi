@@ -20,7 +20,9 @@ coverage:
         target: 50%
         if_no_uploads: error
 
-    changes: false
+    changes:
+      default:
+        informational: true
 
   ignore:
     - "examples/"
