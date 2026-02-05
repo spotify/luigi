@@ -22,9 +22,11 @@ These are the unit tests for the BigQueryLoadAvro class.
 import unittest
 import avro
 import avro.schema
+import pytest
 from luigi.contrib.bigquery_avro import BigQueryLoadAvro
 
 
+@pytest.mark.gcloud
 class BigQueryAvroTest(unittest.TestCase):
 
     def test_writer_schema_method_existence(self):

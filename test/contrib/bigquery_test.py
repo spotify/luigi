@@ -151,6 +151,7 @@ class BigQueryExtractTaskTest(unittest.TestCase):
         run_job.assert_called_with('proj', expected_body, dataset=BQDataset('proj', 'ds', None))
 
 
+@pytest.mark.gcloud
 class BigQueryClientTest(unittest.TestCase):
 
     def test_retry_succeeds_on_second_attempt(self):

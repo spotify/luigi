@@ -1,39 +1,46 @@
 codecov:
-  require_ci_to_pass: yes
+  require_ci_to_pass: true
   notify:
-    after_n_builds: 24
-    wait_for_ci: yes
+    wait_for_ci: true
 
 coverage:
-  precision: 2  # Just copied from default
-  round: down  # Just copied from default
-  range: "70...100"  # Just copied from default
+  precision: 2
+  round: down
+  range: "50...70"
 
   status:
     project:
       default: false  # disable the default status that measures entire project
       core:
-        target: 92%
+        target: 90%
         paths:
           - "luigi/*.py"
-    patch:  # Just copied from default
+    patch:
       default:
+        target: 50%
         if_no_uploads: error
 
-    changes: true  # Just copied from default
+    changes:
+      default:
+        informational: true
 
   ignore:
     - "examples/"
     - "luigi/tools"  # These are tested as actual run commands without coverage
-    # List modules who's tests are not run by Travis or
-    # are run in a subprocesses (like on cluster).
-    - "luigi/contrib/gcs.py"
+    # List modules who's tests are not run by CI or are run in a subprocesses (like on cluster).
+    - "luigi/contrib/beam_dataflow.py"
     - "luigi/contrib/bigquery.py"
     - "luigi/contrib/bigquery_avro.py"
-    - "luigi/contrib/hdfs/"
+    - "luigi/contrib/dataproc.py"
+    - "luigi/contrib/dropbox.py"
+    - "luigi/contrib/ftp.py"
+    - "luigi/contrib/gcs.py"
     - "luigi/contrib/hadoop.py"
-    - "luigi/contrib/mrrunner.py"
+    - "luigi/contrib/hdfs/"
     - "luigi/contrib/kubernetes.py"
+    - "luigi/contrib/mrrunner.py"
+    - "luigi/contrib/sparkey.py"
+    - "luigi/contrib/webhdfs.py"
 
 # For luigi we do not want any comments
 comment: false

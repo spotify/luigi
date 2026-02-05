@@ -491,3 +491,30 @@ class MetricsHandlerTest(unittest.TestCase):
         with mock.patch.object(self.handler, 'write') as patched_write:
             self.handler.get()
             patched_write.assert_not_called()
+
+
+class FromUtcTest(unittest.TestCase):
+    def test_with_microseconds(self):
+        """Test parsing UTC time string with microseconds"""
+        result = luigi.server.from_utc("2021-01-15 10:30:45.123456")
+        self.assertIsInstance(result, int)
+
+    def test_without_microseconds(self):
+        """Test parsing UTC time string without microseconds"""
+        result = luigi.server.from_utc("2021-01-15 10:30:45")
+        self.assertIsInstance(result, int)
+
+    def test_with_custom_format(self):
+        """Test parsing with custom format"""
+        result = luigi.server.from_utc("01/15/2021", fmt="%m/%d/%Y")
+        self.assertIsInstance(result, int)
+
+    def test_invalid_format_raises_error(self):
+        """Test that invalid format raises ValueError"""
+        with self.assertRaises(ValueError):
+            luigi.server.from_utc("invalid-date")
+
+    def test_custom_format_mismatch_raises_error(self):
+        """Test that mismatched custom format raises ValueError"""
+        with self.assertRaises(ValueError):
+            luigi.server.from_utc("2021-01-15", fmt="%m/%d/%Y")
