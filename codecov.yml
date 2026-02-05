@@ -20,7 +20,7 @@ coverage:
       default:
         if_no_uploads: error
 
-    changes: true  # Just copied from default
+    changes: false
 
   ignore:
     - "examples/"
