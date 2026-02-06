@@ -93,6 +93,18 @@ class Parameter(Generic[T]):
 
     def __get__(self, instance: Any, owner: Any) -> Any: ...
 
+    def has_task_value(self, task_name: str, param_name: str) -> bool: ...
+
+    def task_value(self, task_name: str, param_name: str) -> T: ...
+
+    def parse(self, x: Any) -> T: ...
+
+    def serialize(self, x: T) -> str: ...
+
+    def normalize(self, x: Any) -> T: ...
+
+    def next_in_enumeration(self, value: T) -> Optional[T]: ...
+
 class _OptionalParameterBase(Parameter[Union[T, None]]): ...
 
 class OptionalParameter(_OptionalParameterBase[str]):
@@ -110,15 +122,38 @@ class MonthParameter(DateParameter):
 class YearParameter(DateParameter):
     date_format: str
 
+# TypedDict for DateHour/DateMinute/DateSecond parameter kwargs
+class _DateTimeParameterKwargs(_BaseParameterKwargs[datetime.datetime], total=False):
+    interval: int
+    start: Optional[datetime.datetime]
+
 class DateHourParameter(Parameter[datetime.datetime]):
     date_format: str
+    interval: int
+    start: datetime.datetime | None
+    def __new__(
+        cls,
+        **kwargs: Unpack[_DateTimeParameterKwargs]
+    ) -> datetime.datetime: ...
 
 class DateMinuteParameter(Parameter[datetime.datetime]):
     date_format: str
     deprecated_date_format: str
+    interval: int
+    start: datetime.datetime | None
+    def __new__(
+        cls,
+        **kwargs: Unpack[_DateTimeParameterKwargs]
+    ) -> datetime.datetime: ...
 
 class DateSecondParameter(Parameter[datetime.datetime]):
     date_format: str
+    interval: int
+    start: datetime.datetime | None
+    def __new__(
+        cls,
+        **kwargs: Unpack[_DateTimeParameterKwargs]
+    ) -> datetime.datetime: ...
 
 class IntParameter(Parameter[int]): ...
 
