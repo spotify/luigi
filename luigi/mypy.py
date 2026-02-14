@@ -52,7 +52,6 @@ from mypy.types import (
     CallableType,
     Instance,
     NoneType,
-
     Type,
     TypeOfAny,
     get_proper_type,
@@ -87,7 +86,9 @@ class TaskPlugin(Plugin):
     def check_parameter(self, fullname):
         sym = self.lookup_fully_qualified(fullname)
         if sym and isinstance(sym.node, TypeInfo):
-            return any(base.fullname == "luigi.parameter.Parameter" for base in sym.node.mro)
+            return any(
+                base.fullname == "luigi.parameter.Parameter" for base in sym.node.mro
+            )
 
     def _task_class_maker_callback(self, ctx: ClassDefContext) -> None:
         transformer = TaskTransformer(ctx.cls, ctx.reason, ctx.api, self)
@@ -109,10 +110,16 @@ class TaskPlugin(Plugin):
         if isinstance(default_type, Instance):
             # Handle Choice/Enum parameters by inferring from var_type or choices argument
             if default_type.type.fullname in (
-                "luigi.parameter.ChoiceListParameter", "luigi.parameter.EnumListParameter",
-                "luigi.parameter.ChoiceParameter", "luigi.parameter.EnumParameter",
+                "luigi.parameter.ChoiceListParameter",
+                "luigi.parameter.EnumListParameter",
+                "luigi.parameter.ChoiceParameter",
+                "luigi.parameter.EnumParameter",
             ):
-                element_type: Type = default_type.args[0] if default_type.args else AnyType(TypeOfAny.unannotated)
+                element_type: Type = (
+                    default_type.args[0]
+                    if default_type.args
+                    else AnyType(TypeOfAny.unannotated)
+                )
 
                 # Infer from choices argument (may be in **kwargs, so search all arg groups)
                 for i, names in enumerate(ctx.arg_names):
@@ -123,25 +130,33 @@ class TaskPlugin(Plugin):
                                 element_type = choices_type.args[0]
 
                 is_list = default_type.type.fullname in (
-                    "luigi.parameter.ChoiceListParameter", "luigi.parameter.EnumListParameter",
+                    "luigi.parameter.ChoiceListParameter",
+                    "luigi.parameter.EnumListParameter",
                 )
                 if is_list:
                     return ctx.api.named_generic_type("builtins.tuple", [element_type])
                 else:
                     return element_type
 
-            # Find the Parameter base with its type argument
-            for base in default_type.type.bases:
-                if isinstance(base, Instance) and base.type.fullname == "luigi.parameter.Parameter":
-                    # base.args contains the type argument (e.g., [int] for IntParameter)
-                    if len(base.args) == 1:
-                        return base.args[0]
-                    break
+            # Check if a 'default' argument is explicitly provided
+            try:
+                default_idx = ctx.callee_arg_names.index("default")
+                if ctx.args[default_idx]:
+                    default_arg = ctx.args[default_idx][0]
+                    if not isinstance(default_arg, EllipsisExpr):
+                        return ctx.arg_types[default_idx][0]
+            except ValueError:
+                pass
+
+            # For Parameter subclasses without explicit default, return Any
+            # so that both annotation styles work:
+            #   foo: int = IntParameter()           (resolved type annotation)
+            #   foo: IntParameter = IntParameter()  (parameter type annotation)
+            return AnyType(TypeOfAny.special_form)
 
         try:
             default_idx = ctx.callee_arg_names.index("default")
         except ValueError:
-            # If we couldn't infer from __new__, return Any
             return AnyType(TypeOfAny.unannotated)
 
         default_args = ctx.args[default_idx]
@@ -150,7 +165,6 @@ class TaskPlugin(Plugin):
             default_type = ctx.arg_types[default_idx][0]
             default_arg = default_args[0]
 
-            # Fallback to default Any type if the field is required
             if not isinstance(default_arg, EllipsisExpr):
                 return default_type
 
@@ -387,6 +401,13 @@ class TaskTransformer:
             with state.strict_optional_set(self._api.options.strict_optional):
                 init_type = self._infer_task_attr_init_type(sym, stmt)
 
+            # When the type annotation is a Parameter type, update the
+            # symbol's type to the resolved type so that mypy uses it
+            # for the __init__ parameter type
+            if init_type is not None and init_type != sym.type:
+                assert isinstance(node, Var)
+                node.type = init_type
+
             found_attrs[lhs.name] = TaskAttribute(
                 name=lhs.name,
                 has_default=has_default,
@@ -429,9 +450,18 @@ class TaskTransformer:
         In particular, possibly use the signature of __set__.
         """
         default = sym.type
+        t = get_proper_type(sym.type)
+
+        # If the type annotation is a Parameter subclass, resolve to the inner type T
+        # e.g. IntParameter -> int, Parameter[str] -> str
+        if isinstance(t, Instance):
+            is_param = self._task_plugin.check_parameter(t.type.fullname)
+            if is_param:
+                resolved = self._resolve_parameter_type(t)
+                return resolved
+
         if sym.implicit:
             return default
-        t = get_proper_type(sym.type)
 
         # Perform a simple-minded inference from the signature of __set__, if present.
         # We can't use mypy.checkmember here, since this plugin runs before type checking.
@@ -439,6 +469,7 @@ class TaskTransformer:
         # the vast majority of use cases.
         if not isinstance(t, Instance):
             return default
+
         setter = t.type.get("__set__")
 
         if not setter:
@@ -488,6 +519,27 @@ class TaskTransformer:
             fullname = type_info.fullname
 
         return fullname is not None and self._task_plugin.check_parameter(fullname)
+
+    def _resolve_parameter_type(self, t: Instance) -> Type:
+        """Resolve a Parameter type annotation to its inner type T.
+
+        e.g. IntParameter -> int, Parameter[str] -> str
+        """
+        # Direct Parameter[T] usage (e.g. Parameter[str])
+        if t.type.fullname == "luigi.parameter.Parameter" and t.args:
+            return t.args[0]
+
+        # Parameter subclass (e.g. IntParameter extends Parameter[int])
+        for base in t.type.bases:
+            if (
+                isinstance(base, Instance)
+                and base.type.fullname == "luigi.parameter.Parameter"
+            ):
+                if base.args:
+                    return base.args[0]
+                break
+
+        return AnyType(TypeOfAny.unannotated)
 
 
 def plugin(version: str) -> type[Plugin]:
