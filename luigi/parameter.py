@@ -211,7 +211,19 @@ class Parameter(Generic[T]):
     def __get__(self, instance: Any, owner: Any) -> T: ...
 
     def __get__(self, instance: Any, owner: Any) -> Any:
-        return self
+        if instance is None:
+            return self
+        return instance.__dict__[self._attribute_name]
+
+    def __set_name__(self, owner, name):
+        self._attribute_name = name
+
+    def __set__(self, instance: Any, value: T):
+        if self._attribute_name is None:
+            raise RuntimeError(
+                "Parameter name not set. ensure it's defined as a class attribute."
+            )
+        instance.__dict__[self._attribute_name] = value
 
     def _get_value_from_config(self, section, name):
         """Loads the default from the config. Returns _no_value if it doesn't exist"""
