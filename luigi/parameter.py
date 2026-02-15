@@ -709,6 +709,15 @@ class DateSecondParameter(_DatetimeParameterBase):
     _timedelta = datetime.timedelta(seconds=1)
 
 
+class StrParameter(Parameter[str]):
+    """
+    Parameter whose value is a ``str``.
+    """
+
+    def parse(self, x):
+        return str(x)
+
+
 class IntParameter(Parameter[int]):
     """
     Parameter whose value is an ``int``.

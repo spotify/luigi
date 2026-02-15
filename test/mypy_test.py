@@ -94,7 +94,11 @@ MyTask(
 """
 
         stdout, stderr, exitcode = _run_mypy(test_code)
-        self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertEqual(
+            exitcode,
+            0,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
         self.assertIn("Success: no issues found", stdout)
 
     def test_plugin_invalid_arg(self):
@@ -119,7 +123,11 @@ MyTask(foo='1', bar="bar", unknown="unknown")
 
         stdout, stderr, exitcode = _run_mypy(test_code)
 
-        self.assertEqual(exitcode, 1, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertEqual(
+            exitcode,
+            1,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
         self.assertIn(
             'error: Incompatible types in assignment (expression has type "int", variable has type "str")  [assignment]',
             stdout,
@@ -154,7 +162,11 @@ class MyTask(luigi.Task):
 """
 
         stdout, stderr, exitcode = _run_mypy(test_code)
-        self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertEqual(
+            exitcode,
+            0,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
         self.assertIn("Success: no issues found", stdout)
 
     def test_plugin_parameter_type_annotation(self):
@@ -173,13 +185,17 @@ import luigi
 
 class MyTask(luigi.Task):
     foo: luigi.IntParameter = luigi.IntParameter()
-    bar: luigi.Parameter[str] = luigi.Parameter()
+    bar: luigi.StrParameter = luigi.StrParameter()
 
 MyTask(foo=1, bar='2')
 """
 
         stdout, stderr, exitcode = _run_mypy(test_code)
-        self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertEqual(
+            exitcode,
+            0,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
         self.assertIn("Success: no issues found", stdout)
 
     def test_plugin_parameter_type_annotation_invalid_arg(self):
@@ -196,13 +212,17 @@ import luigi
 
 class MyTask(luigi.Task):
     foo: luigi.IntParameter = luigi.IntParameter()
-    bar: luigi.Parameter[str] = luigi.Parameter()
+    bar: luigi.StrParameter = luigi.StrParameter()
 
 MyTask(foo='1', bar='2')
 """
 
         stdout, stderr, exitcode = _run_mypy(test_code)
-        self.assertEqual(exitcode, 1, f'Expected mypy error but got:\nstdout: {stdout}\nstderr: {stderr}')
+        self.assertEqual(
+            exitcode,
+            1,
+            f"Expected mypy error but got:\nstdout: {stdout}\nstderr: {stderr}",
+        )
         self.assertIn(
             'error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"',
             stdout,

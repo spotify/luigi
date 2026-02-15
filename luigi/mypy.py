@@ -458,7 +458,7 @@ class TaskTransformer:
         t = get_proper_type(sym.type)
 
         # If the type annotation is a Parameter subclass, resolve to the inner type T
-        # e.g. IntParameter -> int, Parameter[str] -> str
+        # e.g. IntParameter -> int, StrParameter -> str
         if isinstance(t, Instance):
             is_param = self._task_plugin.check_parameter(t.type.fullname)
             if is_param:
