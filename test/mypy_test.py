@@ -5,6 +5,22 @@ import unittest
 from mypy import api
 
 
+def _run_mypy(test_code: str):
+    with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
+        test_file.write(test_code.encode("utf-8"))
+        test_file.flush()
+        return api.run(
+            [
+                "--no-incremental",
+                "--cache-dir=/dev/null",
+                "--show-traceback",
+                "--config-file",
+                "test/testconfig/pyproject.toml",
+                test_file.name,
+            ]
+        )
+
+
 class TestMyMypyPlugin(unittest.TestCase):
     def test_plugin_no_issue(self):
         if sys.version_info[:2] < (3, 8):
@@ -77,21 +93,13 @@ MyTask(
 )
 """
 
-        with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
-            test_file.write(test_code.encode("utf-8"))
-            test_file.flush()
-            stdout, stderr, exitcode = api.run(
-                [
-                    "--no-incremental",
-                    "--cache-dir=/dev/null",
-                    "--show-traceback",
-                    "--config-file",
-                    "test/testconfig/pyproject.toml",
-                    test_file.name,
-                ]
-            )
-            self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
-            self.assertIn("Success: no issues found", stdout)
+        stdout, stderr, exitcode = _run_mypy(test_code)
+        self.assertEqual(
+            exitcode,
+            0,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
+        self.assertIn("Success: no issues found", stdout)
 
     def test_plugin_invalid_arg(self):
         if sys.version_info[:2] < (3, 8):
@@ -113,34 +121,26 @@ class MyTask(luigi.Task):
 MyTask(foo='1', bar="bar", unknown="unknown")
         """
 
-        with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
-            test_file.write(test_code.encode("utf-8"))
-            test_file.flush()
-            stdout, stderr, exitcode = api.run(
-                [
-                    "--no-incremental",
-                    "--cache-dir=/dev/null",
-                    "--show-traceback",
-                    "--config-file",
-                    "test/testconfig/pyproject.toml",
-                    test_file.name,
-                ]
-            )
+        stdout, stderr, exitcode = _run_mypy(test_code)
 
-            self.assertEqual(exitcode, 1, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
-            self.assertIn(
-                'error: Incompatible types in assignment (expression has type "int", variable has type "str")  [assignment]',
-                stdout,
-            )  # check baz assignment
-            self.assertIn(
-                'error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"  [arg-type]',
-                stdout,
-            )  # check foo argument
-            self.assertIn(
-                'error: Unexpected keyword argument "unknown" for "MyTask"  [call-arg]',
-                stdout,
-            )  # check unknown argument
-            self.assertIn("Found 3 errors in 1 file (checked 1 source file)", stdout)
+        self.assertEqual(
+            exitcode,
+            1,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
+        self.assertIn(
+            'error: Incompatible types in assignment (expression has type "int", variable has type "str")  [assignment]',
+            stdout,
+        )  # check baz assignment
+        self.assertIn(
+            'error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"  [arg-type]',
+            stdout,
+        )  # check foo argument
+        self.assertIn(
+            'error: Unexpected keyword argument "unknown" for "MyTask"  [call-arg]',
+            stdout,
+        )  # check unknown argument
+        self.assertIn("Found 3 errors in 1 file (checked 1 source file)", stdout)
 
     def test_plugin_custom_parameter_subclass_without_default_arg(self):
         """Test for issue #3376: Custom Parameter subclass without 'default' in __init__"""
@@ -161,18 +161,70 @@ class MyTask(luigi.Task):
     path = CustomPathParameter()
 """
 
-        with tempfile.NamedTemporaryFile(suffix=".py") as test_file:
-            test_file.write(test_code.encode("utf-8"))
-            test_file.flush()
-            stdout, stderr, exitcode = api.run(
-                [
-                    "--no-incremental",
-                    "--cache-dir=/dev/null",
-                    "--show-traceback",
-                    "--config-file",
-                    "test/testconfig/pyproject.toml",
-                    test_file.name,
-                ]
-            )
-            self.assertEqual(exitcode, 0, f'mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}')
-            self.assertIn("Success: no issues found", stdout)
+        stdout, stderr, exitcode = _run_mypy(test_code)
+        self.assertEqual(
+            exitcode,
+            0,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
+        self.assertIn("Success: no issues found", stdout)
+
+    def test_plugin_parameter_type_annotation(self):
+        """Test that Parameter types can be used as type annotations.
+
+        Users should be able to write:
+            foo: luigi.IntParameter = luigi.IntParameter()
+            bar: luigi.Parameter[str] = luigi.Parameter()
+        """
+        if sys.version_info[:2] < (3, 8):
+            return
+
+        test_code = """
+import luigi
+
+
+class MyTask(luigi.Task):
+    foo: luigi.IntParameter = luigi.IntParameter()
+    bar: luigi.StrParameter = luigi.StrParameter()
+
+MyTask(foo=1, bar='2')
+"""
+
+        stdout, stderr, exitcode = _run_mypy(test_code)
+        self.assertEqual(
+            exitcode,
+            0,
+            f"mypy plugin error occurred:\nstdout: {stdout}\nstderr: {stderr}",
+        )
+        self.assertIn("Success: no issues found", stdout)
+
+    def test_plugin_parameter_type_annotation_invalid_arg(self):
+        """Test that Parameter type annotations catch type errors in __init__ args.
+
+        MyTask(foo='1', bar='2') should error because foo expects int, not str.
+        """
+        if sys.version_info[:2] < (3, 8):
+            return
+
+        test_code = """
+import luigi
+
+
+class MyTask(luigi.Task):
+    foo: luigi.IntParameter = luigi.IntParameter()
+    bar: luigi.StrParameter = luigi.StrParameter()
+
+MyTask(foo='1', bar='2')
+"""
+
+        stdout, stderr, exitcode = _run_mypy(test_code)
+        self.assertEqual(
+            exitcode,
+            1,
+            f"Expected mypy error but got:\nstdout: {stdout}\nstderr: {stderr}",
+        )
+        self.assertIn(
+            'error: Argument "foo" to "MyTask" has incompatible type "str"; expected "int"',
+            stdout,
+        )
+        self.assertIn("Found 1 error in 1 file (checked 1 source file)", stdout)
