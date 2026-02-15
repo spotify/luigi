@@ -1225,7 +1225,10 @@ class OptionalDictParameter(OptionalParameterMixin, DictParameter):
     expected_type = FrozenOrderedDict
 
 
-class ListParameter(Parameter[Tuple[Any, ...]]):
+ListT = TypeVar("ListT", bound=tuple, default=Tuple[Any, ...])
+
+
+class ListParameter(Parameter[ListT]):
     """
     Parameter whose value is a ``list``.
 
@@ -1382,7 +1385,7 @@ class OptionalListParameter(OptionalParameterMixin, ListParameter):
     expected_type = tuple
 
 
-class TupleParameter(ListParameter):
+class TupleParameter(ListParameter[ListT]):
     """
     Parameter whose value is a ``tuple`` or ``tuple`` of tuples.
 
