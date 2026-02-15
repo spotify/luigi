@@ -94,6 +94,26 @@ class TaskPlugin(Plugin):
         transformer = TaskTransformer(ctx.cls, ctx.reason, ctx.api, self)
         transformer.transform()
 
+    def _infer_choice_enum_element_type(
+        self, ctx: FunctionContext, default_type: Instance
+    ) -> Type:
+        """Infer the element type for Choice/Enum parameter variants.
+
+        Checks the type argument first, then falls back to the 'choices' kwarg.
+        """
+        element_type: Type = (
+            default_type.args[0]
+            if default_type.args
+            else AnyType(TypeOfAny.unannotated)
+        )
+        for i, names in enumerate(ctx.arg_names):
+            for j, name in enumerate(names):
+                if name == "choices":
+                    choices_type = get_proper_type(ctx.arg_types[i][j])
+                    if isinstance(choices_type, Instance) and choices_type.args:
+                        element_type = choices_type.args[0]
+        return element_type
+
     def _task_parameter_field_callback(self, ctx: FunctionContext) -> Type:
         """Extract the type of the `default` argument from the Field function, and use it as the return type.
 
@@ -108,35 +128,20 @@ class TaskPlugin(Plugin):
         # Try to get the return type from __new__ method
         default_type = ctx.default_return_type
         if isinstance(default_type, Instance):
-            # Handle Choice/Enum parameters by inferring from var_type or choices argument
+            # Handle Choice/Enum list parameters (ChoiceListParameter, EnumListParameter)
             if default_type.type.fullname in (
                 "luigi.parameter.ChoiceListParameter",
                 "luigi.parameter.EnumListParameter",
+            ):
+                element_type = self._infer_choice_enum_element_type(ctx, default_type)
+                return ctx.api.named_generic_type("builtins.tuple", [element_type])
+
+            # Handle Choice/Enum scalar parameters (ChoiceParameter, EnumParameter)
+            if default_type.type.fullname in (
                 "luigi.parameter.ChoiceParameter",
                 "luigi.parameter.EnumParameter",
             ):
-                element_type: Type = (
-                    default_type.args[0]
-                    if default_type.args
-                    else AnyType(TypeOfAny.unannotated)
-                )
-
-                # Infer from choices argument (may be in **kwargs, so search all arg groups)
-                for i, names in enumerate(ctx.arg_names):
-                    for j, name in enumerate(names):
-                        if name == "choices":
-                            choices_type = get_proper_type(ctx.arg_types[i][j])
-                            if isinstance(choices_type, Instance) and choices_type.args:
-                                element_type = choices_type.args[0]
-
-                is_list = default_type.type.fullname in (
-                    "luigi.parameter.ChoiceListParameter",
-                    "luigi.parameter.EnumListParameter",
-                )
-                if is_list:
-                    return ctx.api.named_generic_type("builtins.tuple", [element_type])
-                else:
-                    return element_type
+                return self._infer_choice_enum_element_type(ctx, default_type)
 
             # Check if a 'default' argument is explicitly provided
             try:
