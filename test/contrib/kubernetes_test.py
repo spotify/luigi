@@ -110,3 +110,57 @@ class TestK8STask(unittest.TestCase):
         kubernetes_job._KubernetesJobTask__track_job()
         # Make sure successful job signals
         self.assertTrue(mock_signal.called)
+
+    def test_cluster_is_scaling(self):
+        kubernetes_job = KubernetesJobTask()
+        condition = {
+            "reason": "Unschedulable",
+            "message": "0/1 nodes are available: 1 Insufficient cpu, 1 Insufficient memory."
+        }
+        assert kubernetes_job.__is_scaling_in_progress(condition)
+
+        condition = {
+            "reason": "ContainersNotReady",
+            "message": "0/1 nodes are available: 1 Insufficient cpu, 1 Insufficient memory."
+        }
+        assert kubernetes_job.__is_scaling_in_progress(condition) is False
+
+        condition = {
+            "reason": "Unschedulable",
+            "message": "1/1 nodes are available: 1 Insufficient cpu, 1 Insufficient memory."
+        }
+        assert kubernetes_job.__is_scaling_in_progress(condition) is True
+
+        condition = {
+            "reason": "Unschedulable",
+            "message": "other message"
+        }
+        assert kubernetes_job.__is_scaling_in_progress(condition) is False
+
+        condition = {
+            "message": "other message"
+        }
+        assert kubernetes_job.__is_scaling_in_progress(condition) is False
+
+    @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__get_job_status")
+    @mock.patch.object(KubernetesJobTask, "KubernetesJobTask__get_pods")
+    def test_output_when_scaling(self, mock_get_pods, mock_job_status):
+        # mock that the job succeeded
+        cond1 = {
+            "reason": "Unschedulable",
+            "message": "1/1 nodes are available: 1 Insufficient cpu, 1 Insufficient memory."
+        }
+        mock_job_status.return_value = "succeeded"
+        mock_get_pods.return_value = [
+            {
+                'conditions': [
+                    cond1
+                ]
+             }
+        ]
+        # create a kubernetes job
+        kubernetes_job = KubernetesJobTask()
+        # set logger and uu_name due to logging in __track_job()
+        kubernetes_job._KubernetesJobTask__logger = logger
+        kubernetes_job.uu_name = "test"
+        self.assertTrue(kubernetes_job._KubernetesJobTask____verify_job_has_started())
