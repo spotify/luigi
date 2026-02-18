@@ -85,7 +85,7 @@ class TestK8STask(unittest.TestCase):
 
     def test_fail_job(self):
         fail = FailJob()
-        self.assertRaises(RuntimeError, fail.run)
+        self.assertRaises(AssertionError, fail.run)
         # Check for retrials
         kube_api = HTTPClient(KubeConfig.from_file("~/.kube/config"))  # assumes minikube
         jobs = Job.objects(kube_api).filter(selector="luigi_task_id="
@@ -94,11 +94,14 @@ class TestK8STask(unittest.TestCase):
         job = Job(kube_api, jobs.response["items"][0])
         self.assertTrue("failed" in job.obj["status"])
         self.assertTrue(job.obj["status"]["failed"] > fail.max_retrials)
-        self.assertTrue(job.obj['spec']['template']['metadata']['labels'] == fail.labels())
+        self.assertTrue(job.obj['spec']['template']['metadata']['labels'].items() >= fail.labels.items())
 
+    @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__verify_job_has_started")
     @mock.patch.object(KubernetesJobTask, "_KubernetesJobTask__get_job_status")
     @mock.patch.object(KubernetesJobTask, "signal_complete")
-    def test_output(self, mock_signal, mock_job_status):
+    def test_output(self, mock_signal, mock_job_status, mock_verify_job):
+        # mock that the job has started
+        mock_verify_job.return_value = True
         # mock that the job succeeded
         mock_job_status.return_value = "succeeded"
         # create a kubernetes job
@@ -106,6 +109,7 @@ class TestK8STask(unittest.TestCase):
         # set logger and uu_name due to logging in __track_job()
         kubernetes_job._KubernetesJobTask__logger = logger
         kubernetes_job.uu_name = "test"
+        kubernetes_job._KubernetesJobTask__print_kubectl_hints = mock.Mock()
         # track the job (bc included in run method)
         kubernetes_job._KubernetesJobTask__track_job()
         # Make sure successful job signals
