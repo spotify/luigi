@@ -490,9 +490,12 @@ class S3Client(FileSystem):
 
     @staticmethod
     def _get_s3_config(key=None):
-        defaults = dict(configuration.get_config().defaults())
+        # LuigiConfigParser has defaults since [DEFAULT] is a special section
+        # LuigiTomlParser does not have it because [DEFAULT] is not a special section
+        luigi_config = configuration.get_config()
+        defaults = dict(luigi_config.defaults()) if hasattr(luigi_config, "defaults") else {}
         try:
-            config = dict(configuration.get_config().items('s3'))
+            config = dict(luigi_config['s3'])
         except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
