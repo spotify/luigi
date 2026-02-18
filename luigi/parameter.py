@@ -1083,7 +1083,10 @@ class _DictParamEncoder(JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-class DictParameter(Parameter[Dict[Any, Any]]):
+DictT = TypeVar("DictT", bound=dict, default=Dict[Any, Any])
+
+
+class DictParameter(Parameter[DictT]):
     """
     Parameter whose value is a ``dict``.
 
