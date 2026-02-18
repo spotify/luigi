@@ -34,12 +34,14 @@ def getpcmd(pid):
     :param pid:
     """
     if os.name == "nt":
-        # Use wmic command instead of ps on Windows.
-        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid, )
+        # Use powershell command instead of ps on Windows.
+        pcmd = (f"Get-CimInstance Win32_Process -Filter 'ProcessId={pid}' | "
+                 "Select-Object CommandLine")
+        cmd = f'powershell.exe -Command "{pcmd}"'
         with os.popen(cmd, 'r') as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
             if lines:
-                _, val = lines
+                val = lines[-1]
                 return val
     elif sys.platform == "darwin":
         # Use pgrep instead of /proc on macOS.
