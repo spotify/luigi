@@ -169,7 +169,9 @@ class ElasticsearchTarget(luigi.Target):
 
         The document id would be sufficient but,
         for documentation,
-        we index the parameters `update_id`, `target_index`, `target_doc_type` and `date` as well.
+        we index the parameters `update_id`, `target_index`, `target_doc_type` and `date` as well.  `date_utc` added
+        so we can be sure to get the actual date and time based upon UTC and not the client date and time based on the
+        client machine.
         """
         self.create_marker_index()
         self.es.index(index=self.marker_index, doc_type=self.marker_doc_type,
@@ -177,7 +179,8 @@ class ElasticsearchTarget(luigi.Target):
                           'update_id': self.update_id,
                           'target_index': self.index,
                           'target_doc_type': self.doc_type,
-                          'date': datetime.datetime.now()})
+                          'date': datetime.datetime.now(),
+                          'date_utc': datetime.datetime.utcnow()})
         self.es.indices.flush(index=self.marker_index)
         self.ensure_hist_size()
 
