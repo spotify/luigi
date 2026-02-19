@@ -47,7 +47,22 @@ from luigi.cmdline_parser import CmdlineParser
 
 from .freezing import FrozenOrderedDict, recursively_freeze, recursively_unfreeze
 
-_no_value = object()
+
+class _NoValueType:
+    """Sentinel class representing "no default value provided"."""
+
+    _instance: "Optional[_NoValueType]" = None
+
+    def __new__(cls) -> "_NoValueType":
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __repr__(self) -> str:
+        return "<no_value>"
+
+
+_no_value = _NoValueType()
 
 
 class ParameterVisibility(IntEnum):
@@ -149,9 +164,18 @@ class Parameter(Generic[T]):
     """
     _counter = 0  # non-atomically increasing counter used for ordering parameters.
 
-    def __init__(self, default=_no_value, is_global=False, significant=True, description=None,
-                 config_path=None, positional=True, always_in_help=False, batch_method=None,
-                 visibility=ParameterVisibility.PUBLIC):
+    def __init__(
+        self,
+        default: Union[T, _NoValueType] = _no_value,
+        is_global: bool = False,
+        significant: bool = True,
+        description: Optional[str] = None,
+        config_path: Optional[str] = None,
+        positional: bool = True,
+        always_in_help: bool = False,
+        batch_method=None,
+        visibility=ParameterVisibility.PUBLIC,
+    ):
         """
         :param default: the default value for this parameter. This should match the type of the
                         Parameter, i.e. ``datetime.date`` for ``DateParameter`` or ``int`` for
