@@ -37,9 +37,9 @@ from typing import (
     Sequence,
     Tuple,
     Type,
+    TypedDict,
     Union,
     overload,
-    TypedDict,
 )
 
 from typing_extensions import TypeVar, Unpack
