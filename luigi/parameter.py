@@ -501,7 +501,7 @@ class _DateParameterBase(Parameter[datetime.date]):
         start: Optional[datetime.date] = None,
         **kwargs: Unpack[_ParameterKwargs],
     ):
-        super(_DateParameterBase, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         self.interval = interval
         self.start = start if start is not None else _UNIX_EPOCH.date()
 
@@ -652,7 +652,7 @@ class _DatetimeParameterBase(Parameter[datetime.datetime]):
         start: Optional[datetime.datetime] = None,
         **kwargs: Unpack[_ParameterKwargs],
     ):
-        super(_DatetimeParameterBase, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         self.interval = interval
         self.start = start if start is not None else _UNIX_EPOCH
 
@@ -749,7 +749,7 @@ class DateMinuteParameter(_DatetimeParameterBase):
             )
             return value
         except ValueError:
-            return super(DateMinuteParameter, self).parse(x)
+            return super().parse(x)
 
 
 class DateSecondParameter(_DatetimeParameterBase):
@@ -856,7 +856,7 @@ class BoolParameter(Parameter[bool]):
         **kwargs: Unpack[_ParameterKwargs],
     ):
         self.parsing = parsing
-        super(BoolParameter, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         if self._default == _no_value:
             self._default = False
 
@@ -879,7 +879,7 @@ class BoolParameter(Parameter[bool]):
             return None
 
     def _parser_kwargs(self, *args, **kwargs):
-        parser_kwargs = super(BoolParameter, self)._parser_kwargs(*args, **kwargs)
+        parser_kwargs = super()._parser_kwargs(*args, **kwargs)
         if self.parsing == self.IMPLICIT_PARSING:
             parser_kwargs["action"] = "store_true"
         elif self.parsing == self.EXPLICIT_PARSING:
@@ -1081,7 +1081,7 @@ class EnumParameter(Parameter[EnumParameterType]):
         if enum is None:
             raise ParameterException('An enum class must be specified.')
         self._enum = enum
-        super(EnumParameter, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
 
     def parse(self, x):
         try:
@@ -1130,7 +1130,7 @@ class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
         if enum is None:
             raise ParameterException('An enum class must be specified.')
         self._enum = enum
-        super(EnumListParameter, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
 
     def parse(self, x):
         values = [] if x == '' else x.split(self._sep)
@@ -1248,7 +1248,7 @@ class DictParameter(Parameter[DictT]):
     def __init__(
         self,
         default: Union[DictT, _NoValueType] = _no_value,
-        *args,
+        *,
         schema=None,
         **kwargs: Unpack[_ParameterKwargs],
     ):
@@ -1602,7 +1602,7 @@ class NumericalParameter(Parameter[NumericalType]):
                 min_value=self._min_value, max_value=self._max_value,
                 left_endpoint="[" if left_op == operator.le else "(",
                 right_endpoint=")" if right_op == operator.lt else "]"))
-        super(NumericalParameter, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         if self.description:
             self.description += " "
         else:
@@ -1679,7 +1679,7 @@ class ChoiceParameter(Parameter[ChoiceType]):
         self._choices = set(choices)
         self._var_type = var_type
         assert all(type(choice) is self._var_type for choice in self._choices), "Invalid type in choices"
-        super(ChoiceParameter, self).__init__(default=default, **kwargs)
+        super().__init__(default=default, **kwargs)
         if self.description:
             self.description += " "
         else:
@@ -1744,7 +1744,7 @@ class ChoiceListParameter(ChoiceParameter[ChoiceType]):
         choices: Optional[Sequence[ChoiceType]] = None,
         **kwargs: Unpack[_ParameterKwargs],
     ):
-        super(ChoiceListParameter, self).__init__(
+        super().__init__(
             default=default, var_type=var_type, choices=choices, **kwargs
         )  # type: ignore[arg-type]
 
