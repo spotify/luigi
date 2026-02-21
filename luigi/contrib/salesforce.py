@@ -49,7 +49,7 @@ def get_soql_fields(soql):
 
 
 def ensure_utf(value):
-    return value.encode("utf-8") if isinstance(value, unicode) else value
+    return value.encode("utf-8") if isinstance(value, str) else value
 
 
 def parse_results(fields, data):
