@@ -28,8 +28,7 @@ from luigi.contrib import hdfs
 
 
 class ComplexOldFormat(luigi.format.Format):
-    """Should take unicode but output bytes
-    """
+    """Should take unicode but output bytes"""
 
     def hdfs_writer(self, output_pipe):
         return self.pipe_writer(luigi.contrib.hdfs.Plain.hdfs_writer(output_pipe))
@@ -46,7 +45,6 @@ class TestException(Exception):
 
 
 class HdfsTargetTestMixin(FileSystemTargetTestMixin):
-
     def create_target(self, format=None):
         target = hdfs.HdfsTarget(self._test_file(), format=format)
         if target.exists():
@@ -80,8 +78,8 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         if self.fs.exists(parent):
             self.fs.remove(parent, skip_trash=True)
         self.assertFalse(self.fs.exists(parent))
-        fobj = target.open('w')
-        fobj.write('lol\n')
+        fobj = target.open("w")
+        fobj.write("lol\n")
         fobj.close()
         self.assertTrue(self.fs.exists(parent))
         self.assertTrue(target.exists())
@@ -91,18 +89,19 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         target = hdfs.HdfsTarget(path, is_tmp=True)
         if target.exists():
             target.remove(skip_trash=True)
-        with target.open('w') as fobj:
-            fobj.write('lol\n')
+        with target.open("w") as fobj:
+            fobj.write("lol\n")
         self.assertTrue(target.exists())
         del target
         import gc
+
         gc.collect()
         self.assertFalse(self.fs.exists(path))
 
     def test_luigi_tmp(self):
         target = hdfs.HdfsTarget(is_tmp=True)
         self.assertFalse(target.exists())
-        with target.open('w'):
+        with target.open("w"):
             pass
         self.assertTrue(target.exists())
 
@@ -111,7 +110,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         target2 = hdfs.HdfsTarget(self._test_file())
         if target2.exists():
             target2.remove(skip_trash=True)
-        with target.open('w'):
+        with target.open("w"):
             pass
         self.assertTrue(target.exists())
         target.move(target2.path)
@@ -119,13 +118,13 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         self.assertTrue(target2.exists())
 
     def test_rename_no_parent(self):
-        parent = self._test_dir() + '/foo'
+        parent = self._test_dir() + "/foo"
         if self.fs.exists(parent):
             self.fs.remove(parent, skip_trash=True)
 
         target1 = hdfs.HdfsTarget(is_tmp=True)
-        target2 = hdfs.HdfsTarget(parent + '/bar')
-        with target1.open('w'):
+        target2 = hdfs.HdfsTarget(parent + "/bar")
+        with target1.open("w"):
             pass
         self.assertTrue(target1.exists())
         target1.move(target2.path)
@@ -133,13 +132,13 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         self.assertTrue(target2.exists())
 
     def test_rename_no_grandparent(self):
-        grandparent = self._test_dir() + '/foo'
+        grandparent = self._test_dir() + "/foo"
         if self.fs.exists(grandparent):
             self.fs.remove(grandparent, skip_trash=True)
 
         target1 = hdfs.HdfsTarget(is_tmp=True)
-        target2 = hdfs.HdfsTarget(grandparent + '/bar/baz')
-        with target1.open('w'):
+        target2 = hdfs.HdfsTarget(grandparent + "/bar/baz")
+        with target1.open("w"):
             pass
         self.assertTrue(target1.exists())
         target1.move(target2.path)
@@ -155,12 +154,12 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         t2 = hdfs.HdfsTarget(target_dir.path + "/part-00002")
         t3 = hdfs.HdfsTarget(target_dir.path + "/another")
 
-        with t1.open('w') as f:
-            f.write('foo\n')
-        with t2.open('w') as f:
-            f.write('bar\n')
-        with t3.open('w') as f:
-            f.write('biz\n')
+        with t1.open("w") as f:
+            f.write("foo\n")
+        with t2.open("w") as f:
+            f.write("bar\n")
+        with t3.open("w") as f:
+            f.write("biz\n")
 
         files = hdfs.HdfsTarget("%s/part-0000*" % target_dir.path)
 
@@ -174,7 +173,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
             expected_regexp = re.compile(expected_regexp)
         if not expected_regexp.search(text):
             msg = msg or "Regexp didn't match"
-            msg = '%s: %r not found in %r' % (msg, expected_regexp.pattern, text)
+            msg = "%s: %r not found in %r" % (msg, expected_regexp.pattern, text)
             raise self.failureException(msg)
 
     def test_tmppath_not_configured(self):
@@ -215,8 +214,7 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         self.assertRegexpMatches(res9, "/tmp/tmpdir/file")
 
     def test_tmppath_username(self):
-        self.assertRegexpMatches(hdfs.tmppath('/path/to/stuff', include_unix_username=True),
-                                 "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\\d+")
+        self.assertRegexpMatches(hdfs.tmppath("/path/to/stuff", include_unix_username=True), "^/tmp/[a-z0-9_]+/path/to/stuff-luigitemp-\\d+")
 
     def test_pickle(self):
         t = hdfs.HdfsTarget("/tmp/dir")
@@ -229,10 +227,10 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
         self.assertFalse(target.exists())
 
         t1 = hdfs.HdfsTarget(target.path + "part-00000", format=format)
-        with t1.open('w'):
+        with t1.open("w"):
             pass
         t2 = hdfs.HdfsTarget(target.path + "_SUCCESS", format=format)
-        with t2.open('w'):
+        with t2.open("w"):
             pass
         self.assertTrue(target.exists())
 
@@ -242,26 +240,25 @@ class HdfsTargetTestMixin(FileSystemTargetTestMixin):
 
 
 class _MiscOperationsMixin:
-
     # TODO: chown/chmod/count should really be methods on HdfsTarget rather than the client!
 
     def get_target(self):
-        fn = '/tmp/foo-%09d' % random.randint(0, 999999999)
+        fn = "/tmp/foo-%09d" % random.randint(0, 999999999)
         t = luigi.contrib.hdfs.HdfsTarget(fn)
-        with t.open('w') as f:
-            f.write('test')
+        with t.open("w") as f:
+            f.write("test")
         return t
 
     def test_count(self):
         t = self.get_target()
         res = self.get_client().count(t.path)
-        for key in ['content_size', 'dir_count', 'file_count']:
+        for key in ["content_size", "dir_count", "file_count"]:
             self.assertTrue(key in res)
 
     def test_chmod(self):
         t = self.get_target()
-        self.get_client().chmod(t.path, '777')
+        self.get_client().chmod(t.path, "777")
 
     def test_chown(self):
         t = self.get_target()
-        self.get_client().chown(t.path, 'root', 'root')
+        self.get_client().chown(t.path, "root", "root")

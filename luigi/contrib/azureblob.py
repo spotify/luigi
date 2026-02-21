@@ -25,7 +25,7 @@ from azure.storage.blob import BlobServiceClient
 from luigi.format import get_default_format
 from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemTarget
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class AzureBlobClient(FileSystem):
@@ -41,6 +41,7 @@ class AzureBlobClient(FileSystem):
     solution to this issue is to create Shared `Access Signatures` aka `sas`. A SAS can be created for an entire
     container or just a single blob. SAS can be revoked.
     """
+
     def __init__(self, account_name=None, account_key=None, sas_token=None, **kwargs):
         """
         :param str account_name:
@@ -63,33 +64,25 @@ class AzureBlobClient(FileSystem):
             * `token_credential` - A token credential used to authenticate HTTPS requests. The token value should be updated before its expiration.
         """
         if kwargs.get("custom_domain"):
-            account_url = "{protocol}://{custom_domain}/{account_name}".format(protocol=kwargs.get("protocol", "https"),
-                                                                               custom_domain=kwargs.get("custom_domain"),
-                                                                               account_name=account_name)
+            account_url = "{protocol}://{custom_domain}/{account_name}".format(
+                protocol=kwargs.get("protocol", "https"), custom_domain=kwargs.get("custom_domain"), account_name=account_name
+            )
         else:
-            account_url = "{protocol}://{account_name}.blob.{endpoint_suffix}".format(protocol=kwargs.get("protocol",
-                                                                                                          "https"),
-                                                                                      account_name=account_name,
-                                                                                      endpoint_suffix=kwargs.get(
-                                                                                          "endpoint_suffix",
-                                                                                          "core.windows.net"))
+            account_url = "{protocol}://{account_name}.blob.{endpoint_suffix}".format(
+                protocol=kwargs.get("protocol", "https"), account_name=account_name, endpoint_suffix=kwargs.get("endpoint_suffix", "core.windows.net")
+            )
 
-        self.options = {
-            "account_name": account_name,
-            "account_key": account_key,
-            "account_url": account_url,
-            "sas_token": sas_token}
+        self.options = {"account_name": account_name, "account_key": account_key, "account_url": account_url, "sas_token": sas_token}
         self.kwargs = kwargs
 
     @property
     def connection(self):
         if self.kwargs.get("connection_string"):
-            return BlobServiceClient.from_connection_string(conn_str=self.kwargs.get("connection_string"),
-                                                            **self.kwargs)
+            return BlobServiceClient.from_connection_string(conn_str=self.kwargs.get("connection_string"), **self.kwargs)
         else:
-            return BlobServiceClient(account_url=self.options.get("account_url"),
-                                     credential=self.options.get("account_key") or self.options.get("sas_token"),
-                                     **self.kwargs)
+            return BlobServiceClient(
+                account_url=self.options.get("account_url"), credential=self.options.get("account_key") or self.options.get("sas_token"), **self.kwargs
+            )
 
     def container_client(self, container_name):
         return self.connection.get_container_client(container_name)
@@ -99,36 +92,29 @@ class AzureBlobClient(FileSystem):
         return container_client.get_blob_client(blob_name)
 
     def upload(self, tmp_path, container, blob, **kwargs):
-        logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(
-            tmp_path=tmp_path, container=container, blob=blob))
+        logging.debug("Uploading file '{tmp_path}' to container '{container}' and blob '{blob}'".format(tmp_path=tmp_path, container=container, blob=blob))
         self.create_container(container)
         lease = None
         blob_client = self.blob_client(container, blob)
         if blob_client.exists():
             lease = blob_client.acquire_lease()
         try:
-            with open(tmp_path, 'rb') as data:
-                blob_client.upload_blob(data,
-                                        overwrite=True,
-                                        lease=lease,
-                                        progress_hook=kwargs.get("progress_callback"))
+            with open(tmp_path, "rb") as data:
+                blob_client.upload_blob(data, overwrite=True, lease=lease, progress_hook=kwargs.get("progress_callback"))
         finally:
             if lease is not None:
                 lease.release()
 
     def download_as_bytes(self, container, blob, bytes_to_read=None):
-        logging.debug("Downloading from container '{container}' and blob '{blob}' as bytes".format(
-            container=container, blob=blob))
+        logging.debug("Downloading from container '{container}' and blob '{blob}' as bytes".format(container=container, blob=blob))
         blob_client = self.blob_client(container, blob)
-        download_stream = blob_client.download_blob(offset=0, length=bytes_to_read) if bytes_to_read \
-            else blob_client.download_blob()
+        download_stream = blob_client.download_blob(offset=0, length=bytes_to_read) if bytes_to_read else blob_client.download_blob()
         return download_stream.readall()
 
     def download_as_file(self, container, blob, location):
-        logging.debug("Downloading from container '{container}' and blob '{blob}' to {location}".format(
-            container=container, blob=blob, location=location))
+        logging.debug("Downloading from container '{container}' and blob '{blob}' to {location}".format(container=container, blob=blob, location=location))
         blob_client = self.blob_client(container, blob)
-        with open(location, 'wb') as file:
+        with open(location, "wb") as file:
             download_stream = blob_client.download_blob()
             file.write(download_stream.readall())
         return blob_client.get_blob_properties()
@@ -162,8 +148,7 @@ class AzureBlobClient(FileSystem):
     def mkdir(self, path, parents=True, raise_if_exists=False):
         container, blob = self.splitfilepath(path)
         if raise_if_exists and self.exists(path):
-            raise FileAlreadyExists("The Azure blob path '{blob}' already exists under container '{container}'".format(
-                blob=blob, container=container))
+            raise FileAlreadyExists("The Azure blob path '{blob}' already exists under container '{container}'".format(blob=blob, container=container))
 
     def isdir(self, path):
         """
@@ -187,16 +172,15 @@ class AzureBlobClient(FileSystem):
             raise Exception(
                 "Can't copy blob from '{source_container}' to '{dest_container}'. File can be moved within container".format(
                     source_container=source_container, dest_container=dest_container
-                ))
+                )
+            )
 
         source_blob_client = self.blob_client(source_container, source_blob)
         dest_blob_client = self.blob_client(dest_container, dest_blob)
         source_lease = source_blob_client.acquire_lease()
         destination_lease = dest_blob_client.acquire_lease() if self.exists(dest) else None
         try:
-            return dest_blob_client.start_copy_from_url(source_url=source_blob_client.url,
-                                                        source_lease=source_lease,
-                                                        destination_lease=destination_lease)
+            return dest_blob_client.start_copy_from_url(source_url=source_blob_client.url, source_lease=source_lease, destination_lease=destination_lease)
         finally:
             source_lease.release()
             if destination_lease is not None:
@@ -279,6 +263,7 @@ class AzureBlobTarget(FileSystemTarget):
     """
     Create an Azure Blob Target for storing data on Azure Blob Storage
     """
+
     def __init__(self, container, blob, client=None, format=None, download_when_reading=True, **kwargs):
         """
         :param str account_name:
@@ -327,9 +312,9 @@ class AzureBlobTarget(FileSystemTarget):
             * :class:`.ReadableAzureBlobFile` if 'r'
             * :class:`.AtomicAzureBlobFile` if 'w'
         """
-        if mode not in ('r', 'w'):
+        if mode not in ("r", "w"):
             raise ValueError("Unsupported open mode '%s'" % mode)
-        if mode == 'r':
+        if mode == "r":
             return self.format.pipe_reader(ReadableAzureBlobFile(self.container, self.blob, self.client, self.download_when_reading, **self.azure_blob_options))
         else:
             return self.format.pipe_writer(AtomicAzureBlobFile(self.container, self.blob, self.client, **self.azure_blob_options))

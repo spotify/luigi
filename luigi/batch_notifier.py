@@ -16,19 +16,19 @@ class batch_email(luigi.Config):
     email_interval = luigi.parameter.IntParameter(
         default=60,
         config_path=dict(section="batch-notifier", name="email-interval-minutes"),
-        description='Number of minutes between e-mail sends (default: 60)')
+        description="Number of minutes between e-mail sends (default: 60)",
+    )
     batch_mode = luigi.parameter.ChoiceParameter(
-        default='unbatched_params', choices=('family', 'all', 'unbatched_params'),
+        default="unbatched_params",
+        choices=("family", "all", "unbatched_params"),
         description='Method used for batching failures in e-mail. If "family" all failures for '
-                    'tasks with the same family will be batched. If "unbatched_params", all '
-                    'failures for tasks with the same family and non-batched parameters will be '
-                    'batched. If "all", tasks will only be batched if they have identical names.')
-    error_lines = luigi.parameter.IntParameter(
-        default=20, description='Number of lines to show from each error message. 0 means show all')
-    error_messages = luigi.parameter.IntParameter(
-        default=1, description='Number of error messages to show for each group')
-    group_by_error_messages = luigi.parameter.BoolParameter(
-        default=True, description='Group items with the same error messages together')
+        'tasks with the same family will be batched. If "unbatched_params", all '
+        "failures for tasks with the same family and non-batched parameters will be "
+        'batched. If "all", tasks will only be batched if they have identical names.',
+    )
+    error_lines = luigi.parameter.IntParameter(default=20, description="Number of lines to show from each error message. 0 means show all")
+    error_messages = luigi.parameter.IntParameter(default=1, description="Number of error messages to show for each group")
+    group_by_error_messages = luigi.parameter.BoolParameter(default=True, description="Group items with the same error messages together")
 
 
 class ExplQueue(collections.OrderedDict):
@@ -47,10 +47,10 @@ def _fail_queue(num_messages):
     return lambda: collections.defaultdict(lambda: ExplQueue(num_messages))
 
 
-def _plural_format(template, number, plural='s'):
+def _plural_format(template, number, plural="s"):
     if number == 0:
-        return ''
-    return template.format(number, '' if number == 1 else plural)
+        return ""
+    return template.format(number, "" if number == 1 else plural)
 
 
 class BatchNotifier:
@@ -64,7 +64,7 @@ class BatchNotifier:
 
         self._email_format = email().format
         if email().receiver:
-            self._default_owner = set(filter(None, email().receiver.split(',')))
+            self._default_owner = set(filter(None, email().receiver.split(",")))
         else:
             self._default_owner = set()
 
@@ -72,46 +72,45 @@ class BatchNotifier:
         self._next_send = time.time() + 60 * self._config.email_interval
 
     def _key(self, task_name, family, unbatched_args):
-        if self._config.batch_mode == 'all':
+        if self._config.batch_mode == "all":
             return task_name
-        elif self._config.batch_mode == 'family':
+        elif self._config.batch_mode == "family":
             return family
-        elif self._config.batch_mode == 'unbatched_params':
-            param_str = ', '.join('{}={}'.format(k, v) for k, v in unbatched_args.items())
-            return '{}({})'.format(family, param_str)
+        elif self._config.batch_mode == "unbatched_params":
+            param_str = ", ".join("{}={}".format(k, v) for k, v in unbatched_args.items())
+            return "{}({})".format(family, param_str)
         else:
-            raise ValueError('Unknown batch mode for batch notifier: {}'.format(
-                self._config.batch_mode))
+            raise ValueError("Unknown batch mode for batch notifier: {}".format(self._config.batch_mode))
 
     def _format_expl(self, expl):
-        lines = expl.rstrip().split('\n')[-self._config.error_lines:]
-        if self._email_format == 'html':
-            return '<pre>{}</pre>'.format('\n'.join(lines))
+        lines = expl.rstrip().split("\n")[-self._config.error_lines :]
+        if self._email_format == "html":
+            return "<pre>{}</pre>".format("\n".join(lines))
         else:
-            return '\n{}'.format('\n'.join(map('      {}'.format, lines)))
+            return "\n{}".format("\n".join(map("      {}".format, lines)))
 
     def _expl_body(self, expls):
         lines = [self._format_expl(expl) for expl in expls]
-        if lines and self._email_format != 'html':
-            lines.append('')
-        return '\n'.join(lines)
+        if lines and self._email_format != "html":
+            lines.append("")
+        return "\n".join(lines)
 
     def _format_task(self, task_tuple):
         task, failure_count, disable_count, scheduling_count = task_tuple
         counts = [
-            _plural_format('{} failure{}', failure_count),
-            _plural_format('{} disable{}', disable_count),
-            _plural_format('{} scheduling failure{}', scheduling_count),
+            _plural_format("{} failure{}", failure_count),
+            _plural_format("{} disable{}", disable_count),
+            _plural_format("{} scheduling failure{}", scheduling_count),
         ]
-        count_str = ', '.join(filter(None, counts))
-        return '{} ({})'.format(task, count_str)
+        count_str = ", ".join(filter(None, counts))
+        return "{} ({})".format(task, count_str)
 
     def _format_tasks(self, tasks):
         lines = map(self._format_task, sorted(tasks, key=self._expl_key))
-        if self._email_format == 'html':
-            return '<li>{}'.format('\n<br>'.join(lines))
+        if self._email_format == "html":
+            return "<li>{}".format("\n<br>".join(lines))
         else:
-            return '- {}'.format('\n  '.join(lines))
+            return "- {}".format("\n  ".join(lines))
 
     def _owners(self, owners):
         return self._default_owner | set(owners)
@@ -156,17 +155,16 @@ class BatchNotifier:
 
     def _email_body(self, fail_counts, disable_counts, scheduling_counts, fail_expls):
         expls = {
-            (name, fail_count, disable_counts[name], scheduling_counts[name]): self._expl_body(fail_expls[name])
-            for name, fail_count in fail_counts.items()
+            (name, fail_count, disable_counts[name], scheduling_counts[name]): self._expl_body(fail_expls[name]) for name, fail_count in fail_counts.items()
         }
         expl_groups = sorted(self._task_expl_groups(expls), key=self._expls_key)
         body_lines = []
         for tasks, msg in expl_groups:
             body_lines.append(self._format_tasks(tasks))
             body_lines.append(msg)
-        body = '\n'.join(filter(None, body_lines)).rstrip()
-        if self._email_format == 'html':
-            return '<ul>\n{}\n</ul>'.format(body)
+        body = "\n".join(filter(None, body_lines)).rstrip()
+        if self._email_format == "html":
+            return "<ul>\n{}\n</ul>".format(body)
         else:
             return body
 
@@ -175,15 +173,14 @@ class BatchNotifier:
         num_disables = sum(disable_counts.values())
         num_scheduling_failures = sum(scheduling_counts.values())
         subject_parts = [
-            _plural_format('{} failure{}', num_failures),
-            _plural_format('{} disable{}', num_disables),
-            _plural_format('{} scheduling failure{}', num_scheduling_failures),
+            _plural_format("{} failure{}", num_failures),
+            _plural_format("{} disable{}", num_disables),
+            _plural_format("{} scheduling failure{}", num_scheduling_failures),
         ]
-        subject_base = ', '.join(filter(None, subject_parts))
+        subject_base = ", ".join(filter(None, subject_parts))
         if subject_base:
-            prefix = '' if owner in self._default_owner else 'Your tasks have '
-            subject = 'Luigi: {}{} in the last {} minutes'.format(
-                prefix, subject_base, self._config.email_interval)
+            prefix = "" if owner in self._default_owner else "Your tasks have "
+            subject = "Luigi: {}{} in the last {} minutes".format(prefix, subject_base, self._config.email_interval)
             email_body = self._email_body(fail_counts, disable_counts, scheduling_counts, fail_expls)
             send_email(subject, email_body, email().sender, (owner,))
 

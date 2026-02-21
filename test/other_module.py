@@ -25,5 +25,5 @@ class OtherModuleTask(luigi.Task):
         return luigi.LocalTarget(self.p)
 
     def run(self):
-        with self.output().open('w') as f:
-            f.write('Done!')
+        with self.output().open("w") as f:
+            f.write("Done!")

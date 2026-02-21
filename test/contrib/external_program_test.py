@@ -48,10 +48,10 @@ def setup_run_process(proc):
 
 class TestExternalProgramTask(ExternalProgramTask):
     def program_args(self):
-        return ['app_path', 'arg1', 'arg2']
+        return ["app_path", "arg1", "arg2"]
 
     def output(self):
-        return luigi.LocalTarget('output')
+        return luigi.LocalTarget("output")
 
 
 class TestLogStderrOnFailureOnlyTask(TestExternalProgramTask):
@@ -62,7 +62,7 @@ class TestTouchTask(ExternalProgramTask):
     file_path = luigi.Parameter()
 
     def program_args(self):
-        return ['touch', self.output().path]
+        return ["touch", self.output().path]
 
     def output(self):
         return luigi.LocalTarget(self.file_path)
@@ -72,91 +72,90 @@ class TestEchoTask(ExternalProgramTask):
     MESSAGE = "Hello, world!"
 
     def program_args(self):
-        return ['echo', self.MESSAGE]
+        return ["echo", self.MESSAGE]
 
 
 @pytest.mark.contrib
 class ExternalProgramTaskTest(unittest.TestCase):
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_run(self, proc):
         setup_run_process(proc)
         job = TestExternalProgramTask()
         job.run()
 
-        self.assertEqual(proc.call_args[0][0],
-                         ['app_path', 'arg1', 'arg2'])
+        self.assertEqual(proc.call_args[0][0], ["app_path", "arg1", "arg2"])
 
-    @patch('luigi.contrib.external_program.logger')
-    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.logger")
+    @patch("luigi.contrib.external_program.tempfile.TemporaryFile")
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_handle_failed_job(self, proc, file, logger):
         proc.return_value.returncode = 1
-        file.return_value = BytesIO(b'stderr')
+        file.return_value = BytesIO(b"stderr")
         try:
             job = TestExternalProgramTask()
             job.run()
         except ExternalProgramRunError as e:
-            self.assertEqual(e.err, 'stderr')
-            self.assertIn('STDERR: stderr', str(e))
-            self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+            self.assertEqual(e.err, "stderr")
+            self.assertIn("STDERR: stderr", str(e))
+            self.assertIn(call.info("Program stderr:\nstderr"), logger.mock_calls)
         else:
-            self.fail('Should have thrown ExternalProgramRunError')
+            self.fail("Should have thrown ExternalProgramRunError")
 
-    @patch('luigi.contrib.external_program.logger')
-    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.logger")
+    @patch("luigi.contrib.external_program.tempfile.TemporaryFile")
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_always_log_stderr_on_failure(self, proc, file, logger):
         proc.return_value.returncode = 1
-        file.return_value = BytesIO(b'stderr')
+        file.return_value = BytesIO(b"stderr")
         with self.assertRaises(ExternalProgramRunError):
             job = TestLogStderrOnFailureOnlyTask()
             job.run()
 
-        self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+        self.assertIn(call.info("Program stderr:\nstderr"), logger.mock_calls)
 
-    @patch('luigi.contrib.external_program.logger')
-    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.logger")
+    @patch("luigi.contrib.external_program.tempfile.TemporaryFile")
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_log_stderr_on_success_by_default(self, proc, file, logger):
         proc.return_value.returncode = 0
-        file.return_value = BytesIO(b'stderr')
+        file.return_value = BytesIO(b"stderr")
         job = TestExternalProgramTask()
         job.run()
 
-        self.assertIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+        self.assertIn(call.info("Program stderr:\nstderr"), logger.mock_calls)
 
     def test_capture_output_set_to_false_writes_output_to_stdout(self):
 
         out = tempfile.TemporaryFile()
 
         def Popen_wrap(args, **kwargs):
-            kwargs.pop('stdout', None)
+            kwargs.pop("stdout", None)
             return Popen(args, stdout=out, **kwargs)
 
-        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+        with mock.patch("luigi.contrib.external_program.subprocess.Popen", wraps=Popen_wrap):
             task = TestEchoTask(capture_output=False)
             task.run()
             stdout = task._clean_output_file(out).strip()
             self.assertEqual(stdout, task.MESSAGE)
 
-    @patch('luigi.contrib.external_program.logger')
-    @patch('luigi.contrib.external_program.tempfile.TemporaryFile')
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.logger")
+    @patch("luigi.contrib.external_program.tempfile.TemporaryFile")
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_dont_log_stderr_on_success_if_disabled(self, proc, file, logger):
         proc.return_value.returncode = 0
-        file.return_value = BytesIO(b'stderr')
+        file.return_value = BytesIO(b"stderr")
         job = TestLogStderrOnFailureOnlyTask()
         job.run()
 
-        self.assertNotIn(call.info('Program stderr:\nstderr'), logger.mock_calls)
+        self.assertNotIn(call.info("Program stderr:\nstderr"), logger.mock_calls)
 
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_program_args_must_be_implemented(self, proc):
         with self.assertRaises(NotImplementedError):
             job = ExternalProgramTask()
             job.run()
 
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_app_interruption(self, proc):
 
         def interrupt():
@@ -174,7 +173,7 @@ class ExternalProgramTaskTest(unittest.TestCase):
         # create a tempdir first, to ensure an empty playground for
         # TestTouchTask to create its file in
         tempdir = tempfile.mkdtemp()
-        tempfile_path = os.path.join(tempdir, 'testfile')
+        tempfile_path = os.path.join(tempdir, "testfile")
 
         try:
             job = TestTouchTask(file_path=tempfile_path)
@@ -186,37 +185,35 @@ class ExternalProgramTaskTest(unittest.TestCase):
             shutil.rmtree(tempdir)
 
     def test_tracking_url_pattern_works_with_capture_output_disabled(self):
-        test_val = Value('i', 0)
+        test_val = Value("i", 0)
 
         def fake_set_tracking_url(val, url):
             if url == "TEXT":
                 val.value += 1
 
-        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url='stdout',
-                            tracking_url_pattern=r"SOME (.*)")
+        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url="stdout", tracking_url_pattern=r"SOME (.*)")
         task.MESSAGE = "SOME TEXT"
 
-        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+        with mock.patch.object(task, "set_tracking_url", new=partial(fake_set_tracking_url, test_val)):
             task.run()
             self.assertEqual(test_val.value, 1)
 
     def test_tracking_url_pattern_works_with_capture_output_enabled(self):
-        test_val = Value('i', 0)
+        test_val = Value("i", 0)
 
         def fake_set_tracking_url(val, url):
             if url == "THING":
                 val.value += 1
 
-        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url='stdout',
-                            tracking_url_pattern=r"ANY(.*)")
+        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url="stdout", tracking_url_pattern=r"ANY(.*)")
         task.MESSAGE = "ANYTHING"
 
-        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+        with mock.patch.object(task, "set_tracking_url", new=partial(fake_set_tracking_url, test_val)):
             task.run()
             self.assertEqual(test_val.value, 1)
 
     def test_tracking_url_pattern_works_with_stderr(self):
-        test_val = Value('i', 0)
+        test_val = Value("i", 0)
 
         def fake_set_tracking_url(val, url):
             if url == "THING_ELSE":
@@ -225,36 +222,34 @@ class ExternalProgramTaskTest(unittest.TestCase):
         def Popen_wrap(args, **kwargs):
             return Popen('>&2 echo "ANYTHING_ELSE"', shell=True, **kwargs)
 
-        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url='stderr',
-                            tracking_url_pattern=r"ANY(.*)")
+        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url="stderr", tracking_url_pattern=r"ANY(.*)")
 
-        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
-            with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+        with mock.patch("luigi.contrib.external_program.subprocess.Popen", wraps=Popen_wrap):
+            with mock.patch.object(task, "set_tracking_url", new=partial(fake_set_tracking_url, test_val)):
                 task.run()
                 self.assertEqual(test_val.value, 1)
 
     def test_no_url_searching_is_performed_if_pattern_is_not_set(self):
         def Popen_wrap(args, **kwargs):
             # stdout should not be replaced with pipe if tracking_url_pattern is not set
-            self.assertNotEqual(kwargs['stdout'], subprocess.PIPE)
+            self.assertNotEqual(kwargs["stdout"], subprocess.PIPE)
             return Popen(args, **kwargs)
 
-        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url='stdout')
+        task = TestEchoTask(capture_output=True, stream_for_searching_tracking_url="stdout")
 
-        with mock.patch('luigi.contrib.external_program.subprocess.Popen', wraps=Popen_wrap):
+        with mock.patch("luigi.contrib.external_program.subprocess.Popen", wraps=Popen_wrap):
             task.run()
 
     def test_tracking_url_context_works_without_capture_output(self):
-        test_val = Value('i', 0)
+        test_val = Value("i", 0)
 
         def fake_set_tracking_url(val, url):
             if url == "world":
                 val.value += 1
 
-        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url='stdout',
-                            tracking_url_pattern=r"Hello, (.*)!")
+        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url="stdout", tracking_url_pattern=r"Hello, (.*)!")
         test_args = list(map(str, task.program_args()))
-        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+        with mock.patch.object(task, "set_tracking_url", new=partial(fake_set_tracking_url, test_val)):
             with task._proc_with_tracking_url_context(proc_args=test_args, proc_kwargs={}) as proc:
                 proc.wait()
         self.assertEqual(test_val.value, 1)
@@ -263,89 +258,85 @@ class ExternalProgramTaskTest(unittest.TestCase):
 
         class _Task(TestEchoTask):
             def build_tracking_url(self, logs_output):
-                return 'The {} is mine'.format(logs_output)
+                return "The {} is mine".format(logs_output)
 
-        test_val = Value('i', 0)
+        test_val = Value("i", 0)
 
         def fake_set_tracking_url(val, url):
             if url == "The world is mine":
                 val.value += 1
 
-        task = _Task(
-            capture_output=False,
-            stream_for_searching_tracking_url='stdout',
-            tracking_url_pattern=r"Hello, (.*)!"
-        )
+        task = _Task(capture_output=False, stream_for_searching_tracking_url="stdout", tracking_url_pattern=r"Hello, (.*)!")
 
         test_args = list(map(str, task.program_args()))
 
-        with mock.patch.object(task, 'set_tracking_url', new=partial(fake_set_tracking_url, test_val)):
+        with mock.patch.object(task, "set_tracking_url", new=partial(fake_set_tracking_url, test_val)):
             with task._proc_with_tracking_url_context(proc_args=test_args, proc_kwargs={}) as proc:
                 proc.wait()
         self.assertEqual(test_val.value, 1)
 
 
 class TestExternalPythonProgramTask(ExternalPythonProgramTask):
-    virtualenv = '/path/to/venv'
-    extra_pythonpath = '/extra/pythonpath'
+    virtualenv = "/path/to/venv"
+    extra_pythonpath = "/extra/pythonpath"
 
     def program_args(self):
         return ["app_path", "arg1", "arg2"]
 
     def output(self):
-        return luigi.LocalTarget('output')
+        return luigi.LocalTarget("output")
 
 
 @pytest.mark.contrib
 class ExternalPythonProgramTaskTest(unittest.TestCase):
-    @patch.dict('os.environ', {'OTHERVAR': 'otherval'}, clear=True)
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch.dict("os.environ", {"OTHERVAR": "otherval"}, clear=True)
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_original_environment_is_kept_intact(self, proc):
         setup_run_process(proc)
 
         job = TestExternalPythonProgramTask()
         job.run()
 
-        proc_env = proc.call_args[1]['env']
-        self.assertIn('PYTHONPATH', proc_env)
-        self.assertIn('OTHERVAR', proc_env)
+        proc_env = proc.call_args[1]["env"]
+        self.assertIn("PYTHONPATH", proc_env)
+        self.assertIn("OTHERVAR", proc_env)
 
-    @patch.dict('os.environ', {'PATH': '/base/path'}, clear=True)
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch.dict("os.environ", {"PATH": "/base/path"}, clear=True)
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_venv_is_set_and_prepended_to_path(self, proc):
         setup_run_process(proc)
 
         job = TestExternalPythonProgramTask()
         job.run()
 
-        proc_env = proc.call_args[1]['env']
-        self.assertIn('PATH', proc_env)
-        self.assertTrue(proc_env['PATH'].startswith('/path/to/venv/bin'))
-        self.assertTrue(proc_env['PATH'].endswith('/base/path'))
-        self.assertIn('VIRTUAL_ENV', proc_env)
-        self.assertEqual(proc_env['VIRTUAL_ENV'], '/path/to/venv')
+        proc_env = proc.call_args[1]["env"]
+        self.assertIn("PATH", proc_env)
+        self.assertTrue(proc_env["PATH"].startswith("/path/to/venv/bin"))
+        self.assertTrue(proc_env["PATH"].endswith("/base/path"))
+        self.assertIn("VIRTUAL_ENV", proc_env)
+        self.assertEqual(proc_env["VIRTUAL_ENV"], "/path/to/venv")
 
-    @patch.dict('os.environ', {}, clear=True)
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch.dict("os.environ", {}, clear=True)
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_pythonpath_is_set_if_empty(self, proc):
         setup_run_process(proc)
 
         job = TestExternalPythonProgramTask()
         job.run()
 
-        proc_env = proc.call_args[1]['env']
-        self.assertIn('PYTHONPATH', proc_env)
-        self.assertTrue(proc_env['PYTHONPATH'].startswith('/extra/pythonpath'))
+        proc_env = proc.call_args[1]["env"]
+        self.assertIn("PYTHONPATH", proc_env)
+        self.assertTrue(proc_env["PYTHONPATH"].startswith("/extra/pythonpath"))
 
-    @patch.dict('os.environ', {'PYTHONPATH': '/base/pythonpath'}, clear=True)
-    @patch('luigi.contrib.external_program.subprocess.Popen')
+    @patch.dict("os.environ", {"PYTHONPATH": "/base/pythonpath"}, clear=True)
+    @patch("luigi.contrib.external_program.subprocess.Popen")
     def test_pythonpath_is_prepended_if_not_empty(self, proc):
         setup_run_process(proc)
 
         job = TestExternalPythonProgramTask()
         job.run()
 
-        proc_env = proc.call_args[1]['env']
-        self.assertIn('PYTHONPATH', proc_env)
-        self.assertTrue(proc_env['PYTHONPATH'].startswith('/extra/pythonpath'))
-        self.assertTrue(proc_env['PYTHONPATH'].endswith('/base/pythonpath'))
+        proc_env = proc.call_args[1]["env"]
+        self.assertIn("PYTHONPATH", proc_env)
+        self.assertTrue(proc_env["PYTHONPATH"].startswith("/extra/pythonpath"))
+        self.assertTrue(proc_env["PYTHONPATH"].endswith("/base/pythonpath"))

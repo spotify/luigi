@@ -22,7 +22,7 @@ Currently the only subclass is :py:class:`~luigi.db_task_history.DbTaskHistory`.
 import abc
 import logging
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class StoredTask:
@@ -69,7 +69,6 @@ class TaskHistory(metaclass=abc.ABCMeta):
 
 
 class NopHistory(TaskHistory):
-
     def task_scheduled(self, task):
         pass
 

@@ -25,17 +25,16 @@ from luigi.task_register import (
 
 
 class TaskRegisterTest(LuigiTestCase):
-
     def test_externalize_taskclass(self):
         with self.assertRaises(TaskClassNotFoundException):
-            Register.get_task_cls('scooby.Doo')
+            Register.get_task_cls("scooby.Doo")
 
         class Task1(luigi.Task):
             @classmethod
             def get_task_family(cls):
                 return "scooby.Doo"
 
-        self.assertEqual(Task1, Register.get_task_cls('scooby.Doo'))
+        self.assertEqual(Task1, Register.get_task_cls("scooby.Doo"))
 
         class Task2(luigi.Task):
             @classmethod
@@ -43,7 +42,7 @@ class TaskRegisterTest(LuigiTestCase):
                 return "scooby.Doo"
 
         with self.assertRaises(TaskClassAmbigiousException):
-            Register.get_task_cls('scooby.Doo')
+            Register.get_task_cls("scooby.Doo")
 
         class Task3(luigi.Task):
             @classmethod
@@ -53,4 +52,4 @@ class TaskRegisterTest(LuigiTestCase):
         # There previously was a rare bug where the third installed class could
         # "undo" class ambiguity.
         with self.assertRaises(TaskClassAmbigiousException):
-            Register.get_task_cls('scooby.Doo')
+            Register.get_task_cls("scooby.Doo")

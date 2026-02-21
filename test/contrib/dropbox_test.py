@@ -16,45 +16,47 @@ try:
 
     from luigi.contrib.dropbox import DropboxClient
 except ImportError:
-    raise unittest.SkipTest('DropboxTarget and DropboxClient will not be tested. Dropbox library is not installed')
+    raise unittest.SkipTest("DropboxTarget and DropboxClient will not be tested. Dropbox library is not installed")
 
-DROPBOX_APP_TOKEN = os.environ.get('DROPBOX_APP_TOKEN')
+DROPBOX_APP_TOKEN = os.environ.get("DROPBOX_APP_TOKEN")
 
 if not DROPBOX_APP_TOKEN:
-    raise ValueError("In order to test DropboxTarget and DropboxClient, the DROPBOX_APP_TOKEN environment variable "
-                     "must contain a valid Dropbox OAuth2 Token. \n"
-                     "Get one at https://www.dropbox.com/developers/apps ")
+    raise ValueError(
+        "In order to test DropboxTarget and DropboxClient, the DROPBOX_APP_TOKEN environment variable "
+        "must contain a valid Dropbox OAuth2 Token. \n"
+        "Get one at https://www.dropbox.com/developers/apps "
+    )
 
 DROPBOX_TEST_PATH = "/luigi-tests/luigi-test-" + datetime.now().strftime("%Y.%m.%d-%H.%M.%S") + str(uuid.uuid4())
 
 # These paths will be created in the test set-up
-DROPBOX_TEST_SIMPLE_DIR = DROPBOX_TEST_PATH + '/dir2'
-DROPBOX_TEST_FILE_IN_DIR = DROPBOX_TEST_SIMPLE_DIR + '/test2.txt'
-DROPBOX_TEST_SIMPLE_FILE = DROPBOX_TEST_PATH + '/test.txt'
-DROPBOX_TEST_DIR_TO_DELETE = DROPBOX_TEST_PATH + '/dir_to_delete'
-DROPBOX_TEST_FILE_TO_DELETE_2 = DROPBOX_TEST_DIR_TO_DELETE + '/test3.2.txt'
-DROPBOX_TEST_FILE_TO_DELETE_1 = DROPBOX_TEST_DIR_TO_DELETE + '/test3.1.txt'
-DROPBOX_TEST_FILE_TO_COPY_ORIG = DROPBOX_TEST_PATH + '/dir4/test4.txt'
-DROPBOX_TEST_FILE_TO_MOVE_ORIG = DROPBOX_TEST_PATH + '/dir3/test3.txt'
+DROPBOX_TEST_SIMPLE_DIR = DROPBOX_TEST_PATH + "/dir2"
+DROPBOX_TEST_FILE_IN_DIR = DROPBOX_TEST_SIMPLE_DIR + "/test2.txt"
+DROPBOX_TEST_SIMPLE_FILE = DROPBOX_TEST_PATH + "/test.txt"
+DROPBOX_TEST_DIR_TO_DELETE = DROPBOX_TEST_PATH + "/dir_to_delete"
+DROPBOX_TEST_FILE_TO_DELETE_2 = DROPBOX_TEST_DIR_TO_DELETE + "/test3.2.txt"
+DROPBOX_TEST_FILE_TO_DELETE_1 = DROPBOX_TEST_DIR_TO_DELETE + "/test3.1.txt"
+DROPBOX_TEST_FILE_TO_COPY_ORIG = DROPBOX_TEST_PATH + "/dir4/test4.txt"
+DROPBOX_TEST_FILE_TO_MOVE_ORIG = DROPBOX_TEST_PATH + "/dir3/test3.txt"
 
 # All the following paths will be used by the tests
-DROPBOX_TEST_SMALL_FILE = DROPBOX_TEST_PATH + '/dir/small.txt'
-DROPBOX_TEST_LARGE_FILE = DROPBOX_TEST_PATH + '/dir/big.bin'
+DROPBOX_TEST_SMALL_FILE = DROPBOX_TEST_PATH + "/dir/small.txt"
+DROPBOX_TEST_LARGE_FILE = DROPBOX_TEST_PATH + "/dir/big.bin"
 
-DROPBOX_TEST_FILE_TO_COPY_DEST = DROPBOX_TEST_PATH + '/dir_four/test_four.txt'
+DROPBOX_TEST_FILE_TO_COPY_DEST = DROPBOX_TEST_PATH + "/dir_four/test_four.txt"
 
-DROPBOX_TEST_FILE_TO_MOVE_DEST = DROPBOX_TEST_PATH + '/dir_three/test_three.txt'
-DROPBOX_TEST_OUTER_DIR_TO_CREATE = DROPBOX_TEST_PATH + '/new_folder'
-DROPBOX_TEST_DIR_TO_CREATE = DROPBOX_TEST_OUTER_DIR_TO_CREATE + '/inner_folder'
+DROPBOX_TEST_FILE_TO_MOVE_DEST = DROPBOX_TEST_PATH + "/dir_three/test_three.txt"
+DROPBOX_TEST_OUTER_DIR_TO_CREATE = DROPBOX_TEST_PATH + "/new_folder"
+DROPBOX_TEST_DIR_TO_CREATE = DROPBOX_TEST_OUTER_DIR_TO_CREATE + "/inner_folder"
 
-DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE = DROPBOX_TEST_PATH + '/another_new_folder'
+DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE = DROPBOX_TEST_PATH + "/another_new_folder"
 
-DROPBOX_TEST_FILE_TO_UPLOAD_BZIP2 = DROPBOX_TEST_PATH + '/bin.file'
-DROPBOX_TEST_FILE_TO_UPLOAD_TEXT = DROPBOX_TEST_PATH + '/text.txt'
-DROPBOX_TEST_FILE_TO_UPLOAD_BIN = DROPBOX_TEST_PATH + '/file.bin'
-DROPBOX_TEST_FILE_TO_UPLOAD_LARGE = DROPBOX_TEST_PATH + '/file.blob'
+DROPBOX_TEST_FILE_TO_UPLOAD_BZIP2 = DROPBOX_TEST_PATH + "/bin.file"
+DROPBOX_TEST_FILE_TO_UPLOAD_TEXT = DROPBOX_TEST_PATH + "/text.txt"
+DROPBOX_TEST_FILE_TO_UPLOAD_BIN = DROPBOX_TEST_PATH + "/file.bin"
+DROPBOX_TEST_FILE_TO_UPLOAD_LARGE = DROPBOX_TEST_PATH + "/file.blob"
 
-DROPBOX_TEST_NON_EXISTING_FILE = DROPBOX_TEST_SIMPLE_DIR + 'ajdlkajfal'
+DROPBOX_TEST_NON_EXISTING_FILE = DROPBOX_TEST_SIMPLE_DIR + "ajdlkajfal"
 
 
 @pytest.mark.dropbox
@@ -63,42 +65,42 @@ class TestClientDropbox(unittest.TestCase):
         self.luigiconn = DropboxClient(DROPBOX_APP_TOKEN)
 
         self.dropbox_api = dropbox.dropbox_client.Dropbox(DROPBOX_APP_TOKEN)
-        self.dropbox_api.files_upload(b'hello', DROPBOX_TEST_SIMPLE_FILE)
-        self.dropbox_api.files_upload(b'hello2', DROPBOX_TEST_FILE_IN_DIR)
-        self.dropbox_api.files_upload(b'hello3', DROPBOX_TEST_FILE_TO_MOVE_ORIG)
-        self.dropbox_api.files_upload(b'hello4', DROPBOX_TEST_FILE_TO_COPY_ORIG)
-        self.dropbox_api.files_upload(b'hello3.1', DROPBOX_TEST_FILE_TO_DELETE_1)
-        self.dropbox_api.files_upload(b'hello3.2', DROPBOX_TEST_FILE_TO_DELETE_2)
+        self.dropbox_api.files_upload(b"hello", DROPBOX_TEST_SIMPLE_FILE)
+        self.dropbox_api.files_upload(b"hello2", DROPBOX_TEST_FILE_IN_DIR)
+        self.dropbox_api.files_upload(b"hello3", DROPBOX_TEST_FILE_TO_MOVE_ORIG)
+        self.dropbox_api.files_upload(b"hello4", DROPBOX_TEST_FILE_TO_COPY_ORIG)
+        self.dropbox_api.files_upload(b"hello3.1", DROPBOX_TEST_FILE_TO_DELETE_1)
+        self.dropbox_api.files_upload(b"hello3.2", DROPBOX_TEST_FILE_TO_DELETE_2)
 
     def tearDown(self):
         self.dropbox_api.files_delete_v2(DROPBOX_TEST_PATH)
         self.dropbox_api._session.close()
 
     def test_exists(self):
-        self.assertTrue(self.luigiconn.exists('/'))
+        self.assertTrue(self.luigiconn.exists("/"))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_PATH))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR))
-        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR + '/'))
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR + "/"))
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE))
 
-        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE + '/'))
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_FILE + "/"))
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_NON_EXISTING_FILE))
 
     def test_listdir_simple(self):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH)
-        self.assertTrue('/' not in list_of_dirs)
+        self.assertTrue("/" not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
 
     def test_listdir_simple_with_one_slash(self):
-        list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + '/')
-        self.assertTrue('/' not in list_of_dirs)
+        list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH + "/")
+        self.assertTrue("/" not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
 
     def test_listdir_multiple(self):
         list_of_dirs = self.luigiconn.listdir(DROPBOX_TEST_PATH, limit=2)
-        self.assertTrue('/' not in list_of_dirs)
+        self.assertTrue("/" not in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_PATH in list_of_dirs)
         self.assertTrue(DROPBOX_TEST_SIMPLE_FILE in list_of_dirs)  # we verify recursivity
 
@@ -120,7 +122,7 @@ class TestClientDropbox(unittest.TestCase):
 
         # We make sure that we return False when we fail to remove a non-existing path
         self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE))
-        self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE + '/'))
+        self.assertFalse(self.luigiconn.remove(DROPBOX_TEST_NON_EXISTING_FILE + "/"))
 
     def test_mkdir_new_dir(self):
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_DIR_TO_CREATE))
@@ -149,23 +151,23 @@ class TestClientDropbox(unittest.TestCase):
         self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
 
     def test_lifecycle_of_dirpath_with_trailing_slash(self):
-        self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
+        self.aux_lifecycle_of_directory(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + "/")
 
     def test_lifecycle_of_dirpath_with_several_trailing_mixed(self):
-        self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
+        self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + "/")
         self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
         self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
-        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/'))
+        self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + "/"))
 
     def test_lifecycle_of_dirpath_with_several_trailing_mixed_2(self):
         self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE)
-        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/'))
-        self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '/')
+        self.assertTrue(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + "/"))
+        self.luigiconn.remove(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + "/")
         self.assertFalse(self.luigiconn.exists(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE))
 
     def test_mkdir_new_dir_two_slashes(self):
         with self.assertRaises(dropbox.dropbox_client.ApiError):
-            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + '//')
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR_TO_CREATE_AND_DELETE + "//")
 
     def test_mkdir_recreate_dir(self):
         try:
@@ -183,17 +185,17 @@ class TestClientDropbox(unittest.TestCase):
 
     def test_mkdir_recreate_slashed_dir(self):
         try:
-            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + '/')
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + "/")
         except Exception as ex:
             self.fail("mkdir with default options raises Exception:" + str(ex))
 
         try:
-            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + '/', raise_if_exists=False)
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + "/", raise_if_exists=False)
         except Exception as ex:
             self.fail("mkdir with 'raise_if_exists=False' raises Exception:" + str(ex))
 
         with self.assertRaises(luigi.target.FileAlreadyExists):
-            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + '/', raise_if_exists=True)
+            self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_DIR + "/", raise_if_exists=True)
 
     def test_mkdir_recreate_file(self):
         with self.assertRaises(luigi.target.NotADirectory):
@@ -206,14 +208,14 @@ class TestClientDropbox(unittest.TestCase):
             self.luigiconn.mkdir(DROPBOX_TEST_SIMPLE_FILE, raise_if_exists=False)
 
     def test_isdir(self):
-        self.assertTrue(self.luigiconn.isdir('/'))
+        self.assertTrue(self.luigiconn.isdir("/"))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_PATH))
         self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR))
-        self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR + '/'))
+        self.assertTrue(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_DIR + "/"))
 
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_SIMPLE_FILE))
         self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE))
-        self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE + '/'))
+        self.assertFalse(self.luigiconn.isdir(DROPBOX_TEST_NON_EXISTING_FILE + "/"))
 
     def test_move(self):
         md, res = self.dropbox_api.files_download(DROPBOX_TEST_FILE_TO_MOVE_ORIG)
@@ -248,7 +250,7 @@ class TestDropboxTarget(unittest.TestCase):
         self.luigiconn = DropboxClient(DROPBOX_APP_TOKEN)
         self.dropbox_api = dropbox.dropbox_client.Dropbox(DROPBOX_APP_TOKEN)
 
-        self.initial_contents = b'\x00hello\xff\x00-\xe2\x82\x28'  # Binary invalid-utf8 sequence
+        self.initial_contents = b"\x00hello\xff\x00-\xe2\x82\x28"  # Binary invalid-utf8 sequence
         self.dropbox_api.files_upload(self.initial_contents, DROPBOX_TEST_SIMPLE_FILE)
 
     def tearDown(self):
@@ -273,16 +275,15 @@ class TestDropboxTarget(unittest.TestCase):
                 return luigi.LocalTarget(path=self.local_path, format=NopFormat())
 
             def run(self):
-                with self.input().open('r') as dbxfile, self.output().open('w') as localfile:
+                with self.input().open("r") as dbxfile, self.output().open("w") as localfile:
                     remote_contents = dbxfile.read()
                     localfile.write(remote_contents * 3)
 
         tmp_file = tempfile.mkdtemp() + os.sep + "tmp.file"
-        luigi.build([DbxToLocalTask(dbx_path=DROPBOX_TEST_SIMPLE_FILE, local_path=tmp_file)],
-                    local_scheduler=True)
+        luigi.build([DbxToLocalTask(dbx_path=DROPBOX_TEST_SIMPLE_FILE, local_path=tmp_file)], local_scheduler=True)
 
         expected_contents = self.initial_contents * 3
-        with open(tmp_file, 'rb') as f:
+        with open(tmp_file, "rb") as f:
             actual_contents = f.read()
 
         self.assertEqual(expected_contents, actual_contents)
@@ -295,7 +296,7 @@ class TestDropboxTarget(unittest.TestCase):
                 return luigi.contrib.dropbox.DropboxTarget(DROPBOX_TEST_FILE_TO_UPLOAD_TEXT, DROPBOX_APP_TOKEN)
 
             def run(self):
-                with self.output().open('w') as dbxfile:
+                with self.output().open("w") as dbxfile:
                     dbxfile.write(small_input_text)
 
         luigi.build([WriteToDrobopxTest()], local_scheduler=True)
@@ -308,11 +309,10 @@ class TestDropboxTarget(unittest.TestCase):
 
         class WriteToDrobopxTest(luigi.Task):
             def output(self):
-                return luigi.contrib.dropbox.DropboxTarget(output_file, DROPBOX_APP_TOKEN,
-                                                           format=luigi.format.Nop)
+                return luigi.contrib.dropbox.DropboxTarget(output_file, DROPBOX_APP_TOKEN, format=luigi.format.Nop)
 
             def run(self):
-                with self.output().open('w') as dbxfile:
+                with self.output().open("w") as dbxfile:
                     dbxfile.write(large_contents)
 
         luigi.build([WriteToDrobopxTest()], local_scheduler=True)
@@ -333,11 +333,10 @@ class TestDropboxTarget(unittest.TestCase):
 
         class WriteToDrobopxTest(luigi.Task):
             def output(self):
-                return luigi.contrib.dropbox.DropboxTarget(DROPBOX_TEST_FILE_TO_UPLOAD_BZIP2, DROPBOX_APP_TOKEN,
-                                                           format=luigi.format.Bzip2)
+                return luigi.contrib.dropbox.DropboxTarget(DROPBOX_TEST_FILE_TO_UPLOAD_BZIP2, DROPBOX_APP_TOKEN, format=luigi.format.Bzip2)
 
             def run(self):
-                with self.output().open('w') as bzip2_dbxfile:
+                with self.output().open("w") as bzip2_dbxfile:
                     bzip2_dbxfile.write(contents)
 
         luigi.build([WriteToDrobopxTest()], local_scheduler=True)
@@ -354,7 +353,7 @@ class TestDropboxTarget(unittest.TestCase):
 
             def run(self):
                 with self.output().temporary_path() as tmp_path:
-                    open(tmp_path, 'wb').write(contents)
+                    open(tmp_path, "wb").write(contents)
 
         luigi.build([WriteToDrobopxTest()], local_scheduler=True)
         actual_content = self.dropbox_api.files_download(DROPBOX_TEST_FILE_TO_UPLOAD_BIN)[1].content

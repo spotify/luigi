@@ -24,7 +24,6 @@ from luigi.contrib.spark import SparkSubmitTask
 
 
 class UserItemMatrix(luigi.Task):
-
     #: the size of the data being generated
     data_size = luigi.IntParameter()
 
@@ -40,10 +39,10 @@ class UserItemMatrix(luigi.Task):
         * `rating`: the day when the data was created.
 
         """
-        w = self.output().open('w')
+        w = self.output().open("w")
         for user in range(self.data_size):
             track = int(random.random() * self.data_size)
-            w.write('%d\\%d\\%f' % (user, track, 1.0))
+            w.write("%d\\%d\\%f" % (user, track, 1.0))
         w.close()
 
     def output(self):
@@ -54,7 +53,7 @@ class UserItemMatrix(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
-        return luigi.contrib.hdfs.HdfsTarget('data-matrix', format=luigi.format.Gzip)
+        return luigi.contrib.hdfs.HdfsTarget("data-matrix", format=luigi.format.Gzip)
 
 
 class SparkALS(SparkSubmitTask):
@@ -72,14 +71,15 @@ class SparkALS(SparkSubmitTask):
         master: yarn-client
 
     """
+
     data_size = luigi.IntParameter(default=1000)
 
-    driver_memory = '2g'
-    executor_memory = '3g'
+    driver_memory = "2g"
+    executor_memory = "3g"
     num_executors = luigi.IntParameter(default=100)
 
-    app = 'my-spark-assembly.jar'
-    entry_class = 'com.spotify.spark.ImplicitALS'
+    app = "my-spark-assembly.jar"
+    entry_class = "com.spotify.spark.ImplicitALS"
 
     def app_options(self):
         # These are passed to the Spark main args in the defined order.
@@ -104,10 +104,10 @@ class SparkALS(SparkSubmitTask):
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
         # The corresponding Spark job outputs as GZip format.
-        return luigi.contrib.hdfs.HdfsTarget('als-output/', format=luigi.format.Gzip)
+        return luigi.contrib.hdfs.HdfsTarget("als-output/", format=luigi.format.Gzip)
 
 
-'''
+"""
 // Corresponding example Spark Job, a wrapper around the MLLib ALS job.
 // This class would have to be jarred into my-spark-assembly.jar
 // using sbt assembly (or package) and made available to the Luigi job
@@ -143,4 +143,4 @@ object ImplicitALS {
     sc.stop()
   }
 }
-'''
+"""

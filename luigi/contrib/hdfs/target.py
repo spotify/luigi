@@ -30,7 +30,6 @@ from luigi.target import FileSystemTarget
 
 
 class HdfsTarget(FileSystemTarget):
-
     def __init__(self, path=None, format=None, is_tmp=False, fs=None):
         if path is None:
             assert is_tmp
@@ -40,32 +39,25 @@ class HdfsTarget(FileSystemTarget):
         if format is None:
             format = luigi.format.get_default_format() >> hdfs_format.Plain
 
-        old_format = (
-            (
-                hasattr(format, 'hdfs_writer') or
-                hasattr(format, 'hdfs_reader')
-            ) and
-            not hasattr(format, 'output')
-        )
+        old_format = (hasattr(format, "hdfs_writer") or hasattr(format, "hdfs_reader")) and not hasattr(format, "output")
 
-        if not old_format and getattr(format, 'output', '') != 'hdfs':
+        if not old_format and getattr(format, "output", "") != "hdfs":
             format = format >> hdfs_format.Plain
 
         if old_format:
             warnings.warn(
-                'hdfs_writer and hdfs_reader method for format is deprecated,'
-                'specify the property output of your format as \'hdfs\' instead',
+                "hdfs_writer and hdfs_reader method for format is deprecated,specify the property output of your format as 'hdfs' instead",
                 DeprecationWarning,
-                stacklevel=2
+                stacklevel=2,
             )
 
-            if hasattr(format, 'hdfs_writer'):
+            if hasattr(format, "hdfs_writer"):
                 format_writer = format.hdfs_writer
             else:
                 w_format = format >> hdfs_format.Plain
                 format_writer = w_format.pipe_writer
 
-            if hasattr(format, 'hdfs_reader'):
+            if hasattr(format, "hdfs_reader"):
                 format_reader = format.hdfs_reader
             else:
                 r_format = format >> hdfs_format.Plain
@@ -80,7 +72,7 @@ class HdfsTarget(FileSystemTarget):
             format = hdfs_format.CompatibleHdfsFormat(
                 format.pipe_writer,
                 format.pipe_reader,
-                getattr(format, 'input', None),
+                getattr(format, "input", None),
             )
 
         self.format = format
@@ -88,7 +80,7 @@ class HdfsTarget(FileSystemTarget):
         self.is_tmp = is_tmp
         (scheme, netloc, path, query, fragment) = urlparse.urlsplit(path)
         if ":" in path:
-            raise ValueError('colon is not allowed in hdfs filenames')
+            raise ValueError("colon is not allowed in hdfs filenames")
         self._fs = fs or hdfs_clients.get_autoconfig_client()
 
     def __del__(self):
@@ -106,11 +98,11 @@ class HdfsTarget(FileSystemTarget):
             return True
         return False
 
-    def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+    def open(self, mode="r"):
+        if mode not in ("r", "w"):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
-        if mode == 'r':
+        if mode == "r":
             return self.format.pipe_reader(self.path)
         else:
             return self.format.pipe_writer(self.path)
@@ -128,7 +120,7 @@ class HdfsTarget(FileSystemTarget):
         if isinstance(path, HdfsTarget):
             path = path.path
         if raise_if_exists and self.fs.exists(path):
-            raise RuntimeError('Destination exists: %s' % path)
+            raise RuntimeError("Destination exists: %s" % path)
         self.fs.rename(self.path, path)
 
     def move(self, path, raise_if_exists=False):
@@ -165,7 +157,7 @@ class HdfsTarget(FileSystemTarget):
             # start with the full path and then up the tree until we can check
             length = len(parts)
             for part in range(length):
-                path = "/".join(parts[0:length - part]) + "/"
+                path = "/".join(parts[0 : length - part]) + "/"
                 if self.fs.exists(path):
                     # if the path exists and we can write there, great!
                     if self._is_writable(path):
@@ -178,7 +170,7 @@ class HdfsTarget(FileSystemTarget):
             return False
 
     def _is_writable(self, path):
-        test_path = path + '.test_write_access-%09d' % random.randrange(10_000_000_000)
+        test_path = path + ".test_write_access-%09d" % random.randrange(10_000_000_000)
         try:
             self.fs.touchz(test_path)
             self.fs.remove(test_path, recursive=False)
@@ -200,7 +192,8 @@ class HdfsFlagTarget(HdfsTarget):
     Because Hadoop outputs into a directory and not a single file,
     the path is assumed to be a directory.
     """
-    def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
+
+    def __init__(self, path, format=None, client=None, flag="_SUCCESS"):
         """
         Initializes a HdfsFlagTarget.
 
@@ -212,8 +205,7 @@ class HdfsFlagTarget(HdfsTarget):
         :type flag: str
         """
         if path[-1] != "/":
-            raise ValueError("HdfsFlagTarget requires the path to be to a "
-                             "directory.  It must end with a slash ( / ).")
+            raise ValueError("HdfsFlagTarget requires the path to be to a directory.  It must end with a slash ( / ).")
         super(HdfsFlagTarget, self).__init__(path, format, client)
         self.flag = flag
 

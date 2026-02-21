@@ -28,7 +28,7 @@ from urllib.parse import urlsplit
 import luigi
 from luigi import Task
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import requests
@@ -40,11 +40,11 @@ def get_soql_fields(soql):
     """
     Gets queried columns names.
     """
-    soql_fields = re.search('(?<=select)(?s)(.*)(?=from)', soql, re.IGNORECASE)     # get fields
-    soql_fields = re.sub(' ', '', soql_fields.group())                              # remove extra spaces
-    soql_fields = re.sub('\t', '', soql_fields)                                     # remove tabs
-    fields = re.split(',|\n|\r|', soql_fields)                                      # split on commas and newlines
-    fields = [field for field in fields if field != '']                             # remove empty strings
+    soql_fields = re.search("(?<=select)(?s)(.*)(?=from)", soql, re.IGNORECASE)  # get fields
+    soql_fields = re.sub(" ", "", soql_fields.group())  # remove extra spaces
+    soql_fields = re.sub("\t", "", soql_fields)  # remove tabs
+    fields = re.split(",|\n|\r|", soql_fields)  # split on commas and newlines
+    fields = [field for field in fields if field != ""]  # remove empty strings
     return fields
 
 
@@ -58,14 +58,14 @@ def parse_results(fields, data):
     """
     master = []
 
-    for record in data['records']:  # for each 'record' in response
+    for record in data["records"]:  # for each 'record' in response
         row = [None] * len(fields)  # create null list the length of number of columns
         for obj, value in record.items():  # for each obj in record
             if not isinstance(value, (dict, list, tuple)):  # if not data structure
                 if obj in fields:
                     row[fields.index(obj)] = ensure_utf(value)
 
-            elif isinstance(value, dict) and obj != 'attributes':  # traverse down into object
+            elif isinstance(value, dict) and obj != "attributes":  # traverse down into object
                 path = obj
                 _traverse_results(value, fields, row, path)
 
@@ -80,13 +80,13 @@ def _traverse_results(value, fields, row, path):
     Traverses through ordered dict and recursively calls itself when encountering a dictionary
     """
     for f, v in value.items():  # for each item in obj
-        field_name = '{path}.{name}'.format(path=path, name=f) if path else f
+        field_name = "{path}.{name}".format(path=path, name=f) if path else f
 
         if not isinstance(v, (dict, list, tuple)):  # if not data structure
             if field_name in fields:
                 row[fields.index(field_name)] = ensure_utf(v)
 
-        elif isinstance(v, dict) and f != 'attributes':  # it is a dict
+        elif isinstance(v, dict) and f != "attributes":  # it is a dict
             _traverse_results(v, fields, row, field_name)
 
 
@@ -96,12 +96,13 @@ class salesforce(luigi.Config):
 
     Did not include sandbox_name here, as the user may have multiple sandboxes.
     """
-    username = luigi.Parameter(default='')
-    password = luigi.Parameter(default='')
-    security_token = luigi.Parameter(default='')
+
+    username = luigi.Parameter(default="")
+    password = luigi.Parameter(default="")
+    security_token = luigi.Parameter(default="")
 
     # sandbox token
-    sb_security_token = luigi.Parameter(default='')
+    sb_security_token = luigi.Parameter(default="")
 
 
 class QuerySalesforce(Task):
@@ -149,31 +150,27 @@ class QuerySalesforce(Task):
         if self.use_sandbox and not self.sandbox_name:
             raise Exception("Parameter sf_sandbox_name must be provided when uploading to a Salesforce Sandbox")
 
-        sf = SalesforceAPI(salesforce().username,
-                           salesforce().password,
-                           salesforce().security_token,
-                           salesforce().sb_security_token,
-                           self.sandbox_name)
+        sf = SalesforceAPI(salesforce().username, salesforce().password, salesforce().security_token, salesforce().sb_security_token, self.sandbox_name)
 
-        job_id = sf.create_operation_job('query', self.object_name, content_type=self.content_type)
+        job_id = sf.create_operation_job("query", self.object_name, content_type=self.content_type)
         logger.info("Started query job %s in salesforce for object %s" % (job_id, self.object_name))
 
-        batch_id = ''
-        msg = ''
+        batch_id = ""
+        msg = ""
         try:
             if self.is_soql_file:
-                with open(self.soql, 'r') as infile:
+                with open(self.soql, "r") as infile:
                     self.soql = infile.read()
 
             batch_id = sf.create_batch(job_id, self.soql, self.content_type)
             logger.info("Creating new batch %s to query: %s for job: %s." % (batch_id, self.object_name, job_id))
             status = sf.block_on_batch(job_id, batch_id)
-            if status['state'].lower() == 'failed':
-                msg = "Batch failed with message: %s" % status['state_message']
+            if status["state"].lower() == "failed":
+                msg = "Batch failed with message: %s" % status["state_message"]
                 logger.error(msg)
                 # don't raise exception if it's b/c of an included relationship
                 # normal query will execute (with relationship) after bulk job is closed
-                if 'foreign key relationships not supported' not in status['state_message'].lower():
+                if "foreign key relationships not supported" not in status["state_message"].lower():
                     raise Exception(msg)
             else:
                 result_ids = sf.get_batch_result_ids(job_id, batch_id)
@@ -181,14 +178,14 @@ class QuerySalesforce(Task):
                 # If there's only one result, just download it, otherwise we need to merge the resulting downloads
                 if len(result_ids) == 1:
                     data = sf.get_batch_result(job_id, batch_id, result_ids[0])
-                    with open(self.output().path, 'wb') as outfile:
+                    with open(self.output().path, "wb") as outfile:
                         outfile.write(data)
                 else:
                     # Download each file to disk, and then merge into one.
                     # Preferring to do it this way so as to minimize memory consumption.
                     for i, result_id in enumerate(result_ids):
                         logger.info("Downloading batch result %s for batch: %s and job: %s" % (result_id, batch_id, job_id))
-                        with open("%s.%d" % (self.output().path, i), 'wb') as outfile:
+                        with open("%s.%d" % (self.output().path, i), "wb") as outfile:
                             outfile.write(sf.get_batch_result(job_id, batch_id, result_id))
 
                     logger.info("Merging results of batch %s" % batch_id)
@@ -197,13 +194,13 @@ class QuerySalesforce(Task):
             logger.info("Closing job %s" % job_id)
             sf.close_job(job_id)
 
-        if 'state_message' in status and 'foreign key relationships not supported' in status['state_message'].lower():
+        if "state_message" in status and "foreign key relationships not supported" in status["state_message"].lower():
             logger.info("Retrying with REST API query")
             data_file = sf.query_all(self.soql)
 
             reader = csv.reader(data_file)
-            with open(self.output().path, 'wb') as outfile:
-                writer = csv.writer(outfile, dialect='excel')
+            with open(self.output().path, "wb") as outfile:
+                writer = csv.writer(outfile, dialect="excel")
                 for row in reader:
                     writer.writerow(row)
 
@@ -211,11 +208,11 @@ class QuerySalesforce(Task):
         """
         Merges the resulting files of a multi-result batch bulk query.
         """
-        outfile = open(self.output().path, 'w')
+        outfile = open(self.output().path, "w")
 
-        if self.content_type.lower() == 'csv':
+        if self.content_type.lower() == "csv":
             for i, result_id in enumerate(result_ids):
-                with open("%s.%d" % (self.output().path, i), 'r') as f:
+                with open("%s.%d" % (self.output().path, i), "r") as f:
                     header = f.readline()
                     if i == 0:
                         outfile.write(header)
@@ -232,6 +229,7 @@ class SalesforceAPI:
     Class used to interact with the SalesforceAPI.  Currently provides only the
     methods necessary for performing a bulk upload operation.
     """
+
     API_VERSION = 34.0
     SOAP_NS = "{urn:partner.soap.sforce.com}"
     API_NS = "{http://www.force.com/2009/06/asyncapi/dataload}"
@@ -257,9 +255,7 @@ class SalesforceAPI:
         if self.has_active_session():
             raise Exception("Session already in progress.")
 
-        response = requests.post(self._get_login_url(),
-                                 headers=self._get_login_headers(),
-                                 data=self._get_login_xml())
+        response = requests.post(self._get_login_url(), headers=self._get_login_headers(), data=self._get_login_xml())
         response.raise_for_status()
 
         root = ET.fromstring(response.text)
@@ -274,8 +270,7 @@ class SalesforceAPI:
             self.server_url = e.text
 
         if not self.has_active_session():
-            raise Exception("Invalid login attempt resulted in null sessionId [%s] and/or serverUrl [%s]." %
-                            (self.session_id, self.server_url))
+            raise Exception("Invalid login attempt resulted in null sessionId [%s] and/or serverUrl [%s]." % (self.session_id, self.server_url))
         self.hostname = urlsplit(self.server_url).hostname
 
     def has_active_session(self):
@@ -287,11 +282,8 @@ class SalesforceAPI:
 
         :param query: the SOQL query to send to Salesforce, e.g. "SELECT id from Lead WHERE email = 'a@b.com'"
         """
-        params = {'q': query}
-        response = requests.get(self._get_norm_query_url(),
-                                headers=self._get_rest_headers(),
-                                params=params,
-                                **kwargs)
+        params = {"q": query}
+        response = requests.get(self._get_norm_query_url(), headers=self._get_rest_headers(), params=params, **kwargs)
         if response.status_code != requests.codes.ok:
             raise Exception(response.content)
 
@@ -313,11 +305,9 @@ class SalesforceAPI:
         """
         if identifier_is_url:
             # Don't use `self.base_url` here because the full URI is provided
-            url = (u'https://{instance}{next_record_url}'
-                   .format(instance=self.hostname,
-                           next_record_url=next_records_identifier))
+            url = "https://{instance}{next_record_url}".format(instance=self.hostname, next_record_url=next_records_identifier)
         else:
-            url = self._get_norm_query_url() + '{next_record_id}'
+            url = self._get_norm_query_url() + "{next_record_id}"
             url = url.format(next_record_id=next_records_identifier)
         response = requests.get(url, headers=self._get_rest_headers(), **kwargs)
 
@@ -347,8 +337,8 @@ class SalesforceAPI:
         tmp_list = [fields]
         tmp_list.extend(parse_results(fields, response))
 
-        tmp_dir = luigi.configuration.get_config().get('salesforce', 'local-tmp-dir', None)
-        tmp_file = tempfile.TemporaryFile(mode='a+b', dir=tmp_dir)
+        tmp_dir = luigi.configuration.get_config().get("salesforce", "local-tmp-dir", None)
+        tmp_file = tempfile.TemporaryFile(mode="a+b", dir=tmp_dir)
 
         writer = csv.writer(tmp_file)
         writer.writerows(tmp_list)
@@ -356,16 +346,16 @@ class SalesforceAPI:
         # The number of results might have exceeded the Salesforce batch limit
         # so check whether there are more results and retrieve them if so.
 
-        length = len(response['records'])
-        while not response['done']:
-            response = self.query_more(response['nextRecordsUrl'], identifier_is_url=True, **kwargs)
+        length = len(response["records"])
+        while not response["done"]:
+            response = self.query_more(response["nextRecordsUrl"], identifier_is_url=True, **kwargs)
 
             writer.writerows(parse_results(fields, response))
-            length += len(response['records'])
+            length += len(response["records"])
             if not length % 10000:
-                logger.info('Requested {0} lines...'.format(length))
+                logger.info("Requested {0} lines...".format(length))
 
-        logger.info('Requested a total of {0} lines.'.format(length))
+        logger.info("Requested a total of {0} lines.".format(length))
 
         tmp_file.seek(0)
         return tmp_file
@@ -401,13 +391,15 @@ class SalesforceAPI:
         if not self.has_active_session():
             self.start_session()
 
-        response = requests.post(self._get_create_job_url(),
-                                 headers=self._get_create_job_headers(),
-                                 data=self._get_create_job_xml(operation, obj, external_id_field_name, content_type))
+        response = requests.post(
+            self._get_create_job_url(),
+            headers=self._get_create_job_headers(),
+            data=self._get_create_job_xml(operation, obj, external_id_field_name, content_type),
+        )
         response.raise_for_status()
 
         root = ET.fromstring(response.text)
-        job_id = root.find('%sid' % self.API_NS).text
+        job_id = root.find("%sid" % self.API_NS).text
         return job_id
 
     def get_job_details(self, job_id):
@@ -431,9 +423,7 @@ class SalesforceAPI:
         :param job_id: job_id as returned by 'create_operation_job(...)'
         :return: abort response as xml
         """
-        response = requests.post(self._get_abort_job_url(job_id),
-                                 headers=self._get_abort_job_headers(),
-                                 data=self._get_abort_job_xml())
+        response = requests.post(self._get_abort_job_url(job_id), headers=self._get_abort_job_headers(), data=self._get_abort_job_xml())
         response.raise_for_status()
 
         return response
@@ -448,9 +438,7 @@ class SalesforceAPI:
         if not job_id or not self.has_active_session():
             raise Exception("Can not close job without valid job_id and an active session.")
 
-        response = requests.post(self._get_close_job_url(job_id),
-                                 headers=self._get_close_job_headers(),
-                                 data=self._get_close_job_xml())
+        response = requests.post(self._get_close_job_url(job_id), headers=self._get_close_job_headers(), data=self._get_close_job_xml())
         response.raise_for_status()
 
         return response
@@ -472,15 +460,13 @@ class SalesforceAPI:
             raise Exception("Can not create a batch without a valid job_id and an active session.")
 
         headers = self._get_create_batch_content_headers(file_type)
-        headers['Content-Length'] = str(len(data))
+        headers["Content-Length"] = str(len(data))
 
-        response = requests.post(self._get_create_batch_url(job_id),
-                                 headers=headers,
-                                 data=data)
+        response = requests.post(self._get_create_batch_url(job_id), headers=headers, data=data)
         response.raise_for_status()
 
         root = ET.fromstring(response.text)
-        batch_id = root.find('%sid' % self.API_NS).text
+        batch_id = root.find("%sid" % self.API_NS).text
         return batch_id
 
     def block_on_batch(self, job_id, batch_id, sleep_time_seconds=5, max_wait_time_seconds=-1):
@@ -498,9 +484,11 @@ class SalesforceAPI:
         status = {}
         while max_wait_time_seconds < 0 or time.time() - start_time < max_wait_time_seconds:
             status = self._get_batch_info(job_id, batch_id)
-            logger.info("Batch %s Job %s in state %s.  %s records processed.  %s records failed." %
-                        (batch_id, job_id, status['state'], status['num_processed'], status['num_failed']))
-            if status['state'].lower() in ["completed", "failed"]:
+            logger.info(
+                "Batch %s Job %s in state %s.  %s records processed.  %s records failed."
+                % (batch_id, job_id, status["state"], status["num_processed"], status["num_failed"])
+            )
+            if status["state"].lower() in ["completed", "failed"]:
                 return status
             time.sleep(sleep_time_seconds)
 
@@ -521,12 +509,11 @@ class SalesforceAPI:
         :param batch_id: batch_id as returned by 'create_batch(...)'
         :return: list of batch result IDs to be used in 'get_batch_result(...)'
         """
-        response = requests.get(self._get_batch_results_url(job_id, batch_id),
-                                headers=self._get_batch_info_headers())
+        response = requests.get(self._get_batch_results_url(job_id, batch_id), headers=self._get_batch_info_headers())
         response.raise_for_status()
 
         root = ET.fromstring(response.text)
-        result_ids = [r.text for r in root.findall('%sresult' % self.API_NS)]
+        result_ids = [r.text for r in root.findall("%sresult" % self.API_NS)]
 
         return result_ids
 
@@ -538,26 +525,24 @@ class SalesforceAPI:
         :param result_id:
 
         """
-        response = requests.get(self._get_batch_result_url(job_id, batch_id, result_id),
-                                headers=self._get_session_headers())
+        response = requests.get(self._get_batch_result_url(job_id, batch_id, result_id), headers=self._get_session_headers())
         response.raise_for_status()
 
         return response.content
 
     def _get_batch_info(self, job_id, batch_id):
-        response = requests.get(self._get_batch_info_url(job_id, batch_id),
-                                headers=self._get_batch_info_headers())
+        response = requests.get(self._get_batch_info_url(job_id, batch_id), headers=self._get_batch_info_headers())
         response.raise_for_status()
 
         root = ET.fromstring(response.text)
 
         result = {
-            "state": root.find('%sstate' % self.API_NS).text,
-            "num_processed": root.find('%snumberRecordsProcessed' % self.API_NS).text,
-            "num_failed": root.find('%snumberRecordsFailed' % self.API_NS).text,
+            "state": root.find("%sstate" % self.API_NS).text,
+            "num_processed": root.find("%snumberRecordsProcessed" % self.API_NS).text,
+            "num_failed": root.find("%snumberRecordsFailed" % self.API_NS).text,
         }
-        if root.find('%sstateMessage' % self.API_NS) is not None:
-            result['state_message'] = root.find('%sstateMessage' % self.API_NS).text
+        if root.find("%sstateMessage" % self.API_NS) is not None:
+            result["state_message"] = root.find("%sstateMessage" % self.API_NS).text
         return result
 
     def _get_login_url(self):
@@ -616,32 +601,25 @@ class SalesforceAPI:
         return "%s/%s" % (self._get_batch_results_url(job_id, batch_id), result_id)
 
     def _get_login_headers(self):
-        headers = {
-            'Content-Type': "text/xml; charset=UTF-8",
-            'SOAPAction': 'login'
-        }
+        headers = {"Content-Type": "text/xml; charset=UTF-8", "SOAPAction": "login"}
         return headers
 
     def _get_session_headers(self):
-        headers = {
-            'X-SFDC-Session': self.session_id
-        }
+        headers = {"X-SFDC-Session": self.session_id}
         return headers
 
     def _get_norm_session_headers(self):
-        headers = {
-            'Authorization': 'Bearer %s' % self.session_id
-        }
+        headers = {"Authorization": "Bearer %s" % self.session_id}
         return headers
 
     def _get_rest_headers(self):
         headers = self._get_norm_session_headers()
-        headers['Content-Type'] = 'application/json'
+        headers["Content-Type"] = "application/json"
         return headers
 
     def _get_job_headers(self):
         headers = self._get_session_headers()
-        headers['Content-Type'] = "application/xml; charset=UTF-8"
+        headers["Content-Type"] = "application/xml; charset=UTF-8"
         return headers
 
     def _get_create_job_headers(self):
@@ -655,8 +633,8 @@ class SalesforceAPI:
 
     def _get_create_batch_content_headers(self, content_type):
         headers = self._get_session_headers()
-        content_type = 'text/csv' if content_type.lower() == 'csv' else 'application/xml'
-        headers['Content-Type'] = "%s; charset=UTF-8" % content_type
+        content_type = "text/csv" if content_type.lower() == "csv" else "application/xml"
+        headers["Content-Type"] = "%s; charset=UTF-8" % content_type
         return headers
 
     def _get_batch_info_headers(self):
@@ -677,8 +655,7 @@ class SalesforceAPI:
         """ % (self.username, self.password, self.security_token if self.sandbox_name is None else self.sb_security_token)
 
     def _get_create_job_xml(self, operation, obj, external_id_field_name, content_type):
-        external_id_field_name_element = "" if not external_id_field_name else \
-            "\n<externalIdFieldName>%s</externalIdFieldName>" % external_id_field_name
+        external_id_field_name_element = "" if not external_id_field_name else "\n<externalIdFieldName>%s</externalIdFieldName>" % external_id_field_name
 
         # Note: "Unable to parse job" error may be caused by reordering fields.
         #       ExternalIdFieldName element must be before contentType element.

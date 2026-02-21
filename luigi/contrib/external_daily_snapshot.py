@@ -20,7 +20,7 @@ import logging
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class ExternalDailySnapshot(luigi.ExternalTask):
@@ -44,6 +44,7 @@ class ExternalDailySnapshot(luigi.ExternalTask):
       ServiceLogs.latest(service="radio", lookback=21)
 
     """
+
     date = luigi.DateParameter()
     __cache = []
 
@@ -70,6 +71,5 @@ class ExternalDailySnapshot(luigi.ExternalTask):
             t = cls(date=d, *args, **kwargs)
             if t.complete():
                 return t
-        logger.debug("Could not find last dump for %s (looked back %d days)",
-                     cls.__name__, lookback)
+        logger.debug("Could not find last dump for %s (looked back %d days)", cls.__name__, lookback)
         return t

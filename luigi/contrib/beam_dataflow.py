@@ -25,7 +25,7 @@ import luigi
 from luigi.contrib import bigquery, gcs
 from luigi.task import MixinNaiveBulkComplete
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class DataflowParamKeys(metaclass=abc.ABCMeta):
@@ -35,6 +35,7 @@ class DataflowParamKeys(metaclass=abc.ABCMeta):
     the Python implementation expects snake case.
 
     """
+
     @property
     @abc.abstractmethod
     def runner(self):
@@ -133,14 +134,10 @@ class _CmdLineRunner:
     own launcher class and set it in BeamDataflowJobTask.cmd_line_runner.
 
     """
+
     @staticmethod
     def run(cmd, task=None):
-        process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            close_fds=True
-        )
+        process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
         output_lines = []
         while True:
             line = process.stdout.readline()
@@ -303,7 +300,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
 
     def run(self):
         cmd_line = self._mk_cmd_line()
-        logger.info(' '.join(cmd_line))
+        logger.info(" ".join(cmd_line))
 
         self.before_run()
 
@@ -334,20 +331,16 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
 
     def _get_runner(self):
         if not self.runner:
-            logger.warning("Runner not supplied to BeamDataflowJobTask. " +
-                           "Defaulting to DirectRunner.")
+            logger.warning("Runner not supplied to BeamDataflowJobTask. " + "Defaulting to DirectRunner.")
             return "DirectRunner"
-        elif self.runner in [
-            "DataflowRunner",
-            "DirectRunner"
-        ]:
+        elif self.runner in ["DataflowRunner", "DirectRunner"]:
             return self.runner
         else:
             raise ValueError("Runner %s is unsupported." % self.runner)
 
     def _get_dataflow_args(self):
         def f(key, value):
-            return '--{}={}'.format(key, value)
+            return "--{}={}".format(key, value)
 
         output = []
 
@@ -392,20 +385,20 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
 
     def _format_input_args(self):
         """
-            Parses the result(s) of self.input() into a string-serialized
-            key-value list passed to the Dataflow job. Valid inputs include:
+        Parses the result(s) of self.input() into a string-serialized
+        key-value list passed to the Dataflow job. Valid inputs include:
 
-            return FooTarget()
+        return FooTarget()
 
-            return {"input1": FooTarget(), "input2": FooTarget2())
+        return {"input1": FooTarget(), "input2": FooTarget2())
 
-            return ("input", FooTarget())
+        return ("input", FooTarget())
 
-            return [("input1", FooTarget()), ("input2": FooTarget2())]
+        return [("input1", FooTarget()), ("input2": FooTarget2())]
 
-            return [FooTarget(), FooTarget2()]
+        return [FooTarget(), FooTarget2()]
 
-            Unlabeled input are passed in with under the default key "input".
+        Unlabeled input are passed in with under the default key "input".
         """
         job_input = self.input()
 
@@ -422,19 +415,15 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
                 job_input = {"input": job_input}
 
         elif not isinstance(job_input, dict):
-            raise ValueError("Invalid job input requires(). Supported types: ["
-                             "Target, tuple of (name, Target), "
-                             "dict of (name: Target), list of Targets]")
+            raise ValueError("Invalid job input requires(). Supported types: [Target, tuple of (name, Target), dict of (name: Target), list of Targets]")
 
         if not isinstance(self.file_pattern(), dict):
-            raise ValueError('file_pattern() must return a dict type')
+            raise ValueError("file_pattern() must return a dict type")
 
         input_args = []
 
-        for (name, targets) in job_input.items():
-            uris = [
-              self.get_target_path(uri_target) for uri_target in luigi.task.flatten(targets)
-            ]
+        for name, targets in job_input.items():
+            uris = [self.get_target_path(uri_target) for uri_target in luigi.task.flatten(targets)]
             if isinstance(targets, dict):
                 """
                 If targets is a dict that means it had multiple outputs.
@@ -447,38 +436,37 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
 
             input_dict = {}
 
-            for (arg_name, uri) in zip(names, uris):
-                pattern = self.file_pattern().get(name, 'part-*')
+            for arg_name, uri in zip(names, uris):
+                pattern = self.file_pattern().get(name, "part-*")
                 input_value = input_dict.get(arg_name, [])
-                input_value.append(uri.rstrip('/') + '/' + pattern)
+                input_value.append(uri.rstrip("/") + "/" + pattern)
                 input_dict[arg_name] = input_value
 
-            for (key, paths) in input_dict.items():
-                input_args.append("--%s=%s" % (key, ','.join(paths)))
+            for key, paths in input_dict.items():
+                input_args.append("--%s=%s" % (key, ",".join(paths)))
 
         return input_args
 
     def _format_output_args(self):
         """
-            Parses the result(s) of self.output() into a string-serialized
-            key-value list passed to the Dataflow job. Valid outputs include:
+        Parses the result(s) of self.output() into a string-serialized
+        key-value list passed to the Dataflow job. Valid outputs include:
 
-            return FooTarget()
+        return FooTarget()
 
-            return {"output1": FooTarget(), "output2": FooTarget2()}
+        return {"output1": FooTarget(), "output2": FooTarget2()}
 
-            Unlabeled outputs are passed in with under the default key "output".
+        Unlabeled outputs are passed in with under the default key "output".
         """
         job_output = self.output()
         if isinstance(job_output, luigi.Target):
             job_output = {"output": job_output}
         elif not isinstance(job_output, dict):
-            raise ValueError(
-                "Task output must be a Target or a dict from String to Target")
+            raise ValueError("Task output must be a Target or a dict from String to Target")
 
         output_args = []
 
-        for (name, target) in job_output.items():
+        for name, target in job_output.items():
             uri = self.get_target_path(target)
             output_args.append("--%s=%s" % (name, uri))
 
@@ -487,8 +475,8 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
     @staticmethod
     def get_target_path(target):
         """
-            Given a luigi Target, determine a stringly typed path to pass as a
-            Dataflow job argument.
+        Given a luigi Target, determine a stringly typed path to pass as a
+        Dataflow job argument.
         """
         if isinstance(target, luigi.LocalTarget) or isinstance(target, gcs.GCSTarget):
             return target.path

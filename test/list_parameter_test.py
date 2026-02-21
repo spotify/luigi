@@ -31,7 +31,6 @@ class ListParameterTask(luigi.Task):
 
 
 class ListParameterTest(unittest.TestCase):
-
     _list = [1, "one", True]
 
     def test_parse(self):
@@ -48,8 +47,7 @@ class ListParameterTest(unittest.TestCase):
         self.assertEqual(b_list, a.parse(a.serialize(b_list)))
 
     def test_parse_interface(self):
-        in_parse(["ListParameterTask", "--param", '[1, "one", true]'],
-                 lambda task: self.assertEqual(task.param, tuple(ListParameterTest._list)))
+        in_parse(["ListParameterTask", "--param", '[1, "one", true]'], lambda task: self.assertEqual(task.param, tuple(ListParameterTest._list)))
 
     def test_serialize_task(self):
         t = ListParameterTask(ListParameterTest._list)
@@ -100,13 +98,9 @@ class ListParameterTest(unittest.TestCase):
             a.normalize(invalid_list_value)
 
         # Check that warnings are properly emitted
-        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False):
+        with mock.patch("luigi.parameter._JSONSCHEMA_ENABLED", False):
             with pytest.warns(
-                UserWarning,
-                match=(
-                    "The 'jsonschema' package is not installed so the parameter can not be "
-                    "validated even though a schema is given."
-                )
+                UserWarning, match=("The 'jsonschema' package is not installed so the parameter can not be validated even though a schema is given.")
             ):
                 luigi.ListParameter(schema={"type": "array", "items": {"type": "number"}})
 
@@ -124,7 +118,10 @@ class ListParameterTest(unittest.TestCase):
         )
         c = luigi.DictParameter(schema=validator)
         c.normalize(valid_list)
-        with pytest.raises(ValidationError, match=r"'INVALID_ATTRIBUTE' is not of type 'number'",):
+        with pytest.raises(
+            ValidationError,
+            match=r"'INVALID_ATTRIBUTE' is not of type 'number'",
+        ):
             c.normalize(["INVALID_ATTRIBUTE"])
 
         # Test with frozen data

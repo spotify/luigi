@@ -28,7 +28,6 @@ import luigi.server
 
 
 class ResourceTestTask(RunOnceTask):
-
     param = luigi.Parameter()
     reduce_foo = luigi.BoolParameter()
 
@@ -45,7 +44,6 @@ class ResourceTestTask(RunOnceTask):
 
 
 class ResourceWrapperTask(RunOnceTask):
-
     reduce_foo = ResourceTestTask.reduce_foo
 
     def requires(self):
@@ -56,7 +54,6 @@ class ResourceWrapperTask(RunOnceTask):
 
 
 class LocalRunningResourcesTest(unittest.TestCase):
-
     def test_resource_reduction(self):
         # trivial resource reduction on local scheduler
         # test the running_task_resources setter and getter
@@ -72,8 +69,7 @@ class LocalRunningResourcesTest(unittest.TestCase):
 
 
 class ConcurrentRunningResourcesTest(unittest.TestCase):
-
-    @with_config({'scheduler': {'stable_done_cooldown_secs': '0'}})
+    @with_config({"scheduler": {"stable_done_cooldown_secs": "0"}})
     def setUp(self):
         super(ConcurrentRunningResourcesTest, self).setUp()
 

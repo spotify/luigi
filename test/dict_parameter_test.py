@@ -33,8 +33,7 @@ class DictParameterTask(luigi.Task):
 
 
 class DictParameterTest(unittest.TestCase):
-
-    _dict = collections.OrderedDict([('username', 'me'), ('password', 'secret')])
+    _dict = collections.OrderedDict([("username", "me"), ("password", "secret")])
 
     def test_parse(self):
         d = luigi.DictParameter().parse(json.dumps(DictParameterTest._dict))
@@ -51,8 +50,9 @@ class DictParameterTest(unittest.TestCase):
             self.assertEqual(json_input, luigi.DictParameter().serialize(_dict))
 
     def test_parse_interface(self):
-        in_parse(["DictParameterTask", "--param", '{"username": "me", "password": "secret"}'],
-                 lambda task: self.assertEqual(task.param, DictParameterTest._dict))
+        in_parse(
+            ["DictParameterTask", "--param", '{"username": "me", "password": "secret"}'], lambda task: self.assertEqual(task.param, DictParameterTest._dict)
+        )
 
     def test_serialize_task(self):
         t = DictParameterTask(DictParameterTest._dict)
@@ -105,34 +105,30 @@ class DictParameterTest(unittest.TestCase):
         # Test the example given in docstring
         b = luigi.DictParameter(
             schema={
-              "type": "object",
-              "patternProperties": {
-                ".*": {"type": "string", "enum": ["web", "staging"]},
-              }
+                "type": "object",
+                "patternProperties": {
+                    ".*": {"type": "string", "enum": ["web", "staging"]},
+                },
             }
-          )
+        )
         b.normalize({"role": "web", "env": "staging"})
         with pytest.raises(ValidationError, match=r"'UNKNOWN_VALUE' is not one of \['web', 'staging'\]"):
             b.normalize({"role": "UNKNOWN_VALUE", "env": "staging"})
 
         # Check that warnings are properly emitted
-        with mock.patch('luigi.parameter._JSONSCHEMA_ENABLED', False):
+        with mock.patch("luigi.parameter._JSONSCHEMA_ENABLED", False):
             with pytest.warns(
-                UserWarning,
-                match=(
-                    "The 'jsonschema' package is not installed so the parameter can not be "
-                    "validated even though a schema is given."
-                )
+                UserWarning, match=("The 'jsonschema' package is not installed so the parameter can not be validated even though a schema is given.")
             ):
                 luigi.ListParameter(schema={"type": "object"})
 
         # Test with a custom validator
         validator = Draft4Validator(
             schema={
-              "type": "object",
-              "patternProperties": {
-                ".*": {"type": "string", "enum": ["web", "staging"]},
-              },
+                "type": "object",
+                "patternProperties": {
+                    ".*": {"type": "string", "enum": ["web", "staging"]},
+                },
             }
         )
         c = luigi.DictParameter(schema=validator)

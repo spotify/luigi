@@ -7,7 +7,7 @@ from luigi.contrib.hdfs.clients import exists, listdir, mkdir, remove, rename
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs.error import HDFSCliError
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class HdfsAtomicWriteError(IOError):
@@ -15,9 +15,8 @@ class HdfsAtomicWriteError(IOError):
 
 
 class HdfsReadPipe(luigi.format.InputPipeProcessWrapper):
-
     def __init__(self, path):
-        super(HdfsReadPipe, self).__init__(load_hadoop_cmd() + ['fs', '-cat', path])
+        super(HdfsReadPipe, self).__init__(load_hadoop_cmd() + ["fs", "-cat", path])
 
 
 class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
@@ -38,11 +37,10 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
         self.tmppath = hdfs_config.tmppath(self.path)
         parent_dir = os.path.dirname(self.tmppath)
         mkdir(parent_dir, parents=True, raise_if_exists=False)
-        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ['fs', '-put', '-', self.tmppath])
+        super(HdfsAtomicWritePipe, self).__init__(load_hadoop_cmd() + ["fs", "-put", "-", self.tmppath])
 
     def abort(self):
-        logger.info("Aborting %s('%s'). Removing temporary file '%s'",
-                    self.__class__.__name__, self.path, self.tmppath)
+        logger.info("Aborting %s('%s'). Removing temporary file '%s'", self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWritePipe, self).abort()
         remove(self.tmppath, skip_trash=True)
 
@@ -56,8 +54,8 @@ class HdfsAtomicWritePipe(luigi.format.OutputPipeProcessWrapper):
                 pass
             else:
                 raise ex
-        if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
-            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
+        if not all(result["result"] for result in rename(self.tmppath, self.path) or []):
+            raise HdfsAtomicWriteError("Atomic write to {} failed".format(self.path))
 
 
 class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
@@ -69,11 +67,10 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
         self.path = path
         self.tmppath = hdfs_config.tmppath(self.path)
         self.datapath = self.tmppath + ("/data%s" % data_extension)
-        super(HdfsAtomicWriteDirPipe, self).__init__(load_hadoop_cmd() + ['fs', '-put', '-', self.datapath])
+        super(HdfsAtomicWriteDirPipe, self).__init__(load_hadoop_cmd() + ["fs", "-put", "-", self.datapath])
 
     def abort(self):
-        logger.info("Aborting %s('%s'). Removing temporary dir '%s'",
-                    self.__class__.__name__, self.path, self.tmppath)
+        logger.info("Aborting %s('%s'). Removing temporary dir '%s'", self.__class__.__name__, self.path, self.tmppath)
         super(HdfsAtomicWriteDirPipe, self).abort()
         remove(self.tmppath, skip_trash=True)
 
@@ -89,18 +86,17 @@ class HdfsAtomicWriteDirPipe(luigi.format.OutputPipeProcessWrapper):
                 raise ex
 
         # it's unlikely to fail in this way but better safe than sorry
-        if not all(result['result'] for result in rename(self.tmppath, self.path) or []):
-            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
+        if not all(result["result"] for result in rename(self.tmppath, self.path) or []):
+            raise HdfsAtomicWriteError("Atomic write to {} failed".format(self.path))
 
         if os.path.basename(self.tmppath) in map(os.path.basename, listdir(self.path)):
             remove(self.path)
-            raise HdfsAtomicWriteError('Atomic write to {} failed'.format(self.path))
+            raise HdfsAtomicWriteError("Atomic write to {} failed".format(self.path))
 
 
 class PlainFormat(luigi.format.Format):
-
-    input = 'bytes'
-    output = 'hdfs'
+    input = "bytes"
+    output = "hdfs"
 
     def hdfs_writer(self, path):
         return self.pipe_writer(path)
@@ -116,9 +112,8 @@ class PlainFormat(luigi.format.Format):
 
 
 class PlainDirFormat(luigi.format.Format):
-
-    input = 'bytes'
-    output = 'hdfs'
+    input = "bytes"
+    output = "hdfs"
 
     def hdfs_writer(self, path):
         return self.pipe_writer(path)
@@ -139,8 +134,7 @@ PlainDir = PlainDirFormat()
 
 
 class CompatibleHdfsFormat(luigi.format.Format):
-
-    output = 'hdfs'
+    output = "hdfs"
 
     def __init__(self, writer, reader, input=None):
         if input is not None:
@@ -167,7 +161,7 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def __getstate__(self):
         d = self.__dict__.copy()
-        for attr in ('reader', 'writer'):
+        for attr in ("reader", "writer"):
             method = getattr(self, attr)
             try:
                 # if instance method, pickle instance and method name
@@ -178,7 +172,7 @@ class CompatibleHdfsFormat(luigi.format.Format):
 
     def __setstate__(self, d):
         self.__dict__ = d
-        for attr in ('reader', 'writer'):
+        for attr in ("reader", "writer"):
             try:
                 method_self, method_name = d[attr]
             except ValueError:

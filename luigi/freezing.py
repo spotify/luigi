@@ -3,7 +3,6 @@
 Please, do not use it outside of Luigi codebase itself.
 """
 
-
 from collections import OrderedDict
 
 try:

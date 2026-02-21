@@ -52,6 +52,7 @@ class LuigiStatusCode(enum.Enum):
     =============================  ==========================================================
 
     """
+
     SUCCESS = (":)", "there were no failed tasks or missing dependencies")
     SUCCESS_WITH_RETRY = (":)", "there were failed tasks but they all succeeded in a retry")
     FAILED = (":(", "there were failed tasks")
@@ -73,6 +74,7 @@ class LuigiRunResult:
         - scheduling_succeeded (bool): Boolean which is *True* if all the tasks were scheduled without errors.
 
     """
+
     def __init__(self, worker, worker_add_run_status=True):
         self.worker = worker
         summary_dict = _summary_dict(worker)
@@ -94,18 +96,25 @@ def _partition_tasks(worker):
     Still_pending_not_ext is only used to get upstream_failure, upstream_missing_dependency and run_by_other_worker
     """
     task_history = worker._add_task_history
-    pending_tasks = {task for (task, status, ext) in task_history if status == 'PENDING'}
+    pending_tasks = {task for (task, status, ext) in task_history if status == "PENDING"}
     set_tasks = {}
-    set_tasks["completed"] = {task for (task, status, ext) in task_history if status == 'DONE' and task in pending_tasks}
-    set_tasks["already_done"] = {task for (task, status, ext) in task_history
-                                 if status == 'DONE' and task not in pending_tasks and task not in set_tasks["completed"]}
-    set_tasks["ever_failed"] = {task for (task, status, ext) in task_history if status == 'FAILED'}
+    set_tasks["completed"] = {task for (task, status, ext) in task_history if status == "DONE" and task in pending_tasks}
+    set_tasks["already_done"] = {
+        task for (task, status, ext) in task_history if status == "DONE" and task not in pending_tasks and task not in set_tasks["completed"]
+    }
+    set_tasks["ever_failed"] = {task for (task, status, ext) in task_history if status == "FAILED"}
     set_tasks["failed"] = set_tasks["ever_failed"] - set_tasks["completed"]
-    set_tasks["scheduling_error"] = {task for (task, status, ext) in task_history if status == 'UNKNOWN'}
-    set_tasks["still_pending_ext"] = {task for (task, status, ext) in task_history
-                                      if status == 'PENDING' and task not in set_tasks["ever_failed"] and task not in set_tasks["completed"] and not ext}
-    set_tasks["still_pending_not_ext"] = {task for (task, status, ext) in task_history
-                                          if status == 'PENDING' and task not in set_tasks["ever_failed"] and task not in set_tasks["completed"] and ext}
+    set_tasks["scheduling_error"] = {task for (task, status, ext) in task_history if status == "UNKNOWN"}
+    set_tasks["still_pending_ext"] = {
+        task
+        for (task, status, ext) in task_history
+        if status == "PENDING" and task not in set_tasks["ever_failed"] and task not in set_tasks["completed"] and not ext
+    }
+    set_tasks["still_pending_not_ext"] = {
+        task
+        for (task, status, ext) in task_history
+        if status == "PENDING" and task not in set_tasks["ever_failed"] and task not in set_tasks["completed"] and ext
+    }
     set_tasks["run_by_other_worker"] = set()
     set_tasks["upstream_failure"] = set()
     set_tasks["upstream_missing_dependency"] = set()
@@ -156,9 +165,13 @@ def _depth_first_search(set_tasks, current_task, visited):
             if task in set_tasks["scheduling_error"]:
                 set_tasks["upstream_scheduling_error"].add(current_task)
                 upstream_scheduling_error = True
-        if not upstream_failure and not upstream_missing_dependency and \
-                not upstream_run_by_other_worker and not upstream_scheduling_error and \
-                current_task not in set_tasks["run_by_other_worker"]:
+        if (
+            not upstream_failure
+            and not upstream_missing_dependency
+            and not upstream_run_by_other_worker
+            and not upstream_scheduling_error
+            and current_task not in set_tasks["run_by_other_worker"]
+        ):
             set_tasks["not_run"].add(current_task)
 
 
@@ -174,7 +187,7 @@ def _get_str(task_dict, extra_indent):
         tasks = task_dict[task_family]
         tasks = sorted(tasks, key=lambda x: str(x))
         prefix_size = 8 if extra_indent else 4
-        prefix = ' ' * prefix_size
+        prefix = " " * prefix_size
 
         line = None
 
@@ -183,43 +196,46 @@ def _get_str(task_dict, extra_indent):
             lines.append(line)
             break
         if len(tasks[0].get_params()) == 0:
-            line = prefix + '- {0} {1}()'.format(len(tasks), str(task_family))
-        elif _get_len_of_params(tasks[0]) > 60 or len(str(tasks[0])) > 200 or \
-                (len(tasks) == 2 and len(tasks[0].get_params()) > 1 and (_get_len_of_params(tasks[0]) > 40 or len(str(tasks[0])) > 100)):
+            line = prefix + "- {0} {1}()".format(len(tasks), str(task_family))
+        elif (
+            _get_len_of_params(tasks[0]) > 60
+            or len(str(tasks[0])) > 200
+            or (len(tasks) == 2 and len(tasks[0].get_params()) > 1 and (_get_len_of_params(tasks[0]) > 40 or len(str(tasks[0])) > 100))
+        ):
             """
             This is to make sure that there is no really long task in the output
             """
-            line = prefix + '- {0} {1}(...)'.format(len(tasks), task_family)
+            line = prefix + "- {0} {1}(...)".format(len(tasks), task_family)
         elif len((tasks[0].get_params())) == 1:
             attributes = {getattr(task, tasks[0].get_params()[0][0]) for task in tasks}
             param_class = tasks[0].get_params()[0][1]
             first, last = _ranging_attributes(attributes, param_class)
             if first is not None and last is not None and len(attributes) > 3:
-                param_str = '{0}...{1}'.format(param_class.serialize(first), param_class.serialize(last))
+                param_str = "{0}...{1}".format(param_class.serialize(first), param_class.serialize(last))
             else:
-                param_str = '{0}'.format(_get_str_one_parameter(tasks))
-            line = prefix + '- {0} {1}({2}={3})'.format(len(tasks), task_family, tasks[0].get_params()[0][0], param_str)
+                param_str = "{0}".format(_get_str_one_parameter(tasks))
+            line = prefix + "- {0} {1}({2}={3})".format(len(tasks), task_family, tasks[0].get_params()[0][0], param_str)
         else:
             ranging = False
             params = _get_set_of_params(tasks)
             unique_param_keys = list(_get_unique_param_keys(params))
             if len(unique_param_keys) == 1:
-                unique_param, = unique_param_keys
+                (unique_param,) = unique_param_keys
                 attributes = params[unique_param]
                 param_class = unique_param[1]
                 first, last = _ranging_attributes(attributes, param_class)
                 if first is not None and last is not None and len(attributes) > 2:
                     ranging = True
-                    line = prefix + '- {0} {1}({2}'.format(len(tasks), task_family, _get_str_ranging_multiple_parameters(first, last, tasks, unique_param))
+                    line = prefix + "- {0} {1}({2}".format(len(tasks), task_family, _get_str_ranging_multiple_parameters(first, last, tasks, unique_param))
             if not ranging:
                 if len(tasks) == 1:
-                    line = prefix + '- {0} {1}'.format(len(tasks), tasks[0])
+                    line = prefix + "- {0} {1}".format(len(tasks), tasks[0])
                 if len(tasks) == 2:
-                    line = prefix + '- {0} {1} and {2}'.format(len(tasks), tasks[0], tasks[1])
+                    line = prefix + "- {0} {1} and {2}".format(len(tasks), tasks[0], tasks[1])
                 if len(tasks) > 2:
-                    line = prefix + '- {0} {1} ...'.format(len(tasks), tasks[0])
+                    line = prefix + "- {0} {1} ...".format(len(tasks), tasks[0])
         lines.append(line)
-    return '\n'.join(lines)
+    return "\n".join(lines)
 
 
 def _get_len_of_params(task):
@@ -227,17 +243,17 @@ def _get_len_of_params(task):
 
 
 def _get_str_ranging_multiple_parameters(first, last, tasks, unique_param):
-    row = ''
-    str_unique_param = '{0}...{1}'.format(unique_param[1].serialize(first), unique_param[1].serialize(last))
+    row = ""
+    str_unique_param = "{0}...{1}".format(unique_param[1].serialize(first), unique_param[1].serialize(last))
     for param in tasks[0].get_params():
-        row += '{0}='.format(param[0])
+        row += "{0}=".format(param[0])
         if param[0] == unique_param[0]:
-            row += '{0}'.format(str_unique_param)
+            row += "{0}".format(str_unique_param)
         else:
-            row += '{0}'.format(param[1].serialize(getattr(tasks[0], param[0])))
+            row += "{0}".format(param[1].serialize(getattr(tasks[0], param[0])))
         if param != tasks[0].get_params()[-1]:
             row += ", "
-    row += ')'
+    row += ")"
     return row
 
 
@@ -269,16 +285,16 @@ def _ranging_attributes(attributes, param_class):
 
 
 def _get_str_one_parameter(tasks):
-    row = ''
+    row = ""
     count = 0
     for task in tasks:
         if (len(row) >= 30 and count > 2 and count != len(tasks) - 1) or len(row) > 200:
-            row += '...'
+            row += "..."
             break
         param = task.get_params()[0]
-        row += '{0}'.format(param[1].serialize(getattr(task, param[0])))
+        row += "{0}".format(param[1].serialize(getattr(task, param[0])))
         if count < len(tasks) - 1:
-            row += ','
+            row += ","
         count += 1
     return row
 
@@ -289,8 +305,7 @@ def _serialize_first_param(task):
 
 def _get_number_of_tasks_for(status, group_tasks):
     if status == "still_pending":
-        return (_get_number_of_tasks(group_tasks["still_pending_ext"]) +
-                _get_number_of_tasks(group_tasks["still_pending_not_ext"]))
+        return _get_number_of_tasks(group_tasks["still_pending_ext"]) + _get_number_of_tasks(group_tasks["still_pending_not_ext"])
     return _get_number_of_tasks(group_tasks[status])
 
 
@@ -307,10 +322,7 @@ def _get_comments(group_tasks):
         num_tasks = _get_number_of_tasks_for(status, group_tasks)
         if num_tasks:
             space = "    " if status in _PENDING_SUB_STATUSES else ""
-            comments[status] = '{space}* {num_tasks} {human}:\n'.format(
-                space=space,
-                num_tasks=num_tasks,
-                human=human)
+            comments[status] = "{space}* {num_tasks} {human}:\n".format(space=space, num_tasks=num_tasks, human=human)
     return comments
 
 
@@ -330,20 +342,20 @@ _ORDERED_STATUSES = (
     "upstream_scheduling_error",
     "not_run",
 )
-_PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext"):])
+_PENDING_SUB_STATUSES = set(_ORDERED_STATUSES[_ORDERED_STATUSES.index("still_pending_ext") :])
 _COMMENTS = {
-    ("already_done", 'complete ones were encountered'),
-    ("completed", 'ran successfully'),
-    ("failed", 'failed'),
-    ("scheduling_error", 'failed scheduling'),
-    ("still_pending", 'were left pending, among these'),
-    ("still_pending_ext", 'were missing external dependencies'),
-    ("run_by_other_worker", 'were being run by another worker'),
-    ("upstream_failure", 'had failed dependencies'),
-    ("upstream_missing_dependency", 'had missing dependencies'),
-    ("upstream_run_by_other_worker", 'had dependencies that were being run by other worker'),
-    ("upstream_scheduling_error", 'had dependencies whose scheduling failed'),
-    ("not_run", 'was not granted run permission by the scheduler'),
+    ("already_done", "complete ones were encountered"),
+    ("completed", "ran successfully"),
+    ("failed", "failed"),
+    ("scheduling_error", "failed scheduling"),
+    ("still_pending", "were left pending, among these"),
+    ("still_pending_ext", "were missing external dependencies"),
+    ("run_by_other_worker", "were being run by another worker"),
+    ("upstream_failure", "had failed dependencies"),
+    ("upstream_missing_dependency", "had missing dependencies"),
+    ("upstream_run_by_other_worker", "had dependencies that were being run by other worker"),
+    ("upstream_scheduling_error", "had dependencies whose scheduling failed"),
+    ("not_run", "was not granted run permission by the scheduler"),
 }
 
 
@@ -362,10 +374,10 @@ def _get_external_workers(worker):
     worker_that_blocked_task = collections.defaultdict(set)
     get_work_response_history = worker._get_work_response_history
     for get_work_response in get_work_response_history:
-        if get_work_response['task_id'] is None:
-            for running_task in get_work_response['running_tasks']:
-                other_worker_id = running_task['worker']
-                other_task_id = running_task['task_id']
+        if get_work_response["task_id"] is None:
+            for running_task in get_work_response["running_tasks"]:
+                other_worker_id = running_task["worker"]
+                other_task_id = running_task["task_id"]
                 other_task = worker._scheduled_tasks.get(other_task_id)
                 if other_worker_id == worker._id or not other_task:
                     continue
@@ -399,19 +411,24 @@ def _summary_format(set_tasks, worker):
     for status, task_dict in set_tasks.items():
         group_tasks[status] = _group_tasks_by_name_and_status(task_dict)
     comments = _get_comments(group_tasks)
-    num_all_tasks = sum([len(set_tasks["already_done"]),
-                         len(set_tasks["completed"]), len(set_tasks["failed"]),
-                         len(set_tasks["scheduling_error"]),
-                         len(set_tasks["still_pending_ext"]),
-                         len(set_tasks["still_pending_not_ext"])])
-    str_output = ''
-    str_output += 'Scheduled {0} tasks of which:\n'.format(num_all_tasks)
+    num_all_tasks = sum(
+        [
+            len(set_tasks["already_done"]),
+            len(set_tasks["completed"]),
+            len(set_tasks["failed"]),
+            len(set_tasks["scheduling_error"]),
+            len(set_tasks["still_pending_ext"]),
+            len(set_tasks["still_pending_not_ext"]),
+        ]
+    )
+    str_output = ""
+    str_output += "Scheduled {0} tasks of which:\n".format(num_all_tasks)
     for status in _ORDERED_STATUSES:
         if status not in comments:
             continue
-        str_output += '{0}'.format(comments[status])
-        if status != 'still_pending':
-            str_output += '{0}\n'.format(_get_str(group_tasks[status], status in _PENDING_SUB_STATUSES))
+        str_output += "{0}".format(comments[status])
+        if status != "still_pending":
+            str_output += "{0}\n".format(_get_str(group_tasks[status], status in _PENDING_SUB_STATUSES))
     ext_workers = _get_external_workers(worker)
     group_tasks_ext_workers = {}
     for ext_worker, task_dict in ext_workers.items():
@@ -425,18 +442,17 @@ def _summary_format(set_tasks, worker):
                 break
             str_output += "    - {0} ran {1} tasks\n".format(ext_worker, len(task_dict))
             count += 1
-        str_output += '\n'
-    if num_all_tasks == sum([len(set_tasks["already_done"]),
-                             len(set_tasks["scheduling_error"]),
-                             len(set_tasks["still_pending_ext"]),
-                             len(set_tasks["still_pending_not_ext"])]):
+        str_output += "\n"
+    if num_all_tasks == sum(
+        [len(set_tasks["already_done"]), len(set_tasks["scheduling_error"]), len(set_tasks["still_pending_ext"]), len(set_tasks["still_pending_not_ext"])]
+    ):
         if len(ext_workers) == 0:
-            str_output += '\n'
-        str_output += 'Did not run any tasks'
+            str_output += "\n"
+        str_output += "Did not run any tasks"
     one_line_summary = _create_one_line_summary(_tasks_status(set_tasks))
     str_output += "\n{0}".format(one_line_summary)
     if num_all_tasks == 0:
-        str_output = 'Did not schedule any tasks'
+        str_output = "Did not schedule any tasks"
     return str_output
 
 
@@ -484,4 +500,6 @@ def summary(worker):
     done.
     """
     return _summary_wrap(_summary_format(_summary_dict(worker), worker))
+
+
 # 5

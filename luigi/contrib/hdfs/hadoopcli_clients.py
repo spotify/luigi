@@ -19,7 +19,6 @@
 The implementations of the hdfs clients.
 """
 
-
 import datetime
 import logging
 import os
@@ -33,7 +32,7 @@ from luigi.contrib.hdfs import error as hdfs_error
 from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.target import FileAlreadyExists
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 def create_hadoopcli_client():
@@ -49,8 +48,7 @@ def create_hadoopcli_client():
     elif version == "apache1":
         return HdfsClientApache1()
     else:
-        raise ValueError("Error: Unknown version specified in Hadoop version"
-                         "configuration parameter")
+        raise ValueError("Error: Unknown version specified in Hadoop versionconfiguration parameter")
 
 
 class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
@@ -58,7 +56,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
     This client uses Apache 2.x syntax for file system commands, which also matched CDH4.
     """
 
-    recursive_listdir_cmd = ['-ls', '-R']
+    recursive_listdir_cmd = ["-ls", "-R"]
 
     @staticmethod
     def call_check(command):
@@ -73,8 +71,8 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
         Use ``hadoop fs -stat`` to check file existence.
         """
 
-        cmd = load_hadoop_cmd() + ['fs', '-stat', path]
-        logger.debug('Running file existence check: %s', subprocess.list2cmdline(cmd))
+        cmd = load_hadoop_cmd() + ["fs", "-stat", path]
+        logger.debug("Running file existence check: %s", subprocess.list2cmdline(cmd))
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True, universal_newlines=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:
@@ -82,87 +80,85 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
         else:
             not_found_pattern = "^.*No such file or directory$"
             not_found_re = re.compile(not_found_pattern)
-            for line in stderr.split('\n'):
+            for line in stderr.split("\n"):
                 if not_found_re.match(line):
                     return False
             raise hdfs_error.HDFSCliError(cmd, p.returncode, stdout, stderr)
 
     def move(self, path, dest):
         parent_dir = os.path.dirname(dest)
-        if parent_dir != '' and not self.exists(parent_dir):
+        if parent_dir != "" and not self.exists(parent_dir):
             self.mkdir(parent_dir)
         if not isinstance(path, (list, tuple)):
             path = [path]
         else:
             warnings.warn("Renaming multiple files at once is not atomic.", stacklevel=2)
-        self.call_check(load_hadoop_cmd() + ['fs', '-mv'] + path + [dest])
+        self.call_check(load_hadoop_cmd() + ["fs", "-mv"] + path + [dest])
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
-            cmd = load_hadoop_cmd() + ['fs', '-rm', '-r']
+            cmd = load_hadoop_cmd() + ["fs", "-rm", "-r"]
         else:
-            cmd = load_hadoop_cmd() + ['fs', '-rm']
+            cmd = load_hadoop_cmd() + ["fs", "-rm"]
 
         if skip_trash:
-            cmd = cmd + ['-skipTrash']
+            cmd = cmd + ["-skipTrash"]
 
         cmd = cmd + [path]
         self.call_check(cmd)
 
     def chmod(self, path, permissions, recursive=False):
         if recursive:
-            cmd = load_hadoop_cmd() + ['fs', '-chmod', '-R', permissions, path]
+            cmd = load_hadoop_cmd() + ["fs", "-chmod", "-R", permissions, path]
         else:
-            cmd = load_hadoop_cmd() + ['fs', '-chmod', permissions, path]
+            cmd = load_hadoop_cmd() + ["fs", "-chmod", permissions, path]
         self.call_check(cmd)
 
     def chown(self, path, owner, group, recursive=False):
         if owner is None:
-            owner = ''
+            owner = ""
         if group is None:
-            group = ''
+            group = ""
         ownership = "%s:%s" % (owner, group)
         if recursive:
-            cmd = load_hadoop_cmd() + ['fs', '-chown', '-R', ownership, path]
+            cmd = load_hadoop_cmd() + ["fs", "-chown", "-R", ownership, path]
         else:
-            cmd = load_hadoop_cmd() + ['fs', '-chown', ownership, path]
+            cmd = load_hadoop_cmd() + ["fs", "-chown", ownership, path]
         self.call_check(cmd)
 
     def count(self, path):
-        cmd = load_hadoop_cmd() + ['fs', '-count', path]
+        cmd = load_hadoop_cmd() + ["fs", "-count", path]
         stdout = self.call_check(cmd)
-        lines = stdout.split('\n')
-        for line in stdout.split('\n'):
+        lines = stdout.split("\n")
+        for line in stdout.split("\n"):
             if line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or not line:
                 lines.pop(lines.index(line))
             else:
                 (dir_count, file_count, content_size, ppath) = stdout.split()
-        results = {'content_size': content_size, 'dir_count': dir_count, 'file_count': file_count}
+        results = {"content_size": content_size, "dir_count": dir_count, "file_count": file_count}
         return results
 
     def copy(self, path, destination):
-        self.call_check(load_hadoop_cmd() + ['fs', '-cp', path, destination])
+        self.call_check(load_hadoop_cmd() + ["fs", "-cp", path, destination])
 
     def put(self, local_path, destination):
-        self.call_check(load_hadoop_cmd() + ['fs', '-put', local_path, destination])
+        self.call_check(load_hadoop_cmd() + ["fs", "-put", local_path, destination])
 
     def get(self, path, local_destination):
-        self.call_check(load_hadoop_cmd() + ['fs', '-get', path, local_destination])
+        self.call_check(load_hadoop_cmd() + ["fs", "-get", path, local_destination])
 
     def getmerge(self, path, local_destination, new_line=False):
         if new_line:
-            cmd = load_hadoop_cmd() + ['fs', '-getmerge', '-nl', path, local_destination]
+            cmd = load_hadoop_cmd() + ["fs", "-getmerge", "-nl", path, local_destination]
         else:
-            cmd = load_hadoop_cmd() + ['fs', '-getmerge', path, local_destination]
+            cmd = load_hadoop_cmd() + ["fs", "-getmerge", path, local_destination]
         self.call_check(cmd)
 
     def mkdir(self, path, parents=True, raise_if_exists=False):
         if parents and raise_if_exists:
             raise NotImplementedError("HdfsClient.mkdir can't raise with -p")
         try:
-            cmd = (load_hadoop_cmd() + ['fs', '-mkdir'] +
-                   (['-p'] if parents else []) +
-                   [path])
+            cmd = load_hadoop_cmd() + ["fs", "-mkdir"] + (["-p"] if parents else []) + [path]
             self.call_check(cmd)
         except hdfs_error.HDFSCliError as ex:
             if "File exists" in ex.stderr:
@@ -171,27 +167,26 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
             else:
                 raise
 
-    def listdir(self, path, ignore_directories=False, ignore_files=False,
-                include_size=False, include_type=False, include_time=False, recursive=False):
+    def listdir(self, path, ignore_directories=False, ignore_files=False, include_size=False, include_type=False, include_time=False, recursive=False):
         if not path:
             path = "."  # default to current/home catalog
 
         if recursive:
-            cmd = load_hadoop_cmd() + ['fs'] + self.recursive_listdir_cmd + [path]
+            cmd = load_hadoop_cmd() + ["fs"] + self.recursive_listdir_cmd + [path]
         else:
-            cmd = load_hadoop_cmd() + ['fs', '-ls', path]
-        lines = self.call_check(cmd).split('\n')
+            cmd = load_hadoop_cmd() + ["fs", "-ls", path]
+        lines = self.call_check(cmd).split("\n")
 
         for line in lines:
             if not line:
                 continue
-            elif line.startswith('OpenJDK 64-Bit Server VM warning') or line.startswith('It\'s highly recommended') or line.startswith('Found'):
+            elif line.startswith("OpenJDK 64-Bit Server VM warning") or line.startswith("It's highly recommended") or line.startswith("Found"):
                 continue  # "hadoop fs -ls" outputs "Found %d items" as its first line
-            elif ignore_directories and line[0] == 'd':
+            elif ignore_directories and line[0] == "d":
                 continue
-            elif ignore_files and line[0] == '-':
+            elif ignore_files and line[0] == "-":
                 continue
-            data = line.split(' ')
+            data = line.split(" ")
 
             file = data[-1]
             size = int(data[-4])
@@ -203,9 +198,8 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
             if include_type:
                 extra_data += (line_type,)
             if include_time:
-                time_str = '%sT%s' % (data[-3], data[-2])
-                modification_time = datetime.datetime.strptime(time_str,
-                                                               '%Y-%m-%dT%H:%M')
+                time_str = "%sT%s" % (data[-3], data[-2])
+                modification_time = datetime.datetime.strptime(time_str, "%Y-%m-%dT%H:%M")
                 extra_data += (modification_time,)
 
             if len(extra_data) > 0:
@@ -214,7 +208,7 @@ class HdfsClient(hdfs_abstract_client.HdfsFileSystem):
                 yield file
 
     def touchz(self, path):
-        self.call_check(load_hadoop_cmd() + ['fs', '-touchz', path])
+        self.call_check(load_hadoop_cmd() + ["fs", "-touchz", path])
 
 
 class HdfsClientCdh3(HdfsClient):
@@ -227,7 +221,7 @@ class HdfsClientCdh3(HdfsClient):
         No explicit -p switch, this version of Hadoop always creates parent directories.
         """
         try:
-            self.call_check(load_hadoop_cmd() + ['fs', '-mkdir', path])
+            self.call_check(load_hadoop_cmd() + ["fs", "-mkdir", path])
         except hdfs_error.HDFSCliError as ex:
             if "File exists" in ex.stderr:
                 if raise_if_exists:
@@ -237,12 +231,12 @@ class HdfsClientCdh3(HdfsClient):
 
     def remove(self, path, recursive=True, skip_trash=False):
         if recursive:
-            cmd = load_hadoop_cmd() + ['fs', '-rmr']
+            cmd = load_hadoop_cmd() + ["fs", "-rmr"]
         else:
-            cmd = load_hadoop_cmd() + ['fs', '-rm']
+            cmd = load_hadoop_cmd() + ["fs", "-rm"]
 
         if skip_trash:
-            cmd = cmd + ['-skipTrash']
+            cmd = cmd + ["-skipTrash"]
 
         cmd = cmd + [path]
         self.call_check(cmd)
@@ -254,10 +248,10 @@ class HdfsClientApache1(HdfsClientCdh3):
     which are similar to CDH3 except for the file existence check.
     """
 
-    recursive_listdir_cmd = ['-lsr']
+    recursive_listdir_cmd = ["-lsr"]
 
     def exists(self, path):
-        cmd = load_hadoop_cmd() + ['fs', '-test', '-e', path]
+        cmd = load_hadoop_cmd() + ["fs", "-test", "-e", path]
         p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         stdout, stderr = p.communicate()
         if p.returncode == 0:

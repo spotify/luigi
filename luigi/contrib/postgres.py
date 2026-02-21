@@ -28,53 +28,58 @@ import tempfile
 import luigi
 from luigi.contrib import rdbms
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
-DB_DRIVER = os.environ.get('LUIGI_PGSQL_DRIVER', 'psycopg2')
+DB_DRIVER = os.environ.get("LUIGI_PGSQL_DRIVER", "psycopg2")
 
 DB_ERROR_CODES = {}
-ERROR_DUPLICATE_TABLE = 'duplicate_table'
-ERROR_UNDEFINED_TABLE = 'undefined_table'
+ERROR_DUPLICATE_TABLE = "duplicate_table"
+ERROR_UNDEFINED_TABLE = "undefined_table"
 
 dbapi = None
 
-if DB_DRIVER == 'psycopg2':
+if DB_DRIVER == "psycopg2":
     try:
         import psycopg2 as dbapi
 
         def update_error_codes():
             import psycopg2.errorcodes
 
-            DB_ERROR_CODES.update({
-                psycopg2.errorcodes.DUPLICATE_TABLE: ERROR_DUPLICATE_TABLE,
-                psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
-            })
+            DB_ERROR_CODES.update(
+                {
+                    psycopg2.errorcodes.DUPLICATE_TABLE: ERROR_DUPLICATE_TABLE,
+                    psycopg2.errorcodes.UNDEFINED_TABLE: ERROR_UNDEFINED_TABLE,
+                }
+            )
+
         update_error_codes()
     except ImportError:
         pass
 
-if dbapi is None or DB_DRIVER == 'pg8000':
+if dbapi is None or DB_DRIVER == "pg8000":
     try:
         import pg8000.core
         import pg8000.dbapi as dbapi  # noqa: F811
+
         # pg8000 doesn't have an error code catalog so we need to make our own
         # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
-        DB_ERROR_CODES.update({'42P07': ERROR_DUPLICATE_TABLE, '42P01': ERROR_UNDEFINED_TABLE})
+        DB_ERROR_CODES.update({"42P07": ERROR_DUPLICATE_TABLE, "42P01": ERROR_UNDEFINED_TABLE})
     except ImportError:
         pass
 
 
 if dbapi is None:
-    logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. "
-                   "Will crash at runtime if postgres functionality is used.")
+    logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. Will crash at runtime if postgres functionality is used.")
 
 
 def _is_pg8000_error(exception):
     try:
-        return isinstance(exception, dbapi.DatabaseError) and \
-            isinstance(exception.args, tuple) and \
-            isinstance(exception.args[0], dict) and \
-            pg8000.core.RESPONSE_CODE in exception.args[0]
+        return (
+            isinstance(exception, dbapi.DatabaseError)
+            and isinstance(exception.args, tuple)
+            and isinstance(exception.args[0], dict)
+            and pg8000.core.RESPONSE_CODE in exception.args[0]
+        )
     except NameError:
         return False
 
@@ -92,7 +97,7 @@ def _pg8000_connection_reset(connection):
 def db_error_code(exception):
     try:
         error_code = None
-        if hasattr(exception, 'pgcode'):
+        if hasattr(exception, "pgcode"):
             error_code = exception.pgcode
         elif _is_pg8000_error(exception):
             error_code = exception.args[0][pg8000.core.RESPONSE_CODE]
@@ -127,6 +132,7 @@ class MultiReplacer:
         >>> MultiReplacer(replace_pairs)("ab")
         'xb'
     """
+
     # TODO: move to misc/util module
 
     def __init__(self, replace_pairs):
@@ -138,7 +144,7 @@ class MultiReplacer:
         """
         replace_list = list(replace_pairs)  # make a copy in case input is iterable
         self._replace_dict = dict(replace_list)
-        pattern = '|'.join(re.escape(x) for x, y in replace_list)
+        pattern = "|".join(re.escape(x) for x, y in replace_list)
         self._search_re = re.compile(pattern)
 
     def _replacer(self, match_object):
@@ -152,14 +158,7 @@ class MultiReplacer:
 
 # these are the escape sequences recognized by postgres COPY
 # according to http://www.postgresql.org/docs/8.1/static/sql-copy.html
-default_escape = MultiReplacer([('\\', '\\\\'),
-                                ('\t', '\\t'),
-                                ('\n', '\\n'),
-                                ('\r', '\\r'),
-                                ('\v', '\\v'),
-                                ('\b', '\\b'),
-                                ('\f', '\\f')
-                                ])
+default_escape = MultiReplacer([("\\", "\\\\"), ("\t", "\\t"), ("\n", "\\n"), ("\r", "\\r"), ("\v", "\\v"), ("\b", "\\b"), ("\f", "\\f")])
 
 
 class PostgresTarget(luigi.Target):
@@ -168,7 +167,8 @@ class PostgresTarget(luigi.Target):
 
     This will rarely have to be directly instantiated by the user.
     """
-    marker_table = luigi.configuration.get_config().get('postgres', 'marker-table', 'table_updates')
+
+    marker_table = luigi.configuration.get_config().get("postgres", "marker-table", "table_updates")
 
     # if not supplied, fall back to default Postgres port
     DEFAULT_DB_PORT = 5432
@@ -176,9 +176,7 @@ class PostgresTarget(luigi.Target):
     # Use DB side timestamps or client side timestamps in the marker_table
     use_db_timestamps = True
 
-    def __init__(
-            self, host, database, user, password, table, update_id, port=None
-    ):
+    def __init__(self, host, database, user, password, table, update_id, port=None):
         """
         Args:
             host (str): Postgres server address. Possibly a host:port string.
@@ -189,8 +187,8 @@ class PostgresTarget(luigi.Target):
             port (int): Postgres server port.
 
         """
-        if ':' in host:
-            self.host, self.port = host.split(':')
+        if ":" in host:
+            self.host, self.port = host.split(":")
         else:
             self.host = host
             self.port = port or self.DEFAULT_DB_PORT
@@ -223,14 +221,15 @@ class PostgresTarget(luigi.Target):
                 """INSERT INTO {marker_table} (update_id, target_table)
                    VALUES (%s, %s)
                 """.format(marker_table=self.marker_table),
-                (self.update_id, self.table))
+                (self.update_id, self.table),
+            )
         else:
             connection.cursor().execute(
                 """INSERT INTO {marker_table} (update_id, target_table, inserted)
                          VALUES (%s, %s, %s);
                     """.format(marker_table=self.marker_table),
-                (self.update_id, self.table,
-                 datetime.datetime.now()))
+                (self.update_id, self.table, datetime.datetime.now()),
+            )
 
     def exists(self, connection=None):
         if connection is None:
@@ -238,11 +237,12 @@ class PostgresTarget(luigi.Target):
             connection.autocommit = True
         cursor = connection.cursor()
         try:
-            cursor.execute("""SELECT 1 FROM {marker_table}
+            cursor.execute(
+                """SELECT 1 FROM {marker_table}
                 WHERE update_id = %s
                 LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,)
-                           )
+                (self.update_id,),
+            )
             row = cursor.fetchone()
         except dbapi.DatabaseError as e:
             if db_error_code(e) == ERROR_UNDEFINED_TABLE:
@@ -255,13 +255,8 @@ class PostgresTarget(luigi.Target):
         """
         Get a DBAPI 2.0 connection object to the database where the table is.
         """
-        connection = dbapi.connect(
-            host=self.host,
-            port=self.port,
-            database=self.database,
-            user=self.user,
-            password=self.password)
-        connection.set_client_encoding('utf-8')
+        connection = dbapi.connect(host=self.host, port=self.port, database=self.database, user=self.user, password=self.password)
+        connection.set_client_encoding("utf-8")
         return connection
 
     def create_marker_table(self):
@@ -315,9 +310,9 @@ class CopyToTable(rdbms.CopyToTable):
         """
         Return/yield tuples or lists corresponding to each row to be inserted.
         """
-        with self.input().open('r') as fobj:
+        with self.input().open("r") as fobj:
             for line in fobj:
-                yield line.strip('\n').split('\t')
+                yield line.strip("\n").split("\t")
 
     def map_column(self, value):
         """
@@ -326,7 +321,7 @@ class CopyToTable(rdbms.CopyToTable):
         Default behaviour is to escape special characters and identify any self.null_values.
         """
         if value in self.null_values:
-            return r'\\N'
+            return r"\\N"
         else:
             return default_escape(str(value))
 
@@ -339,13 +334,7 @@ class CopyToTable(rdbms.CopyToTable):
         Normally you don't override this.
         """
         return PostgresTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.table,
-            update_id=self.update_id,
-            port=self.port
+            host=self.host, database=self.database, user=self.user, password=self.password, table=self.table, update_id=self.update_id, port=self.port
         )
 
     def copy(self, cursor, file):
@@ -354,15 +343,13 @@ class CopyToTable(rdbms.CopyToTable):
         elif len(self.columns[0]) == 2:
             column_names = [c[0] for c in self.columns]
         else:
-            raise Exception('columns must consist of column strings or (column string, type string) tuples (was %r ...)' % (self.columns[0],))
+            raise Exception("columns must consist of column strings or (column string, type string) tuples (was %r ...)" % (self.columns[0],))
 
-        copy_sql = (
-            "COPY {table} ({column_list}) FROM STDIN "
-            "WITH (FORMAT text, NULL '{null_string}', DELIMITER '{delimiter}')"
-        ).format(table=self.table, delimiter=self.column_separator, null_string=r'\\N',
-                 column_list=", ".join(column_names))
+        copy_sql = ("COPY {table} ({column_list}) FROM STDIN WITH (FORMAT text, NULL '{null_string}', DELIMITER '{delimiter}')").format(
+            table=self.table, delimiter=self.column_separator, null_string=r"\\N", column_list=", ".join(column_names)
+        )
         # cursor.copy_expert is not available in pg8000
-        if hasattr(cursor, 'copy_expert'):
+        if hasattr(cursor, "copy_expert"):
             cursor.copy_expert(copy_sql, file)
         else:
             cursor.execute(copy_sql, stream=file)
@@ -381,7 +368,7 @@ class CopyToTable(rdbms.CopyToTable):
         connection = self.output().connect()
         # transform all data generated by rows() using map_column and write data
         # to a temporary file for import using postgres COPY
-        tmp_dir = luigi.configuration.get_config().get('postgres', 'local-tmp-dir', None)
+        tmp_dir = luigi.configuration.get_config().get("postgres", "local-tmp-dir", None)
         tmp_file = tempfile.TemporaryFile(dir=tmp_dir)
         n = 0
         for row in self.rows():
@@ -390,7 +377,7 @@ class CopyToTable(rdbms.CopyToTable):
                 logger.info("Wrote %d lines", n)
             rowstr = self.column_separator.join(self.map_column(val) for val in row)
             rowstr += "\n"
-            tmp_file.write(rowstr.encode('utf-8'))
+            tmp_file.write(rowstr.encode("utf-8"))
 
         logger.info("Done writing, importing at %s", datetime.datetime.now())
         tmp_file.seek(0)
@@ -411,7 +398,7 @@ class CopyToTable(rdbms.CopyToTable):
                     # if first attempt fails with "relation not found", try creating table
                     logger.info("Creating table %s", self.table)
                     # reset() is a psycopg2-specific method
-                    if hasattr(connection, 'reset'):
+                    if hasattr(connection, "reset"):
                         connection.reset()
                     else:
                         _pg8000_connection_reset(connection)
@@ -444,13 +431,14 @@ class PostgresQuery(rdbms.Query):
 
     To customize the query signature as recorded in the database marker table, override the `update_id` property.
     """
+
     def run(self):
         connection = self.output().connect()
         connection.autocommit = self.autocommit
         cursor = connection.cursor()
         sql = self.query
 
-        logger.info('Executing query from task: {name}'.format(name=self.__class__))
+        logger.info("Executing query from task: {name}".format(name=self.__class__))
         cursor.execute(sql)
 
         # Update marker table
@@ -467,11 +455,5 @@ class PostgresQuery(rdbms.Query):
         Normally you don't override this.
         """
         return PostgresTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.table,
-            update_id=self.update_id,
-            port=self.port
+            host=self.host, database=self.database, user=self.user, password=self.password, table=self.table, update_id=self.update_id, port=self.port
         )

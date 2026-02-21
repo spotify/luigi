@@ -46,26 +46,22 @@ class DummyTask(Task):
 
 
 class MultiprocessWorkerTest(unittest.TestCase):
-
     def run(self, result=None):
         self.scheduler = RemoteScheduler()
         self.scheduler.add_worker = Mock()
         self.scheduler.add_task = Mock()
-        with Worker(scheduler=self.scheduler, worker_id='X', worker_processes=2) as worker:
+        with Worker(scheduler=self.scheduler, worker_id="X", worker_processes=2) as worker:
             self.worker = worker
             super(MultiprocessWorkerTest, self).run(result)
 
     def gw_res(self, pending, task_id):
-        return dict(n_pending_tasks=pending,
-                    task_id=task_id,
-                    running_tasks=0, n_unique_pending=0)
+        return dict(n_pending_tasks=pending, task_id=task_id, running_tasks=0, n_unique_pending=0)
 
     def test_positive_path(self):
         a = DummyTask("a")
         b = DummyTask("b")
 
         class MultipleRequirementTask(DummyTask):
-
             def requires(self):
                 return [a, b]
 
@@ -73,18 +69,15 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
         self.assertTrue(self.worker.add(c))
 
-        self.scheduler.get_work = Mock(side_effect=[self.gw_res(3, a.task_id),
-                                                    self.gw_res(2, b.task_id),
-                                                    self.gw_res(1, c.task_id),
-                                                    self.gw_res(0, None),
-                                                    self.gw_res(0, None)])
+        self.scheduler.get_work = Mock(
+            side_effect=[self.gw_res(3, a.task_id), self.gw_res(2, b.task_id), self.gw_res(1, c.task_id), self.gw_res(0, None), self.gw_res(0, None)]
+        )
 
         self.assertTrue(self.worker.run())
         self.assertTrue(c.has_run)
 
     def test_path_with_task_failures(self):
         class FailingTask(DummyTask):
-
             def run(self):
                 raise Exception("I am failing")
 
@@ -92,7 +85,6 @@ class MultiprocessWorkerTest(unittest.TestCase):
         b = FailingTask("b")
 
         class MultipleRequirementTask(DummyTask):
-
             def requires(self):
                 return [a, b]
 
@@ -100,17 +92,14 @@ class MultiprocessWorkerTest(unittest.TestCase):
 
         self.assertTrue(self.worker.add(c))
 
-        self.scheduler.get_work = Mock(side_effect=[self.gw_res(3, a.task_id),
-                                                    self.gw_res(2, b.task_id),
-                                                    self.gw_res(1, c.task_id),
-                                                    self.gw_res(0, None),
-                                                    self.gw_res(0, None)])
+        self.scheduler.get_work = Mock(
+            side_effect=[self.gw_res(3, a.task_id), self.gw_res(2, b.task_id), self.gw_res(1, c.task_id), self.gw_res(0, None), self.gw_res(0, None)]
+        )
 
         self.assertFalse(self.worker.run())
 
 
 class SingleWorkerMultiprocessTest(unittest.TestCase):
-
     def test_default_multiprocessing_behavior(self):
         with Worker(worker_processes=1) as worker:
             task = DummyTask("a")

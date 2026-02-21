@@ -24,51 +24,44 @@ from helpers import unittest
 try:
     import redis
 except ImportError:
-    raise unittest.SkipTest('Unable to load redis module')
+    raise unittest.SkipTest("Unable to load redis module")
 
 from luigi.contrib.redis_store import RedisTarget
 
-HOST = 'localhost'
+HOST = "localhost"
 PORT = 6379
 DB = 15
 PASSWORD = None
 SOCKET_TIMEOUT = None
-MARKER_PREFIX = 'luigi_test'
+MARKER_PREFIX = "luigi_test"
 EXPIRE = 5
 
 
 @pytest.mark.contrib
 class RedisTargetTest(unittest.TestCase):
-
-    """ Test touch, exists and target expiration"""
+    """Test touch, exists and target expiration"""
 
     def test_touch_and_exists(self):
-        target = RedisTarget(HOST, PORT, DB, 'update_id', PASSWORD)
+        target = RedisTarget(HOST, PORT, DB, "update_id", PASSWORD)
         target.marker_prefix = MARKER_PREFIX
         flush()
-        self.assertFalse(target.exists(),
-                         'Target should not exist before touching it')
+        self.assertFalse(target.exists(), "Target should not exist before touching it")
         target.touch()
-        self.assertTrue(target.exists(),
-                        'Target should exist after touching it')
+        self.assertTrue(target.exists(), "Target should exist after touching it")
         flush()
 
     def test_expiration(self):
-        target = RedisTarget(
-            HOST, PORT, DB, 'update_id', PASSWORD, None, EXPIRE)
+        target = RedisTarget(HOST, PORT, DB, "update_id", PASSWORD, None, EXPIRE)
         target.marker_prefix = MARKER_PREFIX
         flush()
         target.touch()
-        self.assertTrue(target.exists(),
-                        'Target should exist after touching it and before expiring')
+        self.assertTrue(target.exists(), "Target should exist after touching it and before expiring")
         sleep(EXPIRE)
-        self.assertFalse(target.exists(),
-                         'Target should not exist after expiring')
+        self.assertFalse(target.exists(), "Target should not exist after expiring")
         flush()
 
 
 def flush():
-    """ Flush test DB"""
-    redis_client = redis.StrictRedis(
-        host=HOST, port=PORT, db=DB, socket_timeout=SOCKET_TIMEOUT)
+    """Flush test DB"""
+    redis_client = redis.StrictRedis(host=HOST, port=PORT, db=DB, socket_timeout=SOCKET_TIMEOUT)
     redis_client.flushdb()

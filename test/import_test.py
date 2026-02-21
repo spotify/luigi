@@ -21,27 +21,22 @@ from helpers import unittest
 
 
 class ImportTest(unittest.TestCase):
-
     def import_test(self):
-        """Test that all module can be imported
-        """
+        """Test that all module can be imported"""
 
-        luigidir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)),
-            '..'
-        )
+        luigidir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 
-        packagedir = os.path.join(luigidir, 'luigi')
+        packagedir = os.path.join(luigidir, "luigi")
 
         for root, subdirs, files in os.walk(packagedir):
-            package = os.path.relpath(root, luigidir).replace('/', '.')
+            package = os.path.relpath(root, luigidir).replace("/", ".")
 
-            if '__init__.py' in files:
+            if "__init__.py" in files:
                 __import__(package)
 
             for f in files:
-                if f.endswith('.py') and not f.startswith('_'):
-                    __import__(package + '.' + f[:-3])
+                if f.endswith(".py") and not f.startswith("_"):
+                    __import__(package + "." + f[:-3])
 
     def import_luigi_test(self):
         """
@@ -53,17 +48,27 @@ class ImportTest(unittest.TestCase):
         expected = [
             luigi.Event,
             luigi.Config,
-            luigi.Task, luigi.ExternalTask, luigi.WrapperTask,
-            luigi.Target, luigi.LocalTarget,
+            luigi.Task,
+            luigi.ExternalTask,
+            luigi.WrapperTask,
+            luigi.Target,
+            luigi.LocalTarget,
             luigi.namespace,
             luigi.RemoteScheduler,
             luigi.RPCError,
-            luigi.run, luigi.build,
+            luigi.run,
+            luigi.build,
             luigi.Parameter,
-            luigi.DateHourParameter, luigi.DateMinuteParameter, luigi.DateSecondParameter, luigi.DateParameter,
-            luigi.MonthParameter, luigi.YearParameter,
-            luigi.DateIntervalParameter, luigi.TimeDeltaParameter,
-            luigi.IntParameter, luigi.FloatParameter,
+            luigi.DateHourParameter,
+            luigi.DateMinuteParameter,
+            luigi.DateSecondParameter,
+            luigi.DateParameter,
+            luigi.MonthParameter,
+            luigi.YearParameter,
+            luigi.DateIntervalParameter,
+            luigi.TimeDeltaParameter,
+            luigi.IntParameter,
+            luigi.FloatParameter,
             luigi.BoolParameter,
         ]
         self.assertGreater(len(expected), 0)

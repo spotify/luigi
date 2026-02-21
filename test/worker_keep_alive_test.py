@@ -30,13 +30,14 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
 
     See https://github.com/spotify/luigi/pull/1789
     """
+
     def run(self, result=None):
         """
         Common setup code. Due to the contextmanager cant use normal setup
         """
         self.sch = Scheduler(retry_delay=0.00000001, retry_count=2)
 
-        with Worker(scheduler=self.sch, worker_id='X', keep_alive=True, wait_interval=0.1, wait_jitter=0) as w:
+        with Worker(scheduler=self.sch, worker_id="X", keep_alive=True, wait_interval=0.1, wait_jitter=0) as w:
             self.w = w
             super(WorkerKeepAliveUpstreamTest, self).run(result)
 
@@ -44,6 +45,7 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
         """
         One dependency disables and one fails
         """
+
         class Disabler(luigi.Task):
             pass
 
@@ -60,10 +62,10 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
         self.w.add(Wrapper())
         disabler = Disabler().task_id
         failer = Failer().task_id
-        self.sch.add_task(disabler, 'FAILED', worker='X')
+        self.sch.add_task(disabler, "FAILED", worker="X")
         self.sch.prune()  # Make scheduler unfail the disabled task
-        self.sch.add_task(disabler, 'FAILED', worker='X')  # Disable it
-        self.sch.add_task(failer, 'FAILED', worker='X')  # Fail it
+        self.sch.add_task(disabler, "FAILED", worker="X")  # Disable it
+        self.sch.add_task(failer, "FAILED", worker="X")  # Fail it
         try:
             t = threading.Thread(target=self.w.run)
             t.start()
@@ -79,6 +81,7 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
         """
         One dependency disables and one succeeds
         """
+
         # TODO: Fix copy paste mess
         class Disabler(luigi.Task):
             pass
@@ -96,10 +99,10 @@ class WorkerKeepAliveUpstreamTest(LuigiTestCase):
         self.w.add(Wrapper())
         disabler = Disabler().task_id
         succeeder = Succeeder().task_id
-        self.sch.add_task(disabler, 'FAILED', worker='X')
+        self.sch.add_task(disabler, "FAILED", worker="X")
         self.sch.prune()  # Make scheduler unfail the disabled task
-        self.sch.add_task(disabler, 'FAILED', worker='X')  # Disable it
-        self.sch.add_task(succeeder, 'DONE', worker='X')  # Fail it
+        self.sch.add_task(disabler, "FAILED", worker="X")  # Disable it
+        self.sch.add_task(succeeder, "DONE", worker="X")  # Fail it
         try:
             t = threading.Thread(target=self.w.run)
             t.start()

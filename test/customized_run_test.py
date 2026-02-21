@@ -28,7 +28,7 @@ import luigi.worker
 
 
 class DummyTask(luigi.Task):
-    task_namespace = 'customized_run'  # to prevent task name coflict between tests
+    task_namespace = "customized_run"  # to prevent task name coflict between tests
     n = luigi.Parameter()
 
     def __init__(self, *args, **kwargs):
@@ -44,7 +44,6 @@ class DummyTask(luigi.Task):
 
 
 class CustomizedLocalScheduler(luigi.scheduler.Scheduler):
-
     def __init__(self, *args, **kwargs):
         super(CustomizedLocalScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -59,7 +58,6 @@ class CustomizedLocalScheduler(luigi.scheduler.Scheduler):
 
 
 class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
-
     def __init__(self, *args, **kwargs):
         super(CustomizedRemoteScheduler, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -74,7 +72,6 @@ class CustomizedRemoteScheduler(luigi.rpc.RemoteScheduler):
 
 
 class CustomizedWorker(luigi.worker.Worker):
-
     def __init__(self, *args, **kwargs):
         super(CustomizedWorker, self).__init__(*args, **kwargs)
         self.has_run = False
@@ -88,7 +85,6 @@ class CustomizedWorker(luigi.worker.Worker):
 
 
 class CustomizedWorkerSchedulerFactory:
-
     def __init__(self, *args, **kwargs):
         self.scheduler = CustomizedLocalScheduler()
         self.worker = CustomizedWorker(self.scheduler)
@@ -104,8 +100,7 @@ class CustomizedWorkerSchedulerFactory:
 
 
 class CustomizedWorkerTest(unittest.TestCase):
-
-    ''' Test that luigi's build method (and ultimately the run method) can accept a customized worker and scheduler '''
+    """Test that luigi's build method (and ultimately the run method) can accept a customized worker and scheduler"""
 
     def setUp(self):
         self.worker_scheduler_factory = CustomizedWorkerSchedulerFactory()
@@ -128,5 +123,5 @@ class CustomizedWorkerTest(unittest.TestCase):
 
     def test_cmdline_custom_worker(self):
         self.assertFalse(self.worker_scheduler_factory.worker.complete())
-        luigi.run(['customized_run.DummyTask', '--n', '4'], worker_scheduler_factory=self.worker_scheduler_factory)
+        luigi.run(["customized_run.DummyTask", "--n", "4"], worker_scheduler_factory=self.worker_scheduler_factory)
         self.assertTrue(self.worker_scheduler_factory.worker.complete())

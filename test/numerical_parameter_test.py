@@ -23,45 +23,36 @@ import luigi
 
 
 class NumericalParameterTest(unittest.TestCase):
-
     def test_int_min_value_inclusive(self):
-        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7,
-                                     left_op=le, right_op=lt)
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7, left_op=le, right_op=lt)
         self.assertEqual(-3, d.parse(-3))
 
     def test_float_min_value_inclusive(self):
-        d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7,
-                                     left_op=le, right_op=lt)
+        d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7, left_op=le, right_op=lt)
         self.assertEqual(-3.0, d.parse(-3))
 
     def test_int_min_value_exclusive(self):
-        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7,
-                                     left_op=lt, right_op=lt)
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7, left_op=lt, right_op=lt)
         self.assertRaises(ValueError, lambda: d.parse(-3))
 
     def test_float_min_value_exclusive(self):
-        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7,
-                                     left_op=lt, right_op=lt)
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7, left_op=lt, right_op=lt)
         self.assertRaises(ValueError, lambda: d.parse(-3))
 
     def test_int_max_value_inclusive(self):
-        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7,
-                                     left_op=le, right_op=le)
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7, left_op=le, right_op=le)
         self.assertEqual(7, d.parse(7))
 
     def test_float_max_value_inclusive(self):
-        d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7,
-                                     left_op=le, right_op=le)
+        d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7, left_op=le, right_op=le)
         self.assertEqual(7, d.parse(7))
 
     def test_int_max_value_exclusive(self):
-        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7,
-                                     left_op=le, right_op=lt)
+        d = luigi.NumericalParameter(var_type=int, min_value=-3, max_value=7, left_op=le, right_op=lt)
         self.assertRaises(ValueError, lambda: d.parse(7))
 
     def test_float_max_value_exclusive(self):
-        d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7,
-                                     left_op=le, right_op=lt)
+        d = luigi.NumericalParameter(var_type=float, min_value=-3, max_value=7, left_op=le, right_op=lt)
         self.assertRaises(ValueError, lambda: d.parse(7))
 
     def test_defaults_start_range(self):
@@ -84,12 +75,14 @@ class NumericalParameterTest(unittest.TestCase):
     def test_hash_int(self):
         class Foo(luigi.Task):
             args = luigi.parameter.NumericalParameter(var_type=int, min_value=-3, max_value=7)
+
         p = luigi.parameter.NumericalParameter(var_type=int, min_value=-3, max_value=7)
         self.assertEqual(hash(Foo(args=-3).args), hash(p.parse("-3")))
 
     def test_hash_float(self):
         class Foo(luigi.Task):
             args = luigi.parameter.NumericalParameter(var_type=float, min_value=-3, max_value=7)
+
         p = luigi.parameter.NumericalParameter(var_type=float, min_value=-3, max_value=7)
         self.assertEqual(hash(Foo(args=-3.0).args), hash(p.parse("-3.0")))
 

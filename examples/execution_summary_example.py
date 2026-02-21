@@ -44,19 +44,19 @@ You can run this example like this:
 
             ===== Luigi Execution Summary =====
 """
+
 import datetime
 
 import luigi
 
 
 class MyExternal(luigi.ExternalTask):
-
     def complete(self):
         return False
 
 
 class Boom(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
     this_is_a_really_long_I_mean_way_too_long_and_annoying_parameter = luigi.IntParameter()
 
     def run(self):
@@ -68,7 +68,7 @@ class Boom(luigi.Task):
 
 
 class Foo(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
     num = luigi.IntParameter()
     num2 = luigi.IntParameter()
 
@@ -81,18 +81,18 @@ class Foo(luigi.Task):
 
 
 class Bar(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
     num = luigi.IntParameter()
 
     def run(self):
-        self.output().open('w').close()
+        self.output().open("w").close()
 
     def output(self):
-        return luigi.LocalTarget('/tmp/bar/%d' % self.num)
+        return luigi.LocalTarget("/tmp/bar/%d" % self.num)
 
 
 class DateTask(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
     date = luigi.DateParameter()
     num = luigi.IntParameter()
 
@@ -105,7 +105,7 @@ class DateTask(luigi.Task):
 
 
 class EntryPoint(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
 
     def run(self):
         print("Running EntryPoint")

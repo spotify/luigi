@@ -39,7 +39,7 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
     def run(self, result=None):
         self.sch = Scheduler()
 
-        with Worker(scheduler=self.sch, worker_id='X', ping_interval=1, max_reschedules=0) as w:
+        with Worker(scheduler=self.sch, worker_id="X", ping_interval=1, max_reschedules=0) as w:
             self.w = w
 
             # also save scheduler's worker struct
@@ -51,7 +51,6 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
         tmp = tempfile.mkdtemp()
 
         class MyTask(luigi.Task):
-
             n = luigi.IntParameter()
             delay = 3
 
@@ -61,11 +60,10 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
 
             def run(self):
                 time.sleep(self.delay)
-                with self.output().open('w') as f:
+                with self.output().open("w") as f:
                     f.write("content\n")
 
         class Wrapper(MyTask):
-
             delay = 0
 
             def requires(self):
@@ -76,27 +74,27 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
     def test_message_handling(self):
         # add some messages for that worker
         for i in range(10):
-            self.sw.add_rpc_message('foo', i=i)
+            self.sw.add_rpc_message("foo", i=i)
         self.assertEqual(10, len(self.sw.rpc_messages))
-        self.assertEqual(9, self.sw.rpc_messages[-1]['kwargs']['i'])
+        self.assertEqual(9, self.sw.rpc_messages[-1]["kwargs"]["i"])
 
         # fetch
         msgs = self.sw.fetch_rpc_messages()
         self.assertEqual(0, len(self.sw.rpc_messages))
-        self.assertEqual(9, msgs[-1]['kwargs']['i'])
+        self.assertEqual(9, msgs[-1]["kwargs"]["i"])
 
     def test_ping_content(self):
         # add some messages for that worker
         for i in range(10):
-            self.sw.add_rpc_message('foo', i=i)
+            self.sw.add_rpc_message("foo", i=i)
 
         # ping the scheduler and check the result
         res = self.sch.ping(worker=self.w._id)
-        self.assertIn('rpc_messages', res)
-        msgs = res['rpc_messages']
+        self.assertIn("rpc_messages", res)
+        msgs = res["rpc_messages"]
         self.assertEqual(10, len(msgs))
-        self.assertEqual('foo', msgs[-1]['name'])
-        self.assertEqual(9, msgs[-1]['kwargs']['i'])
+        self.assertEqual("foo", msgs[-1]["name"])
+        self.assertEqual(9, msgs[-1]["kwargs"]["i"])
 
         # there should be no message left
         self.assertEqual(0, len(self.sw.rpc_messages))
@@ -149,7 +147,7 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
         with self.run_wrapper(2) as (wrapper, t):
             # timing info as above
             t.join(1)
-            self.sw.add_rpc_message('set_worker_processes_not_there', n=2)
+            self.sw.add_rpc_message("set_worker_processes_not_there", n=2)
 
             t.join(3)
             self.assertEqual(1, self.w.worker_processes)
@@ -177,7 +175,7 @@ class WorkerSchedulerCommunicationTest(LuigiTestCase):
         with self.run_wrapper(2) as (wrapper, t):
             # timing info as above
             t.join(1)
-            self.sw.add_rpc_message('set_worker_processes', n=2)
+            self.sw.add_rpc_message("set_worker_processes", n=2)
 
             t.join(3)
             self.assertEqual(1, self.w.worker_processes)

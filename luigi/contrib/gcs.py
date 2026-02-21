@@ -32,7 +32,7 @@ import luigi.target
 from luigi.contrib import gcp
 from luigi.format import FileWrapper
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 # Retry when following errors happened
 RETRYABLE_ERRORS = None
@@ -41,8 +41,10 @@ try:
     import httplib2
     from googleapiclient import discovery, errors, http
 except ImportError:
-    logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
-        This will crash at runtime if GCS functionality is used.")
+    logger.warning(
+        "Loading GCS module without the python packages googleapiclient & google-auth. \
+        This will crash at runtime if GCS functionality is used."
+    )
 else:
     RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError)
 
@@ -50,7 +52,7 @@ else:
 CHUNKSIZE = 10 * 1024 * 1024
 
 # Mimetype to use if one can't be guessed from the file extension.
-DEFAULT_MIMETYPE = 'application/octet-stream'
+DEFAULT_MIMETYPE = "application/octet-stream"
 
 # Time to sleep while waiting for eventual consistency to finish.
 EVENTUAL_CONSISTENCY_SLEEP_INTERVAL = 0.1
@@ -59,7 +61,7 @@ EVENTUAL_CONSISTENCY_SLEEP_INTERVAL = 0.1
 EVENTUAL_CONSISTENCY_MAX_SLEEPS = 300
 
 # Uri for batch requests
-GCS_BATCH_URI = 'https://storage.googleapis.com/batch/storage/v1'
+GCS_BATCH_URI = "https://storage.googleapis.com/batch/storage/v1"
 
 
 # Retry configurations. For more details, see https://tenacity.readthedocs.io/en/latest/
@@ -67,11 +69,13 @@ def is_error_5xx(err):
     return isinstance(err, errors.HttpError) and err.resp.status >= 500
 
 
-gcs_retry = retry(retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
-                  wait=wait_exponential(multiplier=1, min=1, max=10),
-                  stop=stop_after_attempt(5),
-                  reraise=True,
-                  after=after_log(logger, logging.WARNING))
+gcs_retry = retry(
+    retry=(retry_if_exception(is_error_5xx) | retry_if_exception_type(RETRYABLE_ERRORS)),
+    wait=wait_exponential(multiplier=1, min=1, max=10),
+    stop=stop_after_attempt(5),
+    reraise=True,
+    after=after_log(logger, logging.WARNING),
+)
 
 
 def _wait_for_consistency(checker):
@@ -86,8 +90,7 @@ def _wait_for_consistency(checker):
 
         time.sleep(EVENTUAL_CONSISTENCY_SLEEP_INTERVAL)
 
-    logger.warning('Exceeded wait for eventual GCS consistency - this may be a'
-                   'bug in the library or something is terribly wrong.')
+    logger.warning("Exceeded wait for eventual GCS consistency - this may be abug in the library or something is terribly wrong.")
 
 
 class InvalidDeleteException(luigi.target.FileSystemException):
@@ -117,8 +120,8 @@ class GCSClient(luigi.target.FileSystem):
       contents of this file (currently found at https://www.googleapis.com/discovery/v1/apis/storage/v1/rest )
       as the ``descriptor`` argument.
     """
-    def __init__(self, oauth_credentials=None, descriptor='', http_=None,
-                 chunksize=CHUNKSIZE, **discovery_build_kwargs):
+
+    def __init__(self, oauth_credentials=None, descriptor="", http_=None, chunksize=CHUNKSIZE, **discovery_build_kwargs):
         self.chunksize = chunksize
         authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
@@ -128,27 +131,27 @@ class GCSClient(luigi.target.FileSystem):
         if descriptor:
             self.client = discovery.build_from_document(descriptor, **build_kwargs)
         else:
-            build_kwargs.setdefault('cache_discovery', False)
-            self.client = discovery.build('storage', 'v1', **build_kwargs)
+            build_kwargs.setdefault("cache_discovery", False)
+            self.client = discovery.build("storage", "v1", **build_kwargs)
 
     def _path_to_bucket_and_key(self, path):
         (scheme, netloc, path, _, _) = urlsplit(path)
-        assert scheme == 'gs'
+        assert scheme == "gs"
         path_without_initial_slash = path[1:]
         return netloc, path_without_initial_slash
 
     def _is_root(self, key):
-        return len(key) == 0 or key == '/'
+        return len(key) == 0 or key == "/"
 
     def _add_path_delimiter(self, key):
-        return key if key[-1:] == '/' else key + '/'
+        return key if key[-1:] == "/" else key + "/"
 
     @gcs_retry
     def _obj_exists(self, bucket, obj):
         try:
             self.client.objects().get(bucket=bucket, object=obj).execute()
         except errors.HttpError as ex:
-            if ex.resp['status'] == '404':
+            if ex.resp["status"] == "404":
                 return False
             raise
         else:
@@ -159,7 +162,7 @@ class GCSClient(luigi.target.FileSystem):
         response = request.execute()
 
         while response is not None:
-            for it in response.get('items', []):
+            for it in response.get("items", []):
                 yield it
 
             request = self.client.objects().list_next(request, response)
@@ -180,7 +183,7 @@ class GCSClient(luigi.target.FileSystem):
         while response is None:
             status, response = request.next_chunk()
             if status:
-                logger.debug('Upload progress: %.2f%%', 100 * status.progress())
+                logger.debug("Upload progress: %.2f%%", 100 * status.progress())
 
         _wait_for_consistency(lambda: self._obj_exists(bucket, obj))
         return response
@@ -198,7 +201,7 @@ class GCSClient(luigi.target.FileSystem):
             try:
                 self.client.buckets().get(bucket=bucket).execute()
             except errors.HttpError as ex:
-                if ex.resp['status'] == '404':
+                if ex.resp["status"] == "404":
                     return False
                 raise
 
@@ -208,15 +211,14 @@ class GCSClient(luigi.target.FileSystem):
 
         # Any objects with this prefix
         resp = self.client.objects().list(bucket=bucket, prefix=obj, maxResults=20).execute()
-        lst = next(iter(resp.get('items', [])), None)
+        lst = next(iter(resp.get("items", [])), None)
         return bool(lst)
 
     def remove(self, path, recursive=True):
         (bucket, obj) = self._path_to_bucket_and_key(path)
 
         if self._is_root(obj):
-            raise InvalidDeleteException(
-                'Cannot delete root of bucket at path {}'.format(path))
+            raise InvalidDeleteException("Cannot delete root of bucket at path {}".format(path))
 
         if self._obj_exists(bucket, obj):
             self.client.objects().delete(bucket=bucket, object=obj).execute()
@@ -225,12 +227,11 @@ class GCSClient(luigi.target.FileSystem):
 
         if self.isdir(path):
             if not recursive:
-                raise InvalidDeleteException(
-                    'Path {} is a directory. Must use recursive delete'.format(path))
+                raise InvalidDeleteException("Path {} is a directory. Must use recursive delete".format(path))
 
             req = http.BatchHttpRequest(batch_uri=GCS_BATCH_URI)
             for it in self._list_iter(bucket, self._add_path_delimiter(obj)):
-                req.add(self.client.objects().delete(bucket=bucket, object=it['name']))
+                req.add(self.client.objects().delete(bucket=bucket, object=it["name"]))
             req.execute()
 
             _wait_for_consistency(lambda: not self.isdir(path))
@@ -252,17 +253,14 @@ class GCSClient(luigi.target.FileSystem):
 
     def put_multiple(self, filepaths, remote_directory, mimetype=None, chunksize=None, num_process=1):
         if isinstance(filepaths, str):
-            raise ValueError(
-                'filenames must be a list of strings. If you want to put a single file, '
-                'use the `put(self, filename, ...)` method'
-            )
+            raise ValueError("filenames must be a list of strings. If you want to put a single file, use the `put(self, filename, ...)` method")
 
         put_kwargs_list = [
             {
-                'filename': filepath,
-                'dest_path': os.path.join(remote_directory, os.path.basename(filepath)),
-                'mimetype': mimetype,
-                'chunksize': chunksize,
+                "filename": filepath,
+                "dest_path": os.path.join(remote_directory, os.path.basename(filepath)),
+                "mimetype": mimetype,
+                "chunksize": chunksize,
             }
             for filepath in filepaths
         ]
@@ -270,6 +268,7 @@ class GCSClient(luigi.target.FileSystem):
         if num_process > 1:
             from contextlib import closing
             from multiprocessing import Pool
+
             with closing(Pool(num_process)) as p:
                 return p.map(self._forward_args_to_put, put_kwargs_list)
         else:
@@ -293,7 +292,7 @@ class GCSClient(luigi.target.FileSystem):
             else:
                 return
 
-        self.put_string(b"", self._add_path_delimiter(path), mimetype='text/plain')
+        self.put_string(b"", self._add_path_delimiter(path), mimetype="text/plain")
 
     def copy(self, source_path, destination_path):
         src_bucket, src_obj = self._path_to_bucket_and_key(source_path)
@@ -306,26 +305,18 @@ class GCSClient(luigi.target.FileSystem):
             source_path = self._add_path_delimiter(source_path)
             copied_objs = []
             for obj in self.listdir(source_path):
-                suffix = obj[len(source_path):]
+                suffix = obj[len(source_path) :]
 
                 self.client.objects().copy(
-                    sourceBucket=src_bucket,
-                    sourceObject=src_prefix + suffix,
-                    destinationBucket=dest_bucket,
-                    destinationObject=dest_prefix + suffix,
-                    body={}).execute()
+                    sourceBucket=src_bucket, sourceObject=src_prefix + suffix, destinationBucket=dest_bucket, destinationObject=dest_prefix + suffix, body={}
+                ).execute()
                 copied_objs.append(dest_prefix + suffix)
 
-            _wait_for_consistency(
-                lambda: all(self._obj_exists(dest_bucket, obj)
-                            for obj in copied_objs))
+            _wait_for_consistency(lambda: all(self._obj_exists(dest_bucket, obj) for obj in copied_objs))
         else:
             self.client.objects().copy(
-                sourceBucket=src_bucket,
-                sourceObject=src_obj,
-                destinationBucket=dest_bucket,
-                destinationObject=dest_obj,
-                body={}).execute()
+                sourceBucket=src_bucket, sourceObject=src_obj, destinationBucket=dest_bucket, destinationObject=dest_obj, body={}
+            ).execute()
             _wait_for_consistency(lambda: self._obj_exists(dest_bucket, dest_obj))
 
     def rename(self, *args, **kwargs):
@@ -350,11 +341,11 @@ class GCSClient(luigi.target.FileSystem):
 
         obj_prefix = self._add_path_delimiter(obj)
         if self._is_root(obj_prefix):
-            obj_prefix = ''
+            obj_prefix = ""
 
         obj_prefix_len = len(obj_prefix)
         for it in self._list_iter(bucket, obj_prefix):
-            yield self._add_path_delimiter(path) + it['name'][obj_prefix_len:]
+            yield self._add_path_delimiter(path) + it["name"][obj_prefix_len:]
 
     def list_wildcard(self, wildcard_path):
         """Yields full object URIs matching the given wildcard.
@@ -364,14 +355,17 @@ class GCSClient(luigi.target.FileSystem):
         (If we need "full" wildcard functionality we should bring in gsutil dependency with its
         https://github.com/GoogleCloudPlatform/gsutil/blob/master/gslib/wildcard_iterator.py...)
         """
-        path, wildcard_obj = wildcard_path.rsplit('/', 1)
-        assert '*' not in path, "The '*' wildcard character is only supported after the last '/'"
-        wildcard_parts = wildcard_obj.split('*')
+        path, wildcard_obj = wildcard_path.rsplit("/", 1)
+        assert "*" not in path, "The '*' wildcard character is only supported after the last '/'"
+        wildcard_parts = wildcard_obj.split("*")
         assert len(wildcard_parts) == 2, "Only one '*' wildcard is supported"
 
         for it in self.listdir(path):
-            if it.startswith(path + '/' + wildcard_parts[0]) and it.endswith(wildcard_parts[1]) and \
-                   len(it) >= len(path + '/' + wildcard_parts[0]) + len(wildcard_parts[1]):
+            if (
+                it.startswith(path + "/" + wildcard_parts[0])
+                and it.endswith(wildcard_parts[1])
+                and len(it) >= len(path + "/" + wildcard_parts[0]) + len(wildcard_parts[1])
+            ):
                 yield it
 
     @gcs_retry
@@ -385,11 +379,11 @@ class GCSClient(luigi.target.FileSystem):
 
         with tempfile.NamedTemporaryFile(delete=False) as fp:
             # We can't return the tempfile reference because of a bug in python: http://bugs.python.org/issue18879
-            return_fp = _DeleteOnCloseFile(fp.name, 'r')
+            return_fp = _DeleteOnCloseFile(fp.name, "r")
 
             # Special case empty files because chunk-based downloading doesn't work.
             result = self.client.objects().get(bucket=bucket, object=obj).execute()
-            if int(result['size']) == 0:
+            if int(result["size"]) == 0:
                 return return_fp
 
             request = self.client.objects().get_media(bucket=bucket, object=obj)
@@ -448,11 +442,10 @@ class GCSTarget(luigi.target.FileSystemTarget):
         self.format = format
         self.fs = client or GCSClient()
 
-    def open(self, mode='r'):
-        if mode == 'r':
-            return self.format.pipe_reader(
-                FileWrapper(io.BufferedReader(self.fs.download(self.path))))
-        elif mode == 'w':
+    def open(self, mode="r"):
+        if mode == "r":
+            return self.format.pipe_reader(FileWrapper(io.BufferedReader(self.fs.download(self.path))))
+        elif mode == "w":
             return self.format.pipe_writer(AtomicGCSFile(self.path, self.fs))
         else:
             raise ValueError("Unsupported open mode '{}'".format(mode))
@@ -480,7 +473,7 @@ class GCSFlagTarget(GCSTarget):
 
     fs = None
 
-    def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
+    def __init__(self, path, format=None, client=None, flag="_SUCCESS"):
         """
         Initializes a GCSFlagTarget.
 
@@ -495,8 +488,7 @@ class GCSFlagTarget(GCSTarget):
             format = luigi.format.get_default_format()
 
         if path[-1] != "/":
-            raise ValueError("GCSFlagTarget requires the path to be to a "
-                             "directory.  It must end with a slash ( / ).")
+            raise ValueError("GCSFlagTarget requires the path to be to a directory.  It must end with a slash ( / ).")
         super(GCSFlagTarget, self).__init__(path, format=format, client=client)
         self.format = format
         self.fs = client or GCSClient()

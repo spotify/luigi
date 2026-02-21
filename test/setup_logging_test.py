@@ -15,14 +15,14 @@ class TestDaemonLogging(unittest.TestCase):
         self.cls.config = get_config()
 
     def test_cli(self):
-        opts = type('opts', (), {})
+        opts = type("opts", (), {})
 
         opts.background = True
         result = self.cls._cli(opts)
         self.assertTrue(result)
 
         opts.background = False
-        opts.logdir = './tests/'
+        opts.logdir = "./tests/"
         result = self.cls._cli(opts)
         self.assertTrue(result)
 
@@ -33,29 +33,29 @@ class TestDaemonLogging(unittest.TestCase):
 
     def test_section(self):
         self.cls.config = {
-            'logging': {
-                'version': 1,
-                'disable_existing_loggers': False,
-                'formatters': {
-                    'mockformatter': {
-                        'format': '{levelname}: {message}',
-                        'style': '{',
-                        'datefmt': '%Y-%m-%d %H:%M:%S',
+            "logging": {
+                "version": 1,
+                "disable_existing_loggers": False,
+                "formatters": {
+                    "mockformatter": {
+                        "format": "{levelname}: {message}",
+                        "style": "{",
+                        "datefmt": "%Y-%m-%d %H:%M:%S",
                     },
                 },
-                'handlers': {
-                    'mockhandler': {
-                        'class': 'logging.StreamHandler',
-                        'level': 'INFO',
-                        'formatter': 'mockformatter',
+                "handlers": {
+                    "mockhandler": {
+                        "class": "logging.StreamHandler",
+                        "level": "INFO",
+                        "formatter": "mockformatter",
                     },
                 },
-                'loggers': {
-                    'mocklogger': {
-                        'handlers': ('mockhandler',),
-                        'level': 'INFO',
-                        'disabled': False,
-                        'propagate': False,
+                "loggers": {
+                    "mocklogger": {
+                        "handlers": ("mockhandler",),
+                        "level": "INFO",
+                        "disabled": False,
+                        "propagate": False,
                     },
                 },
             },
@@ -64,7 +64,7 @@ class TestDaemonLogging(unittest.TestCase):
         self.assertTrue(result)
 
         self.cls.config = LuigiTomlParser()
-        self.cls.config.read(['./test/testconfig/luigi_logging.toml'])
+        self.cls.config.read(["./test/testconfig/luigi_logging.toml"])
         result = self.cls._section(None)
         self.assertTrue(result)
 
@@ -83,13 +83,15 @@ class TestDaemonLogging(unittest.TestCase):
         result = self.cls._conf(None)
         self.assertFalse(result)
 
-        self.cls.config.data = {'core': {'logging_conf_file': './blah'}}
+        self.cls.config.data = {"core": {"logging_conf_file": "./blah"}}
         with self.assertRaises(OSError):
             self.cls._conf(None)
 
-        self.cls.config.data = {'core': {
-            'logging_conf_file': './test/testconfig/logging.cfg',
-        }}
+        self.cls.config.data = {
+            "core": {
+                "logging_conf_file": "./test/testconfig/logging.cfg",
+            }
+        }
         result = self.cls._conf(None)
         self.assertTrue(result)
 
@@ -102,7 +104,7 @@ class TestInterfaceLogging(TestDaemonLogging):
     cls = InterfaceLogging
 
     def test_cli(self):
-        opts = type('opts', (), {})
+        opts = type("opts", (), {})
         result = self.cls._cli(opts)
         self.assertFalse(result)
 
@@ -112,57 +114,56 @@ class TestInterfaceLogging(TestDaemonLogging):
         self.cls.config = LuigiTomlParser()
         self.cls.config.data = {}
 
-        opts = type('opts', (), {})
-        opts.logging_conf_file = ''
+        opts = type("opts", (), {})
+        opts.logging_conf_file = ""
         result = self.cls._conf(opts)
         self.assertFalse(result)
 
-        opts.logging_conf_file = './blah'
+        opts.logging_conf_file = "./blah"
         with self.assertRaises(OSError):
             self.cls._conf(opts)
 
-        opts.logging_conf_file = './test/testconfig/logging.cfg'
+        opts.logging_conf_file = "./test/testconfig/logging.cfg"
         result = self.cls._conf(opts)
         self.assertTrue(result)
 
     def test_default(self):
-        opts = type('opts', (), {})
-        opts.log_level = 'INFO'
+        opts = type("opts", (), {})
+        opts.log_level = "INFO"
         result = self.cls._default(opts)
         self.assertTrue(result)
 
 
 class PatchedLogging(InterfaceLogging):
-
     @classmethod
     def _cli(cls, *args):
-        cls.calls.append('_cli')
-        return '_cli' not in cls.patched
+        cls.calls.append("_cli")
+        return "_cli" not in cls.patched
 
     @classmethod
     def _conf(cls, *args):
-        cls.calls.append('_conf')
-        return '_conf' not in cls.patched
+        cls.calls.append("_conf")
+        return "_conf" not in cls.patched
 
     @classmethod
     def _section(cls, *args):
-        cls.calls.append('_section')
-        return '_section' not in cls.patched
+        cls.calls.append("_section")
+        return "_section" not in cls.patched
 
     @classmethod
     def _default(cls, *args):
-        cls.calls.append('_default')
-        return '_default' not in cls.patched
+        cls.calls.append("_default")
+        return "_default" not in cls.patched
 
 
 class TestSetup(unittest.TestCase):
     def setUp(self):
-        self.opts = type('opts', (), {})
+        self.opts = type("opts", (), {})
         self.cls = PatchedLogging
         self.cls.calls = []
         self.cls.config = LuigiTomlParser()
         self.cls._configured = False
-        self.cls.patched = '_cli', '_conf', '_section', '_default'
+        self.cls.patched = "_cli", "_conf", "_section", "_default"
 
     def tearDown(self):
         self.cls.config = get_config()
@@ -174,35 +175,35 @@ class TestSetup(unittest.TestCase):
         self.assertFalse(result)
 
     def test_disabled(self):
-        self.cls.config.data = {'core': {'no_configure_logging': True}}
+        self.cls.config.data = {"core": {"no_configure_logging": True}}
         result = self.cls.setup(self.opts)
         self.assertEqual(self.cls.calls, [])
         self.assertFalse(result)
 
     def test_order(self):
         self.cls.setup(self.opts)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_section', '_default'])
+        self.assertEqual(self.cls.calls, ["_cli", "_conf", "_section", "_default"])
 
     def test_cli(self):
         self.cls.patched = ()
         result = self.cls.setup(self.opts)
         self.assertTrue(result)
-        self.assertEqual(self.cls.calls, ['_cli'])
+        self.assertEqual(self.cls.calls, ["_cli"])
 
     def test_conf(self):
-        self.cls.patched = ('_cli', )
+        self.cls.patched = ("_cli",)
         result = self.cls.setup(self.opts)
         self.assertTrue(result)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf'])
+        self.assertEqual(self.cls.calls, ["_cli", "_conf"])
 
     def test_section(self):
-        self.cls.patched = ('_cli', '_conf')
+        self.cls.patched = ("_cli", "_conf")
         result = self.cls.setup(self.opts)
         self.assertTrue(result)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_section'])
+        self.assertEqual(self.cls.calls, ["_cli", "_conf", "_section"])
 
     def test_default(self):
-        self.cls.patched = ('_cli', '_conf', '_section')
+        self.cls.patched = ("_cli", "_conf", "_section")
         result = self.cls.setup(self.opts)
         self.assertTrue(result)
-        self.assertEqual(self.cls.calls, ['_cli', '_conf', '_section', '_default'])
+        self.assertEqual(self.cls.calls, ["_cli", "_conf", "_section", "_default"])

@@ -20,6 +20,7 @@ from typing import Any, Dict
 
 try:
     import toml
+
     toml_enabled = True
 except ImportError:
     toml_enabled = False
@@ -34,8 +35,8 @@ class LuigiTomlParser(BaseParser, ConfigParser):
     data: Dict[str, Any] = dict()
     _instance = None
     _config_paths = [
-        '/etc/luigi/luigi.toml',
-        'luigi.toml',
+        "/etc/luigi/luigi.toml",
+        "luigi.toml",
     ]
 
     @staticmethod

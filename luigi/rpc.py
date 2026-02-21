@@ -19,6 +19,7 @@ Implementation of the REST interface between the workers and the server.
 rpc.py implements the client side of it, server.py implements the server side.
 See :doc:`/central_scheduler` for more info.
 """
+
 import abc
 import base64
 import json
@@ -48,7 +49,7 @@ except ImportError:
         HAS_REQUESTS = False
 
 
-logger = logging.getLogger('luigi-interface')  # TODO: 'interface'?
+logger = logging.getLogger("luigi-interface")  # TODO: 'interface'?
 
 
 def _urljoin(base, url):
@@ -59,13 +60,10 @@ def _urljoin(base, url):
     """
     parsed = urlparse(base)
     scheme = parsed.scheme
-    return urlparse(
-        urljoin(parsed._replace(scheme='http').geturl(), parsed.path + (url if url[0] == '/' else '/' + url))
-    )._replace(scheme=scheme).geturl()
+    return urlparse(urljoin(parsed._replace(scheme="http").geturl(), parsed.path + (url if url[0] == "/" else "/" + url)))._replace(scheme=scheme).geturl()
 
 
 class RPCError(Exception):
-
     def __init__(self, message, sub_exception=None):
         super(RPCError, self).__init__(message)
         self.sub_exception = sub_exception
@@ -89,24 +87,24 @@ class URLLibFetcher(_FetcherInterface):
         url = urlparse(full_url)
         if url.username:
             # base64 encoding of username:password
-            auth = base64.b64encode('{}:{}'.format(url.username, url.password or '').encode('utf-8'))
-            auth = auth.decode('utf-8')
+            auth = base64.b64encode("{}:{}".format(url.username, url.password or "").encode("utf-8"))
+            auth = auth.decode("utf-8")
             # update full_url and create a request object with the auth header set
-            full_url = url._replace(netloc=url.netloc.split('@', 1)[-1]).geturl()
+            full_url = url._replace(netloc=url.netloc.split("@", 1)[-1]).geturl()
             req = Request(full_url)
-            req.add_header('Authorization', 'Basic {}'.format(auth))
+            req.add_header("Authorization", "Basic {}".format(auth))
         else:
             req = Request(full_url)
 
         # add the request body
         if body:
-            req.data = urlencode(body).encode('utf-8')
+            req.data = urlencode(body).encode("utf-8")
 
         return req
 
     def fetch(self, full_url, body, timeout):
         req = self._create_request(full_url, body=body)
-        return urlopen(req, timeout=timeout).read().decode('utf-8')
+        return urlopen(req, timeout=timeout).read().decode("utf-8")
 
     def close(self):
         pass
@@ -115,6 +113,7 @@ class URLLibFetcher(_FetcherInterface):
 class RequestsFetcher(_FetcherInterface):
     def __init__(self):
         from requests import exceptions as requests_exceptions
+
         self.raises = requests_exceptions.RequestException
         self.session = requests.Session()
         self.process_id = os.getpid()
@@ -141,21 +140,19 @@ class RemoteScheduler:
     Scheduler proxy object. Talks to a RemoteSchedulerResponder.
     """
 
-    def __init__(self, url='http://localhost:8082/', connect_timeout=None):
-        assert not url.startswith('http+unix://') or HAS_UNIX_SOCKET, (
-            'You need to install requests-unixsocket for Unix socket support.'
-        )
+    def __init__(self, url="http://localhost:8082/", connect_timeout=None):
+        assert not url.startswith("http+unix://") or HAS_UNIX_SOCKET, "You need to install requests-unixsocket for Unix socket support."
 
-        self._url = url.rstrip('/')
+        self._url = url.rstrip("/")
         config = configuration.get_config()
 
         if connect_timeout is None:
-            connect_timeout = config.getfloat('core', 'rpc-connect-timeout', 10.0)
+            connect_timeout = config.getfloat("core", "rpc-connect-timeout", 10.0)
         self._connect_timeout = connect_timeout
 
-        self._rpc_retry_attempts = config.getint('core', 'rpc-retry-attempts', 3)
-        self._rpc_retry_wait = config.getint('core', 'rpc-retry-wait', 30)
-        self._rpc_log_retries = config.getboolean('core', 'rpc-log-retries', True)
+        self._rpc_retry_attempts = config.getint("core", "rpc-retry-attempts", 3)
+        self._rpc_retry_wait = config.getint("core", "rpc-retry-wait", 30)
+        self._rpc_log_retries = config.getboolean("core", "rpc-log-retries", True)
 
         if HAS_REQUESTS:
             self._fetcher = RequestsFetcher()
@@ -172,10 +169,7 @@ class RemoteScheduler:
                 logger.info("Retrying attempt %r of %r (max)" % (retry_state.attempt_number + 1, self._rpc_retry_attempts))
                 logger.info("Wait for %d seconds" % self._rpc_retry_wait)
 
-        return Retrying(wait=wait_fixed(self._rpc_retry_wait),
-                        stop=stop_after_attempt(self._rpc_retry_attempts),
-                        reraise=True,
-                        after=retry_logging)
+        return Retrying(wait=wait_fixed(self._rpc_retry_wait), stop=stop_after_attempt(self._rpc_retry_attempts), reraise=True, after=retry_logging)
 
     def _fetch(self, url_suffix, body):
         full_url = _urljoin(self._url, url_suffix)
@@ -184,15 +178,11 @@ class RemoteScheduler:
         try:
             response = scheduler_retry(self._fetcher.fetch, full_url, body, self._connect_timeout)
         except self._fetcher.raises as e:
-            raise RPCError(
-                "Errors (%d attempts) when connecting to remote scheduler %r" %
-                (self._rpc_retry_attempts, self._url),
-                e
-            )
+            raise RPCError("Errors (%d attempts) when connecting to remote scheduler %r" % (self._rpc_retry_attempts, self._url), e)
         return response
 
     def _request(self, url, data, attempts=3, allow_null=True):
-        body = {'data': json.dumps(data)}
+        body = {"data": json.dumps(data)}
 
         for _ in range(attempts):
             page = self._fetch(url, body)

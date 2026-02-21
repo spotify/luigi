@@ -22,40 +22,39 @@ from luigi.mock import MockFileSystem, MockTarget
 
 
 class MockFileTest(unittest.TestCase):
-
     def test_1(self):
-        t = MockTarget('test')
-        p = t.open('w')
-        print('test', file=p)
+        t = MockTarget("test")
+        p = t.open("w")
+        print("test", file=p)
         p.close()
 
-        q = t.open('r')
-        self.assertEqual(list(q), ['test\n'])
+        q = t.open("r")
+        self.assertEqual(list(q), ["test\n"])
         q.close()
 
     def test_with(self):
         t = MockTarget("foo")
-        with t.open('w') as b:
+        with t.open("w") as b:
             b.write("bar")
 
-        with t.open('r') as b:
-            self.assertEqual(list(b), ['bar'])
+        with t.open("r") as b:
+            self.assertEqual(list(b), ["bar"])
 
     def test_bytes(self):
         t = MockTarget("foo", format=Nop)
-        with t.open('wb') as b:
+        with t.open("wb") as b:
             b.write(b"bar")
 
-        with t.open('rb') as b:
-            self.assertEqual(list(b), [b'bar'])
+        with t.open("rb") as b:
+            self.assertEqual(list(b), [b"bar"])
 
     def test_default_mode_value(self):
         t = MockTarget("foo")
-        with t.open('w') as b:
+        with t.open("w") as b:
             b.write("bar")
 
         with t.open() as b:
-            self.assertEqual(list(b), ['bar'])
+            self.assertEqual(list(b), ["bar"])
 
     def test_mode_none_error(self):
         t = MockTarget("foo")
@@ -67,11 +66,11 @@ class MockFileTest(unittest.TestCase):
     # That should work in python3 because the default format is Text
     def test_unicode(self):
         t = MockTarget("foo")
-        with t.open('w') as b:
-            b.write(u"bar")
+        with t.open("w") as b:
+            b.write("bar")
 
-        with t.open('r') as b:
-            self.assertEqual(b.read(), u'bar')
+        with t.open("r") as b:
+            self.assertEqual(b.read(), "bar")
 
 
 class MockFileSystemTest(unittest.TestCase):
@@ -79,7 +78,7 @@ class MockFileSystemTest(unittest.TestCase):
 
     def _touch(self, path):
         t = MockTarget(path)
-        with t.open('w'):
+        with t.open("w"):
             pass
 
     def setUp(self):

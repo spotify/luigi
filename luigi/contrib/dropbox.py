@@ -27,21 +27,22 @@ from functools import wraps
 import luigi.format
 from luigi.target import AtomicLocalFile, FileSystem, FileSystemTarget
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import dropbox.dropbox_client
     import dropbox.exceptions
     import dropbox.files
 except ImportError:
-    logger.warning("Loading Dropbox module without the python package dropbox (https://pypi.org/project/dropbox/). "
-                   "Will crash at runtime if Dropbox functionality is used.")
+    logger.warning(
+        "Loading Dropbox module without the python package dropbox (https://pypi.org/project/dropbox/). Will crash at runtime if Dropbox functionality is used."
+    )
 
 
 def accept_trailing_slash_in_existing_dirpaths(func):
     @wraps(func)
     def wrapped(self, path, *args, **kwargs):
-        if path != '/' and path.endswith('/'):
+        if path != "/" and path.endswith("/"):
             logger.warning("Dropbox paths should NOT have trailing slashes. This causes additional API calls")
             logger.warning("Consider modifying your calls to {}, so that they don't use paths than end with '/'".format(func.__name__))
 
@@ -56,7 +57,7 @@ def accept_trailing_slash_in_existing_dirpaths(func):
 def accept_trailing_slash(func):
     @wraps(func)
     def wrapped(self, path, *args, **kwargs):
-        if path != '/' and path.endswith('/'):
+        if path != "/" and path.endswith("/"):
             path = path[:-1]
         return func(self, path, *args, **kwargs)
 
@@ -89,9 +90,9 @@ class DropboxClient(FileSystem):
 
     @accept_trailing_slash_in_existing_dirpaths
     def exists(self, path):
-        if path == '/':
+        if path == "/":
             return True
-        if path.endswith('/'):
+        if path.endswith("/"):
             path = path[:-1]
             return self._exists_and_is_dir(path)
 
@@ -125,7 +126,7 @@ class DropboxClient(FileSystem):
 
     @accept_trailing_slash_in_existing_dirpaths
     def isdir(self, path):
-        if path == '/':
+        if path == "/":
             return True
         try:
             md = self.conn.files_get_metadata(path)
@@ -159,14 +160,13 @@ class DropboxClient(FileSystem):
         return response.content
 
     def upload(self, tmp_path, dest_path):
-        with open(tmp_path, 'rb') as f:
+        with open(tmp_path, "rb") as f:
             file_size = os.path.getsize(tmp_path)
 
             CHUNK_SIZE = 4 * 1000 * 1000
             upload_session_start_result = self.conn.files_upload_session_start(f.read(CHUNK_SIZE))
             commit = dropbox.files.CommitInfo(path=dest_path)
-            cursor = dropbox.files.UploadSessionCursor(session_id=upload_session_start_result.session_id,
-                                                       offset=f.tell())
+            cursor = dropbox.files.UploadSessionCursor(session_id=upload_session_start_result.session_id, offset=f.tell())
 
             if f.tell() >= file_size:
                 self.conn.files_upload_session_finish(f.read(CHUNK_SIZE), cursor, commit)
@@ -184,7 +184,7 @@ class DropboxClient(FileSystem):
         Auxiliary method, used by the 'accept_trailing_slash' and 'accept_trailing_slash_in_existing_dirpaths' decorators
         :param path: a Dropbox path that does NOT ends with a '/' (even if it is a directory)
         """
-        if path == '/':
+        if path == "/":
             return True
         try:
             md = self.conn.files_get_metadata(path)
@@ -205,8 +205,7 @@ class ReadableDropboxFile:
         """
         self.path = path
         self.client = client
-        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(time.time())),
-                                                   ntpath.basename(path))
+        self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(time.time())), ntpath.basename(path))
         self.fid = None
         self.closed = False
 
@@ -314,18 +313,16 @@ class DropboxTarget(FileSystemTarget):
     def temporary_path(self):
         tmp_dir = tempfile.mkdtemp()
         num = random.randrange(0, 10_000_000_000)
-        temp_path = '{}{}luigi-tmp-{:010}{}'.format(
-            tmp_dir, os.sep,
-            num, ntpath.basename(self.path))
+        temp_path = "{}{}luigi-tmp-{:010}{}".format(tmp_dir, os.sep, num, ntpath.basename(self.path))
 
         yield temp_path
         # We won't reach here if there was an user exception.
         self.fs.upload(temp_path, self.path)
 
     def open(self, mode):
-        if mode not in ('r', 'w'):
+        if mode not in ("r", "w"):
             raise ValueError("Unsupported open mode '%s'" % mode)
-        if mode == 'r':
+        if mode == "r":
             return self.format.pipe_reader(ReadableDropboxFile(self.path, self.client))
         else:
             return self.format.pipe_writer(AtomicWritableDropboxFile(self.path, self.client))

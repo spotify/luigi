@@ -62,7 +62,8 @@ class AzureBlobClientTest(unittest.TestCase):
     def test_create_delete_container(self):
         import datetime
         import hashlib
-        m = hashlib.new('md5', usedforsecurity=False)
+
+        m = hashlib.new("md5", usedforsecurity=False)
         m.update(datetime.datetime.now().__str__().encode())
         container_name = m.hexdigest()
 
@@ -76,13 +77,13 @@ class AzureBlobClientTest(unittest.TestCase):
         import datetime
         import hashlib
         import tempfile
-        m = hashlib.new('md5', usedforsecurity=False)
+
+        m = hashlib.new("md5", usedforsecurity=False)
         m.update(datetime.datetime.now().__str__().encode())
         container_name = m.hexdigest()
         m.update(datetime.datetime.now().__str__().encode())
         from_blob_name = m.hexdigest()
-        from_path = "{container_name}/{from_blob_name}".format(container_name=container_name,
-                                                               from_blob_name=from_blob_name)
+        from_path = "{container_name}/{from_blob_name}".format(container_name=container_name, from_blob_name=from_blob_name)
         m.update(datetime.datetime.now().__str__().encode())
         to_blob_name = m.hexdigest()
         to_path = "{container_name}/{to_blob_name}".format(container_name=container_name, to_blob_name=to_blob_name)
@@ -153,7 +154,7 @@ class FinalTask(luigi.Task):
         return {"movie": self.clone(MovieScriptTask), "np": self.clone(AzureJsonDumpTask)}
 
     def run(self):
-        with self.input()["movie"].open('r') as movie, self.input()["np"].open('r') as np, self.output().open('w') as output:
+        with self.input()["movie"].open("r") as movie, self.input()["np"].open("r") as np, self.output().open("w") as output:
             movie_lines = movie.read()
             assert "Toto, I've got a feeling" in movie_lines
             output.write(movie_lines)
@@ -176,6 +177,6 @@ class AzureBlobTargetTest(unittest.TestCase):
 
     def test_AzureBlobTarget(self):
         final_task = FinalTask()
-        luigi.build([final_task], local_scheduler=True, log_level='NOTSET')
+        luigi.build([final_task], local_scheduler=True, log_level="NOTSET")
         output = final_task.output().open("r").read()
         assert "Toto" in output

@@ -89,7 +89,7 @@ class SafeExtractor:
         Raises:
             RuntimeError: If a path traversal attempt is detected.
         """
-        with tarfile.open(tar_path, 'r') as tar:
+        with tarfile.open(tar_path, "r") as tar:
             for member in tar.getmembers():
                 member_path = os.path.join(self.path, member.name)
                 if not self._is_within_directory(self.path, member_path):

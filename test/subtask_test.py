@@ -39,7 +39,6 @@ class AbstractTask(luigi.Task):
 
 
 class Implementation(AbstractTask):
-
     @property
     def foo(self):
         return "bar"
@@ -49,7 +48,6 @@ class Implementation(AbstractTask):
 
 
 class AbstractSubclassTest(unittest.TestCase):
-
     def test_instantiate_abstract(self):
         def try_instantiate():
             AbstractTask(k=1)

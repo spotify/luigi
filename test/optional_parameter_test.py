@@ -7,7 +7,6 @@ import luigi
 
 
 class OptionalParameterTest(LuigiTestCase):
-
     def actual_test(self, cls, default, expected_value, expected_type, bad_data, **kwargs):
 
         class TestConfig(luigi.Config):
@@ -19,34 +18,30 @@ class OptionalParameterTest(LuigiTestCase):
                 assert self.empty_param is None
 
         # Test parsing empty string (should be None)
-        self.assertIsNone(cls(**kwargs).parse(''))
+        self.assertIsNone(cls(**kwargs).parse(""))
 
         # Test next_in_enumeration always returns None for summary
         self.assertIsNone(TestConfig.param.next_in_enumeration(expected_value))
         self.assertIsNone(TestConfig.param.next_in_enumeration(None))
 
         # Test that warning is raised only with bad type
-        with mock.patch('luigi.parameter.warnings') as warnings:
+        with mock.patch("luigi.parameter.warnings") as warnings:
             TestConfig()
             warnings.warn.assert_not_called()
 
         if cls != luigi.OptionalChoiceParameter:
-            with mock.patch('luigi.parameter.warnings') as warnings:
+            with mock.patch("luigi.parameter.warnings") as warnings:
                 TestConfig(param=None)
                 warnings.warn.assert_not_called()
 
-            with mock.patch('luigi.parameter.warnings') as warnings:
+            with mock.patch("luigi.parameter.warnings") as warnings:
                 TestConfig(param=bad_data)
                 if cls == luigi.OptionalBoolParameter:
                     warnings.warn.assert_not_called()
                 else:
                     warnings.warn.assert_called_with(
-                        '{} "param" with value "{}" is not of type "{}" or None.'.format(
-                            cls.__name__,
-                            bad_data,
-                            expected_type
-                        ),
-                        luigi.parameter.OptionalParameterTypeWarning
+                        '{} "param" with value "{}" is not of type "{}" or None.'.format(cls.__name__, bad_data, expected_type),
+                        luigi.parameter.OptionalParameterTypeWarning,
                     )
 
         # Test with value from config
@@ -79,13 +74,13 @@ class OptionalParameterTest(LuigiTestCase):
 
     @with_config({"TestConfig": {"param": "[10.5]", "empty_param": ""}})
     def test_optional_list_parameter(self):
-        self.actual_test(luigi.OptionalListParameter, None, (10.5, ), "tuple", "bad data")
-        self.actual_test(luigi.OptionalListParameter, (1.5, ), (10.5, ), "tuple", "bad data")
+        self.actual_test(luigi.OptionalListParameter, None, (10.5,), "tuple", "bad data")
+        self.actual_test(luigi.OptionalListParameter, (1.5,), (10.5,), "tuple", "bad data")
 
     @with_config({"TestConfig": {"param": "[10.5]", "empty_param": ""}})
     def test_optional_tuple_parameter(self):
-        self.actual_test(luigi.OptionalTupleParameter, None, (10.5, ), "tuple", "bad data")
-        self.actual_test(luigi.OptionalTupleParameter, (1.5, ), (10.5, ), "tuple", "bad data")
+        self.actual_test(luigi.OptionalTupleParameter, None, (10.5,), "tuple", "bad data")
+        self.actual_test(luigi.OptionalTupleParameter, (1.5,), (10.5,), "tuple", "bad data")
 
     @with_config({"TestConfig": {"param": "10.5", "empty_param": ""}})
     def test_optional_numerical_parameter_float(self):
@@ -110,14 +105,10 @@ class OptionalParameterTest(LuigiTestCase):
         self.actual_test(luigi.OptionalChoiceParameter, "default value", 1, "int", "bad data", var_type=int, choices=choices)
 
     def test_warning(self):
-        class TestOptionalFloatParameterSingleType(
-            luigi.parameter.OptionalParameter, luigi.FloatParameter
-        ):
+        class TestOptionalFloatParameterSingleType(luigi.parameter.OptionalParameter, luigi.FloatParameter):
             expected_type = float
 
-        class TestOptionalFloatParameterMultiTypes(
-            luigi.parameter.OptionalParameter, luigi.FloatParameter
-        ):
+        class TestOptionalFloatParameterMultiTypes(luigi.parameter.OptionalParameter, luigi.FloatParameter):
             expected_type = (int, float)
 
         class TestConfig(luigi.Config):
@@ -138,18 +129,10 @@ class OptionalParameterTest(LuigiTestCase):
                 action="always",
                 category=luigi.parameter.OptionalParameterTypeWarning,
             )
-            assert luigi.build(
-                [TestConfig(param_single="0", param_multi="1")], local_scheduler=True
-            )
+            assert luigi.build([TestConfig(param_single="0", param_multi="1")], local_scheduler=True)
 
         assert len(record) == 2
         assert issubclass(record[0].category, luigi.parameter.OptionalParameterTypeWarning)
         assert issubclass(record[1].category, luigi.parameter.OptionalParameterTypeWarning)
-        assert str(record[0].message) == (
-            'TestOptionalFloatParameterSingleType "param_single" with value "0" is not of type '
-            '"float" or None.'
-        )
-        assert str(record[1].message) == (
-            'TestOptionalFloatParameterMultiTypes "param_multi" with value "1" is not of any '
-            'type in ["int", "float"] or None.'
-        )
+        assert str(record[0].message) == ('TestOptionalFloatParameterSingleType "param_single" with value "0" is not of type "float" or None.')
+        assert str(record[1].message) == ('TestOptionalFloatParameterMultiTypes "param_multi" with value "1" is not of any type in ["int", "float"] or None.')

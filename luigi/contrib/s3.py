@@ -36,19 +36,18 @@ from luigi.parameter import OptionalParameter, Parameter
 from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, MissingParentDirectory
 from luigi.task import ExternalTask
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import botocore
     from boto3.s3.transfer import TransferConfig
 except ImportError:
-    logger.warning("Loading S3 module without the python package boto3. "
-                   "Will crash at runtime if S3 functionality is used.")
+    logger.warning("Loading S3 module without the python package boto3. Will crash at runtime if S3 functionality is used.")
 
 # two different ways of marking a directory
 # with a suffix in S3
-S3_DIRECTORY_MARKER_SUFFIX_0 = '_$folder$'
-S3_DIRECTORY_MARKER_SUFFIX_1 = '/'
+S3_DIRECTORY_MARKER_SUFFIX_0 = "_$folder$"
+S3_DIRECTORY_MARKER_SUFFIX_1 = "/"
 
 
 class InvalidDeleteException(FileSystemException):
@@ -72,16 +71,15 @@ class S3Client(FileSystem):
     DEFAULT_PART_SIZE = 8388608
     DEFAULT_THREADS = 100
 
-    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None,
-                 **kwargs):
+    def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None, **kwargs):
         options = self._get_s3_config()
         options.update(kwargs)
         if aws_access_key_id:
-            options['aws_access_key_id'] = aws_access_key_id
+            options["aws_access_key_id"] = aws_access_key_id
         if aws_secret_access_key:
-            options['aws_secret_access_key'] = aws_secret_access_key
+            options["aws_secret_access_key"] = aws_secret_access_key
         if aws_session_token:
-            options['aws_session_token'] = aws_session_token
+            options["aws_session_token"] = aws_session_token
 
         self._options = options
 
@@ -95,29 +93,25 @@ class S3Client(FileSystem):
         if self._s3:
             return self._s3
 
-        aws_access_key_id = options.get('aws_access_key_id')
-        aws_secret_access_key = options.get('aws_secret_access_key')
+        aws_access_key_id = options.get("aws_access_key_id")
+        aws_secret_access_key = options.get("aws_secret_access_key")
 
         # Removing key args would break backwards compatibility
-        role_arn = options.get('aws_role_arn')
-        role_session_name = options.get('aws_role_session_name')
+        role_arn = options.get("aws_role_arn")
+        role_session_name = options.get("aws_role_session_name")
 
         # In case the aws_session_token is provided use it
-        aws_session_token = options.get('aws_session_token')
+        aws_session_token = options.get("aws_session_token")
 
         if role_arn and role_session_name:
-            sts_client = boto3.client('sts')
-            assumed_role = sts_client.assume_role(RoleArn=role_arn,
-                                                  RoleSessionName=role_session_name)
-            aws_secret_access_key = assumed_role['Credentials'].get(
-                'SecretAccessKey')
-            aws_access_key_id = assumed_role['Credentials'].get('AccessKeyId')
-            aws_session_token = assumed_role['Credentials'].get('SessionToken')
-            logger.debug('using aws credentials via assumed role {} as defined in luigi config'
-                         .format(role_session_name))
+            sts_client = boto3.client("sts")
+            assumed_role = sts_client.assume_role(RoleArn=role_arn, RoleSessionName=role_session_name)
+            aws_secret_access_key = assumed_role["Credentials"].get("SecretAccessKey")
+            aws_access_key_id = assumed_role["Credentials"].get("AccessKeyId")
+            aws_session_token = assumed_role["Credentials"].get("SessionToken")
+            logger.debug("using aws credentials via assumed role {} as defined in luigi config".format(role_session_name))
 
-        for key in ['aws_access_key_id', 'aws_secret_access_key',
-                    'aws_role_session_name', 'aws_role_arn', 'aws_session_token']:
+        for key in ["aws_access_key_id", "aws_secret_access_key", "aws_role_session_name", "aws_role_arn", "aws_session_token"]:
             if key in options:
                 options.pop(key)
 
@@ -127,19 +121,16 @@ class S3Client(FileSystem):
         # http://boto3.readthedocs.io/en/latest/guide/configuration.html#configuring-credentials
 
         if not (aws_access_key_id and aws_secret_access_key):
-            logger.debug('no credentials provided, delegating credentials resolution to boto3')
+            logger.debug("no credentials provided, delegating credentials resolution to boto3")
 
         try:
-            self._s3 = boto3.resource('s3',
-                                      aws_access_key_id=aws_access_key_id,
-                                      aws_secret_access_key=aws_secret_access_key,
-                                      aws_session_token=aws_session_token,
-                                      **options)
+            self._s3 = boto3.resource(
+                "s3", aws_access_key_id=aws_access_key_id, aws_secret_access_key=aws_secret_access_key, aws_session_token=aws_session_token, **options
+            )
         except TypeError as e:
             logger.error(e.args[0])
-            if 'got an unexpected keyword argument' in e.args[0]:
-                raise DeprecatedBotoClientException(
-                    "Now using boto3. Check that you're passing the correct arguments")
+            if "got an unexpected keyword argument" in e.args[0]:
+                raise DeprecatedBotoClientException("Now using boto3. Check that you're passing the correct arguments")
             raise
 
         return self._s3
@@ -165,7 +156,7 @@ class S3Client(FileSystem):
         if self.isdir(path):
             return True
 
-        logger.debug('Path %s does not exist', path)
+        logger.debug("Path %s does not exist", path)
         return False
 
     def remove(self, path, recursive=True):
@@ -176,34 +167,34 @@ class S3Client(FileSystem):
         :return: Boolean indicator denoting success of the removal of 1 or more files
         """
         if not self.exists(path):
-            logger.debug('Could not delete %s; path does not exist', path)
+            logger.debug("Could not delete %s; path does not exist", path)
             return False
 
         (bucket, key) = self._path_to_bucket_and_key(path)
         s3_bucket = self.s3.Bucket(bucket)
         # root
         if self._is_root(key):
-            raise InvalidDeleteException('Cannot delete root of bucket at path %s' % path)
+            raise InvalidDeleteException("Cannot delete root of bucket at path %s" % path)
 
         # file
         if self._exists(bucket, key):
             self.s3.meta.client.delete_object(Bucket=bucket, Key=key)
-            logger.debug('Deleting %s from bucket %s', key, bucket)
+            logger.debug("Deleting %s from bucket %s", key, bucket)
             return True
 
         if self.isdir(path) and not recursive:
-            raise InvalidDeleteException('Path %s is a directory. Must use recursive delete' % path)
+            raise InvalidDeleteException("Path %s is a directory. Must use recursive delete" % path)
 
-        delete_key_list = [{'Key': obj.key} for obj in s3_bucket.objects.filter(Prefix=self._add_path_delimiter(key))]
+        delete_key_list = [{"Key": obj.key} for obj in s3_bucket.objects.filter(Prefix=self._add_path_delimiter(key))]
 
         # delete the directory marker file if it exists
-        if self._exists(bucket, '{}{}'.format(key, S3_DIRECTORY_MARKER_SUFFIX_0)):
-            delete_key_list.append({'Key': '{}{}'.format(key, S3_DIRECTORY_MARKER_SUFFIX_0)})
+        if self._exists(bucket, "{}{}".format(key, S3_DIRECTORY_MARKER_SUFFIX_0)):
+            delete_key_list.append({"Key": "{}{}".format(key, S3_DIRECTORY_MARKER_SUFFIX_0)})
 
         if len(delete_key_list) > 0:
             n = 1000
             for i in range(0, len(delete_key_list), n):
-                self.s3.meta.client.delete_objects(Bucket=bucket, Delete={'Objects': delete_key_list[i: i + n]})
+                self.s3.meta.client.delete_objects(Bucket=bucket, Delete={"Objects": delete_key_list[i : i + n]})
             return True
 
         return False
@@ -250,8 +241,7 @@ class S3Client(FileSystem):
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
         # put the file
-        self.s3.meta.client.put_object(
-            Key=key, Bucket=bucket, Body=content, **kwargs)
+        self.s3.meta.client.put_object(Key=key, Bucket=bucket, Body=content, **kwargs)
 
     def put_multipart(self, local_path, destination_s3_path, part_size=DEFAULT_PART_SIZE, **kwargs):
         """
@@ -265,17 +255,16 @@ class S3Client(FileSystem):
         self._check_deprecated_argument(**kwargs)
 
         from boto3.s3.transfer import TransferConfig
+
         # default part size for boto3 is 8Mb, changing it to fit part_size
         # provided as a parameter
         transfer_config = TransferConfig(multipart_chunksize=part_size)
 
         (bucket, key) = self._path_to_bucket_and_key(destination_s3_path)
 
-        self.s3.meta.client.upload_fileobj(
-            Fileobj=open(local_path, 'rb'), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
+        self.s3.meta.client.upload_fileobj(Fileobj=open(local_path, "rb"), Bucket=bucket, Key=key, Config=transfer_config, ExtraArgs=kwargs)
 
-    def copy(self, source_path, destination_path, threads=DEFAULT_THREADS, start_time=None, end_time=None,
-             part_size=DEFAULT_PART_SIZE, **kwargs):
+    def copy(self, source_path, destination_path, threads=DEFAULT_THREADS, start_time=None, end_time=None, part_size=DEFAULT_PART_SIZE, **kwargs):
         """
         Copy object(s) from one S3 location to another. Works for individual keys or entire directories.
         When files are larger than `part_size`, multipart uploading will be used.
@@ -293,8 +282,7 @@ class S3Client(FileSystem):
         threads = 3 if threads < 3 else threads
 
         if self.isdir(source_path):
-            return self._copy_dir(source_path, destination_path, threads=threads,
-                                  start_time=start_time, end_time=end_time, part_size=part_size, **kwargs)
+            return self._copy_dir(source_path, destination_path, threads=threads, start_time=start_time, end_time=end_time, part_size=part_size, **kwargs)
 
         # If the file isn't a directory just perform a simple copy
         else:
@@ -305,17 +293,13 @@ class S3Client(FileSystem):
         dst_bucket, dst_key = self._path_to_bucket_and_key(destination_path)
         transfer_config = TransferConfig(max_concurrency=threads, multipart_chunksize=part_size)
         item = self.get_key(source_path)
-        copy_source = {
-            'Bucket': src_bucket,
-            'Key': src_key
-        }
+        copy_source = {"Bucket": src_bucket, "Key": src_key}
 
         self.s3.meta.client.copy(copy_source, dst_bucket, dst_key, Config=transfer_config, ExtraArgs=kwargs)
 
         return 1, item.size
 
-    def _copy_dir(self, source_path, destination_path, threads=DEFAULT_THREADS,
-                  start_time=None, end_time=None, part_size=DEFAULT_PART_SIZE, **kwargs):
+    def _copy_dir(self, source_path, destination_path, threads=DEFAULT_THREADS, start_time=None, end_time=None, part_size=DEFAULT_PART_SIZE, **kwargs):
         start = datetime.datetime.now()
         copy_jobs = []
         management_pool = ThreadPool(processes=threads)
@@ -330,17 +314,12 @@ class S3Client(FileSystem):
         for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
             path = item.key[key_path_len:]
             # prevents copy attempt of empty key in folder
-            if path != '' and path != '/':
+            if path != "" and path != "/":
                 total_keys += 1
                 total_size_bytes += item.size
-                copy_source = {
-                    'Bucket': src_bucket,
-                    'Key': src_prefix + path
-                }
-                the_kwargs = {'Config': transfer_config, 'ExtraArgs': kwargs}
-                job = management_pool.apply_async(self.s3.meta.client.copy,
-                                                  args=(copy_source, dst_bucket, dst_prefix + path),
-                                                  kwds=the_kwargs)
+                copy_source = {"Bucket": src_bucket, "Key": src_prefix + path}
+                the_kwargs = {"Config": transfer_config, "ExtraArgs": kwargs}
+                job = management_pool.apply_async(self.s3.meta.client.copy, args=(copy_source, dst_bucket, dst_prefix + path), kwds=the_kwargs)
                 copy_jobs.append(job)
         # Wait for the pools to finish scheduling all the copies
         management_pool.close()
@@ -350,8 +329,7 @@ class S3Client(FileSystem):
             result.get()
         end = datetime.datetime.now()
         duration = end - start
-        logger.info('%s : Complete : %s total keys copied in %s' %
-                    (datetime.datetime.now(), total_keys, duration))
+        logger.info("%s : Complete : %s total keys copied in %s" % (datetime.datetime.now(), total_keys, duration))
         return total_keys, total_size_bytes
 
     def get(self, s3_path, destination_local_path):
@@ -371,10 +349,10 @@ class S3Client(FileSystem):
         """
         (bucket, key) = self._path_to_bucket_and_key(s3_path)
         obj = self.s3.Object(bucket, key)
-        contents = obj.get()['Body'].read()
+        contents = obj.get()["Body"].read()
         return contents
 
-    def get_as_string(self, s3_path, encoding='utf-8'):
+    def get_as_string(self, s3_path, encoding="utf-8"):
         """
         Get the contents of an object stored in S3 as string.
 
@@ -397,21 +375,18 @@ class S3Client(FileSystem):
         if self._is_root(key):
             return True
 
-        for suffix in (S3_DIRECTORY_MARKER_SUFFIX_0,
-                       S3_DIRECTORY_MARKER_SUFFIX_1):
+        for suffix in (S3_DIRECTORY_MARKER_SUFFIX_0, S3_DIRECTORY_MARKER_SUFFIX_1):
             try:
-                self.s3.meta.client.get_object(
-                    Bucket=bucket, Key=key + suffix)
+                self.s3.meta.client.get_object(Bucket=bucket, Key=key + suffix)
             except botocore.exceptions.ClientError as e:
-                if e.response['Error']['Code'] not in ['NoSuchKey', '404']:
+                if e.response["Error"]["Code"] not in ["NoSuchKey", "404"]:
                     raise
             else:
                 return True
 
         # files with this prefix
         key_path = self._add_path_delimiter(key)
-        s3_bucket_list_result = list(itertools.islice(
-            s3_bucket.objects.filter(Prefix=key_path), 1))
+        s3_bucket_list_result = list(itertools.islice(s3_bucket.objects.filter(Prefix=key_path), 1))
         if s3_bucket_list_result:
             return True
 
@@ -456,13 +431,14 @@ class S3Client(FileSystem):
             last_modified_date = item.last_modified
             if (
                 # neither are defined, list all
-                (not start_time and not end_time) or
+                (not start_time and not end_time)
+                or
                 # start defined, after start
-                (start_time and not end_time and start_time < last_modified_date) or
+                (start_time and not end_time and start_time < last_modified_date)
+                or
                 # end defined, prior to end
-                (not start_time and end_time and last_modified_date < end_time) or
-                (start_time and end_time and start_time <
-                 last_modified_date < end_time)  # both defined, between
+                (not start_time and end_time and last_modified_date < end_time)
+                or (start_time and end_time and start_time < last_modified_date < end_time)  # both defined, between
             ):
                 if return_key:
                     yield item
@@ -490,7 +466,7 @@ class S3Client(FileSystem):
     def _get_s3_config(key=None):
         defaults = dict(configuration.get_config().defaults())
         try:
-            config = dict(configuration.get_config().items('s3'))
+            config = dict(configuration.get_config().items("s3"))
         except (NoSectionError, KeyError):
             return {}
         # So what ports etc can be read without us having to specify all dtypes
@@ -507,19 +483,18 @@ class S3Client(FileSystem):
 
     @staticmethod
     def _path_to_bucket_and_key(path):
-        (scheme, netloc, path, query, fragment) = urlsplit(path,
-                                                           allow_fragments=False)
-        question_mark_plus_query = '?' + query if query else ''
+        (scheme, netloc, path, query, fragment) = urlsplit(path, allow_fragments=False)
+        question_mark_plus_query = "?" + query if query else ""
         path_without_initial_slash = path[1:] + question_mark_plus_query
         return netloc, path_without_initial_slash
 
     @staticmethod
     def _is_root(key):
-        return (len(key) == 0) or (key == '/')
+        return (len(key) == 0) or (key == "/")
 
     @staticmethod
     def _add_path_delimiter(key):
-        return key if key[-1:] == '/' or key == '' else key + '/'
+        return key if key[-1:] == "/" or key == "" else key + "/"
 
     @staticmethod
     def _check_deprecated_argument(**kwargs):
@@ -527,21 +502,21 @@ class S3Client(FileSystem):
         If `encrypt_key` or `host` is part of the arguments raise an exception
         :return: None
         """
-        if 'encrypt_key' in kwargs:
+        if "encrypt_key" in kwargs:
+            raise DeprecatedBotoClientException("encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.")
+        if "host" in kwargs:
             raise DeprecatedBotoClientException(
-                'encrypt_key deprecated in boto3. Please refer to boto3 documentation for encryption details.')
-        if 'host' in kwargs:
-            raise DeprecatedBotoClientException(
-                'host keyword deprecated and is replaced by region_name in boto3.\n'
-                'example: region_name=us-west-1\n'
-                'For region names, refer to the amazon S3 region documentation\n'
-                'https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region')
+                "host keyword deprecated and is replaced by region_name in boto3.\n"
+                "example: region_name=us-west-1\n"
+                "For region names, refer to the amazon S3 region documentation\n"
+                "https://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region"
+            )
 
     def _exists(self, bucket, key):
         try:
             self.s3.Object(bucket, key).load()
         except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] in ['NoSuchKey', '404']:
+            if e.response["Error"]["Code"] in ["NoSuchKey", "404"]:
                 return False
             else:
                 raise
@@ -562,13 +537,12 @@ class AtomicS3File(AtomicLocalFile):
         self.s3_options = kwargs
 
     def move_to_final_destination(self):
-        self.s3_client.put_multipart(
-            self.tmp_path, self.path, **self.s3_options)
+        self.s3_client.put_multipart(self.tmp_path, self.path, **self.s3_options)
 
 
 class ReadableS3File:
     def __init__(self, s3_key):
-        self.s3_key = s3_key.get()['Body']
+        self.s3_key = s3_key.get()["Body"]
         self.buffer = []
         self.closed = False
         self.finished = False
@@ -594,7 +568,7 @@ class ReadableS3File:
         self.buffer.append(line)
 
     def _flush_buffer(self):
-        output = b''.join(self.buffer)
+        output = b"".join(self.buffer)
         self.buffer = []
         return output
 
@@ -618,7 +592,6 @@ class ReadableS3File:
 
                 # split on newlines, preserving the newline
                 for line in chunk.splitlines(True):
-
                     if not line.endswith(os.linesep):
                         # no newline, so store in buffer
                         self._add_to_buffer(line)
@@ -657,15 +630,14 @@ class S3Target(FileSystemTarget):
         self.fs = client or S3Client()
         self.s3_options = kwargs
 
-    def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+    def open(self, mode="r"):
+        if mode not in ("r", "w"):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
-        if mode == 'r':
+        if mode == "r":
             s3_key = self.fs.get_key(self.path)
             if not s3_key:
-                raise FileNotFoundException(
-                    "Could not find file at %s" % self.path)
+                raise FileNotFoundException("Could not find file at %s" % self.path)
 
             fileobj = ReadableS3File(s3_key)
             return self.format.pipe_reader(fileobj)
@@ -695,7 +667,7 @@ class S3FlagTarget(S3Target):
 
     fs = None
 
-    def __init__(self, path, format=None, client=None, flag='_SUCCESS'):
+    def __init__(self, path, format=None, client=None, flag="_SUCCESS"):
         """
         Initializes a S3FlagTarget.
 
@@ -710,8 +682,7 @@ class S3FlagTarget(S3Target):
             format = get_default_format()
 
         if path[-1] != "/":
-            raise ValueError("S3FlagTarget requires the path to be to a "
-                             "directory.  It must end with a slash ( / ).")
+            raise ValueError("S3FlagTarget requires the path to be to a directory.  It must end with a slash ( / ).")
         super(S3FlagTarget, self).__init__(path, format, client)
         self.flag = flag
 
@@ -734,6 +705,7 @@ class S3PathTask(ExternalTask):
     """
     A external task that to require existence of a path in S3.
     """
+
     path = Parameter()
 
     def output(self):
@@ -744,6 +716,7 @@ class S3EmrTask(ExternalTask):
     """
     An external task that requires the existence of EMR output in S3.
     """
+
     path = Parameter()
 
     def output(self):
@@ -754,6 +727,7 @@ class S3FlagTask(ExternalTask):
     """
     An external task that requires the existence of EMR output in S3.
     """
+
     path = Parameter()
     flag = OptionalParameter(default=None)
 

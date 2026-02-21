@@ -10,7 +10,7 @@ import luigi
 from luigi.contrib import rdbms
 from luigi.task_register import Register
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     from pyhive.exc import DatabaseError
@@ -20,16 +20,13 @@ except ImportError:
 
 
 class presto(luigi.Config):  # NOQA
-    host = luigi.Parameter(default='localhost', description='Presto host')
-    port = luigi.IntParameter(default=8090, description='Presto port')
-    user = luigi.Parameter(default='anonymous', description='Presto user')
-    catalog = luigi.Parameter(default='hive', description='Default catalog')
-    password = luigi.Parameter(default=None, description='User password')
-    protocol = luigi.Parameter(default='https', description='Presto connection protocol')
-    poll_interval = luigi.FloatParameter(
-        default=1.0,
-        description=' how often to ask the Presto REST interface for a progress update, defaults to a second'
-    )
+    host = luigi.Parameter(default="localhost", description="Presto host")
+    port = luigi.IntParameter(default=8090, description="Presto port")
+    user = luigi.Parameter(default="anonymous", description="Presto user")
+    catalog = luigi.Parameter(default="hive", description="Default catalog")
+    password = luigi.Parameter(default=None, description="User password")
+    protocol = luigi.Parameter(default="https", description="Presto connection protocol")
+    poll_interval = luigi.FloatParameter(default=1.0, description=" how often to ask the Presto REST interface for a progress update, defaults to a second")
 
 
 class PrestoClient:
@@ -41,21 +38,21 @@ class PrestoClient:
     def __init__(self, connection, sleep_time=1):
         self.sleep_time = sleep_time
         self._connection = connection
-        self._status = {'state': 'initial'}
+        self._status = {"state": "initial"}
 
     @property
     def percentage_progress(self):
         """
         :return: percentage of query overall progress
         """
-        return self._status.get('stats', {}).get('progressPercentage', 0.1)
+        return self._status.get("stats", {}).get("progressPercentage", 0.1)
 
     @property
     def info_uri(self):
         """
         :return: query UI link
         """
-        return self._status.get('infoUri')
+        return self._status.get("infoUri")
 
     def execute(self, query, parameters=None, mode=None):
         """
@@ -65,9 +62,10 @@ class PrestoClient:
         :param mode: "fetch" - yields rows, "watch" - yields log entries
         :return:
         """
+
         class Mode(Enum):
-            watch = 'watch'
-            fetch = 'fetch'
+            watch = "watch"
+            fetch = "fetch"
 
         _mode = Mode(mode) if mode else Mode.watch
 
@@ -113,9 +111,7 @@ class WithPrestoClient(Register):
             connection = Connection(**dict(_kwargs()))
             return PrestoClient(connection=connection)
 
-        attrs.update({
-            '_client': property(_client)
-        })
+        attrs.update({"_client": property(_client)})
         return super(cls, WithPrestoClient).__new__(cls, name, bases, attrs)
 
 
@@ -123,6 +119,7 @@ class PrestoTarget(luigi.Target):
     """
     Target for presto-accessible tables
     """
+
     def __init__(self, client, catalog, database, table, partition=None):
         self.catalog = catalog
         self.database = database
@@ -140,29 +137,18 @@ class PrestoTarget(luigi.Target):
 
         def _clauses():
             for k in partition.keys():
-                yield '{} = %s'.format(k)
+                yield "{} = %s".format(k)
 
-        clauses = ' AND '.join(_clauses())
+        clauses = " AND ".join(_clauses())
 
-        query = 'SELECT COUNT(*) AS cnt FROM {}.{}.{} WHERE {} LIMIT 1'.format(
-            self.catalog,
-            self.database,
-            self.table,
-            clauses
-        )
+        query = "SELECT COUNT(*) AS cnt FROM {}.{}.{} WHERE {} LIMIT 1".format(self.catalog, self.database, self.table, clauses)
         params = list(partition.values())
         return query, params
 
     def _table_doesnot_exist(self, exception):
-        pattern = re.compile(
-            r'line (\d+):(\d+): Table {}.{}.{} does not exist'.format(
-                self.catalog,
-                self.database,
-                self.table
-            )
-        )
+        pattern = re.compile(r"line (\d+):(\d+): Table {}.{}.{} does not exist".format(self.catalog, self.database, self.table))
         try:
-            message = exception.message['message']
+            message = exception.message["message"]
             if pattern.match(message):
                 return True
         finally:
@@ -170,12 +156,12 @@ class PrestoTarget(luigi.Target):
 
     def count(self):
         if not self._count:
-            '''
+            """
             replace to
             self._count, *_ = next(self._client.execute(*self.count_query, 'fetch'))
             after py2 deprecation
-            '''
-            self._count = next(self._client.execute(*self._count_query, mode='fetch'))[0]
+            """
+            self._count = next(self._client.execute(*self._count_query, mode="fetch"))[0]
         return self._count
 
     def exists(self):
@@ -198,6 +184,7 @@ class PrestoTask(rdbms.Query, metaclass=WithPrestoClient):
     Task for executing presto queries
     During its executions tracking url and percentage progress are set
     """
+
     _tracking_url_set = False
 
     @property
@@ -234,7 +221,7 @@ class PrestoTask(rdbms.Query, metaclass=WithPrestoClient):
 
     @property
     def source(self):
-        return 'pyhive'
+        return "pyhive"
 
     @property
     def partition(self):
@@ -242,7 +229,7 @@ class PrestoTask(rdbms.Query, metaclass=WithPrestoClient):
 
     @property
     def protocol(self):
-        return 'https' if self.password else presto().protocol
+        return "https" if self.password else presto().protocol
 
     @property
     def session_props(self):
@@ -254,9 +241,7 @@ class PrestoTask(rdbms.Query, metaclass=WithPrestoClient):
 
     @property
     def requests_kwargs(self):
-        return {
-            'verify': False
-        }
+        return {"verify": False}
 
     query = None
 

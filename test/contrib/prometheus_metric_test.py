@@ -12,9 +12,9 @@ except ImportError:
     import mock
 
 
-WORKER = 'myworker'
-TASK_ID = 'TaskID'
-TASK_FAMILY = 'TaskFamily'
+WORKER = "myworker"
+TASK_ID = "TaskID"
+TASK_FAMILY = "TaskFamily"
 A_PARAM_VALUE = "1"
 B_PARAM_VALUE = "2"
 C_PARAM_VALUE = "3"
@@ -46,20 +46,18 @@ class PrometheusMetricBaseTest(unittest.TestCase):
         task = self.startTask()
         self.collector.handle_task_started(task)
 
-        counter_name = 'luigi_task_started_total'
+        counter_name = "luigi_task_started_total"
         gauge_name = self.gauge_name
         labels = self.EXPECTED_LABELS
 
-        assert (
-            self.collector.registry.get_sample_value(counter_name, labels=labels) == 1
-        )
+        assert self.collector.registry.get_sample_value(counter_name, labels=labels) == 1
         assert self.collector.registry.get_sample_value(gauge_name, labels=labels) == 0
 
     def test_handle_task_failed(self):
         task = self.startTask()
         self.collector.handle_task_failed(task)
 
-        counter_name = 'luigi_task_failed_total'
+        counter_name = "luigi_task_failed_total"
         gauge_name = self.gauge_name
         labels = self.EXPECTED_LABELS
 
@@ -70,7 +68,7 @@ class PrometheusMetricBaseTest(unittest.TestCase):
         task = self.startTask()
         self.collector.handle_task_disabled(task, self.s._config)
 
-        counter_name = 'luigi_task_disabled_total'
+        counter_name = "luigi_task_disabled_total"
         gauge_name = self.gauge_name
         labels = self.EXPECTED_LABELS
 
@@ -81,7 +79,7 @@ class PrometheusMetricBaseTest(unittest.TestCase):
         task = self.startTask()
         self.collector.handle_task_done(task)
 
-        counter_name = 'luigi_task_done_total'
+        counter_name = "luigi_task_done_total"
         gauge_name = self.gauge_name
         labels = self.EXPECTED_LABELS
 
@@ -91,7 +89,7 @@ class PrometheusMetricBaseTest(unittest.TestCase):
     def test_configure_http_handler(self):
         mock_http_handler = mock.MagicMock()
         self.collector.configure_http_handler(mock_http_handler)
-        mock_http_handler.set_header.assert_called_once_with('Content-Type', CONTENT_TYPE_LATEST)
+        mock_http_handler.set_header.assert_called_once_with("Content-Type", CONTENT_TYPE_LATEST)
 
 
 @pytest.mark.contrib

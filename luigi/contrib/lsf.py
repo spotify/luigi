@@ -69,7 +69,7 @@ The procedure:
 
 """
 
-LOGGER = logging.getLogger('luigi-interface')
+LOGGER = logging.getLogger("luigi-interface")
 
 
 def track_job(job_id):
@@ -83,9 +83,8 @@ def track_job(job_id):
     based on the LSF documentation
     """
     cmd = ["bjobs", "-noheader", "-o", "stat", str(job_id)]
-    track_job_proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, shell=False)
-    status = track_job_proc.communicate()[0].strip('\n')
+    track_job_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=False)
+    status = track_job_proc.communicate()[0].strip("\n")
     return status
 
 
@@ -93,7 +92,7 @@ def kill_job(job_id):
     """
     Kill a running LSF job
     """
-    subprocess.call(['bkill', job_id])
+    subprocess.call(["bkill", job_id])
 
 
 class LSFJobTask(luigi.Task):
@@ -102,18 +101,16 @@ class LSFJobTask(luigi.Task):
     """
 
     n_cpu_flag = luigi.IntParameter(default=2, significant=False)
-    shared_tmp_dir = luigi.Parameter(default='/tmp', significant=False)
-    resource_flag = luigi.Parameter(default='mem=8192', significant=False)
-    memory_flag = luigi.Parameter(default='8192', significant=False)
-    queue_flag = luigi.Parameter(default='queue_name', significant=False)
+    shared_tmp_dir = luigi.Parameter(default="/tmp", significant=False)
+    resource_flag = luigi.Parameter(default="mem=8192", significant=False)
+    memory_flag = luigi.Parameter(default="8192", significant=False)
+    queue_flag = luigi.Parameter(default="queue_name", significant=False)
     runtime_flag = luigi.IntParameter(default=60)
-    job_name_flag = luigi.Parameter(default='')
-    poll_time = luigi.FloatParameter(
-        significant=False, default=5,
-        description="specify the wait time to poll bjobs for the job status")
+    job_name_flag = luigi.Parameter(default="")
+    poll_time = luigi.FloatParameter(significant=False, default=5, description="specify the wait time to poll bjobs for the job status")
     save_job_info = luigi.BoolParameter(default=False)
-    output = luigi.Parameter(default='')
-    extra_bsub_args = luigi.Parameter(default='')
+    output = luigi.Parameter(default="")
+    extra_bsub_args = luigi.Parameter(default="")
 
     job_status = None
 
@@ -126,7 +123,7 @@ class LSFJobTask(luigi.Task):
             with open(error_file, "r") as f_err:
                 errors = f_err.readlines()
         else:
-            errors = ''
+            errors = ""
         return errors
 
     def fetch_task_output(self):
@@ -138,14 +135,14 @@ class LSFJobTask(luigi.Task):
             with open(os.path.join(self.tmp_dir, "job.out"), "r") as f_out:
                 outputs = f_out.readlines()
         else:
-            outputs = ''
+            outputs = ""
         return outputs
 
     def _init_local(self):
 
         base_tmp_dir = self.shared_tmp_dir
 
-        random_id = '%016x' % random.getrandbits(64)
+        random_id = "%016x" % random.getrandbits(64)
         task_name = random_id + self.task_id
         # If any parameters are directories, if we don't
         # replace the separators on *nix, it'll create a weird nested directory
@@ -165,7 +162,7 @@ class LSFJobTask(luigi.Task):
         # Make sure that all the class's dependencies are tarred and available
         LOGGER.debug("Tarballing dependencies")
         # Grab luigi and the module containing the code to be run
-        packages = [luigi, __import__(self.__module__, None, None, 'dummy')]
+        packages = [luigi, __import__(self.__module__, None, None, "dummy")]
         create_packages_archive(packages, os.path.join(self.tmp_dir, "packages.tar"))
 
         # Now, pass onto the class's specified init_local() method.
@@ -203,15 +200,15 @@ class LSFJobTask(luigi.Task):
         """
         pass
 
-    def _dump(self, out_dir=''):
+    def _dump(self, out_dir=""):
         """
         Dump instance to file.
         """
-        self.job_file = os.path.join(out_dir, 'job-instance.pickle')
-        if self.__module__ == '__main__':
+        self.job_file = os.path.join(out_dir, "job-instance.pickle")
+        if self.__module__ == "__main__":
             dump_inst = pickle.dumps(self)
-            module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-            dump_inst = dump_inst.replace('(c__main__', "(c" + module_name)
+            module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
+            dump_inst = dump_inst.replace("(c__main__", "(c" + module_name)
             open(self.job_file, "w").write(dump_inst)
 
         else:
@@ -248,13 +245,10 @@ class LSFJobTask(luigi.Task):
         args += [self.tmp_dir]
 
         # That should do it. Let the world know what we're doing.
-        LOGGER.info("### LSF SUBMISSION ARGS: %s",
-                    " ".join([str(a) for a in args]))
+        LOGGER.info("### LSF SUBMISSION ARGS: %s", " ".join([str(a) for a in args]))
 
         # Submit the job
-        run_job_proc = subprocess.Popen(
-            [str(a) for a in args],
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.tmp_dir)
+        run_job_proc = subprocess.Popen([str(a) for a in args], stdin=subprocess.PIPE, stdout=subprocess.PIPE, cwd=self.tmp_dir)
         output = run_job_proc.communicate()[0]
 
         # ASSUMPTION
@@ -264,11 +258,7 @@ class LSFJobTask(luigi.Task):
         # I cannot think of a better workaround that leaves logic on the Task side of things.
         LOGGER.info("### JOB SUBMISSION OUTPUT: %s", str(output))
         self.job_id = int(output.split("<")[1].split(">")[0])
-        LOGGER.info(
-            "Job %ssubmitted as job %s",
-            self.job_name_flag + ' ',
-            str(self.job_id)
-        )
+        LOGGER.info("Job %ssubmitted as job %s", self.job_name_flag + " ", str(self.job_id))
 
         self._track_job()
 
@@ -313,11 +303,7 @@ class LSFJobTask(luigi.Task):
                     job_name = str(self.job_id)
                     if self.job_name_flag:
                         job_name = "%s %s" % (self.job_name_flag, job_name)
-                    LOGGER.info(
-                        "### JOB COMPLETED: %s in %s seconds",
-                        job_name,
-                        str(time1-time0)
-                    )
+                    LOGGER.info("### JOB COMPLETED: %s in %s seconds", job_name, str(time1 - time0))
                 else:
                     self.job_status = FAILED
                     LOGGER.error("Job has FAILED")
@@ -339,7 +325,7 @@ class LSFJobTask(luigi.Task):
     def _finish(self):
         LOGGER.info("Cleaning up temporary bits")
         if self.tmp_dir and os.path.exists(self.tmp_dir):
-            LOGGER.info('Removing directory %s', self.tmp_dir)
+            LOGGER.info("Removing directory %s", self.tmp_dir)
             shutil.rmtree(self.tmp_dir)
 
     def __del__(self):

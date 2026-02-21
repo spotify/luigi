@@ -30,7 +30,6 @@ from luigi.contrib.bigquery_avro import BigQueryLoadAvro
 
 @pytest.mark.gcloud
 class BigQueryAvroTest(unittest.TestCase):
-
     def test_writer_schema_method_existence(self):
         schema_json = """
         {
@@ -47,6 +46,5 @@ class BigQueryAvroTest(unittest.TestCase):
         avro_schema = avro.schema.Parse(schema_json)
         reader = avro.io.DatumReader(avro_schema, avro_schema)
         actual_schema = BigQueryLoadAvro._get_writer_schema(reader)
-        self.assertEqual(actual_schema, avro_schema,
-                         "writer(s) avro_schema attribute not found")
+        self.assertEqual(actual_schema, avro_schema, "writer(s) avro_schema attribute not found")
         # otherwise AttributeError is thrown

@@ -24,7 +24,7 @@ import logging
 import luigi
 import luigi.task
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class _MetadataColumnsMixin:
@@ -83,6 +83,7 @@ class _MetadataColumnsMixin:
                 date = luigi.Parameter()
                 table = 'tableB'
     """
+
     @property
     def metadata_columns(self):
         """Returns the default metadata columns.
@@ -104,24 +105,27 @@ class _MetadataColumnsMixin:
 
         for column in self.metadata_columns:
             if len(column) == 0:
-                raise ValueError("_add_metadata_columns is unable to infer column information from column {column} for {table}".format(column=column,
-                                                                                                                                       table=self.table))
+                raise ValueError(
+                    "_add_metadata_columns is unable to infer column information from column {column} for {table}".format(column=column, table=self.table)
+                )
 
             column_name = column[0]
             if not self._column_exists(cursor, column_name):
-                logger.info('Adding missing metadata column {column} to {table}'.format(column=column, table=self.table))
+                logger.info("Adding missing metadata column {column} to {table}".format(column=column, table=self.table))
                 self._add_column_to_table(cursor, column)
 
     def _column_exists(self, cursor, column_name):
-        if '.' in self.table:
-            schema, table = self.table.split('.')
-            query = "SELECT 1 AS column_exists " \
-                    "FROM information_schema.columns " \
-                    "WHERE table_schema = LOWER('{0}') AND table_name = LOWER('{1}') AND column_name = LOWER('{2}') LIMIT 1;".format(schema, table, column_name)
+        if "." in self.table:
+            schema, table = self.table.split(".")
+            query = (
+                "SELECT 1 AS column_exists "
+                "FROM information_schema.columns "
+                "WHERE table_schema = LOWER('{0}') AND table_name = LOWER('{1}') AND column_name = LOWER('{2}') LIMIT 1;".format(schema, table, column_name)
+            )
         else:
-            query = "SELECT 1 AS column_exists " \
-                    "FROM information_schema.columns " \
-                    "WHERE table_name = LOWER('{0}') AND column_name = LOWER('{1}') LIMIT 1;".format(self.table, column_name)
+            query = "SELECT 1 AS column_exists FROM information_schema.columns WHERE table_name = LOWER('{0}') AND column_name = LOWER('{1}') LIMIT 1;".format(
+                self.table, column_name
+            )
 
         cursor.execute(query)
         result = cursor.fetchone()
@@ -131,16 +135,16 @@ class _MetadataColumnsMixin:
         if len(column) == 1:
             raise ValueError("_add_column_to_table() column type not specified for {column}".format(column=column[0]))
         elif len(column) == 2:
-            query = "ALTER TABLE {table} ADD COLUMN {column};".format(table=self.table, column=' '.join(column))
+            query = "ALTER TABLE {table} ADD COLUMN {column};".format(table=self.table, column=" ".join(column))
         elif len(column) == 3:
-            query = "ALTER TABLE {table} ADD COLUMN {column} ENCODE {encoding};".format(table=self.table, column=' '.join(column[0:2]), encoding=column[2])
+            query = "ALTER TABLE {table} ADD COLUMN {column} ENCODE {encoding};".format(table=self.table, column=" ".join(column[0:2]), encoding=column[2])
         else:
             raise ValueError("_add_column_to_table() found no matching behavior for {column}".format(column=column))
 
         cursor.execute(query)
 
     def post_copy_metacolumns(self, cursor):
-        logger.info('Executing post copy metadata queries')
+        logger.info("Executing post copy metadata queries")
         for query in self.metadata_queries:
             cursor.execute(query)
 
@@ -217,9 +221,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
             raise NotImplementedError("create_table() not implemented for %r and columns types not specified" % self.table)
         elif len(self.columns[0]) == 2:
             # if columns is specified as (name, type) tuples
-            coldefs = ','.join(
-                '{name} {type}'.format(name=name, type=type) for name, type in self.columns
-            )
+            coldefs = ",".join("{name} {type}".format(name=name, type=type) for name, type in self.columns)
             query = "CREATE TABLE {table} ({coldefs})".format(table=self.table, coldefs=coldefs)
             connection.cursor().execute(query)
 

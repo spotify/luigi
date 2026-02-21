@@ -46,6 +46,7 @@ class ChoiceParameterTest(unittest.TestCase):
     def test_hash_str(self):
         class Foo(luigi.Task):
             args = luigi.ChoiceParameter(var_type=str, choices=["1", "2", "3"])
+
         p = luigi.ChoiceParameter(var_type=str, choices=["3", "2", "1"])
         self.assertEqual(hash(Foo(args="3").args), hash(p.parse("3")))
 
@@ -57,4 +58,5 @@ class ChoiceParameterTest(unittest.TestCase):
     def test_invalid_choice_task(self):
         class Foo(luigi.Task):
             args = luigi.ChoiceParameter(var_type=str, choices=["1", "2", "3"])
+
         self.assertRaises(ValueError, lambda: Foo(args="4"))

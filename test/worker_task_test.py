@@ -34,7 +34,6 @@ luigi.notifications.DEBUG = True
 
 
 class WorkerTaskTest(LuigiTestCase):
-
     def test_constructor(self):
         class MyTask(luigi.Task):
             # Test overriding the constructor without calling the superconstructor
@@ -45,16 +44,17 @@ class WorkerTaskTest(LuigiTestCase):
 
         def f():
             luigi.build([MyTask()], local_scheduler=True)
+
         self.assertRaises(TaskException, f)
 
     def test_run_none(self):
         def f():
             luigi.build([None], local_scheduler=True)
+
         self.assertRaises(TaskException, f)
 
 
 class TaskProcessTest(LuigiTestCase):
-
     def test_update_result_queue_on_success(self):
         # IMO this test makes no sense as it tests internal behavior and have
         # already broken once during internal non-changing refactoring
@@ -66,7 +66,7 @@ class TaskProcessTest(LuigiTestCase):
         result_queue = multiprocessing.Queue()
         task_process = TaskProcess(task, 1, result_queue, mock.Mock())
 
-        with mock.patch.object(result_queue, 'put') as mock_put:
+        with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
             mock_put.assert_called_once_with((task.task_id, DONE, "test success expl", [], None))
 
@@ -84,7 +84,7 @@ class TaskProcessTest(LuigiTestCase):
         result_queue = multiprocessing.Queue()
         task_process = TaskProcess(task, 1, result_queue, mock.Mock())
 
-        with mock.patch.object(result_queue, 'put') as mock_put:
+        with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
             mock_put.assert_called_once_with((task.task_id, FAILED, "test failure expl", [], []))
 
@@ -97,15 +97,9 @@ class TaskProcessTest(LuigiTestCase):
         result_queue = multiprocessing.Queue()
         task_process = TaskProcess(task, 1, result_queue, mock.Mock(), check_complete_on_run=True)
 
-        with mock.patch.object(result_queue, 'put') as mock_put:
+        with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
-            mock_put.assert_called_once_with((
-                task.task_id,
-                FAILED,
-                StringContaining("finished running, but complete() is still returning false"),
-                [],
-                None
-            ))
+            mock_put.assert_called_once_with((task.task_id, FAILED, StringContaining("finished running, but complete() is still returning false"), [], None))
 
     def test_fail_on_unfulfilled_dependencies(self):
         class NeverCompleteTask(luigi.Task):
@@ -132,25 +126,28 @@ class TaskProcessTest(LuigiTestCase):
         result_queue = multiprocessing.Queue()
         task_process = TaskProcess(task, 1, result_queue, mock.Mock())
 
-        with mock.patch.object(result_queue, 'put') as mock_put:
+        with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
             expected_missing = [A().task_id, f"{B().task_id} (foo-B)", f"{C().task_id} (foo-C1, foo-C2)"]
-            mock_put.assert_called_once_with((
-                task.task_id,
-                FAILED,
-                StringContaining(f"Unfulfilled dependencies at run time: {', '.join(expected_missing)}"),
-                expected_missing,
-                [],
-            ))
+            mock_put.assert_called_once_with(
+                (
+                    task.task_id,
+                    FAILED,
+                    StringContaining(f"Unfulfilled dependencies at run time: {', '.join(expected_missing)}"),
+                    expected_missing,
+                    [],
+                )
+            )
 
     def test_cleanup_children_on_terminate(self):
         """
         Subprocesses spawned by tasks should be terminated on terminate
         """
+
         class HangingSubprocessTask(luigi.Task):
             def run(self):
                 python = sys.executable
-                check_call([python, '-c', 'while True: pass'])
+                check_call([python, "-c", "while True: pass"])
 
         task = HangingSubprocessTask()
         queue = mock.Mock()
@@ -176,6 +173,7 @@ class TaskProcessTest(LuigiTestCase):
         When a task sets worker_timeout explicitly to 0, it should disable the timeout, even if it
         is configured globally.
         """
+
         class Task(luigi.Task):
             worker_timeout = 0
 
@@ -185,6 +183,5 @@ class TaskProcessTest(LuigiTestCase):
             result_queue=mock.Mock(),
             status_reporter=mock.Mock(),
             worker_timeout=10,
-
         )
         self.assertEqual(task_process.worker_timeout, 0)

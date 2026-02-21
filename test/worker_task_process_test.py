@@ -24,9 +24,8 @@ from luigi.worker import Worker
 
 
 class ContextManagedTaskProcessTest(LuigiTestCase):
-
     def _test_context_manager(self, force_multiprocessing):
-        CONTEXT_MANAGER_MODULE = b'''
+        CONTEXT_MANAGER_MODULE = b"""
 class MyContextManager:
     def __init__(self, task_process):
         self.task = task_process.task
@@ -37,7 +36,7 @@ class MyContextManager:
     def __exit__(self, exc_type=None, exc_value=None, traceback=None):
         assert self.task.run_event.is_set(), "the task should have run"
         self.task.exit_event.set()
-'''
+"""
 
         class DummyEventRecordingTask(luigi.Task):
             def __init__(self, *args, **kwargs):
@@ -57,8 +56,7 @@ class MyContextManager:
 
         with temporary_unloaded_module(CONTEXT_MANAGER_MODULE) as module_name:
             t = DummyEventRecordingTask()
-            w = Worker(task_process_context=module_name + '.MyContextManager',
-                       force_multiprocessing=force_multiprocessing)
+            w = Worker(task_process_context=module_name + ".MyContextManager", force_multiprocessing=force_multiprocessing)
             w.add(t)
             self.assertTrue(w.run())
             self.assertTrue(t.complete())

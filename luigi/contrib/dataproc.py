@@ -7,7 +7,7 @@ import time
 import luigi
 from luigi.contrib import gcp
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 _dataproc_client = None
 
@@ -18,10 +18,12 @@ try:
 
     DEFAULT_CREDENTIALS, _ = google.auth.default()
     authenticate_kwargs = gcp.get_authenticate_kwargs(DEFAULT_CREDENTIALS)
-    _dataproc_client = discovery.build('dataproc', 'v1', cache_discovery=False, **authenticate_kwargs)
+    _dataproc_client = discovery.build("dataproc", "v1", cache_discovery=False, **authenticate_kwargs)
 except ImportError:
-    logger.warning("Loading Dataproc module without the python packages googleapiclient & google-auth. \
-        This will crash at runtime if Dataproc functionality is used.")
+    logger.warning(
+        "Loading Dataproc module without the python packages googleapiclient & google-auth. \
+        This will crash at runtime if Dataproc functionality is used."
+    )
 
 
 def get_dataproc_client():
@@ -52,9 +54,10 @@ class DataprocBaseTask(_DataprocBaseTask):
     _job_id = None
 
     def submit_job(self, job_config):
-        self._job = self.dataproc_client.projects().regions().jobs()\
-            .submit(projectId=self.gcloud_project_id, region=self.dataproc_region, body=job_config).execute()
-        self._job_id = self._job['reference']['jobId']
+        self._job = (
+            self.dataproc_client.projects().regions().jobs().submit(projectId=self.gcloud_project_id, region=self.dataproc_region, body=job_config).execute()
+        )
+        self._job_id = self._job["reference"]["jobId"]
         return self._job
 
     def submit_spark_job(self, jars, main_class, job_args=None):
@@ -62,18 +65,11 @@ class DataprocBaseTask(_DataprocBaseTask):
         if job_args is None:
             job_args = []
 
-        job_config = {"job": {
-            "placement": {
-                "clusterName": self.dataproc_cluster_name
-            },
-            "sparkJob": {
-                "args": job_args,
-                "mainClass": main_class,
-                "jarFileUris": jars
-            }
-        }}
+        job_config = {
+            "job": {"placement": {"clusterName": self.dataproc_cluster_name}, "sparkJob": {"args": job_args, "mainClass": main_class, "jarFileUris": jars}}
+        }
         self.submit_job(job_config)
-        self._job_name = os.path.basename(self._job['sparkJob']['mainClass'])
+        self._job_name = os.path.basename(self._job["sparkJob"]["mainClass"])
         logger.info("Submitted new dataproc job:{} id:{}".format(self._job_name, self._job_id))
         return self._job
 
@@ -82,18 +78,14 @@ class DataprocBaseTask(_DataprocBaseTask):
         if job_args is None:
             job_args = []
 
-        job_config = {"job": {
-            "placement": {
-                "clusterName": self.dataproc_cluster_name
-            },
-            "pysparkJob": {
-                "mainPythonFileUri": job_file,
-                "pythonFileUris": extra_files,
-                "args": job_args
+        job_config = {
+            "job": {
+                "placement": {"clusterName": self.dataproc_cluster_name},
+                "pysparkJob": {"mainPythonFileUri": job_file, "pythonFileUris": extra_files, "args": job_args},
             }
-        }}
+        }
         self.submit_job(job_config)
-        self._job_name = os.path.basename(self._job['pysparkJob']['mainPythonFileUri'])
+        self._job_name = os.path.basename(self._job["pysparkJob"]["mainPythonFileUri"])
         logger.info("Submitted new dataproc job:{} id:{}".format(self._job_name, self._job_id))
         return self._job
 
@@ -101,14 +93,19 @@ class DataprocBaseTask(_DataprocBaseTask):
         if self._job is None:
             raise Exception("You must submit a job before you can wait for it")
         while True:
-            job_result = self.dataproc_client.projects().regions().jobs()\
-                .get(projectId=self.gcloud_project_id, region=self.dataproc_region, jobId=self._job_id).execute()
-            status = job_result['status']['state']
+            job_result = (
+                self.dataproc_client.projects()
+                .regions()
+                .jobs()
+                .get(projectId=self.gcloud_project_id, region=self.dataproc_region, jobId=self._job_id)
+                .execute()
+            )
+            status = job_result["status"]["state"]
             logger.info("Current dataproc status: {} job:{} id:{}".format(status, self._job_name, self._job_id))
-            if status == 'DONE':
+            if status == "DONE":
                 break
-            if status == 'ERROR':
-                raise Exception(job_result['status']['details'])
+            if status == "ERROR":
+                raise Exception(job_result["status"]["details"])
             time.sleep(5)
 
 
@@ -116,14 +113,15 @@ class DataprocSparkTask(DataprocBaseTask):
     """
     Runs a spark jobs on your Dataproc cluster
     """
+
     main_class = luigi.Parameter()
     jars = luigi.Parameter(default="")
     job_args = luigi.Parameter(default="")
 
     def run(self):
-        self.submit_spark_job(main_class=self.main_class,
-                              jars=self.jars.split(",") if self.jars else [],
-                              job_args=self.job_args.split(",") if self.job_args else [])
+        self.submit_spark_job(
+            main_class=self.main_class, jars=self.jars.split(",") if self.jars else [], job_args=self.job_args.split(",") if self.job_args else []
+        )
         self.wait_for_job()
 
 
@@ -131,19 +129,22 @@ class DataprocPysparkTask(DataprocBaseTask):
     """
     Runs a pyspark jobs on your Dataproc cluster
     """
+
     job_file = luigi.Parameter()
     extra_files = luigi.Parameter(default="")
     job_args = luigi.Parameter(default="")
 
     def run(self):
-        self.submit_pyspark_job(job_file=self.job_file,
-                                extra_files=self.extra_files.split(",") if self.extra_files else [],
-                                job_args=self.job_args.split(",") if self.job_args else [])
+        self.submit_pyspark_job(
+            job_file=self.job_file,
+            extra_files=self.extra_files.split(",") if self.extra_files else [],
+            job_args=self.job_args.split(",") if self.job_args else [],
+        )
         self.wait_for_job()
 
 
 class CreateDataprocClusterTask(_DataprocBaseTask):
-    """ Task for creating a Dataproc cluster. """
+    """Task for creating a Dataproc cluster."""
 
     gcloud_zone = luigi.Parameter(default="europe-west1-c")
     gcloud_network = luigi.Parameter(default="default")
@@ -157,9 +158,13 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
     image_version = luigi.Parameter(default="")
 
     def _get_cluster_status(self):
-        return self.dataproc_client.projects().regions().clusters()\
-            .get(projectId=self.gcloud_project_id, region=self.dataproc_region, clusterName=self.dataproc_cluster_name)\
+        return (
+            self.dataproc_client.projects()
+            .regions()
+            .clusters()
+            .get(projectId=self.gcloud_project_id, region=self.dataproc_region, clusterName=self.dataproc_cluster_name)
             .execute()
+        )
 
     def complete(self):
         try:
@@ -183,46 +188,34 @@ class CreateDataprocClusterTask(_DataprocBaseTask):
                 "gceClusterConfig": {
                     "networkUri": base_uri + "/global/networks/" + self.gcloud_network,
                     "zoneUri": base_uri + "/zones/" + self.gcloud_zone,
-                    "serviceAccountScopes": [
-                        "https://www.googleapis.com/auth/cloud-platform"
-                    ]
+                    "serviceAccountScopes": ["https://www.googleapis.com/auth/cloud-platform"],
                 },
                 "masterConfig": {
                     "numInstances": 1,
                     "machineTypeUri": base_uri + "/zones/" + self.gcloud_zone + "/machineTypes/" + self.master_node_type,
-                    "diskConfig": {
-                        "bootDiskSizeGb": self.master_disk_size,
-                        "numLocalSsds": 0
-                    }
+                    "diskConfig": {"bootDiskSizeGb": self.master_disk_size, "numLocalSsds": 0},
                 },
                 "workerConfig": {
                     "numInstances": self.worker_normal_count,
                     "machineTypeUri": base_uri + "/zones/" + self.gcloud_zone + "/machineTypes/" + self.worker_node_type,
-                    "diskConfig": {
-                        "bootDiskSizeGb": self.worker_disk_size,
-                        "numLocalSsds": 0
-                    }
+                    "diskConfig": {"bootDiskSizeGb": self.worker_disk_size, "numLocalSsds": 0},
                 },
-                "secondaryWorkerConfig": {
-                    "numInstances": self.worker_preemptible_count,
-                    "isPreemptible": True
-                },
-                "softwareConfig": software_config
-            }
+                "secondaryWorkerConfig": {"numInstances": self.worker_preemptible_count, "isPreemptible": True},
+                "softwareConfig": software_config,
+            },
         }
 
-        self.dataproc_client.projects().regions().clusters()\
-            .create(projectId=self.gcloud_project_id, region=self.dataproc_region, body=cluster_conf).execute()
+        self.dataproc_client.projects().regions().clusters().create(projectId=self.gcloud_project_id, region=self.dataproc_region, body=cluster_conf).execute()
 
         while True:
             time.sleep(10)
             cluster_status = self._get_cluster_status()
-            status = cluster_status['status']['state']
+            status = cluster_status["status"]["state"]
             logger.info("Creating new dataproc cluster: {} status: {}".format(self.dataproc_cluster_name, status))
-            if status == 'RUNNING':
+            if status == "RUNNING":
                 break
-            if status == 'ERROR':
-                raise Exception(cluster_status['status']['details'])
+            if status == "ERROR":
+                raise Exception(cluster_status["status"]["details"])
 
 
 class DeleteDataprocClusterTask(_DataprocBaseTask):
@@ -236,21 +229,26 @@ class DeleteDataprocClusterTask(_DataprocBaseTask):
 
     def _get_cluster_status(self):
         try:
-            return self.dataproc_client.projects().regions().clusters()\
-                .get(projectId=self.gcloud_project_id, region=self.dataproc_region,
-                     clusterName=self.dataproc_cluster_name, fields="status")\
+            return (
+                self.dataproc_client.projects()
+                .regions()
+                .clusters()
+                .get(projectId=self.gcloud_project_id, region=self.dataproc_region, clusterName=self.dataproc_cluster_name, fields="status")
                 .execute()
+            )
         except HttpError as e:
             if e.resp.status == 404:
                 return None  # We got a 404 so the cluster doesn't exist
             else:
                 raise e
 
-    def complete(self): return self._get_cluster_status() is None
+    def complete(self):
+        return self._get_cluster_status() is None
 
     def run(self):
-        self.dataproc_client.projects().regions().clusters()\
-            .delete(projectId=self.gcloud_project_id, region=self.dataproc_region, clusterName=self.dataproc_cluster_name).execute()
+        self.dataproc_client.projects().regions().clusters().delete(
+            projectId=self.gcloud_project_id, region=self.dataproc_region, clusterName=self.dataproc_cluster_name
+        ).execute()
 
         while True:
             time.sleep(10)
@@ -258,4 +256,4 @@ class DeleteDataprocClusterTask(_DataprocBaseTask):
             if status is None:
                 logger.info("Finished shutting down cluster: {}".format(self.dataproc_cluster_name))
                 break
-            logger.info("Shutting down cluster: {} current status: {}".format(self.dataproc_cluster_name, status['status']['state']))
+            logger.info("Shutting down cluster: {} current status: {}".format(self.dataproc_cluster_name, status["status"]["state"]))

@@ -26,7 +26,7 @@ from multiprocessing import Value
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class RunAnywayTarget(luigi.Target):
@@ -53,12 +53,12 @@ class RunAnywayTarget(luigi.Target):
     """
 
     # Specify the location of the temporary folder storing the state files. Subclass to change this value
-    temp_dir = os.path.join(tempfile.gettempdir(), 'luigi-simulate')
+    temp_dir = os.path.join(tempfile.gettempdir(), "luigi-simulate")
     temp_time = 24 * 3600  # seconds
 
     # Unique value (PID of the first encountered target) to separate temporary files between executions and
     # avoid deletion collision
-    unique = Value('i', 0)
+    unique = Value("i", 0)
 
     def __init__(self, task_obj):
         self.task_id = task_obj.task_id
@@ -72,12 +72,13 @@ class RunAnywayTarget(luigi.Target):
         if os.path.isdir(self.temp_dir):
             import shutil
             import time
+
             limit = time.time() - self.temp_time
             for fn in os.listdir(self.temp_dir):
                 path = os.path.join(self.temp_dir, fn)
                 if os.path.isdir(path) and os.stat(path).st_mtime < limit:
                     shutil.rmtree(path)
-                    logger.debug('Deleted temporary directory %s', path)
+                    logger.debug("Deleted temporary directory %s", path)
 
     def __str__(self):
         return self.task_id
@@ -86,8 +87,8 @@ class RunAnywayTarget(luigi.Target):
         """
         Returns a temporary file path based on a MD5 hash generated with the task's name and its arguments
         """
-        md5_hash = hashlib.new('md5', self.task_id.encode(), usedforsecurity=False).hexdigest()
-        logger.debug('Hash %s corresponds to task %s', md5_hash, self.task_id)
+        md5_hash = hashlib.new("md5", self.task_id.encode(), usedforsecurity=False).hexdigest()
+        logger.debug("Hash %s corresponds to task %s", md5_hash, self.task_id)
 
         return os.path.join(self.temp_dir, str(self.unique.value), md5_hash)
 
@@ -101,11 +102,11 @@ class RunAnywayTarget(luigi.Target):
         """
         Creates temporary file to mark the task as `done`
         """
-        logger.info('Marking %s as done', self)
+        logger.info("Marking %s as done", self)
 
         fn = self.get_path()
         try:
             os.makedirs(os.path.dirname(fn))
         except OSError:
             pass
-        open(fn, 'w').close()
+        open(fn, "w").close()

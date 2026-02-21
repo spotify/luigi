@@ -32,31 +32,35 @@ class retcode(luigi.Config):
     """
     See the :ref:`return codes configuration section <retcode-config>`.
     """
+
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    unhandled_exception = IntParameter(default=4,
-                                       description='For internal luigi errors.',
-                                       )
+    unhandled_exception = IntParameter(
+        default=4,
+        description="For internal luigi errors.",
+    )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    missing_data = IntParameter(default=0,
-                                description="For when there are incomplete ExternalTask dependencies.",
-                                )
+    missing_data = IntParameter(
+        default=0,
+        description="For when there are incomplete ExternalTask dependencies.",
+    )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    task_failed = IntParameter(default=0,
-                               description='''For when a task's run() method fails.''',
-                               )
+    task_failed = IntParameter(
+        default=0,
+        description="""For when a task's run() method fails.""",
+    )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    already_running = IntParameter(default=0,
-                                   description='For both local --lock and luigid "lock"',
-                                   )
+    already_running = IntParameter(
+        default=0,
+        description='For both local --lock and luigid "lock"',
+    )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    scheduling_error = IntParameter(default=0,
-                                    description='''For when a task's complete() or requires() fails,
-                                                   or task-limit reached'''
-                                    )
+    scheduling_error = IntParameter(
+        default=0,
+        description="""For when a task's complete() or requires() fails,
+                                                   or task-limit reached""",
+    )
     # default value inconsistent with doc/configuration.rst for backwards compatibility reasons
-    not_run = IntParameter(default=0,
-                           description="For when a task is not granted run permission by the scheduler."
-                           )
+    not_run = IntParameter(default=0, description="For when a task is not granted run permission by the scheduler.")
 
 
 def run_with_retcodes(argv):
@@ -67,7 +71,7 @@ def run_with_retcodes(argv):
 
     :param argv: Should (conceptually) be ``sys.argv[1:]``
     """
-    logger = logging.getLogger('luigi-interface')
+    logger = logging.getLogger("luigi-interface")
     with luigi.cmdline_parser.CmdlineParser.global_instance(argv):
         retcodes = retcode()
 
@@ -93,17 +97,15 @@ def run_with_retcodes(argv):
         return status in non_empty_categories
 
     codes_and_conds = (
-        (retcodes.missing_data, has('still_pending_ext')),
-        (retcodes.task_failed, has('failed')),
-        (retcodes.already_running, has('run_by_other_worker')),
-        (retcodes.scheduling_error, has('scheduling_error')),
-        (retcodes.not_run, has('not_run')),
+        (retcodes.missing_data, has("still_pending_ext")),
+        (retcodes.task_failed, has("failed")),
+        (retcodes.already_running, has("run_by_other_worker")),
+        (retcodes.scheduling_error, has("scheduling_error")),
+        (retcodes.not_run, has("not_run")),
     )
     expected_ret_code = max(code * (1 if cond else 0) for code, cond in codes_and_conds)
 
-    if expected_ret_code == 0 and \
-       root_task not in task_sets["completed"] and \
-       root_task not in task_sets["already_done"]:
+    if expected_ret_code == 0 and root_task not in task_sets["completed"] and root_task not in task_sets["already_done"]:
         sys.exit(retcodes.not_run)
     else:
         sys.exit(expected_ret_code)

@@ -72,7 +72,7 @@ logger = logging.getLogger(__name__)
 try:
     import boto3
 except ImportError:
-    logger.warning('boto3 is not installed. BatchTasks require boto3')
+    logger.warning("boto3 is not installed. BatchTasks require boto3")
 
 
 class BatchJobException(Exception):
@@ -83,35 +83,33 @@ POLL_TIME = 10
 
 
 def _random_id():
-    return 'batch-job-' + ''.join(random.sample(string.ascii_lowercase, 8))
+    return "batch-job-" + "".join(random.sample(string.ascii_lowercase, 8))
 
 
 class BatchClient:
-
     def __init__(self, poll_time=POLL_TIME):
         self.poll_time = poll_time
-        self._client = boto3.client('batch')
-        self._log_client = boto3.client('logs')
+        self._client = boto3.client("batch")
+        self._log_client = boto3.client("logs")
         self._queue = self.get_active_queue()
 
     def get_active_queue(self):
         """Get name of first active job queue"""
 
         # Get dict of active queues keyed by name
-        queues = {q['jobQueueName']: q for q in self._client.describe_job_queues()['jobQueues']
-                  if q['state'] == 'ENABLED' and q['status'] == 'VALID'}
+        queues = {q["jobQueueName"]: q for q in self._client.describe_job_queues()["jobQueues"] if q["state"] == "ENABLED" and q["status"] == "VALID"}
         if not queues:
-            raise Exception('No job queues with state=ENABLED and status=VALID')
+            raise Exception("No job queues with state=ENABLED and status=VALID")
 
         # Pick the first queue as default
         return list(queues.keys())[0]
 
     def get_job_id_from_name(self, job_name):
         """Retrieve the first job ID matching the given name"""
-        jobs = self._client.list_jobs(jobQueue=self._queue, jobStatus='RUNNING')['jobSummaryList']
-        matching_jobs = [job for job in jobs if job['jobName'] == job_name]
+        jobs = self._client.list_jobs(jobQueue=self._queue, jobStatus="RUNNING")["jobSummaryList"]
+        matching_jobs = [job for job in jobs if job["jobName"] == job_name]
         if matching_jobs:
-            return matching_jobs[0]['jobId']
+            return matching_jobs[0]["jobId"]
 
     def get_job_status(self, job_id):
         """Retrieve task statuses from ECS API
@@ -123,71 +121,60 @@ class BatchClient:
         response = self._client.describe_jobs(jobs=[job_id])
 
         # Error checking
-        status_code = response['ResponseMetadata']['HTTPStatusCode']
+        status_code = response["ResponseMetadata"]["HTTPStatusCode"]
         if status_code != 200:
-            msg = 'Job status request received status code {0}:\n{1}'
+            msg = "Job status request received status code {0}:\n{1}"
             raise Exception(msg.format(status_code, response))
 
-        return response['jobs'][0]['status']
+        return response["jobs"][0]["status"]
 
     def get_logs(self, log_stream_name, get_last=50):
         """Retrieve log stream from CloudWatch"""
-        response = self._log_client.get_log_events(
-            logGroupName='/aws/batch/job',
-            logStreamName=log_stream_name,
-            startFromHead=False)
-        events = response['events']
-        return '\n'.join(e['message'] for e in events[-get_last:])
+        response = self._log_client.get_log_events(logGroupName="/aws/batch/job", logStreamName=log_stream_name, startFromHead=False)
+        events = response["events"]
+        return "\n".join(e["message"] for e in events[-get_last:])
 
     def submit_job(self, job_definition, parameters, job_name=None, queue=None):
         """Wrap submit_job with useful defaults"""
         if job_name is None:
             job_name = _random_id()
-        response = self._client.submit_job(
-            jobName=job_name,
-            jobQueue=queue or self.get_active_queue(),
-            jobDefinition=job_definition,
-            parameters=parameters
-        )
-        return response['jobId']
+        response = self._client.submit_job(jobName=job_name, jobQueue=queue or self.get_active_queue(), jobDefinition=job_definition, parameters=parameters)
+        return response["jobId"]
 
     def wait_on_job(self, job_id):
         """Poll task status until STOPPED"""
 
         while True:
             status = self.get_job_status(job_id)
-            if status == 'SUCCEEDED':
-                logger.info('Batch job {} SUCCEEDED'.format(job_id))
+            if status == "SUCCEEDED":
+                logger.info("Batch job {} SUCCEEDED".format(job_id))
                 return True
-            elif status == 'FAILED':
+            elif status == "FAILED":
                 # Raise and notify if job failed
-                jobs = self._client.describe_jobs(jobs=[job_id])['jobs']
+                jobs = self._client.describe_jobs(jobs=[job_id])["jobs"]
                 job_str = json.dumps(jobs, indent=4)
-                logger.debug('Job details:\n' + job_str)
+                logger.debug("Job details:\n" + job_str)
 
-                log_stream_name = jobs[0]['attempts'][0]['container']['logStreamName']
+                log_stream_name = jobs[0]["attempts"][0]["container"]["logStreamName"]
                 logs = self.get_logs(log_stream_name)
-                raise BatchJobException('Job {} failed: {}'.format(
-                    job_id, logs))
+                raise BatchJobException("Job {} failed: {}".format(job_id, logs))
 
             time.sleep(self.poll_time)
-            logger.debug('Batch job status for job {0}: {1}'.format(
-                job_id, status))
+            logger.debug("Batch job status for job {0}: {1}".format(job_id, status))
 
     def register_job_definition(self, json_fpath):
         """Register a job definition with AWS Batch, using a JSON"""
         with open(json_fpath) as f:
             job_def = json.load(f)
         response = self._client.register_job_definition(**job_def)
-        status_code = response['ResponseMetadata']['HTTPStatusCode']
+        status_code = response["ResponseMetadata"]["HTTPStatusCode"]
         if status_code != 200:
-            msg = 'Register job definition request received status code {0}:\n{1}'
+            msg = "Register job definition request received status code {0}:\n{1}"
             raise Exception(msg.format(status_code, response))
         return response
 
 
 class BatchTask(luigi.Task):
-
     """
     Base class for an Amazon Batch job
 
@@ -200,6 +187,7 @@ class BatchTask(luigi.Task):
     :param job_queue: name of job queue where job is going to be submitted.
 
     """
+
     job_definition = luigi.Parameter()
     job_name = luigi.OptionalParameter(default=None)
     job_queue = luigi.OptionalParameter(default=None)
@@ -207,11 +195,7 @@ class BatchTask(luigi.Task):
 
     def run(self):
         bc = BatchClient(self.poll_time)
-        job_id = bc.submit_job(
-            self.job_definition,
-            self.parameters,
-            job_name=self.job_name,
-            queue=self.job_queue)
+        job_id = bc.submit_job(self.job_definition, self.parameters, job_name=self.job_name, queue=self.job_queue)
         bc.wait_on_job(job_id)
 
     @property

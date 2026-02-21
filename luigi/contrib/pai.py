@@ -29,6 +29,7 @@ Requires:
 
 Written and maintained by Liu, Dongqing (@liudongqing).
 """
+
 import abc
 import json
 import logging
@@ -37,20 +38,20 @@ from urllib.parse import urljoin
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import requests as rs
     from requests.exceptions import HTTPError
 
 except ImportError:
-    logger.warning('requests is not installed. PaiTask requires requests.')
+    logger.warning("requests is not installed. PaiTask requires requests.")
 
 
 def slot_to_dict(o):
     o_dict = {}
     for key in o.__slots__:
-        if not key.startswith('__'):
+        if not key.startswith("__"):
             value = getattr(o, key, None)
             if value is not None:
                 o_dict[key] = value
@@ -96,10 +97,8 @@ class PaiJob:
         }
 
     """
-    __slots__ = (
-        'jobName', 'image', 'authFile', 'dataDir', 'outputDir', 'codeDir', 'virtualCluster',
-        'taskRoles', 'gpuType', 'retryCount'
-    )
+
+    __slots__ = ("jobName", "image", "authFile", "dataDir", "outputDir", "codeDir", "virtualCluster", "taskRoles", "gpuType", "retryCount")
 
     def __init__(self, jobName, image, tasks):
         """
@@ -114,11 +113,11 @@ class PaiJob:
         if isinstance(tasks, list) and len(tasks) != 0:
             self.taskRoles = tasks
         else:
-            raise TypeError('you must specify one task at least.')
+            raise TypeError("you must specify one task at least.")
 
 
 class Port:
-    __slots__ = ('label', 'beginAt', 'portNumber')
+    __slots__ = ("label", "beginAt", "portNumber")
 
     def __init__(self, label, begin_at=0, port_number=1):
         """
@@ -134,10 +133,7 @@ class Port:
 
 
 class TaskRole:
-    __slots__ = (
-        'name', 'taskNumber', 'cpuNumber', 'memoryMB', 'shmMB', 'gpuNumber', 'portList', 'command',
-        'minFailedTaskCount', 'minSucceededTaskCount'
-    )
+    __slots__ = ("name", "taskNumber", "cpuNumber", "memoryMB", "shmMB", "gpuNumber", "portList", "command", "minFailedTaskCount", "minSucceededTaskCount")
 
     def __init__(self, name, command, taskNumber=1, cpuNumber=1, memoryMB=2048, shmMB=64, gpuNumber=0, portList=[]):
         """
@@ -163,18 +159,10 @@ class TaskRole:
 
 
 class OpenPai(luigi.Config):
-    pai_url = luigi.Parameter(
-        default='http://127.0.0.1:9186',
-        description='rest server url, default is http://127.0.0.1:9186')
-    username = luigi.Parameter(
-        default='admin',
-        description='your username')
-    password = luigi.Parameter(
-        default=None,
-        description='your password')
-    expiration = luigi.IntParameter(
-        default=3600,
-        description='expiration time in seconds')
+    pai_url = luigi.Parameter(default="http://127.0.0.1:9186", description="rest server url, default is http://127.0.0.1:9186")
+    username = luigi.Parameter(default="admin", description="your username")
+    password = luigi.Parameter(default=None, description="your password")
+    expiration = luigi.IntParameter(default=3600, description="expiration time in seconds")
 
 
 class PaiTask(luigi.Task):
@@ -184,13 +172,13 @@ class PaiTask(luigi.Task):
     @abc.abstractmethod
     def name(self):
         """Name for the job, need to be unique, required"""
-        return 'SklearnExample'
+        return "SklearnExample"
 
     @property
     @abc.abstractmethod
     def image(self):
         """URL pointing to the Docker image for all tasks in the job, required"""
-        return 'openpai/pai.example.sklearn'
+        return "openpai/pai.example.sklearn"
 
     @property
     @abc.abstractmethod
@@ -216,12 +204,12 @@ class PaiTask(luigi.Task):
     @property
     def output_dir(self):
         """Output directory on HDFS, $PAI_DEFAULT_FS_URI/$jobName/output will be used if not specified, optional"""
-        return '$PAI_DEFAULT_FS_URI/{0}/output'.format(self.name)
+        return "$PAI_DEFAULT_FS_URI/{0}/output".format(self.name)
 
     @property
     def virtual_cluster(self):
         """The virtual cluster job runs on. If omitted, the job will run on default virtual cluster, optional"""
-        return 'default'
+        return "default"
 
     @property
     def gpu_type(self):
@@ -236,18 +224,16 @@ class PaiTask(luigi.Task):
     def __init_token(self):
         self.__openpai = OpenPai()
 
-        request_json = json.dumps({'username': self.__openpai.username, 'password': self.__openpai.password,
-                                   'expiration': self.__openpai.expiration})
-        logger.debug('Requesting token from OpenPai')
-        response = rs.post(urljoin(self.__openpai.pai_url, '/api/v1/token'),
-                           headers={'Content-Type': 'application/json'}, data=request_json)
-        logger.debug('Get token response {0}'.format(response.text))
+        request_json = json.dumps({"username": self.__openpai.username, "password": self.__openpai.password, "expiration": self.__openpai.expiration})
+        logger.debug("Requesting token from OpenPai")
+        response = rs.post(urljoin(self.__openpai.pai_url, "/api/v1/token"), headers={"Content-Type": "application/json"}, data=request_json)
+        logger.debug("Get token response {0}".format(response.text))
         if response.status_code != 200:
-            msg = 'Get token request failed, response is {}'.format(response.text)
+            msg = "Get token request failed, response is {}".format(response.text)
             logger.error(msg)
             raise Exception(msg)
         else:
-            self.__token = response.json()['token']
+            self.__token = response.json()["token"]
 
     def __init__(self, *args, **kwargs):
         """
@@ -258,24 +244,24 @@ class PaiTask(luigi.Task):
         self.__init_token()
 
     def __check_job_status(self):
-        response = rs.get(urljoin(self.__openpai.pai_url, '/api/v1/jobs/{0}'.format(self.name)))
-        logger.debug('Check job response {0}'.format(response.text))
+        response = rs.get(urljoin(self.__openpai.pai_url, "/api/v1/jobs/{0}".format(self.name)))
+        logger.debug("Check job response {0}".format(response.text))
         if response.status_code == 404:
-            msg = 'Job {0} is not found'.format(self.name)
+            msg = "Job {0} is not found".format(self.name)
             logger.debug(msg)
             raise HTTPError(msg, response=response)
         elif response.status_code != 200:
-            msg = 'Get job request failed, response is {}'.format(response.text)
+            msg = "Get job request failed, response is {}".format(response.text)
             logger.error(msg)
             raise HTTPError(msg, response=response)
-        job_state = response.json()['jobStatus']['state']
-        if job_state in ['UNKNOWN', 'WAITING', 'RUNNING']:
-            logger.debug('Job {0} is running in state {1}'.format(self.name, job_state))
+        job_state = response.json()["jobStatus"]["state"]
+        if job_state in ["UNKNOWN", "WAITING", "RUNNING"]:
+            logger.debug("Job {0} is running in state {1}".format(self.name, job_state))
             return False
         else:
-            msg = 'Job {0} finished in state {1}'.format(self.name, job_state)
+            msg = "Job {0} finished in state {1}".format(self.name, job_state)
             logger.info(msg)
-            if job_state == 'SUCCEED':
+            if job_state == "SUCCEED":
                 return True
             else:
                 raise RuntimeError(msg)
@@ -289,15 +275,17 @@ class PaiTask(luigi.Task):
         job.outputDir = self.output_dir
         job.retryCount = self.retry_count
         job.gpuType = self.gpu_type
-        request_json = json.dumps(job,  default=slot_to_dict)
-        logger.debug('Submit job request {0}'.format(request_json))
-        response = rs.post(urljoin(self.__openpai.pai_url, '/api/v1/jobs'),
-                           headers={'Content-Type': 'application/json',
-                                    'Authorization': 'Bearer {}'.format(self.__token)}, data=request_json)
-        logger.debug('Submit job response {0}'.format(response.text))
+        request_json = json.dumps(job, default=slot_to_dict)
+        logger.debug("Submit job request {0}".format(request_json))
+        response = rs.post(
+            urljoin(self.__openpai.pai_url, "/api/v1/jobs"),
+            headers={"Content-Type": "application/json", "Authorization": "Bearer {}".format(self.__token)},
+            data=request_json,
+        )
+        logger.debug("Submit job response {0}".format(response.text))
         # 202 is success for job submission, see https://github.com/Microsoft/pai/blob/master/docs/rest-server/API.md
         if response.status_code != 202:
-            msg = 'Submit job failed, response code is {0}, body is {1}'.format(response.status_code, response.text)
+            msg = "Submit job failed, response code is {0}, body is {1}".format(response.status_code, response.text)
             logger.error(msg)
             raise HTTPError(msg, response=response)
         while not self.__check_job_status():

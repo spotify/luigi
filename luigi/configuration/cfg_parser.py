@@ -43,10 +43,7 @@ class InterpolationMissingEnvvarError(InterpolationError):
     """
 
     def __init__(self, option, section, value, envvar):
-        msg = (
-            "Config refers to a nonexisting environment variable {}. "
-            "Section [{}], option {}={}"
-        ).format(envvar, section, option, value)
+        msg = ("Config refers to a nonexisting environment variable {}. Section [{}], option {}={}").format(envvar, section, option, value)
         InterpolationError.__init__(self, option, section, msg)
 
 
@@ -55,6 +52,7 @@ class EnvironmentInterpolation(Interpolation):
     Custom interpolation which allows values to refer to environment variables
     using the ``${ENVVAR}`` syntax.
     """
+
     _ENVRE = re.compile(r"\$\{([^}]+)\}")  # matches "${envvar}"
 
     def before_get(self, parser, section, option, value, defaults):
@@ -72,8 +70,7 @@ class EnvironmentInterpolation(Interpolation):
             try:
                 envval = os.environ[envvar]
             except KeyError:
-                raise InterpolationMissingEnvvarError(
-                    option, section, rawval, envvar)
+                raise InterpolationMissingEnvvarError(option, section, rawval, envvar)
             start, end = match.span()
             parts.append(value[:start])
             parts.append(envval)
@@ -118,21 +115,22 @@ class LuigiConfigParser(BaseParser, ConfigParser):
     optionxform = str  # type: ignore
     _instance = None
     _config_paths = [
-        '/etc/luigi/client.cfg',  # Deprecated old-style global luigi config
-        '/etc/luigi/luigi.cfg',
-        'client.cfg',  # Deprecated old-style local luigi config
-        'luigi.cfg',
+        "/etc/luigi/client.cfg",  # Deprecated old-style global luigi config
+        "/etc/luigi/luigi.cfg",
+        "client.cfg",  # Deprecated old-style local luigi config
+        "luigi.cfg",
     ]
     _DEFAULT_INTERPOLATION = CombinedInterpolation([BasicInterpolation(), EnvironmentInterpolation()])
 
     @classmethod
     def reload(cls):
         # Warn about deprecated old-style config paths.
-        deprecated_paths = [p for p in cls._config_paths if os.path.basename(p) == 'client.cfg' and os.path.exists(p)]
+        deprecated_paths = [p for p in cls._config_paths if os.path.basename(p) == "client.cfg" and os.path.exists(p)]
         if deprecated_paths:
-            warnings.warn("Luigi configuration files named 'client.cfg' are deprecated if favor of 'luigi.cfg'. " +
-                          "Found: {paths!r}".format(paths=deprecated_paths),
-                          DeprecationWarning)
+            warnings.warn(
+                "Luigi configuration files named 'client.cfg' are deprecated if favor of 'luigi.cfg'. " + "Found: {paths!r}".format(paths=deprecated_paths),
+                DeprecationWarning,
+            )
 
         return cls.instance().read(cls._config_paths)
 
@@ -147,21 +145,19 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         try:
             try:
                 # Underscore-style is the recommended configuration style
-                option = option.replace('-', '_')
+                option = option.replace("-", "_")
                 return method(self, section, option, **kwargs)
             except (NoOptionError, NoSectionError):
                 # Support dash-style option names (with deprecation warning).
-                option_alias = option.replace('_', '-')
+                option_alias = option.replace("_", "-")
                 value = method(self, section, option_alias, **kwargs)
-                warn = 'Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.'.format(
-                    s=section, o=option_alias, u=option)
+                warn = "Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.".format(s=section, o=option_alias, u=option)
                 warnings.warn(warn, DeprecationWarning)
                 return value
         except (NoOptionError, NoSectionError):
             if default is LuigiConfigParser.NO_DEFAULT:
                 raise
-            if expected_type is not None and default is not None and \
-               not isinstance(default, expected_type):
+            if expected_type is not None and default is not None and not isinstance(default, expected_type):
                 raise
             return default
 
@@ -173,15 +169,14 @@ class LuigiConfigParser(BaseParser, ConfigParser):
         """
 
         # Underscore-style is the recommended configuration style
-        option = option.replace('-', '_')
+        option = option.replace("-", "_")
         if ConfigParser.has_option(self, section, option):
             return True
 
         # Support dash-style option names (with deprecation warning).
-        option_alias = option.replace('_', '-')
+        option_alias = option.replace("_", "-")
         if ConfigParser.has_option(self, section, option_alias):
-            warn = 'Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.'.format(
-                s=section, o=option_alias, u=option)
+            warn = "Configuration [{s}] {o} (with dashes) should be avoided. Please use underscores: {u}.".format(s=section, o=option_alias, u=option)
             warnings.warn(warn, DeprecationWarning)
             return True
 
@@ -202,8 +197,7 @@ class LuigiConfigParser(BaseParser, ConfigParser):
     def getintdict(self, section):
         try:
             # Exclude keys from [DEFAULT] section because in general they do not hold int values
-            return dict((key, int(value)) for key, value in self.items(section)
-                        if key not in {k for k, _ in self.items('DEFAULT')})
+            return dict((key, int(value)) for key, value in self.items(section) if key not in {k for k, _ in self.items("DEFAULT")})
         except NoSectionError:
             return {}
 

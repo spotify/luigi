@@ -23,22 +23,20 @@ import luigi.notifications
 
 
 class LuigiTestCaseTest(LuigiTestCase):
-
     def test_1(self):
         class MyClass(luigi.Task):
             pass
 
-        self.assertTrue(self.run_locally(['MyClass']))
+        self.assertTrue(self.run_locally(["MyClass"]))
 
     def test_2(self):
         class MyClass(luigi.Task):
             pass
 
-        self.assertTrue(self.run_locally(['MyClass']))
+        self.assertTrue(self.run_locally(["MyClass"]))
 
 
 class RunOnceTaskTest(LuigiTestCase):
-
     def test_complete_behavior(self):
         """
         Verify that RunOnceTask works as expected.
@@ -46,6 +44,7 @@ class RunOnceTaskTest(LuigiTestCase):
         This task will fail if it is a normal ``luigi.Task``, because
         RequiringTask will not run (missing dependency at runtime).
         """
+
         class MyTask(RunOnceTask):
             pass
 
@@ -58,5 +57,5 @@ class RunOnceTaskTest(LuigiTestCase):
             def run(self):
                 RequiringTask.counter += 1
 
-        self.run_locally(['RequiringTask'])
+        self.run_locally(["RequiringTask"])
         self.assertEqual(1, RequiringTask.counter)

@@ -26,7 +26,6 @@ luigi.notifications.DEBUG = True
 
 
 class InstanceTest(unittest.TestCase):
-
     def test_simple(self):
         class DummyTask(luigi.Task):
             x = luigi.Parameter()
@@ -42,7 +41,7 @@ class InstanceTest(unittest.TestCase):
         test = self
 
         class A(luigi.Task):
-            task_namespace = 'instance'  # to prevent task name conflict between tests
+            task_namespace = "instance"  # to prevent task name conflict between tests
 
             def __init__(self):
                 self.has_run = False
@@ -64,7 +63,7 @@ class InstanceTest(unittest.TestCase):
 
     def test_external_instance_cache(self):
         class A(luigi.Task):
-            task_namespace = 'instance'  # to prevent task name conflict between tests
+            task_namespace = "instance"  # to prevent task name conflict between tests
             pass
 
         class OtherA(luigi.ExternalTask):
@@ -75,7 +74,8 @@ class InstanceTest(unittest.TestCase):
         self.assertNotEqual(oa, a)
 
     def test_date(self):
-        ''' Adding unit test because we had a problem with this '''
+        """Adding unit test because we had a problem with this"""
+
         class DummyTask(luigi.Task):
             x = luigi.DateIntervalParameter()
 

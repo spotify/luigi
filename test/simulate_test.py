@@ -26,24 +26,24 @@ from luigi.contrib.simulate import RunAnywayTarget
 
 
 def temp_dir():
-    return os.path.join(tempfile.gettempdir(), 'luigi-simulate')
+    return os.path.join(tempfile.gettempdir(), "luigi-simulate")
 
 
 def is_writable():
     d = temp_dir()
-    fn = os.path.join(d, 'luigi-simulate-write-test')
+    fn = os.path.join(d, "luigi-simulate-write-test")
     exists = True
     try:
         try:
             os.makedirs(d)
         except OSError:
             pass
-        open(fn, 'w').close()
+        open(fn, "w").close()
         os.remove(fn)
     except BaseException:
         exists = False
 
-    return unittest.skipIf(not exists, 'Can\'t write to temporary directory')
+    return unittest.skipIf(not exists, "Can't write to temporary directory")
 
 
 class TaskA(luigi.Task):
@@ -53,14 +53,14 @@ class TaskA(luigi.Task):
         return RunAnywayTarget(self)
 
     def run(self):
-        fn = os.path.join(temp_dir(), 'luigi-simulate-test.tmp')
+        fn = os.path.join(temp_dir(), "luigi-simulate-test.tmp")
         try:
             os.makedirs(os.path.dirname(fn))
         except OSError:
             pass
 
-        with open(fn, 'a') as f:
-            f.write('{0}={1}\n'.format(self.__class__.__name__, self.i))
+        with open(fn, "a") as f:
+            f.write("{0}={1}\n".format(self.__class__.__name__, self.i))
 
         self.output().done()
 
@@ -97,14 +97,14 @@ class RunAnywayTargetTest(unittest.TestCase):
     def test_output(self):
         reset()
 
-        fn = os.path.join(temp_dir(), 'luigi-simulate-test.tmp')
+        fn = os.path.join(temp_dir(), "luigi-simulate-test.tmp")
 
         luigi.build([TaskWrap()], local_scheduler=True)
-        with open(fn, 'r') as f:
-            data = f.read().strip().split('\n')
+        with open(fn, "r") as f:
+            data = f.read().strip().split("\n")
 
         data.sort()
-        reference = ['TaskA=0', 'TaskA=10', 'TaskA=20', 'TaskA=5', 'TaskB=0', 'TaskC=0', 'TaskD=0']
+        reference = ["TaskA=0", "TaskA=10", "TaskA=20", "TaskA=5", "TaskB=0", "TaskC=0", "TaskD=0"]
         reference.sort()
 
         os.remove(fn)

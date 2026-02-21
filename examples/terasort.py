@@ -22,12 +22,12 @@ import luigi
 import luigi.contrib.hadoop_jar
 import luigi.contrib.hdfs
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 def hadoop_examples_jar():
     config = luigi.configuration.get_config()
-    examples_jar = config.get('hadoop', 'examples-jar')
+    examples_jar = config.get("hadoop", "examples-jar")
     if not examples_jar:
         logger.error("You must specify hadoop:examples-jar in luigi.cfg")
         raise
@@ -37,8 +37,8 @@ def hadoop_examples_jar():
     return examples_jar
 
 
-DEFAULT_TERASORT_IN = '/tmp/terasort-in'
-DEFAULT_TERASORT_OUT = '/tmp/terasort-out'
+DEFAULT_TERASORT_IN = "/tmp/terasort-in"
+DEFAULT_TERASORT_OUT = "/tmp/terasort-out"
 
 
 class TeraGen(luigi.contrib.hadoop_jar.HadoopJarJobTask):
@@ -46,10 +46,8 @@ class TeraGen(luigi.contrib.hadoop_jar.HadoopJarJobTask):
     Runs TeraGen, by default with 1TB of data (10B records)
     """
 
-    records = luigi.Parameter(default="10000000000",
-                              description="Number of records, each record is 100 Bytes")
-    terasort_in = luigi.Parameter(default=DEFAULT_TERASORT_IN,
-                                  description="directory to store terasort input into.")
+    records = luigi.Parameter(default="10000000000", description="Number of records, each record is 100 Bytes")
+    terasort_in = luigi.Parameter(default=DEFAULT_TERASORT_IN, description="directory to store terasort input into.")
 
     def output(self):
         """
@@ -77,10 +75,8 @@ class TeraSort(luigi.contrib.hadoop_jar.HadoopJarJobTask):
     Runs TeraGent, by default using
     """
 
-    terasort_in = luigi.Parameter(default=DEFAULT_TERASORT_IN,
-                                  description="directory to store terasort input into.")
-    terasort_out = luigi.Parameter(default=DEFAULT_TERASORT_OUT,
-                                   description="directory to store terasort output into.")
+    terasort_in = luigi.Parameter(default=DEFAULT_TERASORT_IN, description="directory to store terasort input into.")
+    terasort_out = luigi.Parameter(default=DEFAULT_TERASORT_OUT, description="directory to store terasort output into.")
 
     def requires(self):
         """

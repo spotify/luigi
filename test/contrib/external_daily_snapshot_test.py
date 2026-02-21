@@ -22,29 +22,29 @@ from luigi.mock import MockTarget
 
 class DataDump(ExternalDailySnapshot):
     param = luigi.Parameter()
-    a = luigi.Parameter(default='zebra')
-    aa = luigi.Parameter(default='Congo')
+    a = luigi.Parameter(default="zebra")
+    aa = luigi.Parameter(default="Congo")
 
     def output(self):
-        return MockTarget('data-%s-%s-%s-%s' % (self.param, self.a, self.aa, self.date))
+        return MockTarget("data-%s-%s-%s-%s" % (self.param, self.a, self.aa, self.date))
 
 
 class ExternalDailySnapshotTest(unittest.TestCase):
     def test_latest(self):
-        MockTarget('data-xyz-zebra-Congo-2012-01-01').open('w').close()
-        d = DataDump.latest(date=datetime.date(2012, 1, 10), param='xyz')
+        MockTarget("data-xyz-zebra-Congo-2012-01-01").open("w").close()
+        d = DataDump.latest(date=datetime.date(2012, 1, 10), param="xyz")
         self.assertEqual(d.date, datetime.date(2012, 1, 1))
 
     def test_latest_not_exists(self):
-        MockTarget('data-abc-zebra-Congo-2012-01-01').open('w').close()
-        d = DataDump.latest(date=datetime.date(2012, 1, 11), param='abc', lookback=5)
+        MockTarget("data-abc-zebra-Congo-2012-01-01").open("w").close()
+        d = DataDump.latest(date=datetime.date(2012, 1, 11), param="abc", lookback=5)
         self.assertEqual(d.date, datetime.date(2012, 1, 7))
 
     def test_deterministic(self):
-        MockTarget('data-pqr-zebra-Congo-2012-01-01').open('w').close()
-        d = DataDump.latest(date=datetime.date(2012, 1, 10), param='pqr', a='zebra', aa='Congo')
+        MockTarget("data-pqr-zebra-Congo-2012-01-01").open("w").close()
+        d = DataDump.latest(date=datetime.date(2012, 1, 10), param="pqr", a="zebra", aa="Congo")
         self.assertEqual(d.date, datetime.date(2012, 1, 1))
 
-        MockTarget('data-pqr-zebra-Congo-2012-01-05').open('w').close()
-        d = DataDump.latest(date=datetime.date(2012, 1, 10), param='pqr', aa='Congo', a='zebra')
+        MockTarget("data-pqr-zebra-Congo-2012-01-05").open("w").close()
+        d = DataDump.latest(date=datetime.date(2012, 1, 10), param="pqr", aa="Congo", a="zebra")
         self.assertEqual(d.date, datetime.date(2012, 1, 1))  # Should still be the same

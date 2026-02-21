@@ -25,11 +25,11 @@ luigi.notifications.DEBUG = True
 
 
 class TaskStatusMessageTest(LuigiTestCase):
-
     def test_run(self):
         message = "test message"
         sch = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=sch) as w:
+
             class MyTask(luigi.Task):
                 def run(self):
                     self.set_status_message(message)

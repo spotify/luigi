@@ -25,7 +25,6 @@ FORWARDED_ATTRIBUTES = set(luigi.worker.TaskProcess.forward_reporter_attributes.
 
 
 class NonYieldingTask(RunOnceTask):
-
     # need to accept messages in order for the "scheduler_message" attribute to be not None
     accepts_messages = True
 
@@ -50,7 +49,6 @@ class NonYieldingTask(RunOnceTask):
 
 
 class YieldingTask(NonYieldingTask):
-
     def run(self):
         # as TaskProcess._run_get_new_deps handles generators in a specific way, store names of
         # forwarded attributes before and after yielding a dynamic dependency, so we can explicitly
@@ -64,7 +62,6 @@ class YieldingTask(NonYieldingTask):
 
 
 class TaskForwardedAttributesTest(LuigiTestCase):
-
     def run_task(self, task):
         sch = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=sch) as w:

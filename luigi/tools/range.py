@@ -24,6 +24,7 @@ over and over and make no progress to more recent times. (See ``task_limit``
 and ``reverse`` parameters.)
 TODO foolproof against that kind of misuse?
 """
+
 import functools
 import itertools
 import logging
@@ -40,7 +41,7 @@ from luigi.parameter import ParameterException
 from luigi.target import FileSystemTarget
 from luigi.task import Register, flatten_output
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a purpose. Stringly typed, events are.
@@ -61,6 +62,7 @@ class RangeEvent(luigi.Event):  # Not sure if subclassing currently serves a pur
     TODO any different for reverse mode? From first missing till last missing?
     From last gap till stop?
     """
+
     COMPLETE_COUNT = "event.tools.range.complete.count"
     COMPLETE_FRACTION = "event.tools.range.complete.fraction"
     DELAY = "event.tools.range.delay"
@@ -86,9 +88,9 @@ class RangeBase(luigi.WrapperTask):
 
     Subclasses will need to use the ``of`` parameter when overriding methods.
     """
+
     # TODO lift the single parameter constraint by passing unknown parameters through WrapperTask?
-    of = luigi.TaskParameter(
-        description="task name to be completed. The task must take a single datetime parameter")
+    of = luigi.TaskParameter(description="task name to be completed. The task must take a single datetime parameter")
     of_params = luigi.DictParameter(default=dict(), description="Arguments to be provided to the 'of' class when instantiating")
     # The common parameters 'start' and 'stop' have type (e.g. DateParameter,
     # DateHourParameter) dependent on the concrete subclass, cumbersome to
@@ -97,18 +99,16 @@ class RangeBase(luigi.WrapperTask):
     stop = luigi.Parameter()
     reverse = luigi.BoolParameter(
         default=False,
-        description="specifies the preferred order for catching up. False - work from the oldest missing outputs onward; True - from the newest backward")
-    task_limit = luigi.IntParameter(
-        default=50,
-        description="how many of 'of' tasks to require. Guards against scheduling insane amounts of tasks in one go")
+        description="specifies the preferred order for catching up. False - work from the oldest missing outputs onward; True - from the newest backward",
+    )
+    task_limit = luigi.IntParameter(default=50, description="how many of 'of' tasks to require. Guards against scheduling insane amounts of tasks in one go")
     # TODO overridable exclude_datetimes or something...
-    now = luigi.IntParameter(
-        default=None,
-        description="set to override current time. In seconds since epoch")
+    now = luigi.IntParameter(default=None, description="set to override current time. In seconds since epoch")
     param_name = luigi.Parameter(
         default=None,
         description="parameter name used to pass in parameterized value. Defaults to None, meaning use first positional parameter",
-        positional=False)
+        positional=False,
+    )
 
     @property
     def of_cls(self):
@@ -169,7 +169,8 @@ class RangeBase(luigi.WrapperTask):
         """
         datetimes = self.finite_datetimes(
             finite_start if self.start is None else min(finite_start, self.parameter_to_datetime(self.start)),
-            finite_stop if self.stop is None else max(finite_stop, self.parameter_to_datetime(self.stop)))
+            finite_stop if self.stop is None else max(finite_stop, self.parameter_to_datetime(self.stop)),
+        )
 
         delay_in_jobs = len(datetimes) - datetimes.index(missing_datetimes[0]) if datetimes and missing_datetimes else 0
         self.trigger_event(RangeEvent.DELAY, self.of_cls.task_family, delay_in_jobs)
@@ -185,7 +186,7 @@ class RangeBase(luigi.WrapperTask):
     def _format_range(self, datetimes):
         param_first = self._format_datetime(datetimes[0])
         param_last = self._format_datetime(datetimes[-1])
-        return '[%s, %s]' % (param_first, param_last)
+        return "[%s, %s]" % (param_first, param_last)
 
     def _instantiate_task_cls(self, param):
         return self.of(**self._task_parameters(param))
@@ -204,7 +205,7 @@ class RangeBase(luigi.WrapperTask):
 
     def requires(self):
         # cache because we anticipate a fair amount of computation
-        if hasattr(self, '_cached_requires'):
+        if hasattr(self, "_cached_requires"):
             return self._cached_requires
 
         if not self.start and not self.stop:
@@ -225,24 +226,25 @@ class RangeBase(luigi.WrapperTask):
         datetimes = self.finite_datetimes(finite_start, finite_stop) if finite_start <= finite_stop else []
 
         if datetimes:
-            logger.debug('Actually checking if range %s of %s is complete',
-                         self._format_range(datetimes), self.of_cls.task_family)
+            logger.debug("Actually checking if range %s of %s is complete", self._format_range(datetimes), self.of_cls.task_family)
             missing_datetimes = sorted(self._missing_datetimes(datetimes))
-            logger.debug('Range %s lacked %d of expected %d %s instances',
-                         self._format_range(datetimes), len(missing_datetimes), len(datetimes), self.of_cls.task_family)
+            logger.debug(
+                "Range %s lacked %d of expected %d %s instances", self._format_range(datetimes), len(missing_datetimes), len(datetimes), self.of_cls.task_family
+            )
         else:
             missing_datetimes = []
-            logger.debug('Empty range. No %s instances expected', self.of_cls.task_family)
+            logger.debug("Empty range. No %s instances expected", self.of_cls.task_family)
 
         self._emit_metrics(missing_datetimes, finite_start, finite_stop)
 
         if self.reverse:
-            required_datetimes = missing_datetimes[-self.task_limit:]
+            required_datetimes = missing_datetimes[-self.task_limit :]
         else:
-            required_datetimes = missing_datetimes[:self.task_limit]
+            required_datetimes = missing_datetimes[: self.task_limit]
         if required_datetimes:
-            logger.debug('Requiring %d missing %s instances in range %s',
-                         len(required_datetimes), self.of_cls.task_family, self._format_range(required_datetimes))
+            logger.debug(
+                "Requiring %d missing %s instances in range %s", len(required_datetimes), self.of_cls.task_family, self._format_range(required_datetimes)
+            )
         if self.reverse:
             required_datetimes.reverse()  # TODO priorities, so that within the batch tasks are ordered too
 
@@ -268,8 +270,8 @@ class RangeBase(luigi.WrapperTask):
         try:
             return self.missing_datetimes(finite_datetimes)
         except TypeError as ex:
-            if 'missing_datetimes()' in repr(ex):
-                warnings.warn('In your Range* subclass, missing_datetimes() should only take 1 argument (see latest docs)')
+            if "missing_datetimes()" in repr(ex):
+                warnings.warn("In your Range* subclass, missing_datetimes() should only take 1 argument (see latest docs)")
                 return self.missing_datetimes(self.of_cls, finite_datetimes)
             else:
                 raise
@@ -279,24 +281,25 @@ class RangeDailyBase(RangeBase):
     """
     Produces a contiguous completed range of a daily recurring task.
     """
-    start = luigi.DateParameter(
-        default=None,
-        description="beginning date, inclusive. Default: None - work backward forever (requires reverse=True)")
-    stop = luigi.DateParameter(
-        default=None,
-        description="ending date, exclusive. Default: None - work forward forever")
+
+    start = luigi.DateParameter(default=None, description="beginning date, inclusive. Default: None - work backward forever (requires reverse=True)")
+    stop = luigi.DateParameter(default=None, description="ending date, exclusive. Default: None - work forward forever")
     days_back = luigi.IntParameter(
         default=100,  # slightly more than three months
-        description=("extent to which contiguousness is to be assured into "
-                     "past, in days from current time. Prevents infinite loop "
-                     "when start is none. If the dataset has limited retention"
-                     " (i.e. old outputs get removed), this should be set "
-                     "shorter to that, too, to prevent the oldest outputs "
-                     "flapping. Increase freely if you intend to process old "
-                     "dates - worker's memory is the limit"))
+        description=(
+            "extent to which contiguousness is to be assured into "
+            "past, in days from current time. Prevents infinite loop "
+            "when start is none. If the dataset has limited retention"
+            " (i.e. old outputs get removed), this should be set "
+            "shorter to that, too, to prevent the oldest outputs "
+            "flapping. Increase freely if you intend to process old "
+            "dates - worker's memory is the limit"
+        ),
+    )
     days_forward = luigi.IntParameter(
         default=0,
-        description="extent to which contiguousness is to be assured into future, in days from current time. Prevents infinite loop when stop is none")
+        description="extent to which contiguousness is to be assured into future, in days from current time. Prevents infinite loop when stop is none",
+    )
 
     def datetime_to_parameter(self, dt):
         return dt.date()
@@ -341,25 +344,26 @@ class RangeHourlyBase(RangeBase):
     """
     Produces a contiguous completed range of an hourly recurring task.
     """
-    start = luigi.DateHourParameter(
-        default=None,
-        description="beginning datehour, inclusive. Default: None - work backward forever (requires reverse=True)")
-    stop = luigi.DateHourParameter(
-        default=None,
-        description="ending datehour, exclusive. Default: None - work forward forever")
+
+    start = luigi.DateHourParameter(default=None, description="beginning datehour, inclusive. Default: None - work backward forever (requires reverse=True)")
+    stop = luigi.DateHourParameter(default=None, description="ending datehour, exclusive. Default: None - work forward forever")
     hours_back = luigi.IntParameter(
         default=100 * 24,  # slightly more than three months
-        description=("extent to which contiguousness is to be assured into "
-                     "past, in hours from current time. Prevents infinite "
-                     "loop when start is none. If the dataset has limited "
-                     "retention (i.e. old outputs get removed), this should "
-                     "be set shorter to that, too, to prevent the oldest "
-                     "outputs flapping. Increase freely if you intend to "
-                     "process old dates - worker's memory is the limit"))
+        description=(
+            "extent to which contiguousness is to be assured into "
+            "past, in hours from current time. Prevents infinite "
+            "loop when start is none. If the dataset has limited "
+            "retention (i.e. old outputs get removed), this should "
+            "be set shorter to that, too, to prevent the oldest "
+            "outputs flapping. Increase freely if you intend to "
+            "process old dates - worker's memory is the limit"
+        ),
+    )
     # TODO always entire interval for reprocessings (fixed start and stop)?
     hours_forward = luigi.IntParameter(
         default=0,
-        description="extent to which contiguousness is to be assured into future, in hours from current time. Prevents infinite loop when stop is none")
+        description="extent to which contiguousness is to be assured into future, in hours from current time. Prevents infinite loop when stop is none",
+    )
 
     def datetime_to_parameter(self, dt):
         return dt
@@ -406,30 +410,29 @@ class RangeByMinutesBase(RangeBase):
     """
     Produces a contiguous completed range of an recurring tasks separated a specified number of minutes.
     """
+
     start = luigi.DateMinuteParameter(
-        default=None,
-        description="beginning date-hour-minute, inclusive. Default: None - work backward forever (requires reverse=True)")
-    stop = luigi.DateMinuteParameter(
-        default=None,
-        description="ending date-hour-minute, exclusive. Default: None - work forward forever")
+        default=None, description="beginning date-hour-minute, inclusive. Default: None - work backward forever (requires reverse=True)"
+    )
+    stop = luigi.DateMinuteParameter(default=None, description="ending date-hour-minute, exclusive. Default: None - work forward forever")
     minutes_back = luigi.IntParameter(
-        default=60*24,  # one day
-        description=("extent to which contiguousness is to be assured into "
-                     "past, in minutes from current time. Prevents infinite "
-                     "loop when start is none. If the dataset has limited "
-                     "retention (i.e. old outputs get removed), this should "
-                     "be set shorter to that, too, to prevent the oldest "
-                     "outputs flapping. Increase freely if you intend to "
-                     "process old dates - worker's memory is the limit"))
+        default=60 * 24,  # one day
+        description=(
+            "extent to which contiguousness is to be assured into "
+            "past, in minutes from current time. Prevents infinite "
+            "loop when start is none. If the dataset has limited "
+            "retention (i.e. old outputs get removed), this should "
+            "be set shorter to that, too, to prevent the oldest "
+            "outputs flapping. Increase freely if you intend to "
+            "process old dates - worker's memory is the limit"
+        ),
+    )
     minutes_forward = luigi.IntParameter(
         default=0,
-        description="extent to which contiguousness is to be assured into future, "
-                    "in minutes from current time. Prevents infinite loop when stop is none")
-
-    minutes_interval = luigi.IntParameter(
-        default=1,
-        description="separation between events in minutes. It must evenly divide 60"
+        description="extent to which contiguousness is to be assured into future, in minutes from current time. Prevents infinite loop when stop is none",
     )
+
+    minutes_interval = luigi.IntParameter(default=1, description="separation between events in minutes. It must evenly divide 60")
 
     def datetime_to_parameter(self, dt):
         return dt
@@ -462,20 +465,15 @@ class RangeByMinutesBase(RangeBase):
         """
         # Validate that the minutes_interval can divide 60 and it is greater than 0 and lesser than 60
         if not (0 < self.minutes_interval < 60):
-            raise ParameterException('minutes-interval must be within 0..60')
+            raise ParameterException("minutes-interval must be within 0..60")
         if 60 % self.minutes_interval != 0:
-            raise ParameterException('minutes-interval does not evenly divide 60')
+            raise ParameterException("minutes-interval does not evenly divide 60")
         # start of a complete interval, e.g. 20:13 and the interval is 5 -> 20:10
-        start_minute = int(finite_start.minute/self.minutes_interval)*self.minutes_interval
-        datehour_start = datetime(
-            year=finite_start.year,
-            month=finite_start.month,
-            day=finite_start.day,
-            hour=finite_start.hour,
-            minute=start_minute)
+        start_minute = int(finite_start.minute / self.minutes_interval) * self.minutes_interval
+        datehour_start = datetime(year=finite_start.year, month=finite_start.month, day=finite_start.day, hour=finite_start.hour, minute=start_minute)
         datehours = []
         for i in itertools.count():
-            t = datehour_start + timedelta(minutes=i*self.minutes_interval)
+            t = datehour_start + timedelta(minutes=i * self.minutes_interval)
             if t >= finite_stop:
                 return datehours
             if t >= finite_start:
@@ -502,13 +500,13 @@ def _constrain_glob(glob, paths, limit=5):
         """
         chars = sorted(chars)
         if len(chars) > 1 and ord(chars[-1]) - ord(chars[0]) == len(chars) - 1:
-            return '[%s-%s]' % (chars[0], chars[-1])
+            return "[%s-%s]" % (chars[0], chars[-1])
         else:
-            return '[%s]' % ''.join(chars)
+            return "[%s]" % "".join(chars)
 
     current = {glob: paths}
     while True:
-        pos = list(current.keys())[0].find('[0-9]')
+        pos = list(current.keys())[0].find("[0-9]")
         if pos == -1:
             # no wildcard expressions left to specialize in the glob
             return list(current.keys())
@@ -516,10 +514,10 @@ def _constrain_glob(glob, paths, limit=5):
         for g, p in current.items():
             char_sets[g] = sorted({path[pos] for path in p})
         if sum(len(s) for s in char_sets.values()) > limit:
-            return [g.replace('[0-9]', digit_set_wildcard(char_sets[g]), 1) for g in current]
+            return [g.replace("[0-9]", digit_set_wildcard(char_sets[g]), 1) for g in current]
         for g, s in char_sets.items():
             for c in s:
-                new_glob = g.replace('[0-9]', c, 1)
+                new_glob = g.replace("[0-9]", c, 1)
                 new_paths = list(filter(lambda p: p[pos] == c, current[g]))
                 current[new_glob] = new_paths
             del current[g]
@@ -555,10 +553,10 @@ def _get_per_location_glob(tasks, outputs, regexes):
 
     glob = list(paths[0])  # FIXME sanity check that it's the same for all paths
     for start, end in positions:
-        glob = glob[:start] + ['[0-9]'] * (end - start) + glob[end:]
+        glob = glob[:start] + ["[0-9]"] * (end - start) + glob[end:]
     # chop off the last path item
     # (wouldn't need to if `hadoop fs -ls -d` equivalent were available)
-    return ''.join(glob).rsplit('/', 1)[0]
+    return "".join(glob).rsplit("/", 1)[0]
 
 
 def _get_filesystems_and_globs(datetime_to_task, datetime_to_re):
@@ -602,11 +600,10 @@ def _list_existing(filesystem, glob, paths):
     time_start = time.time()
     listing = []
     for g in sorted(globs):
-        logger.debug('Listing %s', g)
+        logger.debug("Listing %s", g)
         if filesystem.exists(g):
             listing.extend(filesystem.listdir(g))
-    logger.debug('%d %s listings took %f s to return %d items',
-                 len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing))
+    logger.debug("%d %s listings took %f s to return %d items", len(globs), filesystem.__class__.__name__, time.time() - time_start, len(listing))
     return set(listing)
 
 
@@ -646,25 +643,25 @@ class RangeMonthly(RangeBase):
     It is assumed that the number of months is low enough not to motivate the increased complexity.
     Hence, there is no class RangeMonthlyBase.
     """
-    start = luigi.MonthParameter(
-        default=None,
-        description="beginning month, inclusive. Default: None - work backward forever (requires reverse=True)")
-    stop = luigi.MonthParameter(
-        default=None,
-        description="ending month, exclusive. Default: None - work forward forever")
+
+    start = luigi.MonthParameter(default=None, description="beginning month, inclusive. Default: None - work backward forever (requires reverse=True)")
+    stop = luigi.MonthParameter(default=None, description="ending month, exclusive. Default: None - work forward forever")
     months_back = luigi.IntParameter(
         default=13,  # Little over a year
-        description=("extent to which contiguousness is to be assured into "
-                     "past, in months from current time. Prevents infinite loop "
-                     "when start is none. If the dataset has limited retention"
-                     " (i.e. old outputs get removed), this should be set "
-                     "shorter to that, too, to prevent the oldest outputs "
-                     "flapping. Increase freely if you intend to process old "
-                     "dates - worker's memory is the limit"))
+        description=(
+            "extent to which contiguousness is to be assured into "
+            "past, in months from current time. Prevents infinite loop "
+            "when start is none. If the dataset has limited retention"
+            " (i.e. old outputs get removed), this should be set "
+            "shorter to that, too, to prevent the oldest outputs "
+            "flapping. Increase freely if you intend to process old "
+            "dates - worker's memory is the limit"
+        ),
+    )
     months_forward = luigi.IntParameter(
         default=0,
-        description="extent to which contiguousness is to be assured into future, in months from current time. "
-                    "Prevents infinite loop when stop is none")
+        description="extent to which contiguousness is to be assured into future, in months from current time. Prevents infinite loop when stop is none",
+    )
 
     def datetime_to_parameter(self, dt):
         return date(dt.year, dt.month, 1)
@@ -686,7 +683,7 @@ class RangeMonthly(RangeBase):
         return datetime(dt.year, dt.month, 1)
 
     def _format_datetime(self, dt):
-        return dt.strftime('%Y-%m')
+        return dt.strftime("%Y-%m")
 
     def moving_start(self, now):
         return self._align(now) - relativedelta(months=self.months_back)
@@ -733,9 +730,8 @@ class RangeDaily(RangeDailyBase):
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
-                finite_datetimes,
-                lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)),
-                lambda d: d.strftime('(%Y).*(%m).*(%d)'))
+                finite_datetimes, lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)), lambda d: d.strftime("(%Y).*(%m).*(%d)")
+            )
 
 
 class RangeHourly(RangeHourlyBase):
@@ -762,9 +758,8 @@ class RangeHourly(RangeHourlyBase):
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
-                finite_datetimes,
-                lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)),
-                lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H)'))
+                finite_datetimes, lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)), lambda d: d.strftime("(%Y).*(%m).*(%d).*(%H)")
+            )
 
 
 class RangeByMinutes(RangeByMinutesBase):
@@ -790,6 +785,5 @@ class RangeByMinutes(RangeByMinutesBase):
             return set(finite_datetimes) - set(map(self.parameter_to_datetime, complete_parameters))
         except NotImplementedError:
             return infer_bulk_complete_from_fs(
-                finite_datetimes,
-                lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)),
-                lambda d: d.strftime('(%Y).*(%m).*(%d).*(%H).*(%M)'))
+                finite_datetimes, lambda d: self._instantiate_task_cls(self.datetime_to_parameter(d)), lambda d: d.strftime("(%Y).*(%m).*(%d).*(%H).*(%M)")
+            )

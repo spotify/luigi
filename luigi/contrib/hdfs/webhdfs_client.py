@@ -24,7 +24,6 @@ the authors only implement the features they need.  If you need to wrap more of
 the file system operations, please do and contribute back.
 """
 
-
 import logging
 import os
 import warnings
@@ -33,16 +32,13 @@ import luigi.contrib.target
 from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
 from luigi.contrib.hdfs import config as hdfs_config
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class webhdfs(luigi.Config):
-    port = luigi.IntParameter(default=50070,
-                              description='Port for webhdfs')
-    user = luigi.Parameter(default='', description='Defaults to $USER envvar',
-                           config_path=dict(section='hdfs', name='user'))
-    client_type = luigi.ChoiceParameter(var_type=str, choices=['insecure', 'kerberos'],
-                                        default='insecure', description='Type of hdfs client to use.')
+    port = luigi.IntParameter(default=50070, description="Port for webhdfs")
+    user = luigi.Parameter(default="", description="Defaults to $USER envvar", config_path=dict(section="hdfs", name="user"))
+    client_type = luigi.ChoiceParameter(var_type=str, choices=["insecure", "kerberos"], default="insecure", description="Type of hdfs client to use.")
 
 
 class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
@@ -56,7 +52,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
     def __init__(self, host=None, port=None, user=None, client_type=None):
         self.host = host or hdfs_config.hdfs().namenode_host
         self.port = port or webhdfs().port
-        self.user = user or webhdfs().user or os.environ['USER']
+        self.user = user or webhdfs().user or os.environ["USER"]
         self.client_type = client_type or webhdfs().client_type
 
     @property
@@ -64,7 +60,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         # the hdfs package allows it to specify multiple namenodes by passing a string containing
         # multiple namenodes separated by ';'
         hosts = self.host.split(";")
-        urls = ['http://' + host + ':' + str(self.port) for host in hosts]
+        urls = ["http://" + host + ":" + str(self.port) for host in hosts]
         return ";".join(urls)
 
     @property
@@ -74,11 +70,13 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         # not urgent to memoize it. Note that it *might* be issues with process
         # forking and whatnot (as the one in the snakebite client) if we
         # memoize it too trivially.
-        if self.client_type == 'kerberos':
+        if self.client_type == "kerberos":
             from hdfs.ext.kerberos import KerberosClient
+
             return KerberosClient(url=self.url)
         else:
             import hdfs
+
             return hdfs.InsecureClient(url=self.url, user=self.user)
 
     def walk(self, path, depth=1):
@@ -89,11 +87,12 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         Returns true if the path exists and false otherwise.
         """
         import hdfs
+
         try:
             self.client.status(path)
             return True
         except hdfs.util.HdfsError as e:
-            if str(e).startswith('File does not exist: '):
+            if str(e).startswith("File does not exist: "):
                 return False
             else:
                 raise e
@@ -102,23 +101,19 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         return self.client.upload(hdfs_path, local_path, overwrite=overwrite)
 
     def download(self, hdfs_path, local_path, overwrite=False, n_threads=-1):
-        return self.client.download(hdfs_path, local_path, overwrite=overwrite,
-                                    n_threads=n_threads)
+        return self.client.download(hdfs_path, local_path, overwrite=overwrite, n_threads=n_threads)
 
     def remove(self, hdfs_path, recursive=True, skip_trash=False):
         assert skip_trash  # Yes, you need to explicitly say skip_trash=True
         return self.client.delete(hdfs_path, recursive=recursive)
 
-    def read(self, hdfs_path, offset=0, length=None, buffer_size=None,
-             chunk_size=1024, buffer_char=None):
-        return self.client.read(hdfs_path, offset=offset, length=length,
-                                buffer_size=buffer_size, chunk_size=chunk_size,
-                                buffer_char=buffer_char)
+    def read(self, hdfs_path, offset=0, length=None, buffer_size=None, chunk_size=1024, buffer_char=None):
+        return self.client.read(hdfs_path, offset=offset, length=length, buffer_size=buffer_size, chunk_size=chunk_size, buffer_char=buffer_char)
 
     def move(self, path, dest):
-        parts = dest.rstrip('/').split('/')
+        parts = dest.rstrip("/").split("/")
         if len(parts) > 1:
-            dir_path = '/'.join(parts[0:-1])
+            dir_path = "/".join(parts[0:-1])
             if not self.exists(dir_path):
                 self.mkdir(dir_path, parents=True)
         self.client.rename(path, dest)
@@ -128,7 +123,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         Has no returnvalue (just like WebHDFS)
         """
         if not parents or raise_if_exists:
-            warnings.warn('webhdfs mkdir: parents/raise_if_exists not implemented')
+            warnings.warn("webhdfs mkdir: parents/raise_if_exists not implemented")
         permission = int(oct(mode)[2:])  # Convert from int(decimal) to int(octal)
         self.client.makedirs(path, permission=permission)
 
@@ -168,9 +163,7 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         """
         self.download(path, local_destination)
 
-    def listdir(self, path, ignore_directories=False, ignore_files=False,
-                include_size=False, include_type=False, include_time=False,
-                recursive=False):
+    def listdir(self, path, ignore_directories=False, ignore_files=False, include_size=False, include_type=False, include_time=False, recursive=False):
         assert not recursive
         return self.client.list(path, status=False)
 
@@ -178,4 +171,4 @@ class WebHdfsClient(hdfs_abstract_client.HdfsFileSystem):
         """
         To touchz using the web hdfs "write" cmd.
         """
-        self.client.write(path, data='', overwrite=False)
+        self.client.write(path, data="", overwrite=False)

@@ -19,14 +19,13 @@ here = os.path.dirname(__file__)
 # Patch-up path so that we can import from the directory above this one.r
 # This seems to be necessary because the `test` directory has no __init__.py but
 # adding one makes other tests fail.
-sys.path.append(os.path.join(here, '..'))
+sys.path.append(os.path.join(here, ".."))
 from server_test import ServerTestBase  # noqa
 
 TEST_TIMEOUT = 40
 
 
-@unittest.skipUnless(os.environ.get('TEST_VISUALISER'),
-                     'PhantomJS tests not requested in TEST_VISUALISER')
+@unittest.skipUnless(os.environ.get("TEST_VISUALISER"), "PhantomJS tests not requested in TEST_VISUALISER")
 class TestVisualiser(ServerTestBase):
     """
     Builds a medium-sized task tree of MergeSort results then starts
@@ -37,7 +36,7 @@ class TestVisualiser(ServerTestBase):
     def setUp(self):
         super(TestVisualiser, self).setUp()
 
-        x = 'I scream for ice cream'
+        x = "I scream for ice cream"
         task = UberTask(base_task=FailingMergeSort, x=x, copies=4)
         luigi.build([task], workers=1, scheduler_port=self.get_http_port())
 
@@ -45,7 +44,7 @@ class TestVisualiser(ServerTestBase):
 
         def _do_ioloop():
             # Enter ioloop for maximum TEST_TIMEOUT.  Check every 2s whether the test has finished.
-            print('Entering event loop in separate thread')
+            print("Entering event loop in separate thread")
 
             for i in range(TEST_TIMEOUT):
                 try:
@@ -55,7 +54,7 @@ class TestVisualiser(ServerTestBase):
                 if self.done.is_set():
                     break
 
-            print('Exiting event loop thread')
+            print("Exiting event loop thread")
 
         self.iothread = threading.Thread(target=_do_ioloop)
         self.iothread.start()
@@ -66,11 +65,10 @@ class TestVisualiser(ServerTestBase):
 
     def test(self):
         port = self.get_http_port()
-        print('Server port is {}'.format(port))
-        print('Starting phantomjs')
+        print("Server port is {}".format(port))
+        print("Starting phantomjs")
 
-        p = subprocess.Popen('phantomjs {}/phantomjs_test.js http://localhost:{}'.format(here, port),
-                             shell=True, stdin=None)
+        p = subprocess.Popen("phantomjs {}/phantomjs_test.js http://localhost:{}".format(here, port), shell=True, stdin=None)
 
         # PhantomJS may hang on an error so poll
         status = None
@@ -81,9 +79,9 @@ class TestVisualiser(ServerTestBase):
             time.sleep(1)
 
         if status is None:
-            raise AssertionError('PhantomJS failed to complete')
+            raise AssertionError("PhantomJS failed to complete")
         else:
-            print('PhantomJS return status is {}'.format(status))
+            print("PhantomJS return status is {}".format(status))
             assert status == 0
 
     # tasks tab tests.
@@ -91,48 +89,48 @@ class TestVisualiser(ServerTestBase):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}'.format(port))
+        driver.get("http://localhost:{}".format(port))
 
         length_select = driver.find_element_by_css_selector('select[name="taskTable_length"]')
-        assert length_select.get_attribute('value') == '10'
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 10
+        assert length_select.get_attribute("value") == "10"
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 10
 
         # Now change entries select box and check again.
         clicked = False
-        for option in length_select.find_elements_by_css_selector('option'):
-            if option.text == '50':
+        for option in length_select.find_elements_by_css_selector("option"):
+            if option.text == "50":
                 option.click()
                 clicked = True
                 break
 
         assert clicked, 'Could not click option with "50" entries.'
 
-        assert length_select.get_attribute('value') == '50'
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
+        assert length_select.get_attribute("value") == "50"
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 50
 
         # Now refresh page and check. Select box should be 50 and table should contain 50 rows.
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
         length_select = driver.find_element_by_css_selector('select[name="taskTable_length"]')
-        assert length_select.get_attribute('value') == '50'
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
+        assert length_select.get_attribute("value") == "50"
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 50
 
     def test_keeps_table_filter_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}'.format(port))
+        driver.get("http://localhost:{}".format(port))
 
         # Check initial state.
         search_input = driver.find_element_by_css_selector('input[type="search"]')
-        assert search_input.get_attribute('value') == ''
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 10
+        assert search_input.get_attribute("value") == ""
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 10
 
         # Now filter and check filtered table.
-        search_input.send_keys('ber')
+        search_input.send_keys("ber")
         # UberTask only should be displayed.
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 1
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 1
 
         # Now refresh page and check. Filter input should contain 'ber' and table should contain
         # one row (UberTask).
@@ -140,41 +138,41 @@ class TestVisualiser(ServerTestBase):
 
         # Once page refreshed we have to find all selectors again.
         search_input = driver.find_element_by_css_selector('input[type="search"]')
-        assert search_input.get_attribute('value') == 'ber'
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 1
+        assert search_input.get_attribute("value") == "ber"
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 1
 
     def test_keeps_order_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}'.format(port))
+        driver.get("http://localhost:{}".format(port))
 
         # Order by name (asc).
-        column = driver.find_elements_by_css_selector('#taskTable thead th')[1]
+        column = driver.find_elements_by_css_selector("#taskTable thead th")[1]
         column.click()
 
-        table_body = driver.find_element_by_css_selector('#taskTable tbody')
-        assert self._get_cell_value(table_body, 0, 1) == 'FailingMergeSort_0'
+        table_body = driver.find_element_by_css_selector("#taskTable tbody")
+        assert self._get_cell_value(table_body, 0, 1) == "FailingMergeSort_0"
 
         # Ordery by name (desc).
         column.click()
-        assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+        assert self._get_cell_value(table_body, 0, 1) == "UberTask"
 
         # Now refresh page and check. Table should be ordered by name (desc).
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        table_body = driver.find_element_by_css_selector('#taskTable tbody')
-        assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+        table_body = driver.find_element_by_css_selector("#taskTable tbody")
+        assert self._get_cell_value(table_body, 0, 1) == "UberTask"
 
     def test_keeps_filter_on_server_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}/static/visualiser/index.html#tab=tasks'.format(port))
+        driver.get("http://localhost:{}/static/visualiser/index.html#tab=tasks".format(port))
 
         # Check initial state.
-        checkbox = driver.find_element_by_css_selector('#serverSideCheckbox')
+        checkbox = driver.find_element_by_css_selector("#serverSideCheckbox")
         assert checkbox.is_selected() is False
 
         # Change invert checkbox.
@@ -184,29 +182,27 @@ class TestVisualiser(ServerTestBase):
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        checkbox = driver.find_element_by_css_selector('#serverSideCheckbox')
+        checkbox = driver.find_element_by_css_selector("#serverSideCheckbox")
         assert checkbox.is_selected()
 
     def test_synchronizes_fields_on_tasks_tab(self):
         # Check fields population if tasks tab was opened by direct link
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
-        url = 'http://localhost:{}/static/visualiser/index.html' \
-              '#tab=tasks&length=50&search__search=er&filterOnServer=1&order=1,desc' \
-              .format(port)
+        url = "http://localhost:{}/static/visualiser/index.html#tab=tasks&length=50&search__search=er&filterOnServer=1&order=1,desc".format(port)
 
         driver.get(url)
 
         length_select = driver.find_element_by_css_selector('select[name="taskTable_length"]')
-        assert length_select.get_attribute('value') == '50'
+        assert length_select.get_attribute("value") == "50"
 
         search_input = driver.find_element_by_css_selector('input[type="search"]')
-        assert search_input.get_attribute('value') == 'er'
-        assert len(driver.find_elements_by_css_selector('#taskTable tbody tr')) == 50
+        assert search_input.get_attribute("value") == "er"
+        assert len(driver.find_elements_by_css_selector("#taskTable tbody tr")) == 50
 
         # Table is ordered by first column (name)
-        table_body = driver.find_element_by_css_selector('#taskTable tbody')
-        assert self._get_cell_value(table_body, 0, 1) == 'UberTask'
+        table_body = driver.find_element_by_css_selector("#taskTable tbody")
+        assert self._get_cell_value(table_body, 0, 1) == "UberTask"
 
     # graph tab tests.
 
@@ -214,10 +210,10 @@ class TestVisualiser(ServerTestBase):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+        driver.get("http://localhost:{}/static/visualiser/index.html#tab=graph".format(port))
 
         # Check initial state.
-        invert_checkbox = driver.find_element_by_css_selector('#invertCheckbox')
+        invert_checkbox = driver.find_element_by_css_selector("#invertCheckbox")
         assert invert_checkbox.is_selected() is False
 
         # Change invert checkbox.
@@ -227,38 +223,38 @@ class TestVisualiser(ServerTestBase):
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        invert_checkbox = driver.find_element_by_css_selector('#invertCheckbox')
+        invert_checkbox = driver.find_element_by_css_selector("#invertCheckbox")
         assert invert_checkbox.is_selected()
 
     def test_keeps_task_id_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+        driver.get("http://localhost:{}/static/visualiser/index.html#tab=graph".format(port))
 
         # Check initial state.
-        task_id_input = driver.find_element_by_css_selector('#js-task-id')
-        assert task_id_input.get_attribute('value') == ''
+        task_id_input = driver.find_element_by_css_selector("#js-task-id")
+        assert task_id_input.get_attribute("value") == ""
 
         # Change task id
-        task_id_input.send_keys('1')
-        driver.find_element_by_css_selector('#loadTaskForm button[type=submit]').click()
+        task_id_input.send_keys("1")
+        driver.find_element_by_css_selector("#loadTaskForm button[type=submit]").click()
 
         # Now refresh page and check. Task ID field should contain 1
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        task_id_input = driver.find_element_by_css_selector('#js-task-id')
-        assert task_id_input.get_attribute('value') == '1'
+        task_id_input = driver.find_element_by_css_selector("#js-task-id")
+        assert task_id_input.get_attribute("value") == "1"
 
     def test_keeps_hide_done_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+        driver.get("http://localhost:{}/static/visualiser/index.html#tab=graph".format(port))
 
         # Check initial state.
-        hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
+        hide_done_checkbox = driver.find_element_by_css_selector("#hideDoneCheckbox")
         assert hide_done_checkbox.is_selected() is False
 
         # Change invert checkbox.
@@ -268,62 +264,61 @@ class TestVisualiser(ServerTestBase):
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
+        hide_done_checkbox = driver.find_element_by_css_selector("#hideDoneCheckbox")
         assert hide_done_checkbox.is_selected()
 
     def test_keeps_visualisation_type_after_page_refresh(self):
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
 
-        driver.get('http://localhost:{}/static/visualiser/index.html#tab=graph'.format(port))
+        driver.get("http://localhost:{}/static/visualiser/index.html#tab=graph".format(port))
 
         # Check initial state.
-        svg_radio = driver.find_element_by_css_selector('input[value=svg]')
+        svg_radio = driver.find_element_by_css_selector("input[value=svg]")
         assert svg_radio.is_selected()
 
         # Change vistype to d3 by clicking on its label.
-        d3_radio = driver.find_element_by_css_selector('input[value=d3]')
-        d3_radio.find_element_by_xpath('..').click()
+        d3_radio = driver.find_element_by_css_selector("input[value=d3]")
+        d3_radio.find_element_by_xpath("..").click()
 
         # Now refresh page and check. D3 checkbox shoud be checked.
         driver.refresh()
 
         # Once page refreshed we have to find all selectors again.
-        d3_radio = driver.find_element_by_css_selector('input[value=d3]')
+        d3_radio = driver.find_element_by_css_selector("input[value=d3]")
         assert d3_radio.is_selected()
 
     def test_synchronizes_fields_on_graph_tab(self):
         # Check fields population if tasks tab was opened by direct link.
         port = self.get_http_port()
         driver = webdriver.PhantomJS()
-        url = 'http://localhost:{}/static/visualiser/index.html' \
-              '#tab=graph&taskId=1&invert=1&hideDone=1&visType=svg' \
-              .format(port)
+        url = "http://localhost:{}/static/visualiser/index.html#tab=graph&taskId=1&invert=1&hideDone=1&visType=svg".format(port)
         driver.get(url)
 
         # Check task id input
-        task_id_input = driver.find_element_by_css_selector('#js-task-id')
-        assert task_id_input.get_attribute('value') == '1'
+        task_id_input = driver.find_element_by_css_selector("#js-task-id")
+        assert task_id_input.get_attribute("value") == "1"
 
         # Check Show Upstream Dependencies checkbox.
-        invert_checkbox = driver.find_element_by_css_selector('#invertCheckbox')
+        invert_checkbox = driver.find_element_by_css_selector("#invertCheckbox")
         assert invert_checkbox.is_selected()
 
         # Check Hide Done checkbox.
-        hide_done_checkbox = driver.find_element_by_css_selector('#hideDoneCheckbox')
+        hide_done_checkbox = driver.find_element_by_css_selector("#hideDoneCheckbox")
         assert hide_done_checkbox.is_selected()
 
-        svg_radio = driver.find_element_by_css_selector('input[value=svg]')
-        assert svg_radio.get_attribute('checked')
+        svg_radio = driver.find_element_by_css_selector("input[value=svg]")
+        assert svg_radio.get_attribute("checked")
 
     def _get_cell_value(self, elem, row, column):
-        tr = elem.find_elements_by_css_selector('#taskTable tbody tr')[row]
-        td = tr.find_elements_by_css_selector('td')[column]
+        tr = elem.find_elements_by_css_selector("#taskTable tbody tr")[row]
+        td = tr.find_elements_by_css_selector("td")[column]
         return td.text
 
 
 # ---------------------------------------------------------------------------
 # Code for generating a tree of tasks with some failures.
+
 
 def generate_task_families(task_class, n):
     """
@@ -336,7 +331,7 @@ def generate_task_families(task_class, n):
     """
     ret = {}
     for i in range(n):
-        class_name = '{}_{}'.format(task_class.task_family, i)
+        class_name = "{}_{}".format(task_class.task_family, i)
         ret[class_name] = type(class_name, (task_class,), {})
 
     return ret
@@ -347,6 +342,7 @@ class UberTask(luigi.Task):
     A task which depends on n copies of a configurable subclass.
 
     """
+
     _done = False
 
     base_task = luigi.TaskParameter()
@@ -391,7 +387,7 @@ class MemoryTarget(luigi.Target):
 
 
 class MergeSort(luigi.Task):
-    x = luigi.Parameter(description='A string to be sorted')
+    x = luigi.Parameter(description="A string to be sorted")
 
     def __init__(self, *args, **kwargs):
         super(MergeSort, self).__init__(*args, **kwargs)
@@ -421,7 +417,7 @@ class MergeSort(luigi.Task):
         else:
             s = self.x
 
-        self.result.box = ''.join(s)
+        self.result.box = "".join(s)
 
 
 class FailingMergeSort(MergeSort):
@@ -429,16 +425,17 @@ class FailingMergeSort(MergeSort):
     Simply fail if the string to sort starts with ' '.
 
     """
-    fail_probability = luigi.FloatParameter(default=0.)
+
+    fail_probability = luigi.FloatParameter(default=0.0)
 
     def run(self):
-        if self.x[0] == ' ':
-            raise Exception('I failed')
+        if self.x[0] == " ":
+            raise Exception("I failed")
         else:
             return super(FailingMergeSort, self).run()
 
 
-if __name__ == '__main__':
-    x = 'I scream for ice cream'
+if __name__ == "__main__":
+    x = "I scream for ice cream"
     task = UberTask(base_task=FailingMergeSort, x=x, copies=4)
     luigi.build([task], workers=1, scheduler_port=8082)
