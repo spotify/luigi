@@ -9,10 +9,11 @@ from datetime import datetime
 
 import luigi
 import luigi.parameter
+import luigi.task
 from luigi.notifications import email, send_email
 
 
-class batch_email(luigi.Config):
+class batch_email(luigi.task.Config):
     email_interval = luigi.parameter.IntParameter(
         default=60,
         config_path=dict(section="batch-notifier", name="email-interval-minutes"),

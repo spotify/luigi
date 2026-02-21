@@ -26,11 +26,12 @@ import enum
 import functools
 import textwrap
 
-import luigi
+from luigi.parameter import IntParameter
+from luigi.task import Config
 
 
-class execution_summary(luigi.Config):
-    summary_length = luigi.IntParameter(default=5)
+class execution_summary(Config):
+    summary_length = IntParameter(default=5)
 
 
 class LuigiStatusCode(enum.Enum):

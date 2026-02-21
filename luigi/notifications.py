@@ -63,7 +63,7 @@ class TestNotificationsTask(luigi.task.Task):
         return False
 
 
-class email(luigi.Config):
+class email(luigi.task.Config):
     force_send = luigi.parameter.BoolParameter(default=False, description="Send e-mail even from a tty")
     format = luigi.parameter.ChoiceParameter(
         default="plain", config_path=dict(section="core", name="email-type"), choices=("plain", "html", "none"), description="Format type for sent e-mails"
@@ -79,7 +79,7 @@ class email(luigi.Config):
     )
 
 
-class smtp(luigi.Config):
+class smtp(luigi.task.Config):
     host = luigi.parameter.Parameter(default="localhost", config_path=dict(section="core", name="smtp_host"), description="Hostname of smtp server")
     local_hostname = luigi.parameter.Parameter(
         default=None,
@@ -100,7 +100,7 @@ class smtp(luigi.Config):
     )
 
 
-class sendgrid(luigi.Config):
+class sendgrid(luigi.task.Config):
     apikey = luigi.parameter.Parameter(config_path=dict(section="email", name="SENGRID_API_KEY"), description="API key for SendGrid login")
 
 
