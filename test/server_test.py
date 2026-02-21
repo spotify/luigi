@@ -303,7 +303,8 @@ class _ServerTest(unittest.TestCase):
 
     def setUp(self):
         self.server_client = self.server_client_class()
-        state_path = tempfile.mktemp(suffix=self.id())
+        fd, state_path = tempfile.mkstemp(suffix=self.id())
+        os.close(fd)
         self.addCleanup(functools.partial(os.unlink, state_path))
         luigi.configuration.get_config().set("scheduler", "state_path", state_path)
         self.start_server()
