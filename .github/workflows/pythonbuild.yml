@@ -207,7 +207,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: flake8
+          - tox-env: ruff
           - tox-env: docs
     steps:
       - uses: actions/checkout@v4
