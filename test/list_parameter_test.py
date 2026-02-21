@@ -15,14 +15,15 @@
 # limitations under the License.
 #
 
-from jsonschema import Draft4Validator
-from jsonschema.exceptions import ValidationError
-from helpers import unittest, in_parse
-
-import luigi
 import json
+
 import mock
 import pytest
+from helpers import in_parse, unittest
+from jsonschema import Draft4Validator
+from jsonschema.exceptions import ValidationError
+
+import luigi
 
 
 class ListParameterTask(luigi.Task):

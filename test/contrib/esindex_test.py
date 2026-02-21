@@ -34,14 +34,14 @@ Example running tests against port 9201 with basic auth:
 import collections
 import datetime
 import os
-from helpers import unittest
 
 import elasticsearch
-import luigi
-from elasticsearch.connection import Urllib3HttpConnection
-from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
-
 import pytest
+from elasticsearch.connection import Urllib3HttpConnection
+from helpers import unittest
+
+import luigi
+from luigi.contrib.esindex import CopyToIndex, ElasticsearchTarget
 
 HOST = os.getenv('ESINDEX_TEST_HOST', 'localhost')
 PORT = os.getenv('ESINDEX_TEST_PORT', 9200)

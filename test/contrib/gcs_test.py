@@ -22,9 +22,10 @@ Follow the directions in the gcloud tools to set up local credentials.
 """
 
 from helpers import unittest
+
 try:
-    import googleapiclient.errors
     import google.auth
+    import googleapiclient.errors
 except ImportError:
     raise unittest.SkipTest('Unable to load googleapiclient module')
 import os
@@ -32,9 +33,10 @@ import tempfile
 import unittest
 from unittest import mock
 
-from luigi.contrib import gcs
-from target_test import FileSystemTargetTestMixin
 import pytest
+from target_test import FileSystemTargetTestMixin
+
+from luigi.contrib import gcs
 
 # In order to run this test, you should set these to your GCS project/bucket.
 # Unfortunately there's no mock

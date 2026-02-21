@@ -20,9 +20,11 @@ These are the unit tests for the BigQueryLoadAvro class.
 """
 
 import unittest
+
 import avro
 import avro.schema
 import pytest
+
 from luigi.contrib.bigquery_avro import BigQueryLoadAvro
 
 

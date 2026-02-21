@@ -17,22 +17,22 @@
 
 import bz2
 import gzip
+import io
+import itertools
 import os
 import random
 import shutil
 import sys
-from helpers import unittest
+from errno import EEXIST, EXDEV
+
 import mock
+from helpers import unittest
+from target_test import FileSystemTargetTestMixin
 
 import luigi.format
 from luigi import LocalTarget
 from luigi.local_target import LocalFileSystem
 from luigi.target import FileAlreadyExists, MissingParentDirectory
-from target_test import FileSystemTargetTestMixin
-
-import itertools
-import io
-from errno import EEXIST, EXDEV
 
 
 class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):

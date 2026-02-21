@@ -20,13 +20,13 @@ You can configure what client by setting the "client" config under the "hdfs" se
 "hadoopcli" is the slowest, but should work out of the box.
 """
 
+import getpass
+import os
 import random
+from urllib.parse import urlparse, urlunparse
+
 import luigi
 import luigi.configuration
-import os
-import getpass
-
-from urllib.parse import urlparse, urlunparse
 
 
 class hdfs(luigi.Config):

@@ -16,12 +16,12 @@
 #
 
 from helpers import unittest
+from mock import patch
 
 import luigi
 from luigi import Event, Task, build
-from luigi.mock import MockTarget, MockFileSystem
+from luigi.mock import MockFileSystem, MockTarget
 from luigi.task import flatten
-from mock import patch
 
 
 class DummyException(Exception):

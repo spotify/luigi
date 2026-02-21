@@ -15,13 +15,15 @@
 # limitations under the License.
 #
 
-import luigi
-import tempfile
 import shlex
-from helpers import unittest
-from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask, fix_paths
-from mock import patch, Mock
+import tempfile
+
 import pytest
+from helpers import unittest
+from mock import Mock, patch
+
+import luigi
+from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask, fix_paths
 
 
 class TestHadoopJarJob(HadoopJarJobTask):

@@ -16,7 +16,8 @@
 #
 
 import datetime
-from helpers import unittest, in_parse
+
+from helpers import in_parse, unittest
 
 import luigi
 import luigi.interface

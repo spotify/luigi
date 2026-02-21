@@ -15,9 +15,9 @@
 # limitations under the License.
 #
 
+import mysql.connector
 from helpers import unittest
 
-import mysql.connector
 from luigi.contrib.mysqldb import MySqlTarget
 
 host = 'localhost'

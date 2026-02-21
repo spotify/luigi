@@ -16,7 +16,7 @@
 #
 import luigi
 from luigi.contrib.s3 import S3Target
-from luigi.contrib.spark import SparkSubmitTask, PySparkTask
+from luigi.contrib.spark import PySparkTask, SparkSubmitTask
 
 
 class InlinePySparkWordCount(PySparkTask):

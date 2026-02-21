@@ -1,7 +1,9 @@
+import json
+
+from helpers import unittest
+
 import luigi
 from luigi.parameter import ParameterVisibility
-from helpers import unittest
-import json
 
 
 class TestTask1(luigi.Task):

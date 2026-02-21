@@ -16,12 +16,13 @@
 #
 
 import datetime
-
-from helpers import with_config, LuigiTestCase, parsing, in_parse, RunOnceTask
-from datetime import timedelta
 import enum
+from datetime import timedelta
+
 import mock
 import pytest
+from helpers import LuigiTestCase, RunOnceTask, in_parse, parsing, with_config
+from worker_test import email_patch
 
 import luigi
 import luigi.date_interval
@@ -29,7 +30,6 @@ import luigi.interface
 import luigi.notifications
 from luigi.mock import MockTarget
 from luigi.parameter import ParameterException
-from worker_test import email_patch
 
 luigi.notifications.DEBUG = True
 

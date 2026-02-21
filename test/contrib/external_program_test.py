@@ -14,23 +14,23 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from io import BytesIO
 import os
 import shutil
 import subprocess
 import tempfile
 from functools import partial
+from io import BytesIO
 from multiprocessing import Value
-
-from helpers import unittest
-import luigi
-import luigi.contrib.hdfs
-from luigi.contrib.external_program import ExternalProgramTask, ExternalPythonProgramTask
-from luigi.contrib.external_program import ExternalProgramRunError
-from mock import patch, call
 from subprocess import Popen
+
 import mock
 import pytest
+from helpers import unittest
+from mock import call, patch
+
+import luigi
+import luigi.contrib.hdfs
+from luigi.contrib.external_program import ExternalProgramRunError, ExternalProgramTask, ExternalPythonProgramTask
 
 
 def poll_generator():

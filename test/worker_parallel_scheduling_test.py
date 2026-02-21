@@ -20,14 +20,14 @@ import gc
 import os
 import pickle
 import time
-from helpers import unittest
 
 import mock
 import psutil
+from helpers import unittest
 
 import luigi
-from luigi.worker import Worker
 from luigi.task_status import UNKNOWN
+from luigi.worker import Worker
 
 
 def running_children():

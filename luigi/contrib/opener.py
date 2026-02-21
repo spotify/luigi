@@ -30,12 +30,12 @@ Example:
 """
 
 import json
+from urllib.parse import parse_qs, urlsplit
 
+from luigi.contrib.s3 import S3Target
 from luigi.local_target import LocalTarget
 from luigi.mock import MockTarget
-from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemException
-from urllib.parse import urlsplit, parse_qs
 
 __all__ = ['OpenerError',
            'NoOpenerError',

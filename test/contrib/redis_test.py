@@ -17,9 +17,9 @@
 
 # pylint: disable=F0401
 from time import sleep
-from helpers import unittest
 
 import pytest
+from helpers import unittest
 
 try:
     import redis

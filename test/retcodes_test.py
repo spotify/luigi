@@ -14,8 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from helpers import LuigiTestCase, with_config
 import mock
+from helpers import LuigiTestCase, with_config
+
 import luigi
 import luigi.scheduler
 from luigi.cmdline import luigi_run

@@ -51,8 +51,9 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 """
 
 import copy
-import time
 import logging
+import time
+
 import luigi
 
 logger = logging.getLogger('luigi-interface')

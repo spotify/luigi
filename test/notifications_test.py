@@ -15,17 +15,17 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-import mock
-import sys
 import socket
+import sys
 
-from helpers import with_config
+import mock
+from helpers import unittest, with_config
+
+import luigi
 from luigi import notifications
 from luigi.notifications import generate_email
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-import luigi
 
 
 class TestEmail(unittest.TestCase):

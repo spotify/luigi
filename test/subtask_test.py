@@ -16,6 +16,7 @@
 #
 
 import abc
+
 from helpers import unittest
 
 import luigi

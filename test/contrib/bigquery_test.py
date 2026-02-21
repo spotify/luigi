@@ -26,8 +26,7 @@ import pytest
 from mock.mock import MagicMock
 
 from luigi.contrib import bigquery
-from luigi.contrib.bigquery import BigQueryLoadTask, BigQueryTarget, BQDataset, \
-    BigQueryRunQueryTask, BigQueryExtractTask, BigQueryClient
+from luigi.contrib.bigquery import BigQueryClient, BigQueryExtractTask, BigQueryLoadTask, BigQueryRunQueryTask, BigQueryTarget, BQDataset
 from luigi.contrib.gcs import GCSTarget
 
 

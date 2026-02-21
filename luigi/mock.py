@@ -21,9 +21,8 @@ The main purpose is unit testing workflows without writing to disk.
 """
 
 import multiprocessing
-from io import BytesIO
-
 import sys
+from io import BytesIO
 
 from luigi import target
 from luigi.format import get_default_format

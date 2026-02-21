@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-from luigi.configuration import LuigiTomlParser, get_config, add_config_path
-
-
 from helpers import LuigiTestCase
+
+from luigi.configuration import LuigiTomlParser, add_config_path, get_config
 
 
 class TomlConfigParserTest(LuigiTestCase):

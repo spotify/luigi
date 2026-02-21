@@ -33,10 +33,11 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 
 import unittest
 
+import pytest
+from moto import mock_ecs
+
 import luigi
 from luigi.contrib.ecs import ECSTask, _get_task_statuses
-from moto import mock_ecs
-import pytest
 
 try:
     import boto3

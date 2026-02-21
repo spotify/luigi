@@ -18,14 +18,15 @@
 Provides access to HDFS using the :py:class:`HdfsTarget`, a subclass of :py:class:`~luigi.target.Target`.
 """
 
-import luigi
 import random
 import warnings
-from luigi.target import FileSystemTarget
-from luigi.contrib.hdfs.config import tmppath
-from luigi.contrib.hdfs import format as hdfs_format
-from luigi.contrib.hdfs import clients as hdfs_clients
 from urllib import parse as urlparse
+
+import luigi
+from luigi.contrib.hdfs import clients as hdfs_clients
+from luigi.contrib.hdfs import format as hdfs_format
+from luigi.contrib.hdfs.config import tmppath
+from luigi.target import FileSystemTarget
 
 
 class HdfsTarget(FileSystemTarget):

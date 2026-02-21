@@ -35,17 +35,17 @@ Requires:
 Written and maintained by Andrea Pierleoni (@apierleoni).
 Contributions by Eliseo Papa (@elipapa).
 """
-from tempfile import mkdtemp
 import logging
-import luigi
+from tempfile import mkdtemp
 
+import luigi
 from luigi.local_target import LocalFileSystem
 
 logger = logging.getLogger('luigi-interface')
 
 try:
     import docker
-    from docker.errors import ContainerError, ImageNotFound, APIError
+    from docker.errors import APIError, ContainerError, ImageNotFound
 
 except ImportError:
     logger.warning('docker is not installed. DockerTask requires docker.')

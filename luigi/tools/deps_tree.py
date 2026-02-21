@@ -23,10 +23,11 @@ Use this to visualize the execution plan in the terminal.
                     └─--[Bar-{'num': '12'} (PENDING)]
 """
 
-from luigi.task import flatten
-from luigi.cmdline_parser import CmdlineParser
 import sys
 import warnings
+
+from luigi.cmdline_parser import CmdlineParser
+from luigi.task import flatten
 
 
 class bcolors:

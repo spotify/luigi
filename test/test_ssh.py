@@ -16,6 +16,7 @@
 #
 
 import subprocess
+
 from helpers import unittest
 
 from luigi.contrib.ssh import RemoteContext

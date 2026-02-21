@@ -5,12 +5,13 @@ Please, do not use it outside of Luigi codebase itself.
 
 
 from collections import OrderedDict
+
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping  # type: ignore
-import operator
 import functools
+import operator
 
 
 class FrozenOrderedDict(Mapping):

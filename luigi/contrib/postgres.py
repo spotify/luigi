@@ -19,9 +19,9 @@ Implements a subclass of :py:class:`~luigi.target.Target` that writes data to Po
 Also provides a helper task to copy data into a Postgres table.
 """
 
-import os
 import datetime
 import logging
+import os
 import re
 import tempfile
 
@@ -55,8 +55,8 @@ if DB_DRIVER == 'psycopg2':
 
 if dbapi is None or DB_DRIVER == 'pg8000':
     try:
-        import pg8000.dbapi as dbapi  # noqa: F811
         import pg8000.core
+        import pg8000.dbapi as dbapi  # noqa: F811
         # pg8000 doesn't have an error code catalog so we need to make our own
         # from https://www.postgresql.org/docs/8.2/errcodes-appendix.html
         DB_ERROR_CODES.update({'42P07': ERROR_DUPLICATE_TABLE, '42P01': ERROR_UNDEFINED_TABLE})

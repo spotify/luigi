@@ -2,11 +2,12 @@
 Common code for GCP (google cloud services) integration
 """
 import logging
+
 logger = logging.getLogger('luigi-interface')
 
 try:
-    import httplib2
     import google.auth
+    import httplib2
 except ImportError:
     logger.warning("Loading GCP module without the python packages httplib2, google-auth. \
         This *could* crash at runtime if no other credentials are provided.")

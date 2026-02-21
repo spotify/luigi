@@ -1,13 +1,13 @@
-import luigi
-import mock
 import random
 import unittest
 
-from luigi.contrib.opener import OpenerTarget, NoOpenerError
-from luigi.mock import MockTarget
-from luigi.local_target import LocalTarget
-
+import mock
 import pytest
+
+import luigi
+from luigi.contrib.opener import NoOpenerError, OpenerTarget
+from luigi.local_target import LocalTarget
+from luigi.mock import MockTarget
 
 
 @pytest.mark.contrib

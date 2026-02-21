@@ -13,6 +13,7 @@ from luigi.format import NopFormat
 try:
     import dropbox
     import dropbox.exceptions
+
     from luigi.contrib.dropbox import DropboxClient
 except ImportError:
     raise unittest.SkipTest('DropboxTarget and DropboxClient will not be tested. Dropbox library is not installed')

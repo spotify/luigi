@@ -26,23 +26,21 @@ import logging
 import os
 import os.path
 import warnings
-from multiprocessing.pool import ThreadPool
-
-from urllib.parse import urlsplit
-
 from configparser import NoSectionError
+from multiprocessing.pool import ThreadPool
+from urllib.parse import urlsplit
 
 from luigi import configuration
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
-from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
+from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, MissingParentDirectory
 from luigi.task import ExternalTask
 
 logger = logging.getLogger('luigi-interface')
 
 try:
-    from boto3.s3.transfer import TransferConfig
     import botocore
+    from boto3.s3.transfer import TransferConfig
 except ImportError:
     logger.warning("Loading S3 module without the python package boto3. "
                    "Will crash at runtime if S3 functionality is used.")
@@ -405,7 +403,7 @@ class S3Client(FileSystem):
                 self.s3.meta.client.get_object(
                     Bucket=bucket, Key=key + suffix)
             except botocore.exceptions.ClientError as e:
-                if not e.response['Error']['Code'] in ['NoSuchKey', '404']:
+                if e.response['Error']['Code'] not in ['NoSuchKey', '404']:
                     raise
             else:
                 return True

@@ -18,43 +18,59 @@
 Package containing core luigi functionality.
 """
 
+from luigi import configuration, event, interface, local_target, parameter, rpc, target, task
 from luigi.__version__ import VERSION
-
-from luigi import task
-from luigi.task import (
-    Task, Config, ExternalTask, WrapperTask, namespace, auto_namespace, DynamicRequirements,
-)
-
-from luigi import target
-from luigi.target import Target
-
-from luigi import local_target
-from luigi.local_target import LocalTarget
-
-from luigi import rpc
-from luigi.rpc import RemoteScheduler, RPCError
-from luigi import parameter
-from luigi.parameter import (
-    Parameter,
-    DateParameter, MonthParameter, YearParameter, DateHourParameter, DateMinuteParameter, DateSecondParameter,
-    DateIntervalParameter, TimeDeltaParameter,
-    StrParameter, IntParameter, FloatParameter, BoolParameter, PathParameter,
-    TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter, EnumListParameter,
-    NumericalParameter, ChoiceParameter, ChoiceListParameter, OptionalParameter,
-    OptionalStrParameter, OptionalIntParameter, OptionalFloatParameter, OptionalBoolParameter,
-    OptionalPathParameter, OptionalDictParameter, OptionalListParameter, OptionalTupleParameter,
-    OptionalChoiceParameter, OptionalNumericalParameter,
-)
-
-from luigi import configuration
-
-from luigi import interface
-from luigi.interface import run, build
-from luigi.execution_summary import LuigiStatusCode
-
-from luigi import event
 from luigi.event import Event
-
+from luigi.execution_summary import LuigiStatusCode
+from luigi.interface import build, run
+from luigi.local_target import LocalTarget
+from luigi.parameter import (
+    BoolParameter,
+    ChoiceListParameter,
+    ChoiceParameter,
+    DateHourParameter,
+    DateIntervalParameter,
+    DateMinuteParameter,
+    DateParameter,
+    DateSecondParameter,
+    DictParameter,
+    EnumListParameter,
+    EnumParameter,
+    FloatParameter,
+    IntParameter,
+    ListParameter,
+    MonthParameter,
+    NumericalParameter,
+    OptionalBoolParameter,
+    OptionalChoiceParameter,
+    OptionalDictParameter,
+    OptionalFloatParameter,
+    OptionalIntParameter,
+    OptionalListParameter,
+    OptionalNumericalParameter,
+    OptionalParameter,
+    OptionalPathParameter,
+    OptionalStrParameter,
+    OptionalTupleParameter,
+    Parameter,
+    PathParameter,
+    StrParameter,
+    TaskParameter,
+    TimeDeltaParameter,
+    TupleParameter,
+    YearParameter,
+)
+from luigi.rpc import RemoteScheduler, RPCError
+from luigi.target import Target
+from luigi.task import (
+    Config,
+    DynamicRequirements,
+    ExternalTask,
+    Task,
+    WrapperTask,
+    auto_namespace,
+    namespace,
+)
 
 __version__ = VERSION
 __all__ = [

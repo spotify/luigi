@@ -18,10 +18,11 @@
 import os
 import subprocess
 import tempfile
+
 import mock
 from helpers import unittest
-
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
+
 import luigi
 import luigi.lock
 import luigi.notifications

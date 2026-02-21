@@ -16,13 +16,14 @@
 #
 
 import itertools
-import mock
 import time
-from helpers import unittest
+
+import mock
 import pytest
+from helpers import unittest
+
 import luigi.notifications
-from luigi.scheduler import DISABLED, DONE, FAILED, PENDING, \
-    UNKNOWN, RUNNING, BATCH_RUNNING, UPSTREAM_RUNNING, Scheduler
+from luigi.scheduler import BATCH_RUNNING, DISABLED, DONE, FAILED, PENDING, RUNNING, UNKNOWN, UPSTREAM_RUNNING, Scheduler
 
 luigi.notifications.DEBUG = True
 WORKER = 'myworker'

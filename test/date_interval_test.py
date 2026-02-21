@@ -16,6 +16,7 @@
 #
 
 import datetime
+
 from helpers import LuigiTestCase, in_parse
 
 import luigi

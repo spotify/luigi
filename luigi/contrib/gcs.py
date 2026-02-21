@@ -23,17 +23,13 @@ import mimetypes
 import os
 import tempfile
 import time
-from urllib.parse import urlsplit
 from io import BytesIO
+from urllib.parse import urlsplit
 
-from tenacity import retry
-from tenacity import retry_if_exception
-from tenacity import retry_if_exception_type
-from tenacity import wait_exponential
-from tenacity import stop_after_attempt
-from tenacity import after_log
-from luigi.contrib import gcp
+from tenacity import after_log, retry, retry_if_exception, retry_if_exception_type, stop_after_attempt, wait_exponential
+
 import luigi.target
+from luigi.contrib import gcp
 from luigi.format import FileWrapper
 
 logger = logging.getLogger('luigi-interface')
@@ -43,10 +39,7 @@ RETRYABLE_ERRORS = None
 
 try:
     import httplib2
-
-    from googleapiclient import errors
-    from googleapiclient import discovery
-    from googleapiclient import http
+    from googleapiclient import discovery, errors, http
 except ImportError:
     logger.warning("Loading GCS module without the python packages googleapiclient & google-auth. \
         This will crash at runtime if GCS functionality is used.")
@@ -275,8 +268,8 @@ class GCSClient(luigi.target.FileSystem):
         ]
 
         if num_process > 1:
-            from multiprocessing import Pool
             from contextlib import closing
+            from multiprocessing import Pool
             with closing(Pool(num_process)) as p:
                 return p.map(self._forward_args_to_put, put_kwargs_list)
         else:

@@ -1,9 +1,9 @@
 import warnings
 
-import luigi
 import mock
-
 from helpers import LuigiTestCase, with_config
+
+import luigi
 
 
 class OptionalParameterTest(LuigiTestCase):

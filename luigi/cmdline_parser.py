@@ -20,9 +20,10 @@ be considered internal to luigi.
 """
 
 import argparse
-from contextlib import contextmanager
-from luigi.task_register import Register
 import sys
+from contextlib import contextmanager
+
+from luigi.task_register import Register
 
 
 class CmdlineParser:

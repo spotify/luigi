@@ -1,10 +1,10 @@
 import unittest
 
 import mock
-from pyhive.presto import Cursor, Connection
 from pyhive.exc import DatabaseError
+from pyhive.presto import Connection, Cursor
 
-from luigi.contrib.presto import PrestoTask, PrestoClient, PrestoTarget
+from luigi.contrib.presto import PrestoClient, PrestoTarget, PrestoTask
 
 
 class WithPrestoClientTest(unittest.TestCase):

@@ -18,9 +18,9 @@
 from helpers import unittest
 
 import luigi
-import luigi.worker
 import luigi.date_interval
 import luigi.notifications
+import luigi.worker
 
 luigi.notifications.DEBUG = True
 

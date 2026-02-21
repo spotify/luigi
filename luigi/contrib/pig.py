@@ -22,7 +22,6 @@ Example configuration section in luigi.cfg::
     # pig home directory
     home: /usr/share/pig
 """
-from contextlib import contextmanager
 import logging
 import os
 import select
@@ -30,6 +29,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 
 import luigi
 from luigi import configuration

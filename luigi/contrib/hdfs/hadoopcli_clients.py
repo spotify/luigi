@@ -20,17 +20,18 @@ The implementations of the hdfs clients.
 """
 
 
-from luigi.target import FileAlreadyExists
-from luigi.contrib.hdfs.config import load_hadoop_cmd
+import datetime
+import logging
+import os
+import re
+import subprocess
+import warnings
+
 from luigi.contrib.hdfs import abstract_client as hdfs_abstract_client
 from luigi.contrib.hdfs import config as hdfs_config
 from luigi.contrib.hdfs import error as hdfs_error
-import logging
-import subprocess
-import datetime
-import os
-import re
-import warnings
+from luigi.contrib.hdfs.config import load_hadoop_cmd
+from luigi.target import FileAlreadyExists
 
 logger = logging.getLogger('luigi-interface')
 

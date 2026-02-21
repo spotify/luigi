@@ -17,16 +17,15 @@ import os
 import sys
 
 import mock
+import pytest
+from helpers import unittest, with_config
 from moto import mock_s3
 
 import luigi
 import luigi.contrib.redshift
 import luigi.notifications
-from helpers import unittest, with_config
 from luigi.contrib import redshift
 from luigi.contrib.s3 import S3Client
-
-import pytest
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
     # spulec/moto#308

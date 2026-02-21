@@ -22,32 +22,26 @@ See :doc:`/central_scheduler` for more info.
 """
 
 import collections
-from collections.abc import MutableSet
-import json
-
-from luigi.batch_notifier import BatchNotifier
-
-import pickle
 import functools
 import hashlib
 import inspect
 import itertools
+import json
 import logging
 import os
+import pickle
 import re
 import time
 import uuid
+from collections.abc import MutableSet
 
-from luigi import configuration
-from luigi import notifications
-from luigi import parameter
+from luigi import configuration, notifications, parameter
 from luigi import task_history as history
-from luigi.task_status import DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN, \
-    BATCH_RUNNING
-from luigi.task import Config
-from luigi.parameter import ParameterVisibility
-
+from luigi.batch_notifier import BatchNotifier
 from luigi.metrics import MetricsCollectors
+from luigi.parameter import ParameterVisibility
+from luigi.task import Config
+from luigi.task_status import BATCH_RUNNING, DISABLED, DONE, FAILED, PENDING, RUNNING, SUSPENDED, UNKNOWN
 
 logger = logging.getLogger(__name__)
 

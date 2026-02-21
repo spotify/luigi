@@ -89,17 +89,17 @@ an open-source SGE cluster manager for use with Amazon EC2::
 # - Runner function loads the class from pickle
 # - Runner function hits the work button on it
 
-import os
-import subprocess
-import time
-import sys
 import logging
-import random
+import os
 import pickle
+import random
+import subprocess
+import sys
+import time
 
 import luigi
-from luigi.contrib.hadoop import create_packages_archive
 from luigi.contrib import sge_runner
+from luigi.contrib.hadoop import create_packages_archive
 
 logger = logging.getLogger('luigi-interface')
 logger.propagate = 0

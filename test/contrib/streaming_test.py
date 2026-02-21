@@ -1,15 +1,13 @@
-import mock
 import os
-
 import unittest
+
+import mock
+import pytest
 
 from luigi import Parameter
 from luigi.contrib import mrrunner
-
 from luigi.contrib.hadoop import HadoopJobRunner, JobTask
 from luigi.contrib.hdfs import HdfsTarget
-
-import pytest
 
 
 class MockStreamingJob(JobTask):

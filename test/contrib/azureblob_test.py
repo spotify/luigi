@@ -18,9 +18,9 @@
 Integration tests for azureblob module.
 """
 
+import json
 import os
 import unittest
-import json
 
 import pytest
 

@@ -22,7 +22,6 @@ Currently the only subclass is :py:class:`~luigi.db_task_history.DbTaskHistory`.
 import abc
 import logging
 
-
 logger = logging.getLogger('luigi-interface')
 
 

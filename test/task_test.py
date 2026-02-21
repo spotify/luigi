@@ -14,17 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import collections
 import doctest
 import pickle
 import warnings
-
-from helpers import unittest, LuigiTestCase, with_config
 from datetime import datetime, timedelta
+
+from helpers import LuigiTestCase, unittest, with_config
 
 import luigi
 import luigi.task
 import luigi.util
-import collections
 from luigi.task_register import load_task
 
 

@@ -17,16 +17,15 @@
 
 import sys
 
+from helpers import LuigiTestCase, with_config
+from mock import MagicMock, Mock, patch
+
 import luigi
 import luigi.date_interval
 import luigi.notifications
-from luigi.interface import _WorkerSchedulerFactory
-from luigi.worker import Worker
-from luigi.interface import core
 from luigi.execution_summary import LuigiStatusCode
-
-from mock import Mock, patch, MagicMock
-from helpers import LuigiTestCase, with_config
+from luigi.interface import _WorkerSchedulerFactory, core
+from luigi.worker import Worker
 
 luigi.notifications.DEBUG = True
 

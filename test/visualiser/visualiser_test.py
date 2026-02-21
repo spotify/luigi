@@ -4,14 +4,15 @@ Test the visualiser's javascript using PhantomJS.
 """
 
 import os
-import luigi
 import subprocess
 import sys
-import unittest
-import time
 import threading
+import time
+import unittest
 
 from selenium import webdriver
+
+import luigi
 
 here = os.path.dirname(__file__)
 

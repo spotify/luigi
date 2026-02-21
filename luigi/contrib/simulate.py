@@ -18,11 +18,11 @@
 A module containing classes used to simulate certain behaviors
 """
 
-from multiprocessing import Value
-import tempfile
 import hashlib
 import logging
 import os
+import tempfile
+from multiprocessing import Value
 
 import luigi
 

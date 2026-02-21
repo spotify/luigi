@@ -15,17 +15,17 @@
 # limitations under the License.
 #
 
-from collections import OrderedDict
 import os
 import sys
 import tempfile
+from collections import OrderedDict
+
+import mock
+import pytest
 from helpers import unittest
 
 import luigi.contrib.hive
-import mock
 from luigi import LocalTarget
-
-import pytest
 
 
 @pytest.mark.apache

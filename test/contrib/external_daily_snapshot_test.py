@@ -12,11 +12,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import datetime
 import unittest
+
 import luigi
 from luigi.contrib.external_daily_snapshot import ExternalDailySnapshot
 from luigi.mock import MockTarget
-import datetime
 
 
 class DataDump(ExternalDailySnapshot):

@@ -15,12 +15,12 @@
 # limitations under the License.
 #
 
-import signal
-import subprocess
 import io
+import locale
 import os
 import re
-import locale
+import signal
+import subprocess
 import tempfile
 import warnings
 

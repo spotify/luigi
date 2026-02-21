@@ -40,14 +40,13 @@ protocol or circumvent firewalls (as long as they are open for ssh traffic).
 import contextlib
 import logging
 import os
+import posixpath
 import random
 import subprocess
-import posixpath
 
 import luigi
 import luigi.format
 import luigi.target
-
 
 logger = logging.getLogger('luigi-interface')
 

@@ -4,13 +4,12 @@ is internal to Luigi and not designed for use in other contexts.
 """
 
 import collections
-from datetime import datetime
 import time
-
+from datetime import datetime
 
 import luigi
-from luigi.notifications import send_email, email
 import luigi.parameter
+from luigi.notifications import email, send_email
 
 
 class batch_email(luigi.Config):

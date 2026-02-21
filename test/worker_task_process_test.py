@@ -15,10 +15,12 @@
 # limitations under the License.
 #
 
+import multiprocessing
+
 from helpers import LuigiTestCase, temporary_unloaded_module
+
 import luigi
 from luigi.worker import Worker
-import multiprocessing
 
 
 class ContextManagedTaskProcessTest(LuigiTestCase):

@@ -15,13 +15,13 @@
 # limitations under the License.
 #
 
-import os
-import time
-import signal
 import multiprocessing
+import os
+import signal
+import time
 from contextlib import contextmanager
 
-from helpers import unittest, RunOnceTask, with_config, skipOnGithubActions
+from helpers import RunOnceTask, skipOnGithubActions, unittest, with_config
 
 import luigi
 import luigi.server

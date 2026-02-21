@@ -18,12 +18,12 @@
 import subprocess
 import tempfile
 
-import luigi
+import pytest
 from helpers import unittest
-from luigi.contrib.pig import PigJobError, PigJobTask
 from mock import patch
 
-import pytest
+import luigi
+from luigi.contrib.pig import PigJobError, PigJobTask
 
 
 class SimpleTestJob(PigJobTask):

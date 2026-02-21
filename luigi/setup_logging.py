@@ -22,11 +22,10 @@ workers via command line arguments and options from config files.
 import logging
 import logging.config
 import os.path
-
-from luigi.configuration import get_config, LuigiConfigParser
-from luigi.freezing import recursively_unfreeze
-
 from configparser import NoSectionError
+
+from luigi.configuration import LuigiConfigParser, get_config
+from luigi.freezing import recursively_unfreeze
 
 
 class BaseLogging:

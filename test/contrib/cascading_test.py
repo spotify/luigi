@@ -15,9 +15,8 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-
 import pytest
+from helpers import unittest
 
 import luigi.target
 from luigi.contrib.target import CascadingClient

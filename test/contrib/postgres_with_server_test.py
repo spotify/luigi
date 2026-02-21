@@ -16,8 +16,8 @@
 #
 import os
 
-from helpers import unittest
 import pytest
+from helpers import unittest
 
 import luigi
 import luigi.notifications

@@ -21,10 +21,10 @@ It is a central concept of Luigi and represents the state of the workflow.
 
 import abc
 import io
+import logging
 import os
 import random
 import tempfile
-import logging
 import warnings
 from contextlib import contextmanager
 

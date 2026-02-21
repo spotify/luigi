@@ -17,17 +17,16 @@
 
 import functools
 import itertools
-import tempfile
+import os
 import re
+import tempfile
+import unittest
 from contextlib import contextmanager
 
 import luigi
-import luigi.task_register
 import luigi.cmdline_parser
+import luigi.task_register
 from luigi.cmdline_parser import CmdlineParser
-import os
-
-import unittest
 
 
 def skipOnTravisAndGithubActions(reason):

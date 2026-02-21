@@ -2,9 +2,9 @@ import logging
 import os
 
 import luigi.format
-from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs.clients import remove, rename, mkdir, listdir, exists
+from luigi.contrib.hdfs.clients import exists, listdir, mkdir, remove, rename
+from luigi.contrib.hdfs.config import load_hadoop_cmd
 from luigi.contrib.hdfs.error import HDFSCliError
 
 logger = logging.getLogger('luigi-interface')

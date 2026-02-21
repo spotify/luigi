@@ -22,13 +22,13 @@ import os
 import random
 import socket
 import subprocess
-from helpers import unittest
-import target_test
-
-from luigi.contrib.ssh import RemoteContext, RemoteFileSystem, RemoteTarget, RemoteCalledProcessError
-from luigi.target import MissingParentDirectory, FileAlreadyExists
 
 import pytest
+import target_test
+from helpers import unittest
+
+from luigi.contrib.ssh import RemoteCalledProcessError, RemoteContext, RemoteFileSystem, RemoteTarget
+from luigi.target import FileAlreadyExists, MissingParentDirectory
 
 working_ssh_host = os.environ.get('SSH_TEST_HOST', 'localhost')
 # set this to a working ssh host string (e.g. "localhost") to activate integration tests

@@ -1,5 +1,5 @@
-from helpers import unittest
 import pytest
+from helpers import unittest
 from prometheus_client import CONTENT_TYPE_LATEST
 
 from luigi.contrib.prometheus_metric import PrometheusMetricsCollector

@@ -7,8 +7,9 @@ import unittest
 
 try:
     import google.auth
-    from luigi.contrib import dataproc
     from googleapiclient import discovery
+
+    from luigi.contrib import dataproc
 
     default_credentials, _ = google.auth.default()
     default_client = discovery.build('dataproc', 'v1', cache_discovery=False, credentials=default_credentials)
@@ -16,10 +17,12 @@ try:
 except ImportError:
     raise unittest.SkipTest('Unable to load google cloud dependencies')
 
-import luigi
 import os
 import time
+
 import pytest
+
+import luigi
 
 # In order to run this test, you should set these to your GCS project.
 # Unfortunately there's no mock

@@ -15,16 +15,17 @@
 # limitations under the License.
 #
 
+import collections
+import json
+
+import mock
+import pytest
+from helpers import in_parse, unittest
 from jsonschema import Draft4Validator
 from jsonschema.exceptions import ValidationError
-from helpers import unittest, in_parse
 
 import luigi
 import luigi.interface
-import json
-import mock
-import collections
-import pytest
 
 
 class DictParameterTask(luigi.Task):

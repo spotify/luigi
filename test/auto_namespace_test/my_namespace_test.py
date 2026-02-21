@@ -1,5 +1,6 @@
-import luigi
 from helpers import LuigiTestCase
+
+import luigi
 
 
 class MyNamespaceTest(LuigiTestCase):

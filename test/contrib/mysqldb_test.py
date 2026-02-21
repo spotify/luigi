@@ -1,13 +1,11 @@
-from luigi.tools.range import RangeDaily
+import datetime
 
 import mock
-
-import luigi.contrib.mysqldb
-
-import datetime
+import pytest
 from helpers import unittest
 
-import pytest
+import luigi.contrib.mysqldb
+from luigi.tools.range import RangeDaily
 
 
 def datetime_to_epoch(dt):

@@ -13,12 +13,14 @@
 # the License.
 
 import datetime
+
+import mock
+import pytest
+from helpers import unittest
+
 import luigi
 import luigi.contrib.postgres
 from luigi.tools.range import RangeDaily
-from helpers import unittest
-import mock
-import pytest
 
 
 def datetime_to_epoch(dt):

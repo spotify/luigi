@@ -24,8 +24,8 @@ try:
 except ImportError:
     toml_enabled = False
 
-from .base_parser import BaseParser
 from ..freezing import recursively_freeze
+from .base_parser import BaseParser
 
 
 class LuigiTomlParser(BaseParser, ConfigParser):

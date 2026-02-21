@@ -16,8 +16,8 @@
 #
 
 from helpers import unittest
-from luigi import Task
-from luigi import Parameter
+
+from luigi import Parameter, Task
 from luigi.task import MixinNaiveBulkComplete
 
 COMPLETE_TASKS = ["A", "B", "C"]

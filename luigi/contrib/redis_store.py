@@ -18,8 +18,8 @@
 import datetime
 import logging
 
-from luigi.target import Target
 from luigi.parameter import Parameter
+from luigi.target import Target
 
 logger = logging.getLogger('luigi-interface')
 

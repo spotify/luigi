@@ -15,15 +15,16 @@
 # limitations under the License.
 #
 
-from helpers import LuigiTestCase, RunOnceTask
+import json
+import time
+
 import server_test
+from helpers import LuigiTestCase, RunOnceTask
 
 import luigi
 import luigi.scheduler
 import luigi.worker
 from luigi.parameter import ParameterVisibility
-import json
-import time
 
 
 class SchedulerParameterVisibilitiesTest(LuigiTestCase):

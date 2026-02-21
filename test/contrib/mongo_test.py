@@ -16,11 +16,10 @@
 #
 
 
+import pytest
 from helpers import unittest
 
 from luigi.contrib.mongodb import MongoCellTarget, MongoRangeTarget
-
-import pytest
 
 HOST = 'localhost'
 PORT = 27017

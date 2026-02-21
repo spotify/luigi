@@ -18,8 +18,9 @@
 import os
 import tempfile
 
-import luigi.server
 import server_test
+
+import luigi.server
 
 tempdir = tempfile.mkdtemp()
 

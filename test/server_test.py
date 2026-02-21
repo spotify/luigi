@@ -15,25 +15,25 @@
 # limitations under the License.
 #
 import functools
-import os
 import multiprocessing
+import os
 import shutil
 import signal
-import time
 import tempfile
-from helpers import unittest, skipOnTravisAndGithubActions
+import time
+from urllib.parse import ParseResult, urlencode
+from urllib.parse import quote as urlquote
+
+import pytest
+import tornado.ioloop
+from helpers import skipOnTravisAndGithubActions, unittest
+from tornado.testing import AsyncHTTPTestCase
+
+import luigi.cmdline
 import luigi.rpc
 import luigi.server
-import luigi.cmdline
 from luigi.configuration import get_config
 from luigi.scheduler import Scheduler
-from urllib.parse import (
-    urlencode, ParseResult, quote as urlquote
-)
-
-import tornado.ioloop
-from tornado.testing import AsyncHTTPTestCase
-import pytest
 
 try:
     from unittest import mock

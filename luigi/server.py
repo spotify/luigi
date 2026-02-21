@@ -51,7 +51,7 @@ import tornado.netutil
 import tornado.web
 
 from luigi import Config, parameter
-from luigi.scheduler import Scheduler, RPC_METHODS
+from luigi.scheduler import RPC_METHODS, Scheduler
 
 logger = logging.getLogger("luigi.server")
 

@@ -24,12 +24,13 @@ import shutil
 import tempfile
 import unittest
 
-import luigi
+import pytest
 import sqlalchemy
+from helpers import skipOnTravisAndGithubActions
+
+import luigi
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
-import pytest
-from helpers import skipOnTravisAndGithubActions
 
 
 class BaseTask(luigi.Task):

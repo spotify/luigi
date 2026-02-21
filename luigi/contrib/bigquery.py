@@ -17,24 +17,19 @@
 
 import collections
 import logging
-import luigi.target
 import time
-from luigi.contrib import gcp
 
-from tenacity import retry
-from tenacity import retry_if_exception
-from tenacity import retry_if_exception_type
-from tenacity import wait_exponential
-from tenacity import stop_after_attempt
+from tenacity import retry, retry_if_exception, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+import luigi.target
+from luigi.contrib import gcp
 
 logger = logging.getLogger('luigi-interface')
 
 RETRYABLE_ERRORS = None
 try:
     import httplib2
-    from googleapiclient import discovery
-    from googleapiclient import errors
-    from googleapiclient import http
+    from googleapiclient import discovery, errors, http
 except ImportError:
     logger.warning('BigQuery module imported, but google-api-python-client is '
                    'not installed. Any BigQuery task will fail')

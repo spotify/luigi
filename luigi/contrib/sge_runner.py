@@ -32,10 +32,11 @@ the job has left the queue, delete the temporary folder, and
 return from SGETask.run()
 """
 
-import os
-import sys
-import pickle
 import logging
+import os
+import pickle
+import sys
+
 from luigi.safe_extractor import SafeExtractor
 
 

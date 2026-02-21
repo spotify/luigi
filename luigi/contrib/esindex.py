@@ -84,9 +84,9 @@ There are a two luigi `luigi.cfg` configuration options:
 import abc
 import datetime
 import hashlib
+import itertools
 import json
 import logging
-import itertools
 
 import luigi
 
@@ -97,8 +97,8 @@ try:
     if elasticsearch.__version__ < (1, 0, 0):
         logger.warning("This module works with elasticsearch 1.0.0 "
                        "or newer only.")
-    from elasticsearch.helpers import bulk
     from elasticsearch.connection import Urllib3HttpConnection
+    from elasticsearch.helpers import bulk
 
 except ImportError:
     logger.warning("Loading esindex module without elasticsearch installed. "

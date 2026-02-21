@@ -1,8 +1,9 @@
 """luigi bindings for Google Dataproc on Google Cloud"""
 
+import logging
 import os
 import time
-import logging
+
 import luigi
 from luigi.contrib import gcp
 

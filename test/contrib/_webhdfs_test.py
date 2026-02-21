@@ -16,11 +16,11 @@
 #
 
 import os
+
+import pytest
 from helpers import unittest
 
 from luigi.contrib import webhdfs
-
-import pytest
 
 
 @pytest.mark.apache

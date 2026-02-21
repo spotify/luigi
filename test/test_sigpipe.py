@@ -16,10 +16,10 @@
 #
 
 import os
+
 from helpers import unittest
 
 from luigi.format import InputPipeProcessWrapper
-
 
 BASH_SCRIPT = """
 #!/bin/bash

@@ -15,18 +15,18 @@
 # limitations under the License.
 #
 
-import subprocess
+import logging
 import os
 import os.path
-from glob import glob
+import subprocess
 import unittest
-import logging
+from glob import glob
+
+import pytest
 from mock import patch
 
 import luigi
 from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
-
-import pytest
 
 DEFAULT_HOME = '/home'
 

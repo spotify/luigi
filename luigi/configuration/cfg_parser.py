@@ -32,9 +32,7 @@ See :doc:`/configuration` for more info.
 import os
 import re
 import warnings
-
-from configparser import ConfigParser, NoOptionError, NoSectionError, InterpolationError
-from configparser import Interpolation, BasicInterpolation
+from configparser import BasicInterpolation, ConfigParser, Interpolation, InterpolationError, NoOptionError, NoSectionError
 
 from .base_parser import BaseParser
 

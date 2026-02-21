@@ -15,14 +15,13 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+from helpers import unittest, with_config
 
-from helpers import with_config
 import luigi
-from luigi.db_task_history import DbTaskHistory
-from luigi.task_status import DONE, PENDING, RUNNING
 import luigi.scheduler
+from luigi.db_task_history import DbTaskHistory
 from luigi.parameter import ParameterVisibility
+from luigi.task_status import DONE, PENDING, RUNNING
 
 
 class DummyTask(luigi.Task):

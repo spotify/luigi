@@ -27,15 +27,15 @@ Requires:
 Written and maintained by Andrea Pierleoni (@apierleoni).
 Contributions by Eliseo Papa (@elipapa)
 """
+import logging
 import tempfile
-from helpers import unittest
 from tempfile import NamedTemporaryFile
 
-import luigi
-import logging
-from luigi.contrib.docker_runner import DockerTask
-
 import pytest
+from helpers import unittest
+
+import luigi
+from luigi.contrib.docker_runner import DockerTask
 
 logger = logging.getLogger('luigi-interface')
 

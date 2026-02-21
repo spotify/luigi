@@ -17,10 +17,11 @@
 from helpers import LuigiTestCase
 
 import luigi
-from luigi.task_register import (Register,
-                                 TaskClassNotFoundException,
-                                 TaskClassAmbigiousException,
-                                 )
+from luigi.task_register import (
+    Register,
+    TaskClassAmbigiousException,
+    TaskClassNotFoundException,
+)
 
 
 class TaskRegisterTest(LuigiTestCase):

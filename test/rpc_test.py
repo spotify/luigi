@@ -15,18 +15,21 @@
 # limitations under the License.
 #
 from helpers import unittest, with_config
+
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-import luigi.rpc
-from luigi.scheduler import Scheduler
-import scheduler_api_test
-import luigi.server
-from server_test import ServerTestBase
 import socket
 from multiprocessing import Process, Queue
+
+import scheduler_api_test
+from server_test import ServerTestBase
+
+import luigi.rpc
+import luigi.server
+from luigi.scheduler import Scheduler
 
 
 class RemoteSchedulerTest(unittest.TestCase):

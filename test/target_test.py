@@ -15,13 +15,14 @@
 # limitations under the License.
 #
 
-from helpers import unittest, skipOnTravisAndGithubActions
-from mock import Mock
-import re
 import random
+import re
 
-import luigi.target
+from helpers import skipOnTravisAndGithubActions, unittest
+from mock import Mock
+
 import luigi.format
+import luigi.target
 
 
 class TestException(Exception):

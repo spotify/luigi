@@ -32,8 +32,8 @@ import socket
 import sys
 import textwrap
 
-import luigi.task
 import luigi.parameter
+import luigi.task
 
 logger = logging.getLogger("luigi-interface")
 DEFAULT_CLIENT_EMAIL = 'luigi-client@%s' % socket.gethostname()
@@ -135,9 +135,9 @@ class sendgrid(luigi.Config):
 
 
 def generate_email(sender, subject, message, recipients, image_png):
+    from email.mime.image import MIMEImage
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
-    from email.mime.image import MIMEImage
 
     msg_root = MIMEMultipart('related')
 
@@ -163,8 +163,8 @@ def wrap_traceback(traceback):
     if email().format == 'html':
         try:
             from pygments import highlight
-            from pygments.lexers import PythonTracebackLexer
             from pygments.formatters import HtmlFormatter
+            from pygments.lexers import PythonTracebackLexer
             with_pygments = True
         except ImportError:
             with_pygments = False

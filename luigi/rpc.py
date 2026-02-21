@@ -20,17 +20,17 @@ rpc.py implements the client side of it, server.py implements the server side.
 See :doc:`/central_scheduler` for more info.
 """
 import abc
-import os
+import base64
 import json
 import logging
+import os
 import socket
-import base64
-
-from urllib.parse import urljoin, urlencode, urlparse
-from urllib.request import urlopen, Request
 from urllib.error import URLError
+from urllib.parse import urlencode, urljoin, urlparse
+from urllib.request import Request, urlopen
 
-from tenacity import Retrying, wait_fixed, stop_after_attempt
+from tenacity import Retrying, stop_after_attempt, wait_fixed
+
 from luigi import configuration
 from luigi.scheduler import RPC_METHODS
 

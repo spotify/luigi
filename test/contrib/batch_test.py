@@ -15,12 +15,10 @@
 # limitations under the License.
 #
 
-from helpers import unittest
+import pytest
+from helpers import skipOnTravisAndGithubActions, unittest
 
 import luigi.contrib.batch as batch
-from helpers import skipOnTravisAndGithubActions
-
-import pytest
 
 try:
     import boto3

@@ -19,26 +19,24 @@ The abstract :py:class:`Task` class.
 It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
-from collections import deque, OrderedDict
-from contextlib import contextmanager
-import logging
-import traceback
-import warnings
-import json
-import hashlib
-import re
 import copy
 import functools
+import hashlib
+import json
+import logging
+import re
+import traceback
+import warnings
+from collections import OrderedDict, deque
+from contextlib import contextmanager
 from typing import Any, Dict, Optional
+
 from typing_extensions import dataclass_transform
 
 import luigi
-
-from luigi import configuration
-from luigi import parameter
+from luigi import configuration, parameter
+from luigi.parameter import ParameterVisibility, UnconsumedParameterWarning
 from luigi.task_register import Register
-from luigi.parameter import ParameterVisibility
-from luigi.parameter import UnconsumedParameterWarning
 
 Parameter = parameter.Parameter
 logger = logging.getLogger('luigi-interface')

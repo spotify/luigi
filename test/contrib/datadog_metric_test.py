@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from helpers import unittest
-import mock
 import time
+
+import mock
+from helpers import unittest
 
 from luigi.contrib.datadog_metric import DatadogMetricsCollector
 from luigi.metrics import MetricsCollectors

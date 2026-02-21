@@ -12,17 +12,19 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import os
+import shutil
+import tempfile
+
+from helpers import unittest, with_config
+from mock import patch
+
 import luigi
+import luigi.server
+import luigi.task
+import luigi.worker
 from luigi.local_target import LocalTarget
 from luigi.scheduler import Scheduler
-import luigi.server
-import luigi.worker
-import luigi.task
-from mock import patch
-from helpers import with_config, unittest
-import os
-import tempfile
-import shutil
 
 
 class TestExternalFileTask(luigi.ExternalTask):

@@ -1,11 +1,10 @@
 # coding=utf-8
+import unittest
 from smtplib import SMTPServerDisconnected
 
 import mock
-import unittest
 
 import luigi.batch_notifier
-
 
 BATCH_NOTIFIER_DEFAULTS = {
     'error_lines': 0,

@@ -39,16 +39,15 @@ import datetime
 import logging
 from contextlib import contextmanager
 
-
-from luigi import configuration
-from luigi import task_history
-from luigi.task_status import DONE, FAILED, PENDING, RUNNING
-
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
 from sqlalchemy.engine import reflection
+
+from luigi import configuration, task_history
+from luigi.task_status import DONE, FAILED, PENDING, RUNNING
+
 Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger('luigi-interface')

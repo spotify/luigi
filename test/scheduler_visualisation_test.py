@@ -18,7 +18,8 @@
 import os
 import tempfile
 import time
-from helpers import unittest, RunOnceTask
+
+from helpers import RunOnceTask, unittest
 
 import luigi
 import luigi.notifications

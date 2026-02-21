@@ -15,20 +15,20 @@
 # limitations under the License.
 #
 import multiprocessing
-from subprocess import check_call
 import sys
-
-from helpers import LuigiTestCase, StringContaining
-import mock
-from psutil import Process
+from subprocess import check_call
 from time import sleep
+
+import mock
+from helpers import LuigiTestCase, StringContaining
+from psutil import Process
 
 import luigi
 import luigi.date_interval
 import luigi.notifications
 from luigi.mock import MockTarget
-from luigi.worker import TaskException, TaskProcess
 from luigi.scheduler import DONE, FAILED
+from luigi.worker import TaskException, TaskProcess
 
 luigi.notifications.DEBUG = True
 

@@ -7,7 +7,7 @@ from luigi.task import Config
 logger = logging.getLogger('luigi-interface')
 
 try:
-    from datadog import initialize, api, statsd
+    from datadog import api, initialize, statsd
 except ImportError:
     logger.warning("Loading datadog module without datadog installed. Will crash at runtime if datadog functionality is used.")
 

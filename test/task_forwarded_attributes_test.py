@@ -21,7 +21,6 @@ import luigi
 import luigi.scheduler
 import luigi.worker
 
-
 FORWARDED_ATTRIBUTES = set(luigi.worker.TaskProcess.forward_reporter_attributes.values())
 
 

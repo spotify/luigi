@@ -220,9 +220,7 @@ time. Brilliant!
 import datetime
 import logging
 
-from luigi import task
-from luigi import parameter
-
+from luigi import parameter, task
 
 logger = logging.getLogger('luigi-interface')
 

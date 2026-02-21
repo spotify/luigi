@@ -16,13 +16,14 @@
 #
 
 import logging
+
 from helpers import unittest
+from mock import Mock
 
 import luigi.notifications
 import luigi.worker
 from luigi import Parameter, RemoteScheduler, Task
 from luigi.worker import Worker
-from mock import Mock
 
 luigi.notifications.DEBUG = True
 

@@ -13,8 +13,8 @@ from luigi.task_register import Register
 logger = logging.getLogger('luigi-interface')
 
 try:
-    from pyhive.presto import Connection, Cursor
     from pyhive.exc import DatabaseError
+    from pyhive.presto import Connection, Cursor
 except ImportError:
     logger.warning("pyhive[presto] is not installed.")
 

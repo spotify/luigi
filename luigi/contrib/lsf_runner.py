@@ -20,6 +20,7 @@
 
 import os
 import sys
+
 try:
     # Dill is used for handling pickling and unpickling if there is a deference
     # in server setups between the LSF submission node and the nodes in the
@@ -28,6 +29,7 @@ try:
 except ImportError:
     import pickle
 import logging
+
 from luigi.safe_extractor import SafeExtractor
 
 

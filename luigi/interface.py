@@ -23,19 +23,14 @@ defined in this module to programmatically run luigi.
 
 import logging
 import os
+import signal
 import sys
 import tempfile
-import signal
 import warnings
 
-from luigi import lock
-from luigi import parameter
-from luigi import rpc
-from luigi import scheduler
-from luigi import task
-from luigi import worker
-from luigi.execution_summary import LuigiRunResult
+from luigi import lock, parameter, rpc, scheduler, task, worker
 from luigi.cmdline_parser import CmdlineParser
+from luigi.execution_summary import LuigiRunResult
 from luigi.setup_logging import InterfaceLogging
 
 

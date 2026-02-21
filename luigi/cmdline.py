@@ -10,9 +10,9 @@ def luigi_run(argv=sys.argv[1:]):
 
 
 def luigid(argv=sys.argv[1:]):
-    import luigi.server
-    import luigi.process
     import luigi.configuration
+    import luigi.process
+    import luigi.server
     parser = argparse.ArgumentParser(description=u'Central luigi server')
     parser.add_argument(u'--background', help=u'Run in background mode', action='store_true')
     parser.add_argument(u'--pidfile', help=u'Write pidfile')

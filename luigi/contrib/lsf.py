@@ -18,13 +18,14 @@
    limitations under the License.
 """
 
-import os
-import subprocess
-import time
-import sys
 import logging
+import os
 import random
 import shutil
+import subprocess
+import sys
+import time
+
 try:
     # Dill is used for handling pickling and unpickling if there is a deference
     # in server setups between the LSF submission node and the nodes in the
@@ -35,9 +36,9 @@ except ImportError:
 
 import luigi
 import luigi.configuration
-from luigi.contrib.hadoop import create_packages_archive
 from luigi.contrib import lsf_runner
-from luigi.task_status import PENDING, FAILED, DONE, RUNNING, UNKNOWN
+from luigi.contrib.hadoop import create_packages_archive
+from luigi.task_status import DONE, FAILED, PENDING, RUNNING, UNKNOWN
 
 """
 LSF batch system Tasks.

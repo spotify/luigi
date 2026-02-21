@@ -18,14 +18,13 @@ have opted for PSQL but we're less familiar with that contrib and there are
 less examples on how to test it.
 """
 
-import luigi
-import luigi.contrib.redshift
-import mock
-
 import unittest
 
+import mock
 import pytest
 
+import luigi
+import luigi.contrib.redshift
 
 # Fake AWS and S3 credentials taken from `../redshift_test.py`.
 AWS_ACCESS_KEY = 'key'

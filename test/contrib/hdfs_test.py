@@ -15,16 +15,16 @@
 # limitations under the License.
 #
 
-import re
-import random
 import pickle
-
-import luigi
-import luigi.format
-from luigi.contrib import hdfs
-import luigi.contrib.hdfs.clients
+import random
+import re
 
 from target_test import FileSystemTargetTestMixin
+
+import luigi
+import luigi.contrib.hdfs.clients
+import luigi.format
+from luigi.contrib import hdfs
 
 
 class ComplexOldFormat(luigi.format.Format):
