@@ -33,13 +33,13 @@ import sys
 import textwrap
 
 import luigi.parameter
-import luigi.task
+from luigi.task import Config, Task
 
 logger = logging.getLogger("luigi-interface")
 DEFAULT_CLIENT_EMAIL = "luigi-client@%s" % socket.gethostname()
 
 
-class TestNotificationsTask(luigi.task.Task):
+class TestNotificationsTask(Task):
     """
     You may invoke this task to quickly check if you correctly have setup your
     notifications Configuration.  You can run:
@@ -63,7 +63,7 @@ class TestNotificationsTask(luigi.task.Task):
         return False
 
 
-class email(luigi.task.Config):
+class email(Config):
     force_send = luigi.parameter.BoolParameter(default=False, description="Send e-mail even from a tty")
     format = luigi.parameter.ChoiceParameter(
         default="plain", config_path=dict(section="core", name="email-type"), choices=("plain", "html", "none"), description="Format type for sent e-mails"
@@ -79,7 +79,7 @@ class email(luigi.task.Config):
     )
 
 
-class smtp(luigi.task.Config):
+class smtp(Config):
     host = luigi.parameter.Parameter(default="localhost", config_path=dict(section="core", name="smtp_host"), description="Hostname of smtp server")
     local_hostname = luigi.parameter.Parameter(
         default=None,
@@ -100,7 +100,7 @@ class smtp(luigi.task.Config):
     )
 
 
-class sendgrid(luigi.task.Config):
+class sendgrid(Config):
     apikey = luigi.parameter.Parameter(config_path=dict(section="email", name="SENGRID_API_KEY"), description="API key for SendGrid login")
 
 
@@ -330,10 +330,10 @@ def _prefix(subject):
 
 def format_task_error(headline, task, command, formatted_exception=None):
     """
-    Format a message body for an error email related to a luigi.task.Task
+    Format a message body for an error email related to a Task
 
     :param headline: Summary line for the message
-    :param task: `luigi.task.Task` instance where this error occurred
+    :param task: `Task` instance where this error occurred
     :param formatted_exception: optional string showing traceback
 
     :return: message body

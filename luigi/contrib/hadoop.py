@@ -44,9 +44,9 @@ import luigi
 import luigi.contrib.gcs
 import luigi.contrib.hdfs
 import luigi.contrib.s3
-import luigi.task
 from luigi import configuration
 from luigi.contrib import mrrunner
+from luigi.task import Config
 
 try:
     # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
@@ -62,7 +62,7 @@ _attached_packages = []
 TRACKING_RE = re.compile(r"(tracking url|the url to track the job):\s+(?P<url>.+)$")
 
 
-class hadoop(luigi.task.Config):
+class hadoop(Config):
     pool = luigi.OptionalParameter(
         default=None,
         description=("Hadoop pool so use for Hadoop tasks. To specify pools per tasks, see BaseHadoopJobTask.pool"),
