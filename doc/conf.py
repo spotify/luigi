@@ -15,8 +15,6 @@
 import sys
 import os
 import datetime
-import sphinx.environment
-from docutils.utils import get_source_line
 from importlib.metadata import Distribution
 
 
@@ -53,20 +51,6 @@ except ImportError:
     pass
 
 
-def _warn_node(self, msg, node, *args, **kwargs):
-    """
-    Mute warnings that are like ``WARNING: nonlocal image URI found: https://img. ...``
-
-    Solution was found by googling, copied it from SO:
-
-    http://stackoverflow.com/questions/12772927/specifying-an-online-image-in-sphinx-restructuredtext-format
-    """
-    if not msg.startswith('nonlocal image URI found:'):
-        self._warnfunc(msg, '%s:%s' % get_source_line(node), *args, **kwargs)
-
-
-sphinx.environment.BuildEnvironment.warn_node = _warn_node
-
 # on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
@@ -86,7 +70,7 @@ autoclass_content = 'both'
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.4.4'  # Value mirrored in pyproject.toml
+needs_sphinx = '7.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -162,7 +146,7 @@ pygments_style = 'sphinx'
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
 
-autodoc_default_flags = ['members', 'undoc-members']
+autodoc_default_options = {'members': True, 'undoc-members': True}
 autodoc_member_order = 'bysource'
 
 # -- Options for HTML output ----------------------------------------------
@@ -171,13 +155,7 @@ autodoc_member_order = 'bysource'
 # a list of builtin themes.
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
-    try:
-        import sphinx_rtd_theme
-    except ImportError:
-        raise Exception("You must `pip install sphinx_rtd_theme` to build docs locally.")
-
     html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # otherwise, readthedocs.org uses their theme by default, so no need to specify it
 
@@ -339,6 +317,10 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 autodoc_mock_imports = ["mypy"]
+
+# sphinx-apidoc --separate generates individual RST files not referenced by any toctree;
+# suppress the resulting warnings since this is expected behaviour.
+suppress_warnings = ['toc.not_included']
 
 # Some regression introduced
 # https://github.com/sphinx-doc/sphinx/issues/2330
