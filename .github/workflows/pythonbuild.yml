@@ -13,17 +13,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py38-core
-          - tox-env: py39-core
           - tox-env: py310-core
           - tox-env: py311-core
           - tox-env: py312-core
           - tox-env: py313-core
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -48,17 +46,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py38-mysql
-          - tox-env: py39-mysql
           - tox-env: py310-mysql
           - tox-env: py311-mysql
           - tox-env: py312-mysql
           - tox-env: py313-mysql
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -104,17 +100,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py38-postgres
-          - tox-env: py39-postgres
           - tox-env: py310-postgres
           - tox-env: py311-postgres
           - tox-env: py312-postgres
           - tox-env: py313-postgres
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -146,17 +140,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - tox-env: py38-aws
-          - tox-env: py39-aws
           - tox-env: py310-aws
           - tox-env: py311-aws
           - tox-env: py312-aws
           - tox-env: py313-aws
 
-          - tox-env: py38-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
-          - tox-env: py39-unixsocket
-            OVERRIDE_SKIP_CI_TESTS: True
           - tox-env: py310-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
           - tox-env: py311-unixsocket
@@ -166,31 +154,25 @@ jobs:
           - tox-env: py313-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
 
-          - tox-env: py38-apache
-          - tox-env: py39-apache
           - tox-env: py310-apache
           - tox-env: py311-apache
           - tox-env: py312-apache
           - tox-env: py313-apache
 
-          - tox-env: py38-azureblob
-          - tox-env: py39-azureblob
           - tox-env: py310-azureblob
           - tox-env: py311-azureblob
           - tox-env: py312-azureblob
           - tox-env: py313-azureblob
 
-          - tox-env: py38-contrib
-          - tox-env: py39-contrib
           - tox-env: py310-contrib
           - tox-env: py311-contrib
           - tox-env: py312-contrib
           - tox-env: py313-contrib
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
@@ -219,9 +201,9 @@ jobs:
           - tox-env: lint
           - tox-env: docs
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Set up the latest version of uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
