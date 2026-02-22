@@ -2801,8 +2801,12 @@ name = "tenacity"
 version = "9.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.9' and sys_platform == 'win32'",
-    "python_full_version < '3.9' and sys_platform != 'win32'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform == 'nt'",
+    "python_full_version < '3.8.1' and sys_platform == 'nt'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform == 'win32'",
+    "python_full_version >= '3.8.1' and python_full_version < '3.9' and sys_platform != 'nt' and sys_platform != 'win32'",
+    "python_full_version < '3.8.1' and sys_platform == 'win32'",
+    "python_full_version < '3.8.1' and sys_platform != 'nt' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/94/91fccdb4b8110642462e653d5dcb27e7b674742ad68efd146367da7bdb10/tenacity-9.0.0.tar.gz", hash = "sha256:807f37ca97d62aa361264d497b0e31e92b8027044942bfa756160d908320d73b", size = 47421, upload-time = "2024-07-29T12:12:27.547Z" }
 wheels = [
@@ -2814,8 +2818,9 @@ name = "tenacity"
 version = "9.1.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
+    "python_full_version == '3.9.*' and sys_platform == 'nt'",
     "python_full_version == '3.9.*' and sys_platform == 'win32'",
-    "python_full_version == '3.9.*' and sys_platform != 'win32'",
+    "python_full_version == '3.9.*' and sys_platform != 'nt' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0a/d4/2b0cd0fe285e14b36db076e78c93766ff1d529d70408bd1d2a5a84f1d929/tenacity-9.1.2.tar.gz", hash = "sha256:1169d376c297e7de388d18b4481760d478b0e99a777cad3a9c86e556f4b697cb", size = 48036, upload-time = "2025-04-02T08:25:09.966Z" }
 wheels = [
@@ -2827,8 +2832,9 @@ name = "tenacity"
 version = "9.1.4"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
+    "python_full_version >= '3.10' and sys_platform == 'nt'",
     "python_full_version >= '3.10' and sys_platform == 'win32'",
-    "python_full_version >= '3.10' and sys_platform != 'win32'",
+    "python_full_version >= '3.10' and sys_platform != 'nt' and sys_platform != 'win32'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
 wheels = [
