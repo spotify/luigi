@@ -18,14 +18,15 @@
 """
 The implementations of the hdfs clients.
 """
+
 import logging
 import threading
 
 from luigi.contrib.hdfs import config as hdfs_config
-from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 from luigi.contrib.hdfs import hadoopcli_clients as hdfs_hadoopcli_clients
+from luigi.contrib.hdfs import webhdfs_client as hdfs_webhdfs_client
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 _AUTOCONFIG_CLIENT = threading.local()
 
@@ -50,11 +51,12 @@ def get_autoconfig_client(client_cache=_AUTOCONFIG_CLIENT):
 def _with_ac(method_name):
     def result(*args, **kwargs):
         return getattr(get_autoconfig_client(), method_name)(*args, **kwargs)
+
     return result
 
 
-exists = _with_ac('exists')
-rename = _with_ac('rename')
-remove = _with_ac('remove')
-mkdir = _with_ac('mkdir')
-listdir = _with_ac('listdir')
+exists = _with_ac("exists")
+rename = _with_ac("rename")
+remove = _with_ac("remove")
+mkdir = _with_ac("mkdir")
+listdir = _with_ac("listdir")

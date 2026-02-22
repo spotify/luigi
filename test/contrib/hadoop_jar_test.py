@@ -15,13 +15,15 @@
 # limitations under the License.
 #
 
-import luigi
-import tempfile
 import shlex
-from helpers import unittest
-from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask, fix_paths
-from mock import patch, Mock
+import tempfile
+
 import pytest
+from helpers import unittest
+from mock import Mock, patch
+
+import luigi
+from luigi.contrib.hadoop_jar import HadoopJarJobError, HadoopJarJobTask, fix_paths
 
 
 class TestHadoopJarJob(HadoopJarJobTask):
@@ -55,8 +57,8 @@ class FixPathsTest(unittest.TestCase):
         mock_job = Mock()
         mock_arg = Mock()
         mock_job.args.return_value = [mock_arg]
-        mock_arg.path = 'right_path'
-        self.assertEqual(([], ['right_path']), fix_paths(mock_job))
+        mock_arg.path = "right_path"
+        self.assertEqual(([], ["right_path"]), fix_paths(mock_job))
 
     def test_fix_paths_non_hdfs_target_str(self):
         mock_job = Mock()
@@ -66,33 +68,33 @@ class FixPathsTest(unittest.TestCase):
 
 
 class HadoopJarJobTaskTest(unittest.TestCase):
-    @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    @patch("luigi.contrib.hadoop.run_and_track_hadoop_job")
     def test_good(self, mock_job):
         mock_job.return_value = None
         with tempfile.NamedTemporaryFile() as temp_file:
             task = TestHadoopJarJob(temp_file.name)
             task.run()
 
-    @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    @patch("luigi.contrib.hadoop.run_and_track_hadoop_job")
     def test_missing_jar(self, mock_job):
         mock_job.return_value = None
         task = TestMissingJarJob()
         self.assertRaises(HadoopJarJobError, task.run)
 
-    @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    @patch("luigi.contrib.hadoop.run_and_track_hadoop_job")
     def test_remote_job(self, mock_job):
         mock_job.return_value = None
         with tempfile.NamedTemporaryFile() as temp_file:
             task = TestRemoteHadoopJarJob(temp_file.name)
             task.run()
 
-    @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    @patch("luigi.contrib.hadoop.run_and_track_hadoop_job")
     def test_remote_job_with_space_in_task_id(self, mock_job):
         with tempfile.NamedTemporaryFile() as temp_file:
 
             def check_space(arr, task_id):
                 for a in arr:
-                    if a.startswith('hadoop jar'):
+                    if a.startswith("hadoop jar"):
                         found = False
                         for x in shlex.split(a):
                             if task_id in x:
@@ -100,11 +102,11 @@ class HadoopJarJobTaskTest(unittest.TestCase):
                         if not found:
                             raise AssertionError
 
-            task = TestRemoteHadoopJarTwoParamJob(temp_file.name, 'test')
+            task = TestRemoteHadoopJarTwoParamJob(temp_file.name, "test")
             mock_job.side_effect = lambda x, _: check_space(x, str(task))
             task.run()
 
-    @patch('luigi.contrib.hadoop.run_and_track_hadoop_job')
+    @patch("luigi.contrib.hadoop.run_and_track_hadoop_job")
     def test_remote_job_missing_config(self, mock_job):
         mock_job.return_value = None
         with tempfile.NamedTemporaryFile() as temp_file:

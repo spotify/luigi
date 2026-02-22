@@ -1,7 +1,6 @@
 import unittest
 
 import luigi.metrics as metrics
-
 from luigi.contrib.datadog_metric import DatadogMetricsCollector
 from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
 
@@ -32,7 +31,7 @@ class TestMetricsCollectors(unittest.TestCase):
         assert type(output) is metrics.NoMetricsCollector
 
     def test_other_value(self):
-        collector = 'junk'
+        collector = "junk"
 
         with self.assertRaises(ValueError) as context:
             metrics.MetricsCollectors.get(collector)

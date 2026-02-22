@@ -32,6 +32,7 @@ Requires:
 
 Written and maintained by Marco Capuccini (@mcapuccini).
 """
+
 import logging
 import time
 import uuid
@@ -39,29 +40,21 @@ from datetime import datetime
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     from pykube.config import KubeConfig
     from pykube.http import HTTPClient
     from pykube.objects import Job, Pod
 except ImportError:
-    logger.warning('pykube is not installed. KubernetesJobTask requires pykube.')
+    logger.warning("pykube is not installed. KubernetesJobTask requires pykube.")
 
 
 class kubernetes(luigi.Config):
-    auth_method = luigi.Parameter(
-        default="kubeconfig",
-        description="Authorization method to access the cluster")
-    kubeconfig_path = luigi.Parameter(
-        default="~/.kube/config",
-        description="Path to kubeconfig file for cluster authentication")
-    max_retrials = luigi.IntParameter(
-        default=0,
-        description="Max retrials in event of job failure")
-    kubernetes_namespace = luigi.OptionalParameter(
-        default=None,
-        description="K8s namespace in which the job will run")
+    auth_method = luigi.Parameter(default="kubeconfig", description="Authorization method to access the cluster")
+    kubeconfig_path = luigi.Parameter(default="~/.kube/config", description="Path to kubeconfig file for cluster authentication")
+    max_retrials = luigi.IntParameter(default=0, description="Max retrials in event of job failure")
+    kubernetes_namespace = luigi.OptionalParameter(default=None, description="K8s namespace in which the job will run")
 
 
 class KubernetesJobTask(luigi.Task):
@@ -80,7 +73,7 @@ class KubernetesJobTask(luigi.Task):
             raise ValueError("Illegal auth_method")
         self.job_uuid = str(uuid.uuid4().hex)
         now = datetime.utcnow()
-        self.uu_name = "%s-%s-%s" % (self.name, now.strftime('%Y%m%d%H%M%S'), self.job_uuid[:16])
+        self.uu_name = "%s-%s-%s" % (self.name, now.strftime("%Y%m%d%H%M%S"), self.job_uuid[:16])
 
     @property
     def auth_method(self):
@@ -241,24 +234,20 @@ class KubernetesJobTask(luigi.Task):
     def signal_complete(self):
         """Signal job completion for scheduler and dependent tasks.
 
-         Touching a system file is an easy way to signal completion. example::
-         .. code-block:: python
+        Touching a system file is an easy way to signal completion. example::
+        .. code-block:: python
 
-         with self.output().open('w') as output_file:
-             output_file.write('')
+        with self.output().open('w') as output_file:
+            output_file.write('')
         """
         pass
 
     def __get_pods(self):
-        pod_objs = Pod.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
-            .filter(selector="job-name=" + self.uu_name) \
-            .response['items']
+        pod_objs = Pod.objects(self.__kube_api, namespace=self.kubernetes_namespace).filter(selector="job-name=" + self.uu_name).response["items"]
         return [Pod(self.__kube_api, p) for p in pod_objs]
 
     def __get_job(self):
-        jobs = Job.objects(self.__kube_api, namespace=self.kubernetes_namespace) \
-            .filter(selector="luigi_task_id=" + self.job_uuid) \
-            .response['items']
+        jobs = Job.objects(self.__kube_api, namespace=self.kubernetes_namespace).filter(selector="luigi_task_id=" + self.job_uuid).response["items"]
         assert len(jobs) == 1, "Kubernetes job " + self.uu_name + " not found"
         return Job(self.__kube_api, jobs[0])
 
@@ -267,7 +256,7 @@ class KubernetesJobTask(luigi.Task):
             logs = pod.logs(timestamps=True).strip()
             self.__logger.info("Fetching logs from " + pod.name)
             if len(logs) > 0:
-                for line in logs.split('\n'):
+                for line in logs.split("\n"):
                     self.__logger.info(line)
 
     def __print_kubectl_hints(self):
@@ -283,33 +272,28 @@ class KubernetesJobTask(luigi.Task):
         # Verify that the pod started
         pods = self.__get_pods()
         if not pods:
-            self.__logger.debug(
-                'No pods found for %s, waiting for cluster state to match the job definition' % self.uu_name
-            )
+            self.__logger.debug("No pods found for %s, waiting for cluster state to match the job definition" % self.uu_name)
             time.sleep(self.pod_creation_wait_interal)
             pods = self.__get_pods()
 
         assert len(pods) > 0, "No pod scheduled by " + self.uu_name
         for pod in pods:
-            status = pod.obj['status']
-            for cont_stats in status.get('containerStatuses', []):
-                if 'terminated' in cont_stats['state']:
-                    t = cont_stats['state']['terminated']
-                    err_msg = "Pod %s %s (exit code %d). Logs: `kubectl logs pod/%s`" % (
-                        pod.name, t['reason'], t['exitCode'], pod.name)
-                    assert t['exitCode'] == 0, err_msg
+            status = pod.obj["status"]
+            for cont_stats in status.get("containerStatuses", []):
+                if "terminated" in cont_stats["state"]:
+                    t = cont_stats["state"]["terminated"]
+                    err_msg = "Pod %s %s (exit code %d). Logs: `kubectl logs pod/%s`" % (pod.name, t["reason"], t["exitCode"], pod.name)
+                    assert t["exitCode"] == 0, err_msg
 
-                if 'waiting' in cont_stats['state']:
-                    wr = cont_stats['state']['waiting']['reason']
-                    assert wr == 'ContainerCreating', "Pod %s %s. Logs: `kubectl logs pod/%s`" % (
-                        pod.name, wr, pod.name)
+                if "waiting" in cont_stats["state"]:
+                    wr = cont_stats["state"]["waiting"]["reason"]
+                    assert wr == "ContainerCreating", "Pod %s %s. Logs: `kubectl logs pod/%s`" % (pod.name, wr, pod.name)
 
-            for cond in status.get('conditions', []):
-                if 'message' in cond:
-                    if cond['reason'] == 'ContainersNotReady':
+            for cond in status.get("conditions", []):
+                if "message" in cond:
+                    if cond["reason"] == "ContainersNotReady":
                         return False
-                    assert cond['status'] != 'False', \
-                        "[ERROR] %s - %s" % (cond['reason'], cond['message'])
+                    assert cond["status"] != "False", "[ERROR] %s - %s" % (cond["reason"], cond["message"])
         return True
 
     def __get_job_status(self):
@@ -327,8 +311,7 @@ class KubernetesJobTask(luigi.Task):
 
         if "failed" in job.obj["status"]:
             failed_cnt = job.obj["status"]["failed"]
-            self.__logger.debug("Kubernetes job " + self.uu_name
-                                + " status.failed: " + str(failed_cnt))
+            self.__logger.debug("Kubernetes job " + self.uu_name + " status.failed: " + str(failed_cnt))
             if self.print_pod_logs_on_exit:
                 self.__print_pod_logs()
             if failed_cnt > self.max_retrials:
@@ -337,11 +320,7 @@ class KubernetesJobTask(luigi.Task):
         return "RUNNING"
 
     def __delete_job_cascade(self, job):
-        delete_options_cascade = {
-            "kind": "DeleteOptions",
-            "apiVersion": "v1",
-            "propagationPolicy": "Background"
-        }
+        delete_options_cascade = {"kind": "DeleteOptions", "apiVersion": "v1", "propagationPolicy": "Background"}
         r = self.__kube_api.delete(json=delete_options_cascade, **job.api_kwargs())
         if r.status_code != 200:
             self.__kube_api.raise_for_status(r)
@@ -352,32 +331,16 @@ class KubernetesJobTask(luigi.Task):
         job_json = {
             "apiVersion": "batch/v1",
             "kind": "Job",
-            "metadata": {
-                "name": self.uu_name,
-                "labels": {
-                    "spawned_by": "luigi",
-                    "luigi_task_id": self.job_uuid
-                }
-            },
-            "spec": {
-                "backoffLimit": self.backoff_limit,
-                "template": {
-                    "metadata": {
-                        "name": self.uu_name,
-                        "labels": {}
-                    },
-                    "spec": self.spec_schema
-                }
-            }
+            "metadata": {"name": self.uu_name, "labels": {"spawned_by": "luigi", "luigi_task_id": self.job_uuid}},
+            "spec": {"backoffLimit": self.backoff_limit, "template": {"metadata": {"name": self.uu_name, "labels": {}}, "spec": self.spec_schema}},
         }
         if self.kubernetes_namespace is not None:
-            job_json['metadata']['namespace'] = self.kubernetes_namespace
+            job_json["metadata"]["namespace"] = self.kubernetes_namespace
         if self.active_deadline_seconds is not None:
-            job_json['spec']['activeDeadlineSeconds'] = \
-                self.active_deadline_seconds
+            job_json["spec"]["activeDeadlineSeconds"] = self.active_deadline_seconds
         # Update user labels
-        job_json['metadata']['labels'].update(self.labels)
-        job_json['spec']['template']['metadata']['labels'].update(self.labels)
+        job_json["metadata"]["labels"].update(self.labels)
+        job_json["spec"]["template"]["metadata"]["labels"].update(self.labels)
 
         # Add default restartPolicy if not specified
         if "restartPolicy" not in self.spec_schema:

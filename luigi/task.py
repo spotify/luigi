@@ -19,39 +19,38 @@ The abstract :py:class:`Task` class.
 It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
-from collections import deque, OrderedDict
-from contextlib import contextmanager
-import logging
-import traceback
-import warnings
-import json
-import hashlib
-import re
+
 import copy
 import functools
+import hashlib
+import json
+import logging
+import re
+import traceback
+import warnings
+from collections import OrderedDict, deque
+from contextlib import contextmanager
 from typing import Any, Dict, Optional
+
 from typing_extensions import dataclass_transform
 
 import luigi
-
-from luigi import configuration
-from luigi import parameter
+from luigi import configuration, parameter
+from luigi.parameter import ParameterVisibility, UnconsumedParameterWarning
 from luigi.task_register import Register
-from luigi.parameter import ParameterVisibility
-from luigi.parameter import UnconsumedParameterWarning
 
 Parameter = parameter.Parameter
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 TASK_ID_INCLUDE_PARAMS = 3
 TASK_ID_TRUNCATE_PARAMS = 16
 TASK_ID_TRUNCATE_HASH = 10
-TASK_ID_INVALID_CHAR_REGEX = re.compile(r'[^A-Za-z0-9_]')
-_SAME_AS_PYTHON_MODULE = '_same_as_python_module'
+TASK_ID_INVALID_CHAR_REGEX = re.compile(r"[^A-Za-z0-9_]")
+_SAME_AS_PYTHON_MODULE = "_same_as_python_module"
 
 
-def namespace(namespace=None, scope=''):
+def namespace(namespace=None, scope=""):
     """
     Call to set namespace of tasks declared after the call.
 
@@ -83,10 +82,10 @@ def namespace(namespace=None, scope=''):
            ``a.b`` vs ``a.b.c``, the more specific one (``a.b.c``) wins.
     .. seealso:: The new and better scaling :py:func:`auto_namespace`
     """
-    Register._default_namespace_dict[scope] = namespace or ''
+    Register._default_namespace_dict[scope] = namespace or ""
 
 
-def auto_namespace(scope=''):
+def auto_namespace(scope=""):
     """
     Same as :py:func:`namespace`, but instead of a constant namespace, it will
     be set to the ``__module__`` of the task class. This is desirable for these
@@ -126,14 +125,13 @@ def task_id_str(task_family, params):
     """
     # task_id is a concatenation of task family, the first values of the first 3 parameters
     # sorted by parameter name and a md5hash of the family/parameters as a cananocalised json.
-    param_str = json.dumps(params, separators=(',', ':'), sort_keys=True)
-    param_hash = hashlib.new('md5', param_str.encode('utf-8'), usedforsecurity=False).hexdigest()
+    param_str = json.dumps(params, separators=(",", ":"), sort_keys=True)
+    param_hash = hashlib.new("md5", param_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
-    param_summary = '_'.join(p[:TASK_ID_TRUNCATE_PARAMS]
-                             for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
-    param_summary = TASK_ID_INVALID_CHAR_REGEX.sub('_', param_summary)
+    param_summary = "_".join(p[:TASK_ID_TRUNCATE_PARAMS] for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
+    param_summary = TASK_ID_INVALID_CHAR_REGEX.sub("_", param_summary)
 
-    return '{}_{}_{}'.format(task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
+    return "{}_{}_{}".format(task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
 
 
 class BulkCompleteNotImplementedError(NotImplementedError):
@@ -143,6 +141,7 @@ class BulkCompleteNotImplementedError(NotImplementedError):
     in any subclass. bulk_complete isn't like that. This tricks pylint into
     thinking that the default implementation is a valid implementation and not
     an abstract method."""
+
     pass
 
 
@@ -191,7 +190,7 @@ class Task(metaclass=Register):
     worker_timeout: Optional[int] = None
 
     #: Maximum number of tasks to run together as a batch. Infinite by default
-    max_batch_size = float('inf')
+    max_batch_size = float("inf")
 
     @property
     def batchable(self):
@@ -232,11 +231,11 @@ class Task(metaclass=Register):
 
     @property
     def owner_email(self):
-        '''
+        """
         Override this to send out additional error emails to task owner, in addition to the one
         defined in the global configuration. This should return a string or a list of strings. e.g.
         'test@exmaple.com' or ['test1@example.com', 'test2@example.com']
-        '''
+        """
         return None
 
     def _owner_list(self):
@@ -247,14 +246,14 @@ class Task(metaclass=Register):
         if owner_email is None:
             return []
         elif isinstance(owner_email, str):
-            return owner_email.split(',')
+            return owner_email.split(",")
         else:
             return owner_email
 
     @property
     def use_cmdline_section(self):
-        ''' Property used by core config such as `--workers` etc.
-        These will be exposed without the class as prefix.'''
+        """Property used by core config such as `--workers` etc.
+        These will be exposed without the class as prefix."""
         return True
 
     @classmethod
@@ -262,9 +261,11 @@ class Task(metaclass=Register):
         """
         Decorator for adding event handlers.
         """
+
         def wrapped(callback):
             cls._event_callbacks.setdefault(cls, {}).setdefault(event, set()).add(callback)
             return callback
+
         return wrapped
 
     @classmethod
@@ -300,13 +301,13 @@ class Task(metaclass=Register):
 
     @property
     def task_module(self):
-        ''' Returns what Python module to import to get access to this class. '''
+        """Returns what Python module to import to get access to this class."""
         # TODO(erikbern): we should think about a language-agnostic mechanism
         return self.__class__.__module__
 
     _visible_in_registry = True  # TODO: Consider using in luigi.util as well
 
-    __not_user_specified = '__not_user_specified'
+    __not_user_specified = "__not_user_specified"
 
     # This is here just to help pylint, the Register metaclass will always set
     # this value anyway.
@@ -406,22 +407,22 @@ class Task(metaclass=Register):
 
         # In case any exceptions are thrown, create a helpful description of how the Task was invoked
         # TODO: should we detect non-reprable arguments? These will lead to mysterious errors
-        exc_desc = '%s[args=%s, kwargs=%s]' % (task_family, args, kwargs)
+        exc_desc = "%s[args=%s, kwargs=%s]" % (task_family, args, kwargs)
 
         # Fill in the positional arguments
         positional_params = [(n, p) for n, p in params if p.positional]
         for i, arg in enumerate(args):
             if i >= len(positional_params):
-                raise parameter.UnknownParameterException('%s: takes at most %d parameters (%d given)' % (exc_desc, len(positional_params), len(args)))
+                raise parameter.UnknownParameterException("%s: takes at most %d parameters (%d given)" % (exc_desc, len(positional_params), len(args)))
             param_name, param_obj = positional_params[i]
             result[param_name] = param_obj.normalize(arg)
 
         # Then the keyword arguments
         for param_name, arg in kwargs.items():
             if param_name in result:
-                raise parameter.DuplicateParameterException('%s: parameter %s was already set as a positional parameter' % (exc_desc, param_name))
+                raise parameter.DuplicateParameterException("%s: parameter %s was already set as a positional parameter" % (exc_desc, param_name))
             if param_name not in params_dict:
-                raise parameter.UnknownParameterException('%s: unknown parameter %s' % (exc_desc, param_name))
+                raise parameter.UnknownParameterException("%s: unknown parameter %s" % (exc_desc, param_name))
             result[param_name] = params_dict[param_name].normalize(arg)
 
         # Then use the defaults for anything not filled in
@@ -436,7 +437,7 @@ class Task(metaclass=Register):
                 result[param_name] = param_obj.task_value(task_family, param_name)
 
         def list_to_tuple(x):
-            """ Make tuples out of lists and sets to allow hashing """
+            """Make tuples out of lists and sets to allow hashing"""
             if isinstance(x, list) or isinstance(x, set):
                 return tuple(x)
             else:
@@ -447,15 +448,13 @@ class Task(metaclass=Register):
         if not hasattr(cls, "_unconsumed_params"):
             cls._unconsumed_params = set()
         if task_family in conf.sections():
-            ignore_unconsumed = getattr(cls, 'ignore_unconsumed', set())
+            ignore_unconsumed = getattr(cls, "ignore_unconsumed", set())
             for key, value in conf[task_family].items():
-                key = key.replace('-', '_')
+                key = key.replace("-", "_")
                 composite_key = f"{task_family}_{key}"
                 if key not in result and key not in ignore_unconsumed and composite_key not in cls._unconsumed_params:
                     warnings.warn(
-                        "The configuration contains the parameter "
-                        f"'{key}' with value '{value}' that is not consumed by the task "
-                        f"'{task_family}'.",
+                        f"The configuration contains the parameter '{key}' with value '{value}' that is not consumed by the task '{task_family}'.",
                         UnconsumedParameterWarning,
                     )
                     cls._unconsumed_params.add(composite_key)
@@ -491,7 +490,7 @@ class Task(metaclass=Register):
         """
         Returns ``True`` if the Task is initialized and ``False`` otherwise.
         """
-        return hasattr(self, 'task_id')
+        return hasattr(self, "task_id")
 
     def _warn_on_wrong_param_types(self):
         params = dict(self.get_params())
@@ -523,9 +522,11 @@ class Task(metaclass=Register):
         params_str = {}
         params = dict(self.get_params())
         for param_name, param_value in self.param_kwargs.items():
-            if (((not only_significant) or params[param_name].significant)
-                    and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
-                    and params[param_name].visibility != ParameterVisibility.PRIVATE):
+            if (
+                ((not only_significant) or params[param_name].significant)
+                and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
+                and params[param_name].visibility != ParameterVisibility.PRIVATE
+            ):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
@@ -579,9 +580,9 @@ class Task(metaclass=Register):
         param_objs = dict(params)
         for param_name, param_value in param_values:
             if param_objs[param_name].significant:
-                repr_parts.append('%s=%s' % (param_name, param_objs[param_name].serialize(param_value)))
+                repr_parts.append("%s=%s" % (param_name, param_objs[param_name].serialize(param_value)))
 
-        task_str = '{}({})'.format(self.get_task_family(), ', '.join(repr_parts))
+        task_str = "{}({})".format(self.get_task_family(), ", ".join(repr_parts))
 
         return task_str
 
@@ -597,10 +598,7 @@ class Task(metaclass=Register):
         """
         outputs = flatten(self.output())
         if len(outputs) == 0:
-            warnings.warn(
-                "Task %r without outputs has no custom complete() method" % self,
-                stacklevel=2
-            )
+            warnings.warn("Task %r without outputs has no custom complete() method" % self, stacklevel=2)
             return False
 
         return all(map(lambda output: output.exists(), outputs))
@@ -745,7 +743,7 @@ class Task(metaclass=Register):
         for property_name in unpicklable_properties:
             if hasattr(self, property_name):
                 reserved_properties[property_name] = getattr(self, property_name)
-                setattr(self, property_name, 'placeholder_during_pickling')
+                setattr(self, property_name, "placeholder_during_pickling")
 
         yield
 
@@ -761,6 +759,7 @@ class MixinNaiveBulkComplete:
 
     This doesn't exploit output location specific APIs for speed advantage, nevertheless removes redundant scheduler roundtrips.
     """
+
     @classmethod
     def bulk_complete(cls, parameter_tuples):
         generated_tuples = []
@@ -847,6 +846,7 @@ class DynamicRequirements(object):
     def complete(self, complete_fn=None):
         # default completeness check
         if complete_fn is None:
+
             def complete_fn(task):
                 return task.complete()
 
@@ -866,6 +866,7 @@ class ExternalTask(Task):
     the framework that this Task's :py:meth:`output` is generated outside of
     Luigi.
     """
+
     run = None
 
 
@@ -921,6 +922,7 @@ def externalize(taskclass_or_taskobject):
         class _CopyOfClass(clazz):
             # How to copy a class: http://stackoverflow.com/a/9541120/621449
             _visible_in_registry = False
+
         _CopyOfClass.run = None
         return _CopyOfClass
     else:
@@ -942,6 +944,7 @@ class Config(Task):
     """
     Class for configuration. See :ref:`ConfigClasses`.
     """
+
     # TODO: let's refactor Task & Config so that it inherits from a common
     # ParamContainer base class
     pass
@@ -962,7 +965,7 @@ def getpaths(struct):
         try:
             return [getpaths(r) for r in struct]
         except TypeError:
-            raise Exception('Cannot map %s to Task/dict/list' % str(struct))
+            raise Exception("Cannot map %s to Task/dict/list" % str(struct))
 
 
 def flatten(struct):
@@ -1025,5 +1028,5 @@ def _task_wraps(task_class):
     # This makes it possible to pickle the wrapped class etc.
     # Btw, this is a slight abuse of functools.wraps. It's meant to be used only for
     # functions, but it works for classes too, if you pass updated=[]
-    assigned = functools.WRAPPER_ASSIGNMENTS + ('_namespace_at_class_time',)
+    assigned = functools.WRAPPER_ASSIGNMENTS + ("_namespace_at_class_time",)
     return functools.wraps(task_class, assigned=assigned, updated=[])

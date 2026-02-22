@@ -32,10 +32,11 @@ the job has left the queue, delete the temporary folder, and
 return from SGETask.run()
 """
 
-import os
-import sys
-import pickle
 import logging
+import os
+import pickle
+import sys
+
 from luigi.safe_extractor import SafeExtractor
 
 
@@ -66,15 +67,14 @@ def _extract_packages_archive(work_dir):
     os.chdir(work_dir)
     extractor = SafeExtractor(work_dir)
     extractor.safe_extract(package_file)
-    if '' not in sys.path:
-        sys.path.insert(0, '')
+    if "" not in sys.path:
+        sys.path.insert(0, "")
 
     os.chdir(curdir)
 
 
 def main(args=sys.argv):
-    """Run the work() method from the class instance in the file "job-instance.pickle".
-    """
+    """Run the work() method from the class instance in the file "job-instance.pickle"."""
     try:
         tarball = "--no-tarball" not in args
         # Set up logging.
@@ -90,5 +90,5 @@ def main(args=sys.argv):
         raise
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

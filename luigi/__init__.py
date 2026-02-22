@@ -18,65 +18,126 @@
 Package containing core luigi functionality.
 """
 
+from luigi import configuration, event, interface, local_target, parameter, rpc, target, task
 from luigi.__version__ import VERSION
-
-from luigi import task
-from luigi.task import (
-    Task, Config, ExternalTask, WrapperTask, namespace, auto_namespace, DynamicRequirements,
-)
-
-from luigi import target
-from luigi.target import Target
-
-from luigi import local_target
-from luigi.local_target import LocalTarget
-
-from luigi import rpc
-from luigi.rpc import RemoteScheduler, RPCError
-from luigi import parameter
-from luigi.parameter import (
-    Parameter,
-    DateParameter, MonthParameter, YearParameter, DateHourParameter, DateMinuteParameter, DateSecondParameter,
-    DateIntervalParameter, TimeDeltaParameter,
-    StrParameter, IntParameter, FloatParameter, BoolParameter, PathParameter,
-    TaskParameter, EnumParameter, DictParameter, ListParameter, TupleParameter, EnumListParameter,
-    NumericalParameter, ChoiceParameter, ChoiceListParameter, OptionalParameter,
-    OptionalStrParameter, OptionalIntParameter, OptionalFloatParameter, OptionalBoolParameter,
-    OptionalPathParameter, OptionalDictParameter, OptionalListParameter, OptionalTupleParameter,
-    OptionalChoiceParameter, OptionalNumericalParameter,
-)
-
-from luigi import configuration
-
-from luigi import interface
-from luigi.interface import run, build
-from luigi.execution_summary import LuigiStatusCode
-
-from luigi import event
 from luigi.event import Event
-
+from luigi.execution_summary import LuigiStatusCode
+from luigi.interface import build, run
+from luigi.local_target import LocalTarget
+from luigi.parameter import (
+    BoolParameter,
+    ChoiceListParameter,
+    ChoiceParameter,
+    DateHourParameter,
+    DateIntervalParameter,
+    DateMinuteParameter,
+    DateParameter,
+    DateSecondParameter,
+    DictParameter,
+    EnumListParameter,
+    EnumParameter,
+    FloatParameter,
+    IntParameter,
+    ListParameter,
+    MonthParameter,
+    NumericalParameter,
+    OptionalBoolParameter,
+    OptionalChoiceParameter,
+    OptionalDictParameter,
+    OptionalFloatParameter,
+    OptionalIntParameter,
+    OptionalListParameter,
+    OptionalNumericalParameter,
+    OptionalParameter,
+    OptionalPathParameter,
+    OptionalStrParameter,
+    OptionalTupleParameter,
+    Parameter,
+    PathParameter,
+    StrParameter,
+    TaskParameter,
+    TimeDeltaParameter,
+    TupleParameter,
+    YearParameter,
+)
+from luigi.rpc import RemoteScheduler, RPCError
+from luigi.target import Target
+from luigi.task import (
+    Config,
+    DynamicRequirements,
+    ExternalTask,
+    Task,
+    WrapperTask,
+    auto_namespace,
+    namespace,
+)
 
 __version__ = VERSION
 __all__ = [
-    'task', 'Task', 'Config', 'ExternalTask', 'WrapperTask', 'namespace', 'auto_namespace',
-    'DynamicRequirements',
-    'target', 'Target', 'LocalTarget', 'rpc', 'RemoteScheduler',
-    'RPCError', 'parameter', 'Parameter', 'DateParameter', 'MonthParameter',
-    'YearParameter', 'DateHourParameter', 'DateMinuteParameter', 'DateSecondParameter',
-    'DateIntervalParameter', 'TimeDeltaParameter', 'StrParameter', 'IntParameter',
-    'FloatParameter', 'BoolParameter', 'PathParameter', 'TaskParameter',
-    'ListParameter', 'TupleParameter', 'EnumParameter', 'DictParameter', 'EnumListParameter',
-    'configuration', 'interface', 'local_target', 'run', 'build', 'event', 'Event',
-    'NumericalParameter', 'ChoiceParameter', 'ChoiceListParameter', 'OptionalParameter',
-    'OptionalStrParameter', 'OptionalIntParameter', 'OptionalFloatParameter', 'OptionalBoolParameter',
-    'OptionalPathParameter', 'OptionalDictParameter', 'OptionalListParameter', 'OptionalTupleParameter',
-    'OptionalChoiceParameter', 'OptionalNumericalParameter', 'LuigiStatusCode',
-    '__version__',
+    "task",
+    "Task",
+    "Config",
+    "ExternalTask",
+    "WrapperTask",
+    "namespace",
+    "auto_namespace",
+    "DynamicRequirements",
+    "target",
+    "Target",
+    "LocalTarget",
+    "rpc",
+    "RemoteScheduler",
+    "RPCError",
+    "parameter",
+    "Parameter",
+    "DateParameter",
+    "MonthParameter",
+    "YearParameter",
+    "DateHourParameter",
+    "DateMinuteParameter",
+    "DateSecondParameter",
+    "DateIntervalParameter",
+    "TimeDeltaParameter",
+    "StrParameter",
+    "IntParameter",
+    "FloatParameter",
+    "BoolParameter",
+    "PathParameter",
+    "TaskParameter",
+    "ListParameter",
+    "TupleParameter",
+    "EnumParameter",
+    "DictParameter",
+    "EnumListParameter",
+    "configuration",
+    "interface",
+    "local_target",
+    "run",
+    "build",
+    "event",
+    "Event",
+    "NumericalParameter",
+    "ChoiceParameter",
+    "ChoiceListParameter",
+    "OptionalParameter",
+    "OptionalStrParameter",
+    "OptionalIntParameter",
+    "OptionalFloatParameter",
+    "OptionalBoolParameter",
+    "OptionalPathParameter",
+    "OptionalDictParameter",
+    "OptionalListParameter",
+    "OptionalTupleParameter",
+    "OptionalChoiceParameter",
+    "OptionalNumericalParameter",
+    "LuigiStatusCode",
+    "__version__",
 ]
 
-if not configuration.get_config().has_option('core', 'autoload_range'):
+if not configuration.get_config().has_option("core", "autoload_range"):
     import warnings
-    warning_message = '''
+
+    warning_message = """
         Autoloading range tasks by default has been deprecated and will be removed in a future version.
         To get the behavior now add an option to luigi.cfg:
 
@@ -84,9 +145,10 @@ if not configuration.get_config().has_option('core', 'autoload_range'):
             autoload_range: false
 
         Alternately set the option to true to continue with existing behaviour and suppress this warning.
-    '''
+    """
     warnings.warn(warning_message, DeprecationWarning)
 
-if configuration.get_config().getboolean('core', 'autoload_range', True):
+if configuration.get_config().getboolean("core", "autoload_range", True):
     from .tools import range  # noqa: F401    just makes the tool classes available from command line
-    __all__.append('range')
+
+    __all__.append("range")

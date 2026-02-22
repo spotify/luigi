@@ -17,17 +17,16 @@
 
 import functools
 import itertools
-import tempfile
+import os
 import re
+import tempfile
+import unittest
 from contextlib import contextmanager
 
 import luigi
-import luigi.task_register
 import luigi.cmdline_parser
+import luigi.task_register
 from luigi.cmdline_parser import CmdlineParser
-import os
-
-import unittest
 
 
 def skipOnTravisAndGithubActions(reason):
@@ -43,15 +42,15 @@ def skipOnGithubActions(reason):
 
 
 def _running_on_travis():
-    return os.getenv('TRAVIS') == 'true'
+    return os.getenv("TRAVIS") == "true"
 
 
 def _running_on_github_actions():
-    return os.getenv('GITHUB_ACTIONS') == 'true'
+    return os.getenv("GITHUB_ACTIONS") == "true"
 
 
 def _override_skip_CI_tests():
-    return os.getenv('OVERRIDE_SKIP_CI_TESTS') == 'true'
+    return os.getenv("OVERRIDE_SKIP_CI_TESTS") == "true"
 
 
 class with_config:
@@ -128,6 +127,7 @@ class with_config:
         @functools.wraps(fun)
         def wrapper(*args, **kwargs):
             import luigi.configuration
+
             orig_conf = luigi.configuration.LuigiConfigParser.instance()
             new_conf = luigi.configuration.LuigiConfigParser()
             luigi.configuration.LuigiConfigParser._instance = new_conf
@@ -141,11 +141,11 @@ class with_config:
                 return fun(*args, **kwargs)
             finally:
                 luigi.configuration.LuigiConfigParser._instance = orig_conf
+
         return wrapper
 
 
 class RunOnceTask(luigi.Task):
-
     def __init__(self, *args, **kwargs):
         super(RunOnceTask, self).__init__(*args, **kwargs)
         self.comp = False
@@ -170,6 +170,7 @@ class LuigiTestCase(unittest.TestCase):
 
     Instance caches are cleared before and after all runs
     """
+
     def setUp(self):
         super(LuigiTestCase, self).setUp()
         self._stashed_reg = luigi.task_register.Register._get_reg()
@@ -181,20 +182,20 @@ class LuigiTestCase(unittest.TestCase):
         luigi.task_register.Register.clear_instance_cache()
 
     def run_locally(self, args):
-        """ Helper for running tests testing more of the stack, the command
-        line parsing and task from name intstantiation parts in particular. """
+        """Helper for running tests testing more of the stack, the command
+        line parsing and task from name intstantiation parts in particular."""
         temp = CmdlineParser._instance
         try:
             CmdlineParser._instance = None
-            run_exit_status = luigi.run(['--local-scheduler', '--no-lock'] + args)
+            run_exit_status = luigi.run(["--local-scheduler", "--no-lock"] + args)
         finally:
             CmdlineParser._instance = temp
         return run_exit_status
 
     def run_locally_split(self, space_seperated_args):
-        """ Helper for running tests testing more of the stack, the command
-        line parsing and task from name intstantiation parts in particular. """
-        return self.run_locally(space_seperated_args.split(' '))
+        """Helper for running tests testing more of the stack, the command
+        line parsing and task from name intstantiation parts in particular."""
+        return self.run_locally(space_seperated_args.split(" "))
 
 
 class parsing:
@@ -221,17 +222,13 @@ def in_parse(cmds, deferred_computation):
 
 @contextmanager
 def temporary_unloaded_module(python_file_contents):
-    """ Create an importable module
+    """Create an importable module
 
     Return the name of importable module name given its file contents (source
-    code) """
-    with tempfile.NamedTemporaryFile(
-            dir='test/',
-            prefix="_test_time_generated_module",
-            suffix='.py') as temp_module_file:
+    code)"""
+    with tempfile.NamedTemporaryFile(dir="test/", prefix="_test_time_generated_module", suffix=".py") as temp_module_file:
         temp_module_file.file.write(python_file_contents)
         temp_module_file.file.flush()
         temp_module_path = temp_module_file.name
-        temp_module_name = re.search(r'/(_test_time_generated_module.*).py',
-                                     temp_module_path).group(1)
+        temp_module_name = re.search(r"/(_test_time_generated_module.*).py", temp_module_path).group(1)
         yield temp_module_name

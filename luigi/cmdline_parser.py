@@ -20,9 +20,10 @@ be considered internal to luigi.
 """
 
 import argparse
-from contextlib import contextmanager
-from luigi.task_register import Register
 import sys
+from contextlib import contextmanager
+
+from luigi.task_register import Register
 
 
 class CmdlineParser:
@@ -32,11 +33,12 @@ class CmdlineParser:
 
     Normal luigi users should just use :py:func:`luigi.run`.
     """
+
     _instance = None
 
     @classmethod
     def get_instance(cls):
-        """ Singleton getter """
+        """Singleton getter"""
         return cls._instance
 
     @classmethod
@@ -66,11 +68,10 @@ class CmdlineParser:
         # argument (the task) could be different.
         known_args, _ = self._build_parser().parse_known_args(args=cmdline_args)
         root_task = known_args.root_task
-        parser = self._build_parser(root_task=root_task,
-                                    help_all=known_args.core_help_all)
+        parser = self._build_parser(root_task=root_task, help_all=known_args.core_help_all)
         self._possibly_exit_with_help(parser, known_args)
         if not root_task:
-            raise SystemExit('No task specified')
+            raise SystemExit("No task specified")
         else:
             # Check that what we believe to be the task is correctly spelled
             Register.get_task_cls(root_task)
@@ -83,27 +84,22 @@ class CmdlineParser:
 
         # Unfortunately, we have to set it as optional to argparse, so we can
         # parse out stuff like `--module` before we call for `--help`.
-        parser.add_argument('root_task',
-                            nargs='?',
-                            help='Task family to run. Is not optional.',
-                            metavar='Required root task',
-                            )
+        parser.add_argument(
+            "root_task",
+            nargs="?",
+            help="Task family to run. Is not optional.",
+            metavar="Required root task",
+        )
 
         for task_name, is_without_section, param_name, param_obj in Register.get_all_params():
             is_the_root_task = task_name == root_task
             help = param_obj.description if any((is_the_root_task, help_all, param_obj.always_in_help)) else argparse.SUPPRESS
-            flag_name_underscores = param_name if is_without_section else task_name + '_' + param_name
-            global_flag_name = '--' + flag_name_underscores.replace('_', '-')
-            parser.add_argument(global_flag_name,
-                                help=help,
-                                **param_obj._parser_kwargs(param_name, task_name)
-                                )
+            flag_name_underscores = param_name if is_without_section else task_name + "_" + param_name
+            global_flag_name = "--" + flag_name_underscores.replace("_", "-")
+            parser.add_argument(global_flag_name, help=help, **param_obj._parser_kwargs(param_name, task_name))
             if is_the_root_task:
-                local_flag_name = '--' + param_name.replace('_', '-')
-                parser.add_argument(local_flag_name,
-                                    help=help,
-                                    **param_obj._parser_kwargs(param_name)
-                                    )
+                local_flag_name = "--" + param_name.replace("_", "-")
+                parser.add_argument(local_flag_name, help=help, **param_obj._parser_kwargs(param_name))
 
         return parser
 
@@ -125,7 +121,7 @@ class CmdlineParser:
         the form ``dict(my_param='my_value', ...)``
         """
         res = {}
-        for (param_name, param_obj) in self._get_task_cls().get_params():
+        for param_name, param_obj in self._get_task_cls().get_params():
             attr = getattr(self.known_args, param_name)
             if attr:
                 res.update(((param_name, param_obj.parse(attr)),))

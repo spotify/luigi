@@ -51,17 +51,19 @@ Written and maintained by Jake Feala (@jfeala) for Outlier Bio (@outlierbio)
 """
 
 import copy
-import time
 import logging
+import time
+
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import boto3
-    client = boto3.client('ecs')
+
+    client = boto3.client("ecs")
 except ImportError:
-    logger.warning('boto3 is not installed. ECSTasks require boto3')
+    logger.warning("boto3 is not installed. ECSTasks require boto3")
 
 POLL_TIME = 2
 
@@ -75,30 +77,28 @@ def _get_task_statuses(task_ids, cluster):
     response = client.describe_tasks(tasks=task_ids, cluster=cluster)
 
     # Error checking
-    if response['failures'] != []:
-        raise Exception('There were some failures:\n{0}'.format(
-            response['failures']))
-    status_code = response['ResponseMetadata']['HTTPStatusCode']
+    if response["failures"] != []:
+        raise Exception("There were some failures:\n{0}".format(response["failures"]))
+    status_code = response["ResponseMetadata"]["HTTPStatusCode"]
     if status_code != 200:
-        msg = 'Task status request received status code {0}:\n{1}'
+        msg = "Task status request received status code {0}:\n{1}"
         raise Exception(msg.format(status_code, response))
 
-    return [t['lastStatus'] for t in response['tasks']]
+    return [t["lastStatus"] for t in response["tasks"]]
 
 
 def _track_tasks(task_ids, cluster):
     """Poll task status until STOPPED"""
     while True:
         statuses = _get_task_statuses(task_ids, cluster)
-        if all([status == 'STOPPED' for status in statuses]):
-            logger.info('ECS tasks {0} STOPPED'.format(','.join(task_ids)))
+        if all([status == "STOPPED" for status in statuses]):
+            logger.info("ECS tasks {0} STOPPED".format(",".join(task_ids)))
             break
         time.sleep(POLL_TIME)
-        logger.debug('ECS task status for tasks {0}: {1}'.format(task_ids, statuses))
+        logger.debug("ECS task status for tasks {0}: {1}".format(task_ids, statuses))
 
 
 class ECSTask(luigi.Task):
-
     """
     Base class for an Amazon EC2 Container Service Task
 
@@ -136,12 +136,12 @@ class ECSTask(luigi.Task):
 
     task_def_arn = luigi.OptionalParameter(default=None)
     task_def = luigi.OptionalParameter(default=None)
-    cluster = luigi.Parameter(default='default')
+    cluster = luigi.Parameter(default="default")
 
     @property
     def ecs_task_ids(self):
         """Expose the ECS task ID"""
-        if hasattr(self, '_task_ids'):
+        if hasattr(self, "_task_ids"):
             return self._task_ids
 
     @property
@@ -176,8 +176,8 @@ class ECSTask(luigi.Task):
         command yet exists in `container_overrides` for the specified command,
         it will be added.
         """
-        for colliding_override in filter(lambda x: x['name'] == command['name'], container_overrides):
-            colliding_override['command'] = command['command']
+        for colliding_override in filter(lambda x: x["name"] == command["name"], container_overrides):
+            colliding_override["command"] = command["command"]
             break
         else:
             container_overrides.append(command)
@@ -191,13 +191,13 @@ class ECSTask(luigi.Task):
         `self.run_task_kwargs` while ensuring that the values specified in
         `self.command` are honored in `containerOverrides`.
         """
-        overrides = copy.deepcopy(self.run_task_kwargs.get('overrides', {}))
+        overrides = copy.deepcopy(self.run_task_kwargs.get("overrides", {}))
         if self.command:
-            if 'containerOverrides' in overrides:
+            if "containerOverrides" in overrides:
                 for command in self.command:
-                    self.update_container_overrides_command(overrides['containerOverrides'], command)
+                    self.update_container_overrides_command(overrides["containerOverrides"], command)
             else:
-                overrides['containerOverrides'] = self.command
+                overrides["containerOverrides"] = self.command
         return overrides
 
     @property
@@ -241,31 +241,30 @@ class ECSTask(luigi.Task):
         return {}
 
     def run(self):
-        if (not self.task_def and not self.task_def_arn) or \
-                (self.task_def and self.task_def_arn):
-            raise ValueError(('Either (but not both) a task_def (dict) or'
-                              'task_def_arn (string) must be assigned'))
+        if (not self.task_def and not self.task_def_arn) or (self.task_def and self.task_def_arn):
+            raise ValueError(("Either (but not both) a task_def (dict) ortask_def_arn (string) must be assigned"))
         if not self.task_def_arn:
             # Register the task and get assigned taskDefinition ID (arn)
             response = client.register_task_definition(**self.task_def)
-            self.task_def_arn = response['taskDefinition']['taskDefinitionArn']
+            self.task_def_arn = response["taskDefinition"]["taskDefinitionArn"]
 
         run_task_kwargs = self.run_task_kwargs
-        run_task_kwargs.update({
-            'taskDefinition': self.task_def_arn,
-            'cluster': self.cluster,
-            'overrides': self.combined_overrides,
-        })
+        run_task_kwargs.update(
+            {
+                "taskDefinition": self.task_def_arn,
+                "cluster": self.cluster,
+                "overrides": self.combined_overrides,
+            }
+        )
 
         # Submit the task to AWS ECS and get assigned task ID
         # (list containing 1 string)
         response = client.run_task(**run_task_kwargs)
 
-        if response['failures']:
-            raise Exception(", ".join(["fail to run task {0} reason: {1}".format(failure['arn'], failure['reason'])
-                                       for failure in response['failures']]))
+        if response["failures"]:
+            raise Exception(", ".join(["fail to run task {0} reason: {1}".format(failure["arn"], failure["reason"]) for failure in response["failures"]]))
 
-        self._task_ids = [task['taskArn'] for task in response['tasks']]
+        self._task_ids = [task["taskArn"] for task in response["tasks"]]
 
         # Wait on task completion
         _track_tasks(self._task_ids, self.cluster)

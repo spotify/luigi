@@ -30,45 +30,35 @@ Example:
 """
 
 import json
+from urllib.parse import parse_qs, urlsplit
 
+from luigi.contrib.s3 import S3Target
 from luigi.local_target import LocalTarget
 from luigi.mock import MockTarget
-from luigi.contrib.s3 import S3Target
 from luigi.target import FileSystemException
-from urllib.parse import urlsplit, parse_qs
 
-__all__ = ['OpenerError',
-           'NoOpenerError',
-           'InvalidQuery',
-           'OpenerRegistry',
-           'Opener',
-           'MockOpener',
-           'LocalOpener',
-           'S3Opener',
-           'opener',
-           'OpenerTarget']
+__all__ = ["OpenerError", "NoOpenerError", "InvalidQuery", "OpenerRegistry", "Opener", "MockOpener", "LocalOpener", "S3Opener", "opener", "OpenerTarget"]
 
 
 class OpenerError(FileSystemException):
-
     """The base exception thrown by openers"""
+
     pass
 
 
 class NoOpenerError(OpenerError):
-
     """Thrown when there is no opener for the given protocol"""
+
     pass
 
 
 class InvalidQuery(OpenerError):
-
     """Thrown when an opener is passed unexpected arguments"""
+
     pass
 
 
 class OpenerRegistry:
-
     def __init__(self, openers=None):
         """An opener registry that  stores a number of opener objects used
         to parse Target URIs
@@ -82,7 +72,7 @@ class OpenerRegistry:
 
         self.registry = {}
         self.openers = {}
-        self.default_opener = 'file'
+        self.default_opener = "file"
         for opener in openers:
             self.add(opener)
 
@@ -126,27 +116,14 @@ class OpenerRegistry:
         opener = self.get_opener(target.scheme)
         query = opener.conform_query(target.query)
 
-        target = opener.get_target(
-            target.scheme,
-            target.path,
-            target.fragment,
-            target.username,
-            target.password,
-            target.hostname,
-            target.port,
-            query,
-            **kwargs
-        )
+        target = opener.get_target(target.scheme, target.path, target.fragment, target.username, target.password, target.hostname, target.port, query, **kwargs)
         target.opener_path = target_uri
 
         return target
 
 
 class Opener:
-
-    """Base class for Opener objects.
-
-    """
+    """Base class for Opener objects."""
 
     # Dictionary of expected kwargs and flag for json loading values (bool/int)
     allowed_kwargs = {}
@@ -174,17 +151,16 @@ class Opener:
             # Multiple values of the same name could be passed use first
             # Also params without strings will be treated as true values
             if cls.allowed_kwargs.get(key, False):
-                val = json.loads(vals[0] or 'true')
+                val = json.loads(vals[0] or "true")
             else:
-                val = vals[0] or 'true'
+                val = vals[0] or "true"
 
             query[key] = val
 
         return query
 
     @classmethod
-    def get_target(cls, scheme, path, fragment, username,
-                   password, hostname, port, query, **kwargs):
+    def get_target(cls, scheme, path, fragment, username, password, hostname, port, query, **kwargs):
         """Override this method to use values from the parsed uri to initialize
         the expected target.
 
@@ -193,7 +169,6 @@ class Opener:
 
 
 class MockOpener(Opener):
-
     """Mock target opener, works like LocalTarget but files are all in
     memory.
 
@@ -201,23 +176,22 @@ class MockOpener(Opener):
     * mock://foo/bar.txt
 
     """
-    names = ['mock']
+
+    names = ["mock"]
     allowed_kwargs = {
-        'is_tmp': True,
-        'mirror_on_stderr': True,
-        'format': False,
+        "is_tmp": True,
+        "mirror_on_stderr": True,
+        "format": False,
     }
 
     @classmethod
-    def get_target(cls, scheme, path, fragment, username,
-                   password, hostname, port, query, **kwargs):
-        full_path = (hostname or '') + path
+    def get_target(cls, scheme, path, fragment, username, password, hostname, port, query, **kwargs):
+        full_path = (hostname or "") + path
         query.update(kwargs)
         return MockTarget(full_path, **query)
 
 
 class LocalOpener(Opener):
-
     """Local filesystem opener, works with any valid system path. This
     is the default opener and will be used if you don't indicate which opener.
 
@@ -227,22 +201,21 @@ class LocalOpener(Opener):
     * foo/bar.baz (file:// is the default opener)
 
     """
-    names = ['file']
+
+    names = ["file"]
     allowed_kwargs = {
-        'is_tmp': True,
-        'format': False,
+        "is_tmp": True,
+        "format": False,
     }
 
     @classmethod
-    def get_target(cls, scheme, path, fragment, username,
-                   password, hostname, port, query, **kwargs):
-        full_path = (hostname or '') + path
+    def get_target(cls, scheme, path, fragment, username, password, hostname, port, query, **kwargs):
+        full_path = (hostname or "") + path
         query.update(kwargs)
         return LocalTarget(full_path, **query)
 
 
 class S3Opener(Opener):
-
     """Opens a target stored on Amazon S3 storage
 
     examples:
@@ -250,25 +223,26 @@ class S3Opener(Opener):
     * s3://bucket/foo/bar.txt?aws_access_key_id=xxx&aws_secret_access_key=yyy
 
     """
-    names = ['s3', 's3n']
+
+    names = ["s3", "s3n"]
     allowed_kwargs = {
-        'format': False,
-        'client': True,
+        "format": False,
+        "client": True,
     }
     filter_kwargs = False
 
     @classmethod
-    def get_target(cls, scheme, path, fragment, username,
-                   password, hostname, port, query, **kwargs):
+    def get_target(cls, scheme, path, fragment, username, password, hostname, port, query, **kwargs):
         query.update(kwargs)
-        return S3Target('{scheme}://{hostname}{path}'.format(
-            scheme=scheme, hostname=hostname, path=path), **query)
+        return S3Target("{scheme}://{hostname}{path}".format(scheme=scheme, hostname=hostname, path=path), **query)
 
 
-opener = OpenerRegistry([
-    MockOpener,
-    LocalOpener,
-    S3Opener,
-])
+opener = OpenerRegistry(
+    [
+        MockOpener,
+        LocalOpener,
+        S3Opener,
+    ]
+)
 
 OpenerTarget = opener.open

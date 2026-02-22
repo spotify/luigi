@@ -18,26 +18,24 @@
 import abc
 import json
 import logging
-import time
 import os
+import time
 
 import luigi
-from luigi.contrib import postgres
-from luigi.contrib import rdbms
+from luigi.contrib import postgres, rdbms
 from luigi.contrib.s3 import S3PathTask, S3Target
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 try:
     import psycopg2
     import psycopg2.errorcodes
 except ImportError:
-    logger.warning("Loading postgres module without psycopg2 installed. "
-                   "Will crash at runtime if postgres functionality is used.")
+    logger.warning("Loading postgres module without psycopg2 installed. Will crash at runtime if postgres functionality is used.")
 
 
-class _CredentialsMixin():
+class _CredentialsMixin:
     """
     This mixin is used to provide the same credential properties
     for AWS to all Redshift tasks. It also provides a helper method
@@ -50,42 +48,42 @@ class _CredentialsMixin():
         Override to change the configuration section used
         to obtain default credentials.
         """
-        return 'redshift'
+        return "redshift"
 
     @property
     def aws_access_key_id(self):
         """
         Override to return the key id.
         """
-        return self._get_configuration_attribute('aws_access_key_id')
+        return self._get_configuration_attribute("aws_access_key_id")
 
     @property
     def aws_secret_access_key(self):
         """
         Override to return the secret access key.
         """
-        return self._get_configuration_attribute('aws_secret_access_key')
+        return self._get_configuration_attribute("aws_secret_access_key")
 
     @property
     def aws_account_id(self):
         """
         Override to return the account id.
         """
-        return self._get_configuration_attribute('aws_account_id')
+        return self._get_configuration_attribute("aws_account_id")
 
     @property
     def aws_arn_role_name(self):
         """
         Override to return the arn role name.
         """
-        return self._get_configuration_attribute('aws_arn_role_name')
+        return self._get_configuration_attribute("aws_arn_role_name")
 
     @property
     def aws_session_token(self):
         """
         Override to return the session token.
         """
-        return self._get_configuration_attribute('aws_session_token')
+        return self._get_configuration_attribute("aws_session_token")
 
     def _get_configuration_attribute(self, attribute):
         config = luigi.configuration.get_config()
@@ -104,23 +102,20 @@ class _CredentialsMixin():
         """
 
         if self.aws_account_id and self.aws_arn_role_name:
-            return 'aws_iam_role=arn:aws:iam::{id}:role/{role}'.format(
-                id=self.aws_account_id,
-                role=self.aws_arn_role_name
-            )
+            return "aws_iam_role=arn:aws:iam::{id}:role/{role}".format(id=self.aws_account_id, role=self.aws_arn_role_name)
         elif self.aws_access_key_id and self.aws_secret_access_key:
-            return 'aws_access_key_id={key};aws_secret_access_key={secret}{opt}'.format(
-                key=self.aws_access_key_id,
-                secret=self.aws_secret_access_key,
-                opt=';token={}'.format(self.aws_session_token) if self.aws_session_token else ''
+            return "aws_access_key_id={key};aws_secret_access_key={secret}{opt}".format(
+                key=self.aws_access_key_id, secret=self.aws_secret_access_key, opt=";token={}".format(self.aws_session_token) if self.aws_session_token else ""
             )
         else:
-            raise NotImplementedError("Missing Credentials. "
-                                      "Ensure one of the pairs of auth args below are set "
-                                      "in a configuration file, environment variables or by "
-                                      "being overridden in the task: "
-                                      "'aws_access_key_id' AND 'aws_secret_access_key' OR "
-                                      "'aws_account_id' AND 'aws_arn_role_name'")
+            raise NotImplementedError(
+                "Missing Credentials. "
+                "Ensure one of the pairs of auth args below are set "
+                "in a configuration file, environment variables or by "
+                "being overridden in the task: "
+                "'aws_access_key_id' AND 'aws_secret_access_key' OR "
+                "'aws_account_id' AND 'aws_arn_role_name'"
+            )
 
 
 class RedshiftTarget(postgres.PostgresTarget):
@@ -130,10 +125,8 @@ class RedshiftTarget(postgres.PostgresTarget):
     Redshift is similar to postgres with a few adjustments
     required by redshift.
     """
-    marker_table = luigi.configuration.get_config().get(
-        'redshift',
-        'marker-table',
-        'table_updates')
+
+    marker_table = luigi.configuration.get_config().get("redshift", "marker-table", "table_updates")
 
     # if not supplied, fall back to default Redshift port
     DEFAULT_DB_PORT = 5439
@@ -181,7 +174,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         * IGNOREBLANKLINES
         * DELIMITER '\t'
         """
-        return ''
+        return ""
 
     @property
     def prune_table(self):
@@ -219,7 +212,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         DISTKEY (MY_FIELD)
         SORTKEY (MY_FIELD_2, MY_FIELD_3)
         """
-        return ''
+        return ""
 
     @property
     def table_constraints(self):
@@ -229,7 +222,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         PRIMARY KEY (MY_FIELD, MY_FIELD_2)
         UNIQUE KEY (MY_FIELD_3)
         """
-        return ''
+        return ""
 
     @property
     def do_truncate_table(self):
@@ -247,7 +240,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         if self.prune_table and self.prune_column and self.prune_date:
             return True
         elif self.prune_table or self.prune_column or self.prune_date:
-            raise Exception('override zero or all prune variables')
+            raise Exception("override zero or all prune variables")
         else:
             return False
 
@@ -256,7 +249,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         Return table type (i.e. 'temp').
         """
-        return ''
+        return ""
 
     @property
     def queries(self):
@@ -285,10 +278,10 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         Will create the schema in the database
         """
-        if '.' not in self.table:
+        if "." not in self.table:
             return
 
-        query = 'CREATE SCHEMA IF NOT EXISTS {schema_name};'.format(schema_name=self.table.split('.')[0])
+        query = "CREATE SCHEMA IF NOT EXISTS {schema_name};".format(schema_name=self.table.split(".")[0])
         connection.cursor().execute(query)
 
     def create_table(self, connection):
@@ -304,58 +297,36 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         if len(self.columns[0]) == 1:
             # only names of columns specified, no types
-            raise NotImplementedError("create_table() not implemented "
-                                      "for %r and columns types not "
-                                      "specified" % self.table)
+            raise NotImplementedError("create_table() not implemented for %r and columns types not specified" % self.table)
         elif len(self.columns[0]) == 2:
             # if columns is specified as (name, type) tuples
-            coldefs = ','.join(
-                '{name} {type}'.format(
-                    name=name,
-                    type=type) for name, type in self.columns
+            coldefs = ",".join("{name} {type}".format(name=name, type=type) for name, type in self.columns)
+
+            table_constraints = ""
+            if self.table_constraints != "":
+                table_constraints = ", " + self.table_constraints
+
+            query = ("CREATE {type} TABLE {table} ({coldefs} {table_constraints}) {table_attributes}").format(
+                type=self.table_type, table=self.table, coldefs=coldefs, table_constraints=table_constraints, table_attributes=self.table_attributes
             )
-
-            table_constraints = ''
-            if self.table_constraints != '':
-                table_constraints = ', ' + self.table_constraints
-
-            query = ("CREATE {type} TABLE "
-                     "{table} ({coldefs} {table_constraints}) "
-                     "{table_attributes}").format(
-                type=self.table_type,
-                table=self.table,
-                coldefs=coldefs,
-                table_constraints=table_constraints,
-                table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
         elif len(self.columns[0]) == 3:
             # if columns is specified as (name, type, encoding) tuples
             # possible column encodings: https://docs.aws.amazon.com/redshift/latest/dg/c_Compression_encodings.html
-            coldefs = ','.join(
-                '{name} {type} ENCODE {encoding}'.format(
-                    name=name,
-                    type=type,
-                    encoding=encoding) for name, type, encoding in self.columns
+            coldefs = ",".join("{name} {type} ENCODE {encoding}".format(name=name, type=type, encoding=encoding) for name, type, encoding in self.columns)
+
+            table_constraints = ""
+            if self.table_constraints != "":
+                table_constraints = "," + self.table_constraints
+
+            query = ("CREATE {type} TABLE {table} ({coldefs} {table_constraints}) {table_attributes}").format(
+                type=self.table_type, table=self.table, coldefs=coldefs, table_constraints=table_constraints, table_attributes=self.table_attributes
             )
-
-            table_constraints = ''
-            if self.table_constraints != '':
-                table_constraints = ',' + self.table_constraints
-
-            query = ("CREATE {type} TABLE "
-                     "{table} ({coldefs} {table_constraints}) "
-                     "{table_attributes}").format(
-                type=self.table_type,
-                table=self.table,
-                coldefs=coldefs,
-                table_constraints=table_constraints,
-                table_attributes=self.table_attributes)
 
             connection.cursor().execute(query)
         else:
-            raise ValueError("create_table() found no columns for %r"
-                             % self.table)
+            raise ValueError("create_table() found no columns for %r" % self.table)
 
     def run(self):
         """
@@ -391,21 +362,17 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         If both key-based and role-based credentials are provided, role-based will be used.
         """
         logger.info("Inserting file: %s", f)
-        colnames = ''
+        colnames = ""
         if self.columns and len(self.columns) > 0:
             colnames = ",".join([x[0] for x in self.columns])
-            colnames = '({})'.format(colnames)
+            colnames = "({})".format(colnames)
 
-        cursor.execute("""
+        cursor.execute(
+            """
          COPY {table} {colnames} from '{source}'
          CREDENTIALS '{creds}'
          {options}
-         ;""".format(
-            table=self.table,
-            colnames=colnames,
-            source=f,
-            creds=self._credentials(),
-            options=self.copy_options)
+         ;""".format(table=self.table, colnames=colnames, source=f, creds=self._credentials(), options=self.copy_options)
         )
 
     def output(self):
@@ -414,29 +381,21 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
 
         Normally you don't override this.
         """
-        return RedshiftTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.table,
-            update_id=self.update_id)
+        return RedshiftTarget(host=self.host, database=self.database, user=self.user, password=self.password, table=self.table, update_id=self.update_id)
 
     def does_schema_exist(self, connection):
         """
         Determine whether the schema already exists.
         """
 
-        if '.' in self.table:
-            query = ("select 1 as schema_exists "
-                     "from pg_namespace "
-                     "where nspname = lower(%s) limit 1")
+        if "." in self.table:
+            query = "select 1 as schema_exists from pg_namespace where nspname = lower(%s) limit 1"
         else:
             return True
 
         cursor = connection.cursor()
         try:
-            schema = self.table.split('.')[0]
+            schema = self.table.split(".")[0]
             cursor.execute(query, [schema])
             result = cursor.fetchone()
             return bool(result)
@@ -448,17 +407,13 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         Determine whether the table already exists.
         """
 
-        if '.' in self.table:
-            query = ("select 1 as table_exists "
-                     "from information_schema.tables "
-                     "where table_schema = lower(%s) and table_name = lower(%s) limit 1")
+        if "." in self.table:
+            query = "select 1 as table_exists from information_schema.tables where table_schema = lower(%s) and table_name = lower(%s) limit 1"
         else:
-            query = ("select 1 as table_exists "
-                     "from pg_table_def "
-                     "where tablename = lower(%s) limit 1")
+            query = "select 1 as table_exists from pg_table_def where tablename = lower(%s) limit 1"
         cursor = connection.cursor()
         try:
-            cursor.execute(query, tuple(self.table.split('.')))
+            cursor.execute(query, tuple(self.table.split(".")))
             result = cursor.fetchone()
             return bool(result)
         finally:
@@ -491,7 +446,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         Performs post-copy sql - such as cleansing data, inserting into production table (if copied to temp table), etc.
         """
-        logger.info('Executing post copy queries')
+        logger.info("Executing post copy queries")
         for query in self.queries:
             cursor.execute(query)
 
@@ -499,7 +454,7 @@ class S3CopyToTable(rdbms.CopyToTable, _CredentialsMixin):
         """
         Performs post-copy to fill metadata columns.
         """
-        logger.info('Executing post copy metadata queries')
+        logger.info("Executing post copy metadata queries")
         for query in self.metadata_queries:
             cursor.execute(query)
 
@@ -533,7 +488,7 @@ class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
         """
         Override the jsonpath schema location for the table.
         """
-        return ''
+        return ""
 
     @property
     @abc.abstractmethod
@@ -544,7 +499,7 @@ class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
         * GZIP
         * LZOP
         """
-        return ''
+        return ""
 
     def copy(self, cursor, f):
         """
@@ -552,13 +507,15 @@ class S3CopyJSONToTable(S3CopyToTable, _CredentialsMixin):
         """
 
         logger.info("Inserting file: %s", f)
-        cursor.execute("""
+        cursor.execute(
+            """
          COPY %s from '%s'
          CREDENTIALS '%s'
          JSON AS '%s' %s
          %s
-         ;""" % (self.table, f, self._credentials(),
-                 self.jsonpath, self.copy_json_options, self.copy_options))
+         ;"""
+            % (self.table, f, self._credentials(), self.jsonpath, self.copy_json_options, self.copy_options)
+        )
 
 
 class RedshiftManifestTask(S3PathTask):
@@ -594,15 +551,12 @@ class RedshiftManifestTask(S3PathTask):
             s3 = S3Target(folder_path)
             client = s3.fs
             for file_name in client.list(s3.path):
-                entries.append({
-                    'url': '%s/%s' % (folder_path, file_name),
-                    'mandatory': True
-                })
-        manifest = {'entries': entries}
-        target = self.output().open('w')
+                entries.append({"url": "%s/%s" % (folder_path, file_name), "mandatory": True})
+        manifest = {"entries": entries}
+        target = self.output().open("w")
         dump = json.dumps(manifest)
         if not self.text_target:
-            dump = dump.encode('utf8')
+            dump = dump.encode("utf8")
         target.write(dump)
         target.close()
 
@@ -661,12 +615,8 @@ class KillOpenRedshiftSessions(luigi.Task):
         """
         # uses class name as a meta-table
         return RedshiftTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.__class__.__name__,
-            update_id=self.update_id)
+            host=self.host, database=self.database, user=self.user, password=self.password, table=self.__class__.__name__, update_id=self.update_id
+        )
 
     def run(self):
         """
@@ -675,26 +625,22 @@ class KillOpenRedshiftSessions(luigi.Task):
         connection = self.output().connect()
         # kill any sessions other than ours and
         # internal Redshift sessions (rdsdb)
-        query = ("select pg_terminate_backend(process) "
-                 "from STV_SESSIONS "
-                 "where db_name=%s "
-                 "and user_name != 'rdsdb' "
-                 "and process != pg_backend_pid()")
+        query = "select pg_terminate_backend(process) from STV_SESSIONS where db_name=%s and user_name != 'rdsdb' and process != pg_backend_pid()"
         cursor = connection.cursor()
-        logger.info('Killing all open Redshift sessions for database: %s', self.database)
+        logger.info("Killing all open Redshift sessions for database: %s", self.database)
         try:
             cursor.execute(query, (self.database,))
             cursor.close()
             connection.commit()
         except psycopg2.DatabaseError as e:
-            if e.message and 'EOF' in e.message:
+            if e.message and "EOF" in e.message:
                 # sometimes this operation kills the current session.
                 # rebuild the connection. Need to pause for 30-60 seconds
                 # before Redshift will allow us back in.
                 connection.close()
-                logger.info('Pausing %s seconds for Redshift to reset connection', self.connection_reset_wait_seconds)
+                logger.info("Pausing %s seconds for Redshift to reset connection", self.connection_reset_wait_seconds)
                 time.sleep(self.connection_reset_wait_seconds)
-                logger.info('Reconnecting to Redshift')
+                logger.info("Reconnecting to Redshift")
                 connection = self.output().connect()
             else:
                 raise
@@ -705,7 +651,7 @@ class KillOpenRedshiftSessions(luigi.Task):
         finally:
             connection.close()
 
-        logger.info('Done killing all open Redshift sessions for database: %s', self.database)
+        logger.info("Done killing all open Redshift sessions for database: %s", self.database)
 
 
 class RedshiftQuery(postgres.PostgresQuery):
@@ -728,14 +674,7 @@ class RedshiftQuery(postgres.PostgresQuery):
 
         Normally you don't override this.
         """
-        return RedshiftTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.table,
-            update_id=self.update_id
-        )
+        return RedshiftTarget(host=self.host, database=self.database, user=self.user, password=self.password, table=self.table, update_id=self.update_id)
 
 
 class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
@@ -756,7 +695,7 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
         """
         Override to return the load path.
         """
-        return ''
+        return ""
 
     @property
     def unload_options(self):
@@ -770,21 +709,17 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
         """
         Default UNLOAD command
         """
-        return ("UNLOAD ( '{query}' ) TO '{s3_unload_path}' "
-                "credentials '{credentials}' "
-                "{unload_options};")
+        return "UNLOAD ( '{query}' ) TO '{s3_unload_path}' credentials '{credentials}' {unload_options};"
 
     def run(self):
         connection = self.output().connect()
         cursor = connection.cursor()
 
         unload_query = self.unload_query.format(
-            query=self.query().replace("'", r"\'"),
-            s3_unload_path=self.s3_unload_path,
-            unload_options=self.unload_options,
-            credentials=self._credentials())
+            query=self.query().replace("'", r"\'"), s3_unload_path=self.s3_unload_path, unload_options=self.unload_options, credentials=self._credentials()
+        )
 
-        logger.info('Executing unload query from task: {name}'.format(name=self.__class__))
+        logger.info("Executing unload query from task: {name}".format(name=self.__class__))
 
         cursor = connection.cursor()
         cursor.execute(unload_query)
@@ -802,11 +737,4 @@ class RedshiftUnloadTask(postgres.PostgresQuery, _CredentialsMixin):
 
         Normally you don't override this.
         """
-        return RedshiftTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.table,
-            update_id=self.update_id
-        )
+        return RedshiftTarget(host=self.host, database=self.database, user=self.user, password=self.password, table=self.table, update_id=self.update_id)

@@ -16,22 +16,21 @@
 #
 
 import collections
+import importlib
+import inspect
 import logging
 import os
-import re
-import sys
-import tempfile
-import shutil
-import importlib
-import tarfile
-import inspect
-
 import pickle
+import re
+import shutil
+import sys
+import tarfile
+import tempfile
 
-from luigi.contrib.external_program import ExternalProgramTask
 from luigi import configuration
+from luigi.contrib.external_program import ExternalProgramTask
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class SparkSubmitTask(ExternalProgramTask):
@@ -54,7 +53,7 @@ class SparkSubmitTask(ExternalProgramTask):
     always_log_stderr = False
 
     # Spark applications write its logs into stderr
-    stream_for_searching_tracking_url = 'stderr'
+    stream_for_searching_tracking_url = "stderr"
 
     @property
     def tracking_url_pattern(self):
@@ -89,7 +88,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     @property
     def spark_submit(self):
-        return configuration.get_config().get(self.spark_version, 'spark-submit', 'spark-submit')
+        return configuration.get_config().get(self.spark_version, "spark-submit", "spark-submit")
 
     @property
     def master(self):
@@ -105,13 +104,11 @@ class SparkSubmitTask(ExternalProgramTask):
 
     @property
     def packages(self):
-        return self._list_config(configuration.get_config().get(
-            self.spark_version, "packages", None))
+        return self._list_config(configuration.get_config().get(self.spark_version, "packages", None))
 
     @property
     def py_files(self):
-        return self._list_config(configuration.get_config().get(
-            self.spark_version, "py-files", None))
+        return self._list_config(configuration.get_config().get(self.spark_version, "py-files", None))
 
     @property
     def files(self):
@@ -121,9 +118,9 @@ class SparkSubmitTask(ExternalProgramTask):
     def _conf(self):
         conf = collections.OrderedDict(self.conf or {})
         if self.pyspark_python:
-            conf['spark.pyspark.python'] = self.pyspark_python
+            conf["spark.pyspark.python"] = self.pyspark_python
         if self.pyspark_driver_python:
-            conf['spark.pyspark.driver.python'] = self.pyspark_driver_python
+            conf["spark.pyspark.driver.python"] = self.pyspark_driver_python
         return conf
 
     @property
@@ -180,8 +177,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     @property
     def archives(self):
-        return self._list_config(configuration.get_config().get(
-            self.spark_version, "archives", None))
+        return self._list_config(configuration.get_config().get(self.spark_version, "archives", None))
 
     @property
     def hadoop_conf_dir(self):
@@ -189,7 +185,7 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def get_environment(self):
         env = os.environ.copy()
-        for prop in ('HADOOP_CONF_DIR', 'HADOOP_USER_NAME'):
+        for prop in ("HADOOP_CONF_DIR", "HADOOP_USER_NAME"):
             var = getattr(self, prop.lower(), None)
             if var:
                 env[prop] = var
@@ -203,28 +199,28 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def spark_command(self):
         command = [self.spark_submit]
-        command += self._text_arg('--master', self.master)
-        command += self._text_arg('--deploy-mode', self.deploy_mode)
-        command += self._text_arg('--name', self.name)
-        command += self._text_arg('--class', self.entry_class)
-        command += self._list_arg('--jars', self.jars)
-        command += self._list_arg('--packages', self.packages)
-        command += self._list_arg('--py-files', self.py_files)
-        command += self._list_arg('--files', self.files)
-        command += self._list_arg('--archives', self.archives)
-        command += self._dict_arg('--conf', self._conf)
-        command += self._text_arg('--properties-file', self.properties_file)
-        command += self._text_arg('--driver-memory', self.driver_memory)
-        command += self._text_arg('--driver-java-options', self.driver_java_options)
-        command += self._text_arg('--driver-library-path', self.driver_library_path)
-        command += self._text_arg('--driver-class-path', self.driver_class_path)
-        command += self._text_arg('--executor-memory', self.executor_memory)
-        command += self._text_arg('--driver-cores', self.driver_cores)
-        command += self._flag_arg('--supervise', self.supervise)
-        command += self._text_arg('--total-executor-cores', self.total_executor_cores)
-        command += self._text_arg('--executor-cores', self.executor_cores)
-        command += self._text_arg('--queue', self.queue)
-        command += self._text_arg('--num-executors', self.num_executors)
+        command += self._text_arg("--master", self.master)
+        command += self._text_arg("--deploy-mode", self.deploy_mode)
+        command += self._text_arg("--name", self.name)
+        command += self._text_arg("--class", self.entry_class)
+        command += self._list_arg("--jars", self.jars)
+        command += self._list_arg("--packages", self.packages)
+        command += self._list_arg("--py-files", self.py_files)
+        command += self._list_arg("--files", self.files)
+        command += self._list_arg("--archives", self.archives)
+        command += self._dict_arg("--conf", self._conf)
+        command += self._text_arg("--properties-file", self.properties_file)
+        command += self._text_arg("--driver-memory", self.driver_memory)
+        command += self._text_arg("--driver-java-options", self.driver_java_options)
+        command += self._text_arg("--driver-library-path", self.driver_library_path)
+        command += self._text_arg("--driver-class-path", self.driver_class_path)
+        command += self._text_arg("--executor-memory", self.executor_memory)
+        command += self._text_arg("--driver-cores", self.driver_cores)
+        command += self._flag_arg("--supervise", self.supervise)
+        command += self._text_arg("--total-executor-cores", self.total_executor_cores)
+        command += self._text_arg("--executor-cores", self.executor_cores)
+        command += self._text_arg("--queue", self.queue)
+        command += self._text_arg("--num-executors", self.num_executors)
         return command
 
     def app_command(self):
@@ -234,11 +230,11 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def _list_config(self, config):
         if config and isinstance(config, str):
-            return list(map(lambda x: x.strip(), config.split(',')))
+            return list(map(lambda x: x.strip(), config.split(",")))
 
     def _dict_config(self, config):
         if config and isinstance(config, str):
-            return dict(map(lambda i: i.split('=', 1), config.split('|')))
+            return dict(map(lambda i: i.split("=", 1), config.split("|")))
 
     def _text_arg(self, name, value):
         if value:
@@ -247,14 +243,14 @@ class SparkSubmitTask(ExternalProgramTask):
 
     def _list_arg(self, name, value):
         if value and isinstance(value, (list, tuple)):
-            return [name, ','.join(value)]
+            return [name, ",".join(value)]
         return []
 
     def _dict_arg(self, name, value):
         command = []
         if value and isinstance(value, dict):
             for prop, value in value.items():
-                command += [name, '{0}={1}'.format(prop, value)]
+                command += [name, "{0}={1}".format(prop, value)]
         return command
 
     def _flag_arg(self, name, value):
@@ -275,7 +271,7 @@ class PySparkTask(SparkSubmitTask):
     """
 
     # Path to the pyspark program passed to spark-submit
-    app = os.path.join(os.path.dirname(__file__), 'pyspark_runner.py')
+    app = os.path.join(os.path.dirname(__file__), "pyspark_runner.py")
 
     @property
     def name(self):
@@ -283,9 +279,9 @@ class PySparkTask(SparkSubmitTask):
 
     @property
     def py_packages(self):
-        packages = configuration.get_config().get('spark', 'py-packages', None)
+        packages = configuration.get_config().get("spark", "py-packages", None)
         if packages:
-            return map(lambda s: s.strip(), packages.split(','))
+            return map(lambda s: s.strip(), packages.split(","))
 
     @property
     def files(self):
@@ -294,7 +290,7 @@ class PySparkTask(SparkSubmitTask):
 
     @property
     def pickle_protocol(self):
-        return configuration.get_config().getint('spark', 'pickle-protocol', pickle.DEFAULT_PROTOCOL)
+        return configuration.get_config().getint("spark", "pickle-protocol", pickle.DEFAULT_PROTOCOL)
 
     def setup(self, conf):
         """
@@ -323,13 +319,13 @@ class PySparkTask(SparkSubmitTask):
         return [self.app, pickle_loc] + self.app_options()
 
     def run(self):
-        path_name_fragment = re.sub(r'[^\w]', '_', self.name)
+        path_name_fragment = re.sub(r"[^\w]", "_", self.name)
         self.run_path = tempfile.mkdtemp(prefix=path_name_fragment)
-        self.run_pickle = os.path.join(self.run_path, '.'.join([path_name_fragment, 'pickle']))
-        with open(self.run_pickle, 'wb') as fd:
+        self.run_pickle = os.path.join(self.run_path, ".".join([path_name_fragment, "pickle"]))
+        with open(self.run_pickle, "wb") as fd:
             # Copy module file to run path.
             module_path = os.path.abspath(inspect.getfile(self.__class__))
-            shutil.copy(module_path, os.path.join(self.run_path, '.'))
+            shutil.copy(module_path, os.path.join(self.run_path, "."))
             self._dump(fd)
         try:
             super(PySparkTask, self).run()
@@ -338,10 +334,10 @@ class PySparkTask(SparkSubmitTask):
 
     def _dump(self, fd):
         with self.no_unpicklable_properties():
-            if self.__module__ == '__main__':
+            if self.__module__ == "__main__":
                 d = pickle.dumps(self, protocol=self.pickle_protocol)
-                module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
-                d = d.replace(b'c__main__', b'c' + module_name.encode('ascii'))
+                module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
+                d = d.replace(b"c__main__", b"c" + module_name.encode("ascii"))
                 fd.write(d)
             else:
                 pickle.dump(self, fd, protocol=self.pickle_protocol)
@@ -361,7 +357,7 @@ class PySparkTask(SparkSubmitTask):
             except AttributeError:
                 mod_path = mod.__file__
             os.makedirs(self.run_path, exist_ok=True)
-            tar_path = os.path.join(self.run_path, package + '.tar.gz')
+            tar_path = os.path.join(self.run_path, package + ".tar.gz")
             tar = tarfile.open(tar_path, "w:gz")
             tar.add(mod_path, os.path.basename(mod_path))
             tar.close()

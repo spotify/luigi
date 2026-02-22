@@ -51,43 +51,25 @@ import tornado.netutil
 import tornado.web
 
 from luigi import Config, parameter
-from luigi.scheduler import Scheduler, RPC_METHODS
+from luigi.scheduler import RPC_METHODS, Scheduler
 
 logger = logging.getLogger("luigi.server")
 
 
 class cors(Config):
-    enabled = parameter.BoolParameter(
-        default=False,
-        description='Enables CORS support.')
-    allowed_origins = parameter.ListParameter(
-        default=[],
-        description='A list of allowed origins. Used only if `allow_any_origin` is false.')
-    allow_any_origin = parameter.BoolParameter(
-        default=False,
-        description='Accepts requests from any origin.')
-    allow_null_origin = parameter.BoolParameter(
-        default=False,
-        description='Allows the request to set `null` value of the `Origin` header.')
-    max_age = parameter.IntParameter(
-        default=86400,
-        description='Content of `Access-Control-Max-Age`.')
-    allowed_methods = parameter.Parameter(
-        default='GET, OPTIONS',
-        description='Content of `Access-Control-Allow-Methods`.')
-    allowed_headers = parameter.Parameter(
-        default='Accept, Content-Type, Origin',
-        description='Content of `Access-Control-Allow-Headers`.')
-    exposed_headers = parameter.Parameter(
-        default='',
-        description='Content of `Access-Control-Expose-Headers`.')
-    allow_credentials = parameter.BoolParameter(
-        default=False,
-        description='Indicates that the actual request can include user credentials.')
+    enabled = parameter.BoolParameter(default=False, description="Enables CORS support.")
+    allowed_origins = parameter.ListParameter(default=[], description="A list of allowed origins. Used only if `allow_any_origin` is false.")
+    allow_any_origin = parameter.BoolParameter(default=False, description="Accepts requests from any origin.")
+    allow_null_origin = parameter.BoolParameter(default=False, description="Allows the request to set `null` value of the `Origin` header.")
+    max_age = parameter.IntParameter(default=86400, description="Content of `Access-Control-Max-Age`.")
+    allowed_methods = parameter.Parameter(default="GET, OPTIONS", description="Content of `Access-Control-Allow-Methods`.")
+    allowed_headers = parameter.Parameter(default="Accept, Content-Type, Origin", description="Content of `Access-Control-Allow-Headers`.")
+    exposed_headers = parameter.Parameter(default="", description="Content of `Access-Control-Expose-Headers`.")
+    allow_credentials = parameter.BoolParameter(default=False, description="Indicates that the actual request can include user credentials.")
 
     def __init__(self, *args, **kwargs):
         super(cors, self).__init__(*args, **kwargs)
-        self.allowed_origins = set(i for i in self.allowed_origins if i not in ['*', 'null'])
+        self.allowed_origins = set(i for i in self.allowed_origins if i not in ["*", "null"])
 
 
 class RPCHandler(tornado.web.RequestHandler):
@@ -113,7 +95,7 @@ class RPCHandler(tornado.web.RequestHandler):
         if method not in RPC_METHODS:
             self.send_error(404)
             return
-        payload = self.get_argument('data', default="{}")
+        payload = self.get_argument("data", default="{}")
         arguments = json.loads(payload)
 
         if hasattr(self._scheduler, method):
@@ -129,45 +111,45 @@ class RPCHandler(tornado.web.RequestHandler):
     post = get
 
     def _handle_cors_preflight(self):
-        origin = self.request.headers.get('Origin')
+        origin = self.request.headers.get("Origin")
         if not origin:
             return
 
-        if origin == 'null':
+        if origin == "null":
             if self._cors_config.allow_null_origin:
-                self.set_header('Access-Control-Allow-Origin', 'null')
+                self.set_header("Access-Control-Allow-Origin", "null")
                 self._set_other_cors_headers()
         else:
             if self._cors_config.allow_any_origin:
-                self.set_header('Access-Control-Allow-Origin', '*')
+                self.set_header("Access-Control-Allow-Origin", "*")
                 self._set_other_cors_headers()
             elif origin in self._cors_config.allowed_origins:
-                self.set_header('Access-Control-Allow-Origin', origin)
+                self.set_header("Access-Control-Allow-Origin", origin)
                 self._set_other_cors_headers()
 
     def _handle_cors(self):
-        origin = self.request.headers.get('Origin')
+        origin = self.request.headers.get("Origin")
         if not origin:
             return
 
-        if origin == 'null':
+        if origin == "null":
             if self._cors_config.allow_null_origin:
-                self.set_header('Access-Control-Allow-Origin', 'null')
+                self.set_header("Access-Control-Allow-Origin", "null")
         else:
             if self._cors_config.allow_any_origin:
-                self.set_header('Access-Control-Allow-Origin', '*')
+                self.set_header("Access-Control-Allow-Origin", "*")
             elif origin in self._cors_config.allowed_origins:
-                self.set_header('Access-Control-Allow-Origin', origin)
-                self.set_header('Vary', 'Origin')
+                self.set_header("Access-Control-Allow-Origin", origin)
+                self.set_header("Vary", "Origin")
 
     def _set_other_cors_headers(self):
-        self.set_header('Access-Control-Max-Age', str(self._cors_config.max_age))
-        self.set_header('Access-Control-Allow-Methods', self._cors_config.allowed_methods)
-        self.set_header('Access-Control-Allow-Headers', self._cors_config.allowed_headers)
+        self.set_header("Access-Control-Max-Age", str(self._cors_config.max_age))
+        self.set_header("Access-Control-Allow-Methods", self._cors_config.allowed_methods)
+        self.set_header("Access-Control-Allow-Headers", self._cors_config.allowed_headers)
         if self._cors_config.allow_credentials:
-            self.set_header('Access-Control-Allow-Credentials', 'true')
+            self.set_header("Access-Control-Allow-Credentials", "true")
         if self._cors_config.exposed_headers:
-            self.set_header('Access-Control-Expose-Headers', self._cors_config.exposed_headers)
+            self.set_header("Access-Control-Expose-Headers", self._cors_config.exposed_headers)
 
 
 class BaseTaskHistoryHandler(tornado.web.RequestHandler):
@@ -208,20 +190,24 @@ class SelectedRunHandler(BaseTaskHistoryHandler):
                     statusResults[status] = []
                 # append the id, task_id, ts, y with 0, next_process with null
                 # for the status(running/failed/done) of the selected task
-                statusResults[status].append(({
-                                                  'id': str(task.id), 'task_id': str(task.task_id),
-                                                  'x': from_utc(str(task.ts)), 'y': 0, 'next_process': ''}))
+                statusResults[status].append(({"id": str(task.id), "task_id": str(task.task_id), "x": from_utc(str(task.ts)), "y": 0, "next_process": ""}))
                 # append the id, task_name, task_id, status, datetime, timestamp
                 # for the selected task
-                taskResults.append({
-                    'id': str(task.id), 'taskName': str(name), 'task_id': str(task.task_id),
-                    'status': str(task.event_name), 'datetime': str(task.ts),
-                    'timestamp': from_utc(str(task.ts))})
+                taskResults.append(
+                    {
+                        "id": str(task.id),
+                        "taskName": str(name),
+                        "task_id": str(task.task_id),
+                        "status": str(task.event_name),
+                        "datetime": str(task.ts),
+                        "timestamp": from_utc(str(task.ts)),
+                    }
+                )
         statusResults = json.dumps(statusResults)
         taskResults = json.dumps(taskResults)
         statusResults = tornado.escape.xhtml_unescape(str(statusResults))
         taskResults = tornado.escape.xhtml_unescape(str(taskResults))
-        self.render('history.html', name=name, statusResults=statusResults, taskResults=taskResults)
+        self.render("history.html", name=name, statusResults=statusResults, taskResults=taskResults)
 
 
 def from_utc(utcTime, fmt=None):
@@ -273,7 +259,7 @@ class ByTaskIdHandler(BaseTaskHistoryHandler):
 
 class ByParamsHandler(BaseTaskHistoryHandler):
     def get(self, name):
-        payload = self.get_argument('data', default="{}")
+        payload = self.get_argument("data", default="{}")
         arguments = json.loads(payload)
         with self._scheduler.task_history._session(None) as session:
             tasks = self._scheduler.task_history.find_all_by_parameters(name, session=session, **arguments)
@@ -309,21 +295,22 @@ class MetricsHandler(tornado.web.RequestHandler):
 
 
 def app(scheduler):
-    settings = {"static_path": os.path.join(os.path.dirname(__file__), "static"),
-                "unescape": tornado.escape.xhtml_unescape,
-                "compress_response": True,
-                }
+    settings = {
+        "static_path": os.path.join(os.path.dirname(__file__), "static"),
+        "unescape": tornado.escape.xhtml_unescape,
+        "compress_response": True,
+    }
     handlers = [
-        (r'/api/(.*)', RPCHandler, {"scheduler": scheduler}),
-        (r'/', RootPathHandler, {'scheduler': scheduler}),
-        (r'/tasklist', AllRunHandler, {'scheduler': scheduler}),
-        (r'/tasklist/(.*?)', SelectedRunHandler, {'scheduler': scheduler}),
-        (r'/history', RecentRunHandler, {'scheduler': scheduler}),
-        (r'/history/by_name/(.*?)', ByNameHandler, {'scheduler': scheduler}),
-        (r'/history/by_id/(.*?)', ByIdHandler, {'scheduler': scheduler}),
-        (r'/history/by_task_id/(.*?)', ByTaskIdHandler, {'scheduler': scheduler}),
-        (r'/history/by_params/(.*?)', ByParamsHandler, {'scheduler': scheduler}),
-        (r'/metrics', MetricsHandler, {'scheduler': scheduler})
+        (r"/api/(.*)", RPCHandler, {"scheduler": scheduler}),
+        (r"/", RootPathHandler, {"scheduler": scheduler}),
+        (r"/tasklist", AllRunHandler, {"scheduler": scheduler}),
+        (r"/tasklist/(.*?)", SelectedRunHandler, {"scheduler": scheduler}),
+        (r"/history", RecentRunHandler, {"scheduler": scheduler}),
+        (r"/history/by_name/(.*?)", ByNameHandler, {"scheduler": scheduler}),
+        (r"/history/by_id/(.*?)", ByIdHandler, {"scheduler": scheduler}),
+        (r"/history/by_task_id/(.*?)", ByTaskIdHandler, {"scheduler": scheduler}),
+        (r"/history/by_params/(.*?)", ByParamsHandler, {"scheduler": scheduler}),
+        (r"/metrics", MetricsHandler, {"scheduler": scheduler}),
     ]
     api_app = tornado.web.Application(handlers, **settings)
     return api_app
@@ -375,7 +362,7 @@ def run(api_port=8082, address=None, unix_socket=None, scheduler=None):
 
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
-    if os.name == 'nt':
+    if os.name == "nt":
         signal.signal(signal.SIGBREAK, shutdown_handler)
     else:
         signal.signal(signal.SIGQUIT, shutdown_handler)

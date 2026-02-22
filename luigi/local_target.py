@@ -19,16 +19,16 @@
 :class:`LocalTarget` provides a concrete implementation of a :py:class:`~luigi.target.Target` class that uses files on the local file system
 """
 
+import errno
+import io
 import os
 import random
 import shutil
 import tempfile
-import io
 import warnings
-import errno
 
 from luigi.format import FileWrapper, get_default_format
-from luigi.target import FileAlreadyExists, MissingParentDirectory, NotADirectory, FileSystem, FileSystemTarget, AtomicLocalFile
+from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemTarget, MissingParentDirectory, NotADirectory
 
 
 class atomic_file(AtomicLocalFile):
@@ -40,7 +40,7 @@ class atomic_file(AtomicLocalFile):
         os.replace(self.tmp_path, self.path)
 
     def generate_tmp_path(self, path):
-        return path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
+        return path + "-luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
 
 
 class LocalFileSystem(FileSystem):
@@ -52,7 +52,7 @@ class LocalFileSystem(FileSystem):
 
     def copy(self, old_path, new_path, raise_if_exists=False):
         if raise_if_exists and os.path.exists(new_path):
-            raise RuntimeError('Destination exists: %s' % new_path)
+            raise RuntimeError("Destination exists: %s" % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
             self.mkdir(d)
@@ -104,7 +104,7 @@ class LocalFileSystem(FileSystem):
         but cannot be guaranteed.
         """
         if raise_if_exists and os.path.exists(new_path):
-            raise FileAlreadyExists('Destination exists: %s' % new_path)
+            raise FileAlreadyExists("Destination exists: %s" % new_path)
         d = os.path.dirname(new_path)
         if d and not os.path.exists(d):
             self.mkdir(d)
@@ -112,7 +112,7 @@ class LocalFileSystem(FileSystem):
             os.replace(old_path, new_path)
         except OSError as err:
             if err.errno == errno.EXDEV:
-                new_path_tmp = '%s-%09d' % (new_path, random.randint(0, 999999999))
+                new_path_tmp = "%s-%09d" % (new_path, random.randint(0, 999999999))
                 shutil.copy(old_path, new_path_tmp)
                 os.replace(new_path_tmp, new_path)
                 os.remove(old_path)
@@ -137,8 +137,8 @@ class LocalTarget(FileSystemTarget):
 
         if not path:
             if not is_tmp:
-                raise Exception('path or is_tmp must be set')
-            path = os.path.join(tempfile.gettempdir(), 'luigi-tmp-%09d' % random.randint(0, 999999999))
+                raise Exception("path or is_tmp must be set")
+            path = os.path.join(tempfile.gettempdir(), "luigi-tmp-%09d" % random.randint(0, 999999999))
         super(LocalTarget, self).__init__(path)
         self.format = format
         self.is_tmp = is_tmp
@@ -155,13 +155,13 @@ class LocalTarget(FileSystemTarget):
             except OSError:
                 pass
 
-    def open(self, mode='r'):
-        rwmode = mode.replace('b', '').replace('t', '')
-        if rwmode == 'w':
+    def open(self, mode="r"):
+        rwmode = mode.replace("b", "").replace("t", "")
+        if rwmode == "w":
             self.makedirs()
             return self.format.pipe_writer(atomic_file(self.path))
 
-        elif rwmode == 'r':
+        elif rwmode == "r":
             fileobj = FileWrapper(io.BufferedReader(io.FileIO(self.path, mode)))
             return self.format.pipe_reader(fileobj)
 

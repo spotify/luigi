@@ -25,13 +25,14 @@ We use the hypothesis package to do property-based tests.
 
 """
 
-import string
-import luigi
 import json
+import string
 from datetime import datetime
 
 import hypothesis as hyp
 from hypothesis.strategies import datetimes as hyp_datetimes
+
+import luigi
 
 _no_value = luigi.parameter._no_value
 
@@ -44,13 +45,11 @@ def _mk_param_strategy(param_cls, param_value_strat, with_default=None):
     else:
         default = hyp.strategies.just(_no_value)
 
-    return hyp.strategies.builds(param_cls,
-                                 description=hyp.strategies.text(alphabet=string.printable),
-                                 default=default)
+    return hyp.strategies.builds(param_cls, description=hyp.strategies.text(alphabet=string.printable), default=default)
 
 
 def _mk_task(name, params):
-    return type(name, (luigi.Task, ), params)
+    return type(name, (luigi.Task,), params)
 
 
 # identifiers must be str not unicode in Python2
@@ -60,21 +59,14 @@ text = hyp.strategies.text(alphabet=string.printable)
 # Luigi parameters with a default
 parameters_def = _mk_param_strategy(luigi.Parameter, text, True)
 int_parameters_def = _mk_param_strategy(luigi.IntParameter, hyp.strategies.integers(), True)
-float_parameters_def = _mk_param_strategy(luigi.FloatParameter,
-                                          hyp.strategies.floats(min_value=-1e100, max_value=+1e100), True)
+float_parameters_def = _mk_param_strategy(luigi.FloatParameter, hyp.strategies.floats(min_value=-1e100, max_value=+1e100), True)
 bool_parameters_def = _mk_param_strategy(luigi.BoolParameter, hyp.strategies.booleans(), True)
 date_parameters_def = _mk_param_strategy(luigi.DateParameter, hyp_datetimes(min_value=datetime(1900, 1, 1)), True)
 
-any_default_parameters = hyp.strategies.one_of(
-    parameters_def, int_parameters_def, float_parameters_def, bool_parameters_def, date_parameters_def
-)
+any_default_parameters = hyp.strategies.one_of(parameters_def, int_parameters_def, float_parameters_def, bool_parameters_def, date_parameters_def)
 
 # Tasks with up to 3 random parameters
-tasks_with_defaults = hyp.strategies.builds(
-    _mk_task,
-    name=identifiers,
-    params=hyp.strategies.dictionaries(identifiers, any_default_parameters, max_size=3)
-)
+tasks_with_defaults = hyp.strategies.builds(_mk_task, name=identifiers, params=hyp.strategies.dictionaries(identifiers, any_default_parameters, max_size=3))
 
 
 def _task_to_dict(task):
@@ -121,8 +113,9 @@ def test_json_serializable(task_cls):
 def test_task_id_alphanumeric(task_cls):
     task = task_cls()
     task_id = task.task_id
-    valid = string.ascii_letters + string.digits + '_'
+    valid = string.ascii_letters + string.digits + "_"
 
     assert [x for x in task_id if x not in valid] == []
+
 
 # TODO : significant an non-significant parameters

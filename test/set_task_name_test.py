@@ -29,16 +29,15 @@ def create_class(cls_name):
     return NewTask
 
 
-create_class('MyNewTask')
+create_class("MyNewTask")
 
 
 class SetTaskNameTest(unittest.TestCase):
-
-    ''' I accidentally introduced an issue in this commit:
+    """I accidentally introduced an issue in this commit:
     https://github.com/spotify/luigi/commit/6330e9d0332e6152996292a39c42f752b9288c96
 
     This causes tasks not to get exposed if they change name later. Adding a unit test
-    to resolve the issue. '''
+    to resolve the issue."""
 
     def test_set_task_name(self):
-        luigi.run(['--local-scheduler', '--no-lock', 'MyNewTask'])
+        luigi.run(["--local-scheduler", "--no-lock", "MyNewTask"])

@@ -26,139 +26,126 @@ import pytest
 from mock.mock import MagicMock
 
 from luigi.contrib import bigquery
-from luigi.contrib.bigquery import BigQueryLoadTask, BigQueryTarget, BQDataset, \
-    BigQueryRunQueryTask, BigQueryExtractTask, BigQueryClient
+from luigi.contrib.bigquery import BigQueryClient, BigQueryExtractTask, BigQueryLoadTask, BigQueryRunQueryTask, BigQueryTarget, BQDataset
 from luigi.contrib.gcs import GCSTarget
 
 
 @pytest.mark.gcloud
 class BigQueryLoadTaskTest(unittest.TestCase):
-
-    @mock.patch('luigi.contrib.bigquery.BigQueryClient.run_job')
+    @mock.patch("luigi.contrib.bigquery.BigQueryClient.run_job")
     def test_configure_job(self, run_job):
         class MyBigQueryLoadTask(BigQueryLoadTask):
             def source_uris(self):
-                return ['gs://_']
+                return ["gs://_"]
 
             def configure_job(self, configuration):
-                configuration['load']['destinationTableProperties'] = {
-                    'description': 'Nice table'
-                }
+                configuration["load"]["destinationTableProperties"] = {"description": "Nice table"}
                 return configuration
 
             def output(self):
-                return BigQueryTarget(project_id='proj', dataset_id='ds', table_id='t')
+                return BigQueryTarget(project_id="proj", dataset_id="ds", table_id="t")
 
         job = MyBigQueryLoadTask()
         job.run()
 
         expected_body = {
-            'configuration': {
-                'load': {
-                    'destinationTable': {'projectId': 'proj', 'datasetId': 'ds', 'tableId': 't'},
-                    'encoding': 'UTF-8',
-                    'sourceFormat': 'NEWLINE_DELIMITED_JSON',
-                    'writeDisposition': 'WRITE_EMPTY',
-                    'sourceUris': ['gs://_'],
-                    'maxBadRecords': 0,
-                    'ignoreUnknownValues': False,
-                    'autodetect': True,
-                    'destinationTableProperties': {'description': 'Nice table'}
+            "configuration": {
+                "load": {
+                    "destinationTable": {"projectId": "proj", "datasetId": "ds", "tableId": "t"},
+                    "encoding": "UTF-8",
+                    "sourceFormat": "NEWLINE_DELIMITED_JSON",
+                    "writeDisposition": "WRITE_EMPTY",
+                    "sourceUris": ["gs://_"],
+                    "maxBadRecords": 0,
+                    "ignoreUnknownValues": False,
+                    "autodetect": True,
+                    "destinationTableProperties": {"description": "Nice table"},
                 }
             }
         }
-        run_job.assert_called_with('proj', expected_body, dataset=BQDataset('proj', 'ds', None))
+        run_job.assert_called_with("proj", expected_body, dataset=BQDataset("proj", "ds", None))
 
 
 @pytest.mark.gcloud
 class BigQueryRunQueryTaskTest(unittest.TestCase):
-    @mock.patch('luigi.contrib.bigquery.BigQueryClient.run_job')
+    @mock.patch("luigi.contrib.bigquery.BigQueryClient.run_job")
     def test_configure_job(self, run_job):
         class MyBigQueryRunQuery(BigQueryRunQueryTask):
-            query = 'SELECT @thing'
+            query = "SELECT @thing"
             use_legacy_sql = False
 
             def configure_job(self, configuration):
-                configuration['query']['parameterMode'] = 'NAMED'
-                configuration['query']['queryParameters'] = {
-                    'name': 'thing',
-                    'parameterType': {'type': 'STRING'},
-                    'parameterValue': {'value': 'Nice Thing'}
-                }
+                configuration["query"]["parameterMode"] = "NAMED"
+                configuration["query"]["queryParameters"] = {"name": "thing", "parameterType": {"type": "STRING"}, "parameterValue": {"value": "Nice Thing"}}
                 return configuration
 
             def output(self):
-                return BigQueryTarget(project_id='proj', dataset_id='ds', table_id='t')
+                return BigQueryTarget(project_id="proj", dataset_id="ds", table_id="t")
 
         job = MyBigQueryRunQuery()
         job.run()
 
         expected_body = {
-            'configuration': {
-                'query': {
-                    'query': 'SELECT @thing',
-                    'priority': 'INTERACTIVE',
-                    'destinationTable': {'projectId': 'proj', 'datasetId': 'ds', 'tableId': 't'},
-                    'allowLargeResults': True,
-                    'createDisposition': 'CREATE_IF_NEEDED',
-                    'writeDisposition': 'WRITE_TRUNCATE',
-                    'flattenResults': True,
-                    'userDefinedFunctionResources': [],
-                    'useLegacySql': False,
-                    'parameterMode': 'NAMED',
-                    'queryParameters': {
-                        'name': 'thing',
-                        'parameterType': {'type': 'STRING'},
-                        'parameterValue': {'value': 'Nice Thing'}
-                    }
+            "configuration": {
+                "query": {
+                    "query": "SELECT @thing",
+                    "priority": "INTERACTIVE",
+                    "destinationTable": {"projectId": "proj", "datasetId": "ds", "tableId": "t"},
+                    "allowLargeResults": True,
+                    "createDisposition": "CREATE_IF_NEEDED",
+                    "writeDisposition": "WRITE_TRUNCATE",
+                    "flattenResults": True,
+                    "userDefinedFunctionResources": [],
+                    "useLegacySql": False,
+                    "parameterMode": "NAMED",
+                    "queryParameters": {"name": "thing", "parameterType": {"type": "STRING"}, "parameterValue": {"value": "Nice Thing"}},
                 }
             }
         }
-        run_job.assert_called_with('proj', expected_body, dataset=BQDataset('proj', 'ds', None))
+        run_job.assert_called_with("proj", expected_body, dataset=BQDataset("proj", "ds", None))
 
 
 @pytest.mark.gcloud
 class BigQueryExtractTaskTest(unittest.TestCase):
-    @mock.patch('luigi.contrib.bigquery.BigQueryClient.run_job')
+    @mock.patch("luigi.contrib.bigquery.BigQueryClient.run_job")
     def test_configure_job(self, run_job):
         class MyBigQueryExtractTask(BigQueryExtractTask):
-            destination_format = 'AVRO'
+            destination_format = "AVRO"
 
             def configure_job(self, configuration):
-                configuration['extract']['useAvroLogicalTypes'] = True
+                configuration["extract"]["useAvroLogicalTypes"] = True
                 return configuration
 
             def input(self):
-                return BigQueryTarget(project_id='proj', dataset_id='ds', table_id='t')
+                return BigQueryTarget(project_id="proj", dataset_id="ds", table_id="t")
 
             def output(self):
-                return GCSTarget('gs://_')
+                return GCSTarget("gs://_")
 
         job = MyBigQueryExtractTask()
         job.run()
 
         expected_body = {
-            'configuration': {
-                'extract': {
-                    'sourceTable': {'projectId': 'proj', 'datasetId': 'ds', 'tableId': 't'},
-                    'destinationUris': ['gs://_'],
-                    'destinationFormat': 'AVRO',
-                    'compression': 'NONE',
-                    'useAvroLogicalTypes': True
+            "configuration": {
+                "extract": {
+                    "sourceTable": {"projectId": "proj", "datasetId": "ds", "tableId": "t"},
+                    "destinationUris": ["gs://_"],
+                    "destinationFormat": "AVRO",
+                    "compression": "NONE",
+                    "useAvroLogicalTypes": True,
                 }
             }
         }
-        run_job.assert_called_with('proj', expected_body, dataset=BQDataset('proj', 'ds', None))
+        run_job.assert_called_with("proj", expected_body, dataset=BQDataset("proj", "ds", None))
 
 
 @pytest.mark.gcloud
 class BigQueryClientTest(unittest.TestCase):
-
     def test_retry_succeeds_on_second_attempt(self):
         try:
             from googleapiclient import errors
         except ImportError:
-            raise unittest.SkipTest('Unable to load googleapiclient module')
+            raise unittest.SkipTest("Unable to load googleapiclient module")
         client = MagicMock(spec=BigQueryClient)
         attempts = 0
 

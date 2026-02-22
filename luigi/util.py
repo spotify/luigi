@@ -220,11 +220,9 @@ time. Brilliant!
 import datetime
 import logging
 
-from luigi import task
-from luigi import parameter
+from luigi import parameter, task
 
-
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 def common_params(task_instance, task_cls):
@@ -302,23 +300,21 @@ class inherits:
 
         # Handle unnamed tasks as a list, named as a dictionary
         if self.tasks_to_inherit:
+
             def clone_parent(_self, **kwargs):
                 return _self.clone(cls=self.tasks_to_inherit[0], **kwargs)
+
             task_that_inherits.clone_parent = clone_parent
 
             def clone_parents(_self, **kwargs):
-                return [
-                    _self.clone(cls=task_to_inherit, **kwargs)
-                    for task_to_inherit in self.tasks_to_inherit
-                ]
+                return [_self.clone(cls=task_to_inherit, **kwargs) for task_to_inherit in self.tasks_to_inherit]
+
             task_that_inherits.clone_parents = clone_parents
         elif self.kw_tasks_to_inherit:
             # Even if there is just one named task, return a dictionary
             def clone_parents(_self, **kwargs):
-                return {
-                    task_name: _self.clone(cls=task_to_inherit, **kwargs)
-                    for task_name, task_to_inherit in self.kw_tasks_to_inherit.items()
-                }
+                return {task_name: _self.clone(cls=task_to_inherit, **kwargs) for task_name, task_to_inherit in self.kw_tasks_to_inherit.items()}
+
             task_that_inherits.clone_parents = clone_parents
 
         return task_that_inherits
@@ -346,6 +342,7 @@ class requires:
         # Otherwise, list of tasks is returned
         def requires(_self):
             return _self.clone_parent() if len(self.tasks_to_require) == 1 else _self.clone_parents()
+
         task_that_requires.requires = requires
 
         return task_that_requires
@@ -375,11 +372,10 @@ class copies:
         # Modify task_that_copies by subclassing it and adding methods
         @task._task_wraps(task_that_copies)
         class Wrapped(task_that_copies):
-
             def run(_self):
                 i, o = _self.input(), _self.output()
-                f = o.open('w')  # TODO: assert that i, o are Target objects and not complex datastructures
-                for line in i.open('r'):
+                f = o.open("w")  # TODO: assert that i, o are Target objects and not complex datastructures
+                for line in i.open("r"):
                     f.write(line)
                 f.close()
 
@@ -387,7 +383,7 @@ class copies:
 
 
 def delegates(task_that_delegates):
-    """ Lets a task call methods on subtask(s).
+    """Lets a task call methods on subtask(s).
 
     The way this works is that the subtask is run as a part of the task, but
     the task itself doesn't have to care about the requirements of the subtasks.
@@ -407,7 +403,7 @@ def delegates(task_that_delegates):
             def subtasks(self): return PowersOfN(5)
             def run(self): print self.subtasks().f(42)
     """
-    if not hasattr(task_that_delegates, 'subtasks'):
+    if not hasattr(task_that_delegates, "subtasks"):
         # This method can (optionally) define a couple of delegate tasks that
         # will be accessible as interfaces, meaning that the task can access
         # those tasks and run methods defined on them, etc
@@ -415,7 +411,6 @@ def delegates(task_that_delegates):
 
     @task._task_wraps(task_that_delegates)
     class Wrapped(task_that_delegates):
-
         def deps(self):
             # Overrides method in base class
             return task.flatten(self.requires()) + task.flatten([t.deps() for t in task.flatten(self.subtasks())])

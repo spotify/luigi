@@ -35,20 +35,21 @@ Requires:
 Written and maintained by Andrea Pierleoni (@apierleoni).
 Contributions by Eliseo Papa (@elipapa).
 """
-from tempfile import mkdtemp
-import logging
-import luigi
 
+import logging
+from tempfile import mkdtemp
+
+import luigi
 from luigi.local_target import LocalFileSystem
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import docker
-    from docker.errors import ContainerError, ImageNotFound, APIError
+    from docker.errors import APIError, ContainerError, ImageNotFound
 
 except ImportError:
-    logger.warning('docker is not installed. DockerTask requires docker.')
+    logger.warning("docker is not installed. DockerTask requires docker.")
     docker = None
 
 # TODO: may need to implement this logic for remote hosts
@@ -64,10 +65,9 @@ except ImportError:
 
 
 class DockerTask(luigi.Task):
-
     @property
     def image(self):
-        return 'alpine'
+        return "alpine"
 
     @property
     def command(self):
@@ -79,22 +79,22 @@ class DockerTask(luigi.Task):
 
     @property
     def host_config_options(self):
-        '''
+        """
         Override this to specify host_config options like gpu requests or shm
         size e.g. `{"device_requests": [docker.types.DeviceRequest(count=1, capabilities=[["gpu"]])]}`
 
         See https://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_host_config
-        '''
+        """
         return {}
 
     @property
     def container_options(self):
-        '''
+        """
         Override this to specify container options like user or ports e.g.
         `{"user": f"{os.getuid()}:{os.getgid()}"}`
 
         See https://docker-py.readthedocs.io/en/stable/api.html#docker.api.container.ContainerApiMixin.create_container
-        '''
+        """
         return {}
 
     @property
@@ -103,20 +103,20 @@ class DockerTask(luigi.Task):
 
     @property
     def container_tmp_dir(self):
-        return '/tmp/luigi'
+        return "/tmp/luigi"
 
     @property
     def binds(self):
-        '''
+        """
         Override this to mount local volumes, in addition to the /tmp/luigi
         which gets defined by default. This should return a list of strings.
         e.g. ['/hostpath1:/containerpath1', '/hostpath2:/containerpath2']
-        '''
+        """
         return None
 
     @property
     def network_mode(self):
-        return ''
+        return ""
 
     @property
     def docker_url(self):
@@ -135,42 +135,40 @@ class DockerTask(luigi.Task):
         return True
 
     def __init__(self, *args, **kwargs):
-        '''
+        """
         When a new instance of the DockerTask class gets created:
         - call the parent class __init__ method
         - start the logger
         - init an instance of the docker client
         - create a tmp dir
         - add the temp dir to the volume binds specified in the task
-        '''
+        """
         super(DockerTask, self).__init__(*args, **kwargs)
         self.__logger = logger
 
-        '''init docker client
+        """init docker client
         using the low level API as the higher level API does not allow to mount single
         files as volumes
-        '''
+        """
         self._client = docker.APIClient(self.docker_url)
 
         # add latest tag if nothing else is specified by task
-        if ':' not in self.image:
-            self._image = ':'.join([self.image, 'latest'])
+        if ":" not in self.image:
+            self._image = ":".join([self.image, "latest"])
         else:
             self._image = self.image
 
         if self.mount_tmp:
             # create a tmp_dir, NOTE: /tmp needs to be specified for it to work on
             # macOS, despite what the python documentation says
-            self._host_tmp_dir = mkdtemp(suffix=self.task_id,
-                                         prefix='luigi-docker-tmp-dir-',
-                                         dir='/tmp')
+            self._host_tmp_dir = mkdtemp(suffix=self.task_id, prefix="luigi-docker-tmp-dir-", dir="/tmp")
 
-            self._binds = ['{0}:{1}'.format(self._host_tmp_dir, self.container_tmp_dir)]
+            self._binds = ["{0}:{1}".format(self._host_tmp_dir, self.container_tmp_dir)]
         else:
             self._binds = []
 
         # update environment property with the (internal) location of tmp_dir
-        self.environment['LUIGI_TMP_DIR'] = self.container_tmp_dir
+        self.environment["LUIGI_TMP_DIR"] = self.container_tmp_dir
 
         # add additional volume binds specified by the user to the tmp_Dir bind
         if isinstance(self.binds, str):
@@ -180,16 +178,16 @@ class DockerTask(luigi.Task):
 
         # derive volumes (ie. list of container destination paths) from
         # specified binds
-        self._volumes = [b.split(':')[1] for b in self._binds]
+        self._volumes = [b.split(":")[1] for b in self._binds]
 
     def run(self):
 
         # get image if missing
         if self.force_pull or len(self._client.images(name=self._image)) == 0:
-            logger.info('Pulling docker image ' + self._image)
+            logger.info("Pulling docker image " + self._image)
             try:
                 for logline in self._client.pull(self._image, stream=True):
-                    logger.debug(logline.decode('utf-8'))
+                    logger.debug(logline.decode("utf-8"))
             except APIError as e:
                 self.__logger.warning("Error in Docker API: " + e.explanation)
                 raise
@@ -197,66 +195,60 @@ class DockerTask(luigi.Task):
         # remove clashing container if a container with the same name exists
         if self.auto_remove and self.name:
             try:
-                self._client.remove_container(self.name,
-                                              force=True)
+                self._client.remove_container(self.name, force=True)
             except APIError as e:
                 self.__logger.warning("Ignored error in Docker API: " + e.explanation)
 
         # run the container
         try:
-            logger.debug('Creating image: %s command: %s volumes: %s'
-                         % (self._image, self.command, self._binds))
+            logger.debug("Creating image: %s command: %s volumes: %s" % (self._image, self.command, self._binds))
 
-            host_config = self._client.create_host_config(binds=self._binds,
-                                                          network_mode=self.network_mode,
-                                                          **self.host_config_options)
+            host_config = self._client.create_host_config(binds=self._binds, network_mode=self.network_mode, **self.host_config_options)
 
-            container = self._client.create_container(self._image,
-                                                      command=self.command,
-                                                      name=self.name,
-                                                      environment=self.environment,
-                                                      volumes=self._volumes,
-                                                      host_config=host_config,
-                                                      **self.container_options)
-            self._client.start(container['Id'])
+            container = self._client.create_container(
+                self._image,
+                command=self.command,
+                name=self.name,
+                environment=self.environment,
+                volumes=self._volumes,
+                host_config=host_config,
+                **self.container_options,
+            )
+            self._client.start(container["Id"])
 
-            exit_status = self._client.wait(container['Id'])
+            exit_status = self._client.wait(container["Id"])
             # docker-py>=3.0.0 returns a dict instead of the status code directly
             if type(exit_status) is dict:
-                exit_status = exit_status['StatusCode']
+                exit_status = exit_status["StatusCode"]
 
             if exit_status != 0:
                 stdout = False
                 stderr = True
-                error = self._client.logs(container['Id'],
-                                          stdout=stdout,
-                                          stderr=stderr)
+                error = self._client.logs(container["Id"], stdout=stdout, stderr=stderr)
             if self.auto_remove:
                 try:
-                    self._client.remove_container(container['Id'])
+                    self._client.remove_container(container["Id"])
                 except docker.errors.APIError:
-                    self.__logger.warning("Container " + container['Id'] +
-                                          " could not be removed")
+                    self.__logger.warning("Container " + container["Id"] + " could not be removed")
             if exit_status != 0:
                 raise ContainerError(container, exit_status, self.command, self._image, error)
 
         except ContainerError as e:
             # catch non zero exti status and return it
-            container_name = ''
+            container_name = ""
             if self.name:
                 container_name = self.name
             try:
                 message = e.message
             except AttributeError:
                 message = str(e)
-            self.__logger.error("Container " + container_name +
-                                " exited with non zero code: " + message)
+            self.__logger.error("Container " + container_name + " exited with non zero code: " + message)
             raise
         except ImageNotFound:
             self.__logger.error("Image " + self._image + " not found")
             raise
         except APIError as e:
-            self.__logger.error("Error in Docker API: "+e.explanation)
+            self.__logger.error("Error in Docker API: " + e.explanation)
             raise
 
         # delete temp dir

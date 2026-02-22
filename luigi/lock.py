@@ -24,7 +24,7 @@ import errno
 import hashlib
 import os
 import sys
-from subprocess import Popen, PIPE
+from subprocess import PIPE, Popen
 
 
 def getpcmd(pid):
@@ -35,23 +35,23 @@ def getpcmd(pid):
     """
     if os.name == "nt":
         # Use wmic command instead of ps on Windows.
-        cmd = 'wmic path win32_process where ProcessID=%s get Commandline 2> nul' % (pid, )
-        with os.popen(cmd, 'r') as p:
+        cmd = "wmic path win32_process where ProcessID=%s get Commandline 2> nul" % (pid,)
+        with os.popen(cmd, "r") as p:
             lines = [line for line in p.readlines() if line.strip("\r\n ") != ""]
             if lines:
                 _, val = lines
                 return val
     elif sys.platform == "darwin":
         # Use pgrep instead of /proc on macOS.
-        pidfile = ".%d.pid" % (pid, )
-        with open(pidfile, 'w') as f:
+        pidfile = ".%d.pid" % (pid,)
+        with open(pidfile, "w") as f:
             f.write(str(pid))
         try:
-            p = Popen(['pgrep', '-lf', '-F', pidfile], stdout=PIPE)
+            p = Popen(["pgrep", "-lf", "-F", pidfile], stdout=PIPE)
             stdout, _ = p.communicate()
-            line = stdout.decode('utf8').strip()
+            line = stdout.decode("utf8").strip()
             if line:
-                _, scmd = line.split(' ', 1)
+                _, scmd = line.split(" ", 1)
                 return scmd
         finally:
             os.unlink(pidfile)
@@ -62,15 +62,15 @@ def getpcmd(pid):
         # worked. See the pull request at
         # https://github.com/spotify/luigi/pull/1876
         try:
-            with open('/proc/{0}/cmdline'.format(pid), 'r') as fh:
-                return fh.read().replace('\0', ' ').rstrip()
+            with open("/proc/{0}/cmdline".format(pid), "r") as fh:
+                return fh.read().replace("\0", " ").rstrip()
         except IOError:
             # the system may not allow reading the command line
             # of a process owned by another user
             pass
 
     # Fallback instead of None, for e.g. Cygwin where -o is an "unknown option" for the ps command:
-    return '[PROCESS_WITH_PID={}]'.format(pid)
+    return "[PROCESS_WITH_PID={}]".format(pid)
 
 
 def get_info(pid_dir, my_pid=None):
@@ -79,8 +79,8 @@ def get_info(pid_dir, my_pid=None):
         my_pid = os.getpid()
 
     my_cmd = getpcmd(my_pid)
-    cmd_hash = my_cmd.encode('utf8')
-    pid_file = os.path.join(pid_dir, hashlib.new('md5', cmd_hash, usedforsecurity=False).hexdigest()) + '.pid'
+    cmd_hash = my_cmd.encode("utf8")
+    pid_file = os.path.join(pid_dir, hashlib.new("md5", cmd_hash, usedforsecurity=False).hexdigest()) + ".pid"
 
     return my_pid, my_cmd, pid_file
 
@@ -113,18 +113,16 @@ def acquire_for(pid_dir, num_available=1, kill_signal=None):
     if kill_signal is not None:
         for pid in pids:
             os.kill(pid, kill_signal)
-        print('Sent kill signal to Pids: {}'.format(pids))
+        print("Sent kill signal to Pids: {}".format(pids))
         # We allow for the killer to progress, yet we don't want these to stack
         # up! So we only allow it once.
         num_available += 1
 
     if len(pids) >= num_available:
         # We are already running under a different pid
-        print('Pid(s) {} already running'.format(pids))
+        print("Pid(s) {} already running".format(pids))
         if kill_signal is not None:
-            print('Note: There have (probably) been 1 other "--take-lock"'
-                  ' process which continued to run! Probably no need to run'
-                  ' this one as well.')
+            print('Note: There have (probably) been 1 other "--take-lock" process which continued to run! Probably no need to run this one as well.')
         return False
 
     _write_pids_file(pid_file, pids | {my_pid})
@@ -143,18 +141,18 @@ def _read_pids_file(pid_file):
     # If the file happen to not exist, simply return
     # an empty set()
     try:
-        with open(pid_file, 'r') as f:
+        with open(pid_file, "r") as f:
             return {int(pid_str.strip()) for pid_str in f if pid_str.strip()}
     except FileNotFoundError:
         return set()
 
 
 def _write_pids_file(pid_file, pids_set):
-    with open(pid_file, 'w') as f:
-        f.writelines('{}\n'.format(pid) for pid in pids_set)
+    with open(pid_file, "w") as f:
+        f.writelines("{}\n".format(pid) for pid in pids_set)
 
     # Make the .pid-file writable by all (when the os allows for it)
-    if os.name != 'nt':
+    if os.name != "nt":
         s = os.stat(pid_file)
         if os.getuid() == s.st_uid:
             os.chmod(pid_file, s.st_mode | 0o777)

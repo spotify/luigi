@@ -84,38 +84,33 @@ There are a two luigi `luigi.cfg` configuration options:
 import abc
 import datetime
 import hashlib
+import itertools
 import json
 import logging
-import itertools
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import elasticsearch
+
     if elasticsearch.__version__ < (1, 0, 0):
-        logger.warning("This module works with elasticsearch 1.0.0 "
-                       "or newer only.")
-    from elasticsearch.helpers import bulk
+        logger.warning("This module works with elasticsearch 1.0.0 or newer only.")
     from elasticsearch.connection import Urllib3HttpConnection
+    from elasticsearch.helpers import bulk
 
 except ImportError:
-    logger.warning("Loading esindex module without elasticsearch installed. "
-                   "Will crash at runtime if esindex functionality is used.")
+    logger.warning("Loading esindex module without elasticsearch installed. Will crash at runtime if esindex functionality is used.")
 
 
 class ElasticsearchTarget(luigi.Target):
-    """ Target for a resource in Elasticsearch."""
+    """Target for a resource in Elasticsearch."""
 
-    marker_index = luigi.configuration.get_config().get('elasticsearch',
-                                                        'marker-index', 'update_log')
-    marker_doc_type = luigi.configuration.get_config().get('elasticsearch',
-                                                           'marker-doc-type', 'entry')
+    marker_index = luigi.configuration.get_config().get("elasticsearch", "marker-index", "update_log")
+    marker_doc_type = luigi.configuration.get_config().get("elasticsearch", "marker-doc-type", "entry")
 
-    def __init__(self, host, port, index, doc_type, update_id,
-                 marker_index_hist_size=0, http_auth=None, timeout=10,
-                 extra_elasticsearch_args=None):
+    def __init__(self, host, port, index, doc_type, update_id, marker_index_hist_size=0, http_auth=None, timeout=10, extra_elasticsearch_args=None):
         """
         :param host: Elasticsearch server host
         :type host: str
@@ -153,15 +148,15 @@ class ElasticsearchTarget(luigi.Target):
             port=self.port,
             http_auth=self.http_auth,
             timeout=self.timeout,
-            **self.extra_elasticsearch_args
+            **self.extra_elasticsearch_args,
         )
 
     def marker_index_document_id(self):
         """
         Generate an id for the indicator document.
         """
-        params = '%s:%s:%s' % (self.index, self.doc_type, self.update_id)
-        return hashlib.sha1(params.encode('utf-8')).hexdigest()
+        params = "%s:%s:%s" % (self.index, self.doc_type, self.update_id)
+        return hashlib.sha1(params.encode("utf-8")).hexdigest()
 
     def touch(self):
         """
@@ -172,12 +167,12 @@ class ElasticsearchTarget(luigi.Target):
         we index the parameters `update_id`, `target_index`, `target_doc_type` and `date` as well.
         """
         self.create_marker_index()
-        self.es.index(index=self.marker_index, doc_type=self.marker_doc_type,
-                      id=self.marker_index_document_id(), body={
-                          'update_id': self.update_id,
-                          'target_index': self.index,
-                          'target_doc_type': self.doc_type,
-                          'date': datetime.datetime.now()})
+        self.es.index(
+            index=self.marker_index,
+            doc_type=self.marker_doc_type,
+            id=self.marker_index_document_id(),
+            body={"update_id": self.update_id, "target_index": self.index, "target_doc_type": self.doc_type, "date": datetime.datetime.now()},
+        )
         self.es.indices.flush(index=self.marker_index)
         self.ensure_hist_size()
 
@@ -189,7 +184,7 @@ class ElasticsearchTarget(luigi.Target):
             self.es.get(index=self.marker_index, doc_type=self.marker_doc_type, id=self.marker_index_document_id())
             return True
         except elasticsearch.NotFoundError:
-            logger.debug('Marker document not found.')
+            logger.debug("Marker document not found.")
         except elasticsearch.ElasticsearchException as err:
             logger.warn(err)
         return False
@@ -208,17 +203,14 @@ class ElasticsearchTarget(luigi.Target):
         """
         if self.marker_index_hist_size == 0:
             return
-        result = self.es.search(index=self.marker_index,
-                                doc_type=self.marker_doc_type,
-                                body={'query': {
-                                    'term': {'target_index': self.index}}},
-                                sort=('date:desc',))
+        result = self.es.search(
+            index=self.marker_index, doc_type=self.marker_doc_type, body={"query": {"term": {"target_index": self.index}}}, sort=("date:desc",)
+        )
 
-        for i, hit in enumerate(result.get('hits').get('hits'), start=1):
+        for i, hit in enumerate(result.get("hits").get("hits"), start=1):
             if i > self.marker_index_hist_size:
-                marker_document_id = hit.get('_id')
-                self.es.delete(id=marker_document_id, index=self.marker_index,
-                               doc_type=self.marker_doc_type)
+                marker_document_id = hit.get("_id")
+                self.es.delete(id=marker_document_id, index=self.marker_index, doc_type=self.marker_doc_type)
         self.es.indices.flush(index=self.marker_index)
 
 
@@ -255,7 +247,7 @@ class CopyToIndex(luigi.Task):
         """
         ES hostname.
         """
-        return 'localhost'
+        return "localhost"
 
     @property
     def port(self):
@@ -287,7 +279,7 @@ class CopyToIndex(luigi.Task):
         """
         The target doc_type.
         """
-        return 'default'
+        return "default"
 
     @property
     def mapping(self):
@@ -301,7 +293,7 @@ class CopyToIndex(luigi.Task):
         """
         Settings to be used at index creation time.
         """
-        return {'settings': {}}
+        return {"settings": {}}
 
     @property
     def chunk_size(self):
@@ -351,11 +343,11 @@ class CopyToIndex(luigi.Task):
 
         Beside the user defined fields, the document may contain an `_index`, `_type` and `_id`.
         """
-        with self.input().open('r') as fobj:
+        with self.input().open("r") as fobj:
             for line in fobj:
                 yield line
 
-# everything below will rarely have to be overridden
+    # everything below will rarely have to be overridden
 
     def _docs(self):
         """
@@ -370,14 +362,14 @@ class CopyToIndex(luigi.Task):
         elif isinstance(first, dict):
             pass
         else:
-            raise RuntimeError('Document must be either JSON strings or dict.')
+            raise RuntimeError("Document must be either JSON strings or dict.")
         for doc in itertools.chain([first], iterdocs):
             if needs_parsing:
                 doc = json.loads(doc)
-            if '_index' not in doc:
-                doc['_index'] = self.index
-            if '_type' not in doc:
-                doc['_type'] = self.doc_type
+            if "_index" not in doc:
+                doc["_index"] = self.index
+            if "_type" not in doc:
+                doc["_type"] = self.doc_type
             yield doc
 
     def _init_connection(self):
@@ -387,7 +379,7 @@ class CopyToIndex(luigi.Task):
             port=self.port,
             http_auth=self.http_auth,
             timeout=self.timeout,
-            **self.extra_elasticsearch_args
+            **self.extra_elasticsearch_args,
         )
 
     def create_index(self):
@@ -429,7 +421,7 @@ class CopyToIndex(luigi.Task):
             update_id=self.update_id(),
             marker_index_hist_size=self.marker_index_hist_size,
             timeout=self.timeout,
-            extra_elasticsearch_args=self.extra_elasticsearch_args
+            extra_elasticsearch_args=self.extra_elasticsearch_args,
         )
 
     def run(self):
@@ -450,15 +442,11 @@ class CopyToIndex(luigi.Task):
         self.create_index()
         es = self._init_connection()
         if self.mapping:
-            es.indices.put_mapping(index=self.index, doc_type=self.doc_type,
-                                   body=self.mapping)
-        es.indices.put_settings({"index": {"refresh_interval": "-1"}},
-                                index=self.index)
+            es.indices.put_mapping(index=self.index, doc_type=self.doc_type, body=self.mapping)
+        es.indices.put_settings({"index": {"refresh_interval": "-1"}}, index=self.index)
 
-        bulk(es, self._docs(), chunk_size=self.chunk_size,
-             raise_on_error=self.raise_on_error)
+        bulk(es, self._docs(), chunk_size=self.chunk_size, raise_on_error=self.raise_on_error)
 
-        es.indices.put_settings({"index": {"refresh_interval": "1s"}},
-                                index=self.index)
+        es.indices.put_settings({"index": {"refresh_interval": "1s"}}, index=self.index)
         es.indices.refresh()
         self.output().touch()

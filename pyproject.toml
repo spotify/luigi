@@ -117,8 +117,7 @@ hdp = [
 ]
 
 lint = [
-  "flake8",
-  "isort"
+  "ruff",
 ]
 
 postgres = [
@@ -175,6 +174,21 @@ dev = [
   {include-group = "common"},
   {include-group = "lint"},
 ]
+
+[tool.ruff]
+line-length = 160
+exclude = ["doc"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "W",  # pycodestyle warnings
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["luigi"]
 
 [tool.uv]
 default-groups = ['dev']

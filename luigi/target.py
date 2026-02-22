@@ -21,14 +21,14 @@ It is a central concept of Luigi and represents the state of the workflow.
 
 import abc
 import io
+import logging
 import os
 import random
 import tempfile
-import logging
 import warnings
 from contextlib import contextmanager
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class Target(metaclass=abc.ABCMeta):
@@ -55,6 +55,7 @@ class FileSystemException(Exception):
     """
     Base class for generic file system exceptions.
     """
+
     pass
 
 
@@ -63,6 +64,7 @@ class FileAlreadyExists(FileSystemException):
     Raised when a file system operation can't be performed because
     a directory exists but is required to not exist.
     """
+
     pass
 
 
@@ -71,6 +73,7 @@ class MissingParentDirectory(FileSystemException):
     Raised when a parent directory doesn't exist.
     (Imagine mkdir without -p)
     """
+
     pass
 
 
@@ -79,6 +82,7 @@ class NotADirectory(FileSystemException):
     Raised when a file system operation can't be performed because
     an expected directory is actually a file.
     """
+
     pass
 
 
@@ -105,7 +109,7 @@ class FileSystem(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def remove(self, path, recursive=True, skip_trash=True):
-        """ Remove file or directory at location ``path``
+        """Remove file or directory at location ``path``
 
         :param str path: a path within the FileSystem to remove.
         :param bool recursive: if the path is a directory, recursively remove the directory and all
@@ -183,8 +187,7 @@ class FileSystem(metaclass=abc.ABCMeta):
         Currently, LocalFileSystem and MockFileSystem support only single file
         copying but S3Client copies either a file or a directory as required.
         """
-        raise NotImplementedError("copy() not implemented on {0}".
-                                  format(self.__class__.__name__))
+        raise NotImplementedError("copy() not implemented on {0}".format(self.__class__.__name__))
 
 
 class FileSystemTarget(Target):
@@ -248,9 +251,8 @@ class FileSystemTarget(Target):
         This method is implemented by using :py:attr:`fs`.
         """
         path = self.path
-        if '*' in path or '?' in path or '[' in path or '{' in path:
-            logger.warning("Using wildcards in path %s might lead to processing of an incomplete dataset; "
-                           "override exists() to suppress the warning.", path)
+        if "*" in path or "?" in path or "[" in path or "{" in path:
+            logger.warning("Using wildcards in path %s might lead to processing of an incomplete dataset; override exists() to suppress the warning.", path)
         return self.fs.exists(path)
 
     def remove(self):
@@ -288,11 +290,8 @@ class FileSystemTarget(Target):
                         run_some_external_command(output_path=self.temp_output_path)
         """
         num = random.randrange(0, 10_000_000_000)
-        slashless_path = self.path.rstrip('/').rstrip("\\")
-        _temp_path = '{}-luigi-tmp-{:010}{}'.format(
-            slashless_path,
-            num,
-            self._trailing_slash())
+        slashless_path = self.path.rstrip("/").rstrip("\\")
+        _temp_path = "{}-luigi-tmp-{:010}{}".format(slashless_path, num, self._trailing_slash())
         # TODO: os.path doesn't make sense here as it's os-dependent
         tmp_dir = os.path.dirname(slashless_path)
         if tmp_dir:
@@ -303,13 +302,13 @@ class FileSystemTarget(Target):
         self.fs.rename_dont_move(_temp_path, self.path)
 
     def _touchz(self):
-        with self.open('w'):
+        with self.open("w"):
             pass
 
     def _trailing_slash(self):
         # I suppose one day schema-like paths, like
         # file:///path/blah.txt?params=etc can be parsed too
-        return self.path[-1] if self.path[-1] in r'\/' else ''
+        return self.path[-1] if self.path[-1] in r"\/" else ""
 
 
 class AtomicLocalFile(io.BufferedWriter):
@@ -324,14 +323,14 @@ class AtomicLocalFile(io.BufferedWriter):
     def __init__(self, path):
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
-        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, 'w'))
+        super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, "w"))
 
     def close(self):
         super(AtomicLocalFile, self).close()
         self.move_to_final_destination()
 
     def generate_tmp_path(self, path):
-        return os.path.join(tempfile.gettempdir(), 'luigi-s3-tmp-%09d' % random.randrange(0, 10_000_000_000))
+        return os.path.join(tempfile.gettempdir(), "luigi-s3-tmp-%09d" % random.randrange(0, 10_000_000_000))
 
     def move_to_final_destination(self):
         raise NotImplementedError()
@@ -345,7 +344,7 @@ class AtomicLocalFile(io.BufferedWriter):
         return self.__tmp_path
 
     def __exit__(self, exc_type, exc, traceback):
-        " Close/commit the file if there are no exception "
+        "Close/commit the file if there are no exception"
         if exc_type:
             return
         return super(AtomicLocalFile, self).__exit__(exc_type, exc, traceback)

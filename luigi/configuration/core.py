@@ -21,22 +21,21 @@ import warnings
 from .cfg_parser import LuigiConfigParser
 from .toml_parser import LuigiTomlParser
 
-
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 PARSERS = {
-    'cfg': LuigiConfigParser,
-    'conf': LuigiConfigParser,
-    'ini': LuigiConfigParser,
-    'toml': LuigiTomlParser,
+    "cfg": LuigiConfigParser,
+    "conf": LuigiConfigParser,
+    "ini": LuigiConfigParser,
+    "toml": LuigiTomlParser,
 }
 
-DEFAULT_PARSER = 'cfg'
+DEFAULT_PARSER = "cfg"
 
 
 def _get_default_parser():
-    parser = os.environ.get('LUIGI_CONFIG_PARSER', DEFAULT_PARSER)
+    parser = os.environ.get("LUIGI_CONFIG_PARSER", DEFAULT_PARSER)
     if parser not in PARSERS:
         warnings.warn("Invalid parser: {parser}".format(parser=DEFAULT_PARSER))
         parser = DEFAULT_PARSER
@@ -45,17 +44,12 @@ def _get_default_parser():
 
 def _check_parser(parser_class, parser):
     if not parser_class.enabled:
-        msg = (
-            "Parser not installed yet. "
-            "Please, install luigi with required parser:\n"
-            "pip install luigi[{parser}]"
-        )
+        msg = "Parser not installed yet. Please, install luigi with required parser:\npip install luigi[{parser}]"
         raise ImportError(msg.format(parser=parser))
 
 
 def get_config(parser=None):
-    """Get configs singleton for parser
-    """
+    """Get configs singleton for parser"""
     if parser is None:
         parser = _get_default_parser()
     parser_class = PARSERS[parser]
@@ -64,8 +58,7 @@ def get_config(parser=None):
 
 
 def add_config_path(path):
-    """Select config parser by file extension and add path into parser.
-    """
+    """Select config parser by file extension and add path into parser."""
     if not os.path.isfile(path):
         warnings.warn("Config file does not exist: {path}".format(path=path))
         return False
@@ -81,11 +74,7 @@ def add_config_path(path):
 
     _check_parser(parser_class, parser)
     if parser != default_parser:
-        msg = (
-            "Config for {added} parser added, but used {used} parser. "
-            "Set up right parser via env var: "
-            "export LUIGI_CONFIG_PARSER={added}"
-        )
+        msg = "Config for {added} parser added, but used {used} parser. Set up right parser via env var: export LUIGI_CONFIG_PARSER={added}"
         warnings.warn(msg.format(added=parser, used=default_parser))
 
     # add config path to parser
@@ -93,5 +82,5 @@ def add_config_path(path):
     return True
 
 
-if 'LUIGI_CONFIG_PATH' in os.environ:
-    add_config_path(os.environ['LUIGI_CONFIG_PATH'])
+if "LUIGI_CONFIG_PATH" in os.environ:
+    add_config_path(os.environ["LUIGI_CONFIG_PATH"])

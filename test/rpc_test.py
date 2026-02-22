@@ -15,42 +15,45 @@
 # limitations under the License.
 #
 from helpers import unittest, with_config
+
 try:
     from unittest import mock
 except ImportError:
     import mock
 
-import luigi.rpc
-from luigi.scheduler import Scheduler
-import scheduler_api_test
-import luigi.server
-from server_test import ServerTestBase
 import socket
 from multiprocessing import Process, Queue
+
+import scheduler_api_test
+from server_test import ServerTestBase
+
+import luigi.rpc
+import luigi.server
+from luigi.scheduler import Scheduler
 
 
 class RemoteSchedulerTest(unittest.TestCase):
     def testUrlArgumentVariations(self):
-        for url in ['http://zorg.com', 'http://zorg.com/']:
-            for suffix in ['api/123', '/api/123']:
+        for url in ["http://zorg.com", "http://zorg.com/"]:
+            for suffix in ["api/123", "/api/123"]:
                 s = luigi.rpc.RemoteScheduler(url, 42)
-                with mock.patch.object(s, '_fetcher') as fetcher:
-                    s._fetch(suffix, '{}')
-                    fetcher.fetch.assert_called_once_with('http://zorg.com/api/123', '{}', 42)
+                with mock.patch.object(s, "_fetcher") as fetcher:
+                    s._fetch(suffix, "{}")
+                    fetcher.fetch.assert_called_once_with("http://zorg.com/api/123", "{}", 42)
 
     def testUrlArgumentVariationsNotRoot(self):
-        for url in ['http://zorg.com/subpath', 'http://zorg.com/subpath/']:
-            for suffix in ['api/123', '/api/123']:
+        for url in ["http://zorg.com/subpath", "http://zorg.com/subpath/"]:
+            for suffix in ["api/123", "/api/123"]:
                 s = luigi.rpc.RemoteScheduler(url, 42)
-                with mock.patch.object(s, '_fetcher') as fetcher:
-                    s._fetch(suffix, '{}')
-                    fetcher.fetch.assert_called_once_with('http://zorg.com/subpath/api/123', '{}', 42)
+                with mock.patch.object(s, "_fetcher") as fetcher:
+                    s._fetch(suffix, "{}")
+                    fetcher.fetch.assert_called_once_with("http://zorg.com/subpath/api/123", "{}", 42)
 
     def get_work(self, fetcher_side_effect):
-        scheduler = luigi.rpc.RemoteScheduler('http://zorg.com', 42)
+        scheduler = luigi.rpc.RemoteScheduler("http://zorg.com", 42)
         scheduler._rpc_retry_wait = 1  # shorten wait time to speed up tests
 
-        with mock.patch.object(scheduler, '_fetcher') as fetcher:
+        with mock.patch.object(scheduler, "_fetcher") as fetcher:
             fetcher.raises = socket.timeout, socket.gaierror
             fetcher.fetch.side_effect = fetcher_side_effect
             return scheduler.get_work("fake_worker")
@@ -71,7 +74,7 @@ class RemoteSchedulerTest(unittest.TestCase):
         fetch_results = [socket.timeout, socket.timeout, socket.timeout]
         self.assertRaises(luigi.rpc.RPCError, self.get_work, fetch_results)
 
-    @mock.patch('luigi.rpc.logger')
+    @mock.patch("luigi.rpc.logger")
     def test_log_rpc_retries_enabled(self, mock_logger):
         """
         Tests that each retry of an RPC method is logged
@@ -79,17 +82,20 @@ class RemoteSchedulerTest(unittest.TestCase):
 
         fetch_results = [socket.timeout, socket.timeout, '{"response":{}}']
         self.get_work(fetch_results)
-        self.assertEqual([
-            mock.call.warning('Failed connecting to remote scheduler %r', 'http://zorg.com', exc_info=True),
-            mock.call.info('Retrying attempt 2 of 3 (max)'),
-            mock.call.info('Wait for 1 seconds'),
-            mock.call.warning('Failed connecting to remote scheduler %r', 'http://zorg.com', exc_info=True),
-            mock.call.info('Retrying attempt 3 of 3 (max)'),
-            mock.call.info('Wait for 1 seconds'),
-        ], mock_logger.mock_calls)
+        self.assertEqual(
+            [
+                mock.call.warning("Failed connecting to remote scheduler %r", "http://zorg.com", exc_info=True),
+                mock.call.info("Retrying attempt 2 of 3 (max)"),
+                mock.call.info("Wait for 1 seconds"),
+                mock.call.warning("Failed connecting to remote scheduler %r", "http://zorg.com", exc_info=True),
+                mock.call.info("Retrying attempt 3 of 3 (max)"),
+                mock.call.info("Wait for 1 seconds"),
+            ],
+            mock_logger.mock_calls,
+        )
 
-    @with_config({'core': {'rpc-log-retries': 'false'}})
-    @mock.patch('luigi.rpc.logger')
+    @with_config({"core": {"rpc-log-retries": "false"}})
+    @mock.patch("luigi.rpc.logger")
     def test_log_rpc_retries_disabled(self, mock_logger):
         """
         Tests that retries of an RPC method are not logged
@@ -109,7 +115,7 @@ class RemoteSchedulerTest(unittest.TestCase):
         """
 
         fetch_results = ['{"response": null}', '{"response": {"pass": true}}']
-        self.assertEqual({'pass': True}, self.get_work(fetch_results))
+        self.assertEqual({"pass": True}, self.get_work(fetch_results))
 
     def test_get_work_retries_on_null_limited(self):
         """
@@ -121,7 +127,6 @@ class RemoteSchedulerTest(unittest.TestCase):
 
 
 class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
-
     def get_app(self):
         conf = self.get_scheduler_config()
         sch = Scheduler(**conf)
@@ -129,7 +134,7 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
 
     def setUp(self):
         super(RPCTest, self).setUp()
-        self.sch = luigi.rpc.RemoteScheduler(self.get_url(''))
+        self.sch = luigi.rpc.RemoteScheduler(self.get_url(""))
         self.sch._wait = lambda: None
 
     # disable test that doesn't work with remote scheduler
@@ -144,11 +149,11 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
         pass
 
     def test_quadratic_behavior(self):
-        """ This would be too slow to run through network """
+        """This would be too slow to run through network"""
         pass
 
     def test_get_work_speed(self):
-        """ This would be too slow to run through network """
+        """This would be too slow to run through network"""
         pass
 
 
@@ -168,46 +173,45 @@ class RequestsFetcherTest(ServerTestBase):
         p.start()
         p.join()
 
-        self.assertTrue(q.get(), 'the requests.Session should have changed in the new process')
+        self.assertTrue(q.get(), "the requests.Session should have changed in the new process")
 
 
 class URLLibFetcherTest(ServerTestBase):
-
     def test_url_with_basic_auth(self):
         fetcher = luigi.rpc.URLLibFetcher()
 
         # without password
-        req = fetcher._create_request('http://user@localhost')
-        self.assertTrue(req.has_header('Authorization'))
-        self.assertEqual(req.get_header('Authorization'), 'Basic dXNlcjo=')
-        self.assertEqual(req.get_full_url(), 'http://localhost')
+        req = fetcher._create_request("http://user@localhost")
+        self.assertTrue(req.has_header("Authorization"))
+        self.assertEqual(req.get_header("Authorization"), "Basic dXNlcjo=")
+        self.assertEqual(req.get_full_url(), "http://localhost")
 
         # empty password (same as above)
-        req = fetcher._create_request('http://user:@localhost')
-        self.assertTrue(req.has_header('Authorization'))
-        self.assertEqual(req.get_header('Authorization'), 'Basic dXNlcjo=')
-        self.assertEqual(req.get_full_url(), 'http://localhost')
+        req = fetcher._create_request("http://user:@localhost")
+        self.assertTrue(req.has_header("Authorization"))
+        self.assertEqual(req.get_header("Authorization"), "Basic dXNlcjo=")
+        self.assertEqual(req.get_full_url(), "http://localhost")
 
         # with password
-        req = fetcher._create_request('http://user:pass@localhost')
-        self.assertTrue(req.has_header('Authorization'))
-        self.assertEqual(req.get_header('Authorization'), 'Basic dXNlcjpwYXNz')
-        self.assertEqual(req.get_full_url(), 'http://localhost')
+        req = fetcher._create_request("http://user:pass@localhost")
+        self.assertTrue(req.has_header("Authorization"))
+        self.assertEqual(req.get_header("Authorization"), "Basic dXNlcjpwYXNz")
+        self.assertEqual(req.get_full_url(), "http://localhost")
 
     def test_url_without_basic_auth(self):
         fetcher = luigi.rpc.URLLibFetcher()
-        req = fetcher._create_request('http://localhost')
+        req = fetcher._create_request("http://localhost")
 
-        self.assertFalse(req.has_header('Authorization'))
-        self.assertEqual(req.get_full_url(), 'http://localhost')
+        self.assertFalse(req.has_header("Authorization"))
+        self.assertEqual(req.get_full_url(), "http://localhost")
 
     def test_body_encoding(self):
         fetcher = luigi.rpc.URLLibFetcher()
 
         # with body
-        req = fetcher._create_request('http://localhost', body={'foo': 'bar baz/test'})
-        self.assertEqual(req.data, b'foo=bar+baz%2Ftest')
+        req = fetcher._create_request("http://localhost", body={"foo": "bar baz/test"})
+        self.assertEqual(req.data, b"foo=bar+baz%2Ftest")
 
         # without body
-        req = fetcher._create_request('http://localhost')
+        req = fetcher._create_request("http://localhost")
         self.assertIsNone(req.data)

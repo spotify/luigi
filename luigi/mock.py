@@ -21,9 +21,8 @@ The main purpose is unit testing workflows without writing to disk.
 """
 
 import multiprocessing
-from io import BytesIO
-
 import sys
+from io import BytesIO
 
 from luigi import target
 from luigi.format import get_default_format
@@ -33,6 +32,7 @@ class MockFileSystem(target.FileSystem):
     """
     MockFileSystem inspects/modifies _data to simulate file system operations.
     """
+
     _data = None
 
     def copy(self, path, dest, raise_if_exists=False):
@@ -40,7 +40,7 @@ class MockFileSystem(target.FileSystem):
         Copies the contents of a single file path to dest
         """
         if raise_if_exists and dest in self.get_all_data():
-            raise RuntimeError('Destination exists: %s' % path)
+            raise RuntimeError("Destination exists: %s" % path)
         contents = self.get_all_data()[path]
         self.get_all_data()[dest] = contents
 
@@ -75,7 +75,7 @@ class MockFileSystem(target.FileSystem):
         Moves a single file from path to dest
         """
         if raise_if_exists and dest in self.get_all_data():
-            raise RuntimeError('Destination exists: %s' % path)
+            raise RuntimeError("Destination exists: %s" % path)
         contents = self.get_all_data().pop(path)
         self.get_all_data()[dest] = contents
 
@@ -83,8 +83,7 @@ class MockFileSystem(target.FileSystem):
         """
         listdir does a prefix match of self.get_all_data(), but doesn't yet support globs.
         """
-        return [s for s in self.get_all_data().keys()
-                if s.startswith(path)]
+        return [s for s in self.get_all_data().keys() if s.startswith(path)]
 
     def isdir(self, path):
         return any(self.listdir(path))
@@ -107,7 +106,9 @@ class MockTarget(target.FileSystemTarget):
         self.path = fn
         self.format = format or get_default_format()
 
-    def exists(self,):
+    def exists(
+        self,
+    ):
         return self.path in self.fs.get_all_data()
 
     def move(self, path, raise_if_exists=False):
@@ -122,7 +123,7 @@ class MockTarget(target.FileSystemTarget):
         """
         self.move(*args, **kwargs)
 
-    def open(self, mode='r'):
+    def open(self, mode="r"):
         fn = self.path
         mock_target = self
 
@@ -139,17 +140,17 @@ class MockTarget(target.FileSystemTarget):
                     if self._write_line:
                         sys.stderr.write(fn + ": ")
                     if bytes:
-                        sys.stderr.write(data.decode('utf8'))
+                        sys.stderr.write(data.decode("utf8"))
                     else:
                         sys.stderr.write(data)
-                    if (data[-1]) == '\n':
+                    if (data[-1]) == "\n":
                         self._write_line = True
                     else:
                         self._write_line = False
                 super(Buffer, self).write(data)
 
             def close(self):
-                if mode[0] == 'w':
+                if mode[0] == "w":
                     try:
                         mock_target.wrapper.flush()
                     except AttributeError:
@@ -165,15 +166,15 @@ class MockTarget(target.FileSystemTarget):
                 return self
 
             def readable(self):
-                return mode[0] == 'r'
+                return mode[0] == "r"
 
             def writeable(self):
-                return mode[0] == 'w'
+                return mode[0] == "w"
 
             def seekable(self):
                 return False
 
-        if mode[0] == 'w':
+        if mode[0] == "w":
             wrapper = self.format.pipe_writer(Buffer())
             wrapper.set_wrapper(wrapper)
             return wrapper

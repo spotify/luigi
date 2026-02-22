@@ -18,7 +18,8 @@
 import os
 import tempfile
 import time
-from helpers import unittest, RunOnceTask
+
+from helpers import RunOnceTask, unittest
 
 import luigi
 import luigi.notifications
@@ -34,7 +35,7 @@ class DummyTask(luigi.Task):
     task_id = luigi.IntParameter()
 
     def run(self):
-        f = self.output().open('w')
+        f = self.output().open("w")
         f.close()
 
     def output(self):
@@ -52,11 +53,11 @@ class FactorTask(luigi.Task):
                 return
 
     def run(self):
-        f = self.output().open('w')
+        f = self.output().open("w")
         f.close()
 
     def output(self):
-        return luigi.LocalTarget(os.path.join(tempdir, 'luigi_test_factor_%d' % self.product))
+        return luigi.LocalTarget(os.path.join(tempdir, "luigi_test_factor_%d" % self.product))
 
 
 class BadReqTask(luigi.Task):
@@ -137,15 +138,15 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(len(graph), 2)
         self.assertTrue(DummyTask(task_id=1).task_id in graph)
         d1 = graph[DummyTask(task_id=1).task_id]
-        self.assertEqual(d1[u'status'], u'DONE')
-        self.assertEqual(d1[u'deps'], [])
-        self.assertGreaterEqual(d1[u'start_time'], start)
-        self.assertLessEqual(d1[u'start_time'], end)
+        self.assertEqual(d1["status"], "DONE")
+        self.assertEqual(d1["deps"], [])
+        self.assertGreaterEqual(d1["start_time"], start)
+        self.assertLessEqual(d1["start_time"], end)
         d2 = graph[DummyTask(task_id=2).task_id]
-        self.assertEqual(d2[u'status'], u'DONE')
-        self.assertEqual(d2[u'deps'], [])
-        self.assertGreaterEqual(d2[u'start_time'], start)
-        self.assertLessEqual(d2[u'start_time'], end)
+        self.assertEqual(d2["status"], "DONE")
+        self.assertEqual(d2["deps"], [])
+        self.assertGreaterEqual(d2["start_time"], start)
+        self.assertLessEqual(d2["start_time"], end)
 
     def test_large_graph_truncate(self):
         class LinearTask(luigi.Task):
@@ -226,17 +227,16 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         graph = self.scheduler.dep_graph(root_task.task_id)
         self.assertEqual(10, len(graph))
-        expected_nodes = [LinearTask(i).task_id for i in range(100, 91, -1)] + \
-                         [LinearTask(0).task_id]
+        expected_nodes = [LinearTask(i).task_id for i in range(100, 91, -1)] + [LinearTask(0).task_id]
         self.maxDiff = None
         self.assertCountEqual(expected_nodes, graph)
 
     def _assert_all_done(self, tasks):
-        self._assert_all(tasks, u'DONE')
+        self._assert_all(tasks, "DONE")
 
     def _assert_all(self, tasks, status):
         for task in tasks.values():
-            self.assertEqual(task[u'status'], status)
+            self.assertEqual(task["status"], status)
 
     def test_dep_graph_single(self):
         self._build([FactorTask(1)])
@@ -247,7 +247,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         d1 = dep_graph.get(FactorTask(product=1).task_id)
         self.assertEqual(type(d1), type({}))
-        self.assertEqual(d1[u'deps'], [])
+        self.assertEqual(d1["deps"], [])
 
     def test_dep_graph_not_found(self):
         self._build([FactorTask(1)])
@@ -258,7 +258,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
     def test_inverse_dep_graph_not_found(self):
         self._build([FactorTask(1)])
         remote = self._remote()
-        dep_graph = remote.inverse_dep_graph('FactorTask(product=5)')
+        dep_graph = remote.inverse_dep_graph("FactorTask(product=5)")
         self.assertEqual(len(dep_graph), 0)
 
     def test_dep_graph_tree(self):
@@ -269,19 +269,19 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self._assert_all_done(dep_graph)
 
         d30 = dep_graph[FactorTask(product=30).task_id]
-        self.assertEqual(sorted(d30[u'deps']), sorted([FactorTask(product=15).task_id, FactorTask(product=2).task_id]))
+        self.assertEqual(sorted(d30["deps"]), sorted([FactorTask(product=15).task_id, FactorTask(product=2).task_id]))
 
         d2 = dep_graph[FactorTask(product=2).task_id]
-        self.assertEqual(sorted(d2[u'deps']), [])
+        self.assertEqual(sorted(d2["deps"]), [])
 
         d15 = dep_graph[FactorTask(product=15).task_id]
-        self.assertEqual(sorted(d15[u'deps']), sorted([FactorTask(product=3).task_id, FactorTask(product=5).task_id]))
+        self.assertEqual(sorted(d15["deps"]), sorted([FactorTask(product=3).task_id, FactorTask(product=5).task_id]))
 
         d3 = dep_graph[FactorTask(product=3).task_id]
-        self.assertEqual(sorted(d3[u'deps']), [])
+        self.assertEqual(sorted(d3["deps"]), [])
 
         d5 = dep_graph[FactorTask(product=5).task_id]
-        self.assertEqual(sorted(d5[u'deps']), [])
+        self.assertEqual(sorted(d5["deps"]), [])
 
     def test_dep_graph_missing_deps(self):
         self._build([BadReqTask(True)])
@@ -289,12 +289,12 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertEqual(len(dep_graph), 2)
 
         suc = dep_graph[BadReqTask(succeed=True).task_id]
-        self.assertEqual(suc[u'deps'], [BadReqTask(succeed=False).task_id])
+        self.assertEqual(suc["deps"], [BadReqTask(succeed=False).task_id])
 
         fail = dep_graph[BadReqTask(succeed=False).task_id]
-        self.assertEqual(fail[u'name'], 'BadReqTask')
-        self.assertEqual(fail[u'params'], {'succeed': 'False'})
-        self.assertEqual(fail[u'status'], 'UNKNOWN')
+        self.assertEqual(fail["name"], "BadReqTask")
+        self.assertEqual(fail["params"], {"succeed": "False"})
+        self.assertEqual(fail["status"], "UNKNOWN")
 
     def test_dep_graph_diamond(self):
         self._build([FactorTask(12)])
@@ -304,16 +304,16 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self._assert_all_done(dep_graph)
 
         d12 = dep_graph[FactorTask(product=12).task_id]
-        self.assertEqual(sorted(d12[u'deps']), sorted([FactorTask(product=2).task_id, FactorTask(product=6).task_id]))
+        self.assertEqual(sorted(d12["deps"]), sorted([FactorTask(product=2).task_id, FactorTask(product=6).task_id]))
 
         d6 = dep_graph[FactorTask(product=6).task_id]
-        self.assertEqual(sorted(d6[u'deps']), sorted([FactorTask(product=2).task_id, FactorTask(product=3).task_id]))
+        self.assertEqual(sorted(d6["deps"]), sorted([FactorTask(product=2).task_id, FactorTask(product=3).task_id]))
 
         d3 = dep_graph[FactorTask(product=3).task_id]
-        self.assertEqual(sorted(d3[u'deps']), [])
+        self.assertEqual(sorted(d3["deps"]), [])
 
         d2 = dep_graph[FactorTask(product=2).task_id]
-        self.assertEqual(sorted(d2[u'deps']), [])
+        self.assertEqual(sorted(d2["deps"]), [])
 
     def test_dep_graph_skip_done(self):
         task = OddFibTask(9)
@@ -326,8 +326,8 @@ class SchedulerVisualisationTest(unittest.TestCase):
         skip_done_graph = remote.dep_graph(task_id, include_done=False)
         self.assertEqual(5, len(skip_done_graph))
         for task in skip_done_graph.values():
-            self.assertNotEqual('DONE', task['status'])
-            self.assertLess(len(task['deps']), 2)
+            self.assertNotEqual("DONE", task["status"])
+            self.assertLess(len(task["deps"]), 2)
 
     def test_inverse_dep_graph_skip_done(self):
         self._build([OddFibTask(9, done=False)])
@@ -340,29 +340,29 @@ class SchedulerVisualisationTest(unittest.TestCase):
         skip_done_graph = remote.inverse_dep_graph(task_id, include_done=False)
         self.assertEqual(5, len(skip_done_graph))
         for task in skip_done_graph.values():
-            self.assertNotEqual('DONE', task['status'])
-            self.assertLess(len(task['deps']), 2)
+            self.assertNotEqual("DONE", task["status"])
+            self.assertLess(len(task["deps"]), 2)
 
     def test_task_list_single(self):
         self._build([FactorTask(7)])
         remote = self._remote()
-        tasks_done = remote.task_list('DONE', '')
+        tasks_done = remote.task_list("DONE", "")
         self.assertEqual(len(tasks_done), 1)
         self._assert_all_done(tasks_done)
 
         t7 = tasks_done.get(FactorTask(product=7).task_id)
         self.assertEqual(type(t7), type({}))
 
-        self.assertEqual(remote.task_list('', ''), tasks_done)
-        self.assertEqual(remote.task_list('FAILED', ''), {})
-        self.assertEqual(remote.task_list('PENDING', ''), {})
+        self.assertEqual(remote.task_list("", ""), tasks_done)
+        self.assertEqual(remote.task_list("FAILED", ""), {})
+        self.assertEqual(remote.task_list("PENDING", ""), {})
 
     def test_dep_graph_root_has_display_name(self):
         root_task = FactorTask(12)
         self._build([root_task])
 
         dep_graph = self._remote().dep_graph(root_task.task_id)
-        self.assertEqual('FactorTask(product=12)', dep_graph[root_task.task_id]['display_name'])
+        self.assertEqual("FactorTask(product=12)", dep_graph[root_task.task_id]["display_name"])
 
     def test_dep_graph_non_root_nodes_lack_display_name(self):
         root_task = FactorTask(12)
@@ -371,19 +371,19 @@ class SchedulerVisualisationTest(unittest.TestCase):
         dep_graph = self._remote().dep_graph(root_task.task_id)
         for task_id, node in dep_graph.items():
             if task_id != root_task.task_id:
-                self.assertNotIn('display_name', node)
+                self.assertNotIn("display_name", node)
 
     def test_task_list_failed(self):
         self._build([FailingTask(8)])
         remote = self._remote()
-        failed = remote.task_list('FAILED', '')
+        failed = remote.task_list("FAILED", "")
         self.assertEqual(len(failed), 1)
 
         f8 = failed.get(FailingTask(task_id=8).task_id)
-        self.assertEqual(f8[u'status'], u'FAILED')
+        self.assertEqual(f8["status"], "FAILED")
 
-        self.assertEqual(remote.task_list('DONE', ''), {})
-        self.assertEqual(remote.task_list('PENDING', ''), {})
+        self.assertEqual(remote.task_list("DONE", ""), {})
+        self.assertEqual(remote.task_list("PENDING", ""), {})
 
     def test_task_list_upstream_status(self):
         class A(luigi.ExternalTask):
@@ -416,56 +416,56 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self._build([E()])
         remote = self._remote()
 
-        done = remote.task_list('DONE', '')
+        done = remote.task_list("DONE", "")
         self.assertEqual(len(done), 1)
         db = done.get(B().task_id)
-        self.assertEqual(db['status'], 'DONE')
+        self.assertEqual(db["status"], "DONE")
 
-        missing_input = remote.task_list('PENDING', 'UPSTREAM_MISSING_INPUT')
+        missing_input = remote.task_list("PENDING", "UPSTREAM_MISSING_INPUT")
         self.assertEqual(len(missing_input), 2)
 
         pa = missing_input.get(A().task_id)
-        self.assertEqual(pa['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(A().task_id, {}), 'UPSTREAM_MISSING_INPUT')
+        self.assertEqual(pa["status"], "PENDING")
+        self.assertEqual(remote._upstream_status(A().task_id, {}), "UPSTREAM_MISSING_INPUT")
 
         pc = missing_input.get(C().task_id)
-        self.assertEqual(pc['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(C().task_id, {}), 'UPSTREAM_MISSING_INPUT')
+        self.assertEqual(pc["status"], "PENDING")
+        self.assertEqual(remote._upstream_status(C().task_id, {}), "UPSTREAM_MISSING_INPUT")
 
-        upstream_failed = remote.task_list('PENDING', 'UPSTREAM_FAILED')
+        upstream_failed = remote.task_list("PENDING", "UPSTREAM_FAILED")
         self.assertEqual(len(upstream_failed), 2)
         pe = upstream_failed.get(E().task_id)
-        self.assertEqual(pe['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(E().task_id, {}), 'UPSTREAM_FAILED')
+        self.assertEqual(pe["status"], "PENDING")
+        self.assertEqual(remote._upstream_status(E().task_id, {}), "UPSTREAM_FAILED")
 
         pe = upstream_failed.get(D().task_id)
-        self.assertEqual(pe['status'], 'PENDING')
-        self.assertEqual(remote._upstream_status(D().task_id, {}), 'UPSTREAM_FAILED')
+        self.assertEqual(pe["status"], "PENDING")
+        self.assertEqual(remote._upstream_status(D().task_id, {}), "UPSTREAM_FAILED")
 
         pending = dict(missing_input)
         pending.update(upstream_failed)
-        self.assertEqual(remote.task_list('PENDING', ''), pending)
-        self.assertEqual(remote.task_list('PENDING', 'UPSTREAM_RUNNING'), {})
+        self.assertEqual(remote.task_list("PENDING", ""), pending)
+        self.assertEqual(remote.task_list("PENDING", "UPSTREAM_RUNNING"), {})
 
-        failed = remote.task_list('FAILED', '')
+        failed = remote.task_list("FAILED", "")
         self.assertEqual(len(failed), 1)
         fd = failed.get(F().task_id)
-        self.assertEqual(fd['status'], 'FAILED')
+        self.assertEqual(fd["status"], "FAILED")
 
         all = dict(pending)
         all.update(done)
         all.update(failed)
-        self.assertEqual(remote.task_list('', ''), all)
-        self.assertEqual(remote.task_list('RUNNING', ''), {})
+        self.assertEqual(remote.task_list("", ""), all)
+        self.assertEqual(remote.task_list("RUNNING", ""), {})
 
     def test_task_search(self):
         self._build([FactorTask(8)])
         self._build([FailingTask(8)])
         remote = self._remote()
-        all_tasks = remote.task_search('Task')
+        all_tasks = remote.task_search("Task")
         self.assertEqual(len(all_tasks), 2)
-        self._assert_all(all_tasks['DONE'], 'DONE')
-        self._assert_all(all_tasks['FAILED'], 'FAILED')
+        self._assert_all(all_tasks["DONE"], "DONE")
+        self._assert_all(all_tasks["FAILED"], "FAILED")
 
     def test_fetch_error(self):
         self._build([FailingTask(8)])
@@ -498,9 +498,9 @@ class SchedulerVisualisationTest(unittest.TestCase):
         dep_graph = self._remote().inverse_dep_graph(X().task_id)
 
         def assert_has_deps(task_id, deps):
-            self.assertTrue(task_id in dep_graph, '%s not in dep_graph %s' % (task_id, dep_graph))
+            self.assertTrue(task_id in dep_graph, "%s not in dep_graph %s" % (task_id, dep_graph))
             task = dep_graph[task_id]
-            self.assertEqual(sorted(task['deps']), sorted(deps), '%s does not have deps %s' % (task_id, deps))
+            self.assertEqual(sorted(task["deps"]), sorted(deps), "%s does not have deps %s" % (task_id, deps))
 
         assert_has_deps(X().task_id, [Y().task_id])
         assert_has_deps(Y().task_id, [Z(id=1).task_id, Z(id=2).task_id])
@@ -514,7 +514,7 @@ class SchedulerVisualisationTest(unittest.TestCase):
                 self._complete = True
 
             def complete(self):
-                return getattr(self, '_complete', False)
+                return getattr(self, "_complete", False)
 
         task_x = X()
         self._build([task_x])
@@ -523,12 +523,12 @@ class SchedulerVisualisationTest(unittest.TestCase):
 
         self.assertEqual(1, len(workers))
         worker = workers[0]
-        self.assertEqual(task_x.task_id, worker['first_task'])
-        self.assertEqual(0, worker['num_pending'])
-        self.assertEqual(0, worker['num_uniques'])
-        self.assertEqual(0, worker['num_running'])
-        self.assertEqual('active', worker['state'])
-        self.assertEqual(1, worker['workers'])
+        self.assertEqual(task_x.task_id, worker["first_task"])
+        self.assertEqual(0, worker["num_pending"])
+        self.assertEqual(0, worker["num_uniques"])
+        self.assertEqual(0, worker["num_running"])
+        self.assertEqual("active", worker["state"])
+        self.assertEqual(1, worker["workers"])
 
     def test_worker_list_pending_uniques(self):
         class X(luigi.Task):
@@ -551,43 +551,43 @@ class SchedulerVisualisationTest(unittest.TestCase):
         workers = self._remote().worker_list()
         self.assertEqual(2, len(workers))
         for worker in workers:
-            self.assertEqual(2, worker['num_pending'])
-            self.assertEqual(1, worker['num_uniques'])
-            self.assertEqual(0, worker['num_running'])
+            self.assertEqual(2, worker["num_pending"])
+            self.assertEqual(1, worker["num_uniques"])
+            self.assertEqual(0, worker["num_running"])
 
     def test_worker_list_running(self):
         class X(RunOnceTask):
             n = luigi.IntParameter()
 
-        w = luigi.worker.Worker(worker_id='w', scheduler=self.scheduler, worker_processes=3)
+        w = luigi.worker.Worker(worker_id="w", scheduler=self.scheduler, worker_processes=3)
         w.add(X(0))
         w.add(X(1))
         w.add(X(2))
         w.add(X(3))
 
-        self.scheduler.get_work(worker='w')
-        self.scheduler.get_work(worker='w')
-        self.scheduler.get_work(worker='w')
+        self.scheduler.get_work(worker="w")
+        self.scheduler.get_work(worker="w")
+        self.scheduler.get_work(worker="w")
 
         workers = self._remote().worker_list()
         self.assertEqual(1, len(workers))
         worker = workers[0]
 
-        self.assertEqual(3, worker['num_running'])
-        self.assertEqual(1, worker['num_pending'])
-        self.assertEqual(1, worker['num_uniques'])
+        self.assertEqual(3, worker["num_running"])
+        self.assertEqual(1, worker["num_pending"])
+        self.assertEqual(1, worker["num_uniques"])
 
     def test_worker_list_disabled_worker(self):
         class X(RunOnceTask):
             pass
 
-        with luigi.worker.Worker(worker_id='w', scheduler=self.scheduler) as w:
+        with luigi.worker.Worker(worker_id="w", scheduler=self.scheduler) as w:
             w.add(X())  #
             workers = self._remote().worker_list()
             self.assertEqual(1, len(workers))
-            self.assertEqual('active', workers[0]['state'])
-            self.scheduler.disable_worker('w')
+            self.assertEqual("active", workers[0]["state"])
+            self.scheduler.disable_worker("w")
             workers = self._remote().worker_list()
             self.assertEqual(1, len(workers))
             self.assertEqual(1, len(workers))
-            self.assertEqual('disabled', workers[0]['state'])
+            self.assertEqual("disabled", workers[0]["state"])

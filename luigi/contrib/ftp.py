@@ -27,26 +27,23 @@ Be aware that normal ftp does not provide secure communication.
 
 import datetime
 import ftplib
+import io
+import logging
 import os
 import random
 import tempfile
-import io
 
 import luigi
-import luigi.local_target
 import luigi.format
+import luigi.local_target
 import luigi.target
 from luigi.format import FileWrapper
 
-import logging
-
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
-
-    def __init__(self, host, username=None, password=None, port=None,
-                 tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None):
+    def __init__(self, host, username=None, password=None, port=None, tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None):
         self.host = host
         self.username = username
         self.password = password
@@ -76,10 +73,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         try:
             import pysftp
         except ImportError:
-            logger.warning('Please install pysftp to use SFTP.')
+            logger.warning("Please install pysftp to use SFTP.")
 
-        self.conn = pysftp.Connection(self.host, username=self.username, password=self.password,
-                                      port=self.port, **self.pysftp_conn_kwargs)
+        self.conn = pysftp.Connection(self.host, username=self.username, password=self.password, port=self.port, **self.pysftp_conn_kwargs)
 
     def _ftp_connect(self):
         if self.tls:
@@ -141,7 +137,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         exists = False
         if path in files or fn in files:
             if mtime:
-                mdtm = self.conn.sendcmd('MDTM ' + path)
+                mdtm = self.conn.sendcmd("MDTM " + path)
                 modified = datetime.datetime.strptime(mdtm[4:], "%Y%m%d%H%M%S")
                 exists = modified > mtime
             else:
@@ -218,12 +214,12 @@ class RemoteFileSystem(luigi.target.FileSystem):
             return
 
         for name in names:
-            if os.path.split(name)[1] in ('.', '..'):
+            if os.path.split(name)[1] in (".", ".."):
                 continue
 
             try:
-                ftp.cwd(name)   # if we can cwd to it, it's a folder
-                ftp.cwd(wd)   # don't try a nuke a folder we're in
+                ftp.cwd(name)  # if we can cwd to it, it's a folder
+                ftp.cwd(wd)  # don't try a nuke a folder we're in
                 ftp.cwd(path)  # then go back to where we were
                 self._rm_recursive(ftp, name)
             except ftplib.all_errors:
@@ -233,7 +229,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
             ftp.cwd(wd)  # do not delete the folder that we are in
             ftp.rmd(path)
         except ftplib.all_errors as e:
-            print('_rm_recursive: Could not remove {0}: {1}'.format(path, e))
+            print("_rm_recursive: Could not remove {0}: {1}".format(path, e))
 
     def put(self, local_path, path, atomic=True):
         """
@@ -254,7 +250,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.conn.makedirs(directory)
 
         if atomic:
-            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, 10_000_000_000)))
+            tmp_path = os.path.join(directory, "luigi-tmp-{:09d}".format(random.randrange(0, 10_000_000_000)))
         else:
             tmp_path = normpath
 
@@ -279,11 +275,11 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         # random file name
         if atomic:
-            tmp_path = folder + os.sep + 'luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
+            tmp_path = folder + os.sep + "luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
         else:
             tmp_path = normpath
 
-        self.conn.storbinary('STOR %s' % tmp_path, open(local_path, 'rb'))
+        self.conn.storbinary("STOR %s" % tmp_path, open(local_path, "rb"))
 
         if atomic:
             self.conn.rename(tmp_path, normpath)
@@ -297,7 +293,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if folder and not os.path.exists(folder):
             os.makedirs(folder)
 
-        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
+        tmp_local_path = local_path + "-luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
 
         # download file
         self._connect()
@@ -315,9 +311,9 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.conn.get(path, tmp_local_path)
 
     def _ftp_get(self, path, tmp_local_path):
-        self.conn.retrbinary('RETR %s' % path, open(tmp_local_path, 'wb').write)
+        self.conn.retrbinary("RETR %s" % path, open(tmp_local_path, "wb").write)
 
-    def listdir(self, path='.'):
+    def listdir(self, path="."):
         """
         Gets an list of the contents of path in (s)FTP
         """
@@ -373,9 +369,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     """
 
     def __init__(
-        self, path, host, format=None, username=None,
-        password=None, port=None, mtime=None, tls=False,
-            timeout=60, sftp=False, pysftp_conn_kwargs=None
+        self, path, host, format=None, username=None, password=None, port=None, mtime=None, tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None
     ):
         if format is None:
             format = luigi.format.get_default_format()
@@ -404,33 +398,25 @@ class RemoteTarget(luigi.target.FileSystemTarget):
                      additional options.
         :type mode: str
         """
-        if mode == 'w':
+        if mode == "w":
             return self.format.pipe_writer(AtomicFtpFile(self._fs, self.path))
 
-        elif mode == 'r':
-            temppath = '{}-luigi-tmp-{:09d}'.format(
-                self.path.lstrip('/'), random.randrange(0, 10_000_000_000)
-            )
+        elif mode == "r":
+            temppath = "{}-luigi-tmp-{:09d}".format(self.path.lstrip("/"), random.randrange(0, 10_000_000_000))
             try:
                 # store reference to the TemporaryDirectory because it will be removed on GC
-                self.__temp_dir = tempfile.TemporaryDirectory(
-                    prefix="luigi-contrib-ftp_"
-                )
+                self.__temp_dir = tempfile.TemporaryDirectory(prefix="luigi-contrib-ftp_")
             except AttributeError:
                 # TemporaryDirectory only available in Python3, use old behaviour in Python2
                 # this file will not be cleaned up automatically
-                self.__tmp_path = os.path.join(
-                    tempfile.gettempdir(), 'luigi-contrib-ftp', temppath
-                )
+                self.__tmp_path = os.path.join(tempfile.gettempdir(), "luigi-contrib-ftp", temppath)
             else:
                 self.__tmp_path = os.path.join(self.__temp_dir.name, temppath)
 
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 
-            return self.format.pipe_reader(
-                FileWrapper(io.BufferedReader(io.FileIO(self.__tmp_path, 'r')))
-            )
+            return self.format.pipe_reader(FileWrapper(io.BufferedReader(io.FileIO(self.__tmp_path, "r"))))
         else:
             raise Exception("mode must be 'r' or 'w' (got: %s)" % mode)
 

@@ -21,11 +21,11 @@ import luigi
 
 
 class Factorial(luigi.Task):
-
-    ''' This calculates factorials *online* and does not write its results anywhere
+    """This calculates factorials *online* and does not write its results anywhere
 
     Demonstrates the ability for dependencies between Tasks and not just between their output.
-    '''
+    """
+
     n = luigi.IntParameter(default=100)
 
     def requires(self):
@@ -44,7 +44,6 @@ class Factorial(luigi.Task):
 
 
 class FactorialTest(unittest.TestCase):
-
     def test_invoke(self):
         luigi.build([Factorial(100)], local_scheduler=True)
         self.assertEqual(Factorial(42).value, 1405006117752879898543142606244511569936384000000000)

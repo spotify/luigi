@@ -22,11 +22,10 @@ workers via command line arguments and options from config files.
 import logging
 import logging.config
 import os.path
-
-from luigi.configuration import get_config, LuigiConfigParser
-from luigi.freezing import recursively_unfreeze
-
 from configparser import NoSectionError
+
+from luigi.configuration import LuigiConfigParser, get_config
+from luigi.freezing import recursively_unfreeze
 
 
 class BaseLogging:
@@ -38,60 +37,54 @@ class BaseLogging:
         if isinstance(cls.config, LuigiConfigParser):
             return False
         try:
-            logging_config = cls.config['logging']
+            logging_config = cls.config["logging"]
         except (TypeError, KeyError, NoSectionError):
             return False
         logging.config.dictConfig(recursively_unfreeze(logging_config))
         return True
 
     @classmethod
-    def setup(cls,
-              opts=type('opts', (), {
-                  'background': None,
-                  'logdir': None,
-                  'logging_conf_file': None,
-                  'log_level': 'DEBUG'
-              })):
+    def setup(cls, opts=type("opts", (), {"background": None, "logdir": None, "logging_conf_file": None, "log_level": "DEBUG"})):
         """Setup logging via CLI params and config."""
-        logger = logging.getLogger('luigi')
+        logger = logging.getLogger("luigi")
 
         if cls._configured:
-            logger.info('logging already configured')
+            logger.info("logging already configured")
             return False
         cls._configured = True
 
-        if cls.config.getboolean('core', 'no_configure_logging', False):
-            logger.info('logging disabled in settings')
+        if cls.config.getboolean("core", "no_configure_logging", False):
+            logger.info("logging disabled in settings")
             return False
 
         configured = cls._cli(opts)
         if configured:
-            logger = logging.getLogger('luigi')
-            logger.info('logging configured via special settings')
+            logger = logging.getLogger("luigi")
+            logger.info("logging configured via special settings")
             return True
 
         configured = cls._conf(opts)
         if configured:
-            logger = logging.getLogger('luigi')
-            logger.info('logging configured via *.conf file')
+            logger = logging.getLogger("luigi")
+            logger.info("logging configured via *.conf file")
             return True
 
         configured = cls._section(opts)
         if configured:
-            logger = logging.getLogger('luigi')
-            logger.info('logging configured via config section')
+            logger = logging.getLogger("luigi")
+            logger.info("logging configured via config section")
             return True
 
         configured = cls._default(opts)
         if configured:
-            logger = logging.getLogger('luigi')
-            logger.info('logging configured by default settings')
+            logger = logging.getLogger("luigi")
+            logger.info("logging configured by default settings")
         return configured
 
 
 class DaemonLogging(BaseLogging):
-    """Configure logging for luigid
-    """
+    """Configure logging for luigid"""
+
     _configured = False
     _log_format = "%(asctime)s %(name)s[%(process)s] %(levelname)s: %(message)s"
 
@@ -110,10 +103,7 @@ class DaemonLogging(BaseLogging):
             return True
 
         if opts.logdir:
-            logging.basicConfig(
-                level=logging.INFO,
-                format=cls._log_format,
-                filename=os.path.join(opts.logdir, "luigi-server.log"))
+            logging.basicConfig(level=logging.INFO, format=cls._log_format, filename=os.path.join(opts.logdir, "luigi-server.log"))
             return True
 
         return False
@@ -121,7 +111,7 @@ class DaemonLogging(BaseLogging):
     @classmethod
     def _conf(cls, opts):
         """Setup logging via ini-file from logging_conf_file option."""
-        logging_conf = cls.config.get('core', 'logging_conf_file', None)
+        logging_conf = cls.config.get("core", "logging_conf_file", None)
         if logging_conf is None:
             return False
 
@@ -143,6 +133,7 @@ class DaemonLogging(BaseLogging):
 # Part of this logic taken for dropped function "setup_interface_logging"
 class InterfaceLogging(BaseLogging):
     """Configure logging for worker"""
+
     _configured = False
 
     @classmethod
@@ -168,13 +159,13 @@ class InterfaceLogging(BaseLogging):
         """Setup default logger"""
         level = getattr(logging, opts.log_level, logging.DEBUG)
 
-        logger = logging.getLogger('luigi-interface')
+        logger = logging.getLogger("luigi-interface")
         logger.setLevel(level)
 
         stream_handler = logging.StreamHandler()
         stream_handler.setLevel(level)
 
-        formatter = logging.Formatter('%(levelname)s: %(message)s')
+        formatter = logging.Formatter("%(levelname)s: %(message)s")
         stream_handler.setFormatter(formatter)
 
         logger.addHandler(stream_handler)

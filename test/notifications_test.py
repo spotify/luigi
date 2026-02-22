@@ -15,27 +15,26 @@
 # limitations under the License.
 #
 
-from helpers import unittest
-import mock
-import sys
 import socket
+import sys
 
-from helpers import with_config
+import mock
+from helpers import unittest, with_config
+
+import luigi
 from luigi import notifications
 from luigi.notifications import generate_email
 from luigi.scheduler import Scheduler
 from luigi.worker import Worker
-import luigi
 
 
 class TestEmail(unittest.TestCase):
-
     def testEmailNoPrefix(self):
-        self.assertEqual("subject", notifications._prefix('subject'))
+        self.assertEqual("subject", notifications._prefix("subject"))
 
     @with_config({"email": {"prefix": "[prefix]"}})
     def testEmailPrefix(self):
-        self.assertEqual("[prefix] subject", notifications._prefix('subject'))
+        self.assertEqual("[prefix] subject", notifications._prefix("subject"))
 
 
 class TestException(Exception):
@@ -49,7 +48,7 @@ class TestTask(luigi.Task):
 
 class FailSchedulingTask(TestTask):
     def requires(self):
-        raise TestException('Oops!')
+        raise TestException("Oops!")
 
     def run(self):
         pass
@@ -60,36 +59,34 @@ class FailSchedulingTask(TestTask):
 
 class FailRunTask(TestTask):
     def run(self):
-        raise TestException('Oops!')
+        raise TestException("Oops!")
 
     def complete(self):
         return False
 
 
 class ExceptionFormatTest(unittest.TestCase):
-
     def setUp(self):
         self.sch = Scheduler()
 
     def test_fail_run(self):
-        task = FailRunTask(foo='foo', bar='bar')
+        task = FailRunTask(foo="foo", bar="bar")
         self._run_task(task)
 
     def test_fail_run_html(self):
-        task = FailRunTask(foo='foo', bar='bar')
+        task = FailRunTask(foo="foo", bar="bar")
         self._run_task_html(task)
 
     def test_fail_schedule(self):
-        task = FailSchedulingTask(foo='foo', bar='bar')
+        task = FailSchedulingTask(foo="foo", bar="bar")
         self._run_task(task)
 
     def test_fail_schedule_html(self):
-        task = FailSchedulingTask(foo='foo', bar='bar')
+        task = FailSchedulingTask(foo="foo", bar="bar")
         self._run_task_html(task)
 
-    @with_config({'email': {'receiver': 'nowhere@example.com',
-                            'prefix': '[TEST] '}})
-    @mock.patch('luigi.notifications.send_error_email')
+    @with_config({"email": {"receiver": "nowhere@example.com", "prefix": "[TEST] "}})
+    @mock.patch("luigi.notifications.send_error_email")
     def _run_task(self, task, mock_send):
         with Worker(scheduler=self.sch) as w:
             w.add(task)
@@ -100,10 +97,8 @@ class ExceptionFormatTest(unittest.TestCase):
         self._check_subject(args[0], task)
         self._check_body(args[1], task, html=False)
 
-    @with_config({'email': {'receiver': 'nowhere@axample.com',
-                            'prefix': '[TEST] ',
-                            'format': 'html'}})
-    @mock.patch('luigi.notifications.send_error_email')
+    @with_config({"email": {"receiver": "nowhere@axample.com", "prefix": "[TEST] ", "format": "html"}})
+    @mock.patch("luigi.notifications.send_error_email")
     def _run_task_html(self, task, mock_send):
         with Worker(scheduler=self.sch) as w:
             w.add(task)
@@ -119,19 +114,19 @@ class ExceptionFormatTest(unittest.TestCase):
 
     def _check_body(self, body, task, html=False):
         if html:
-            self.assertIn('<th>name</th><td>{}</td>'.format(task.task_family), body)
+            self.assertIn("<th>name</th><td>{}</td>".format(task.task_family), body)
             self.assertIn('<div class="highlight"', body)
-            self.assertIn('Oops!', body)
+            self.assertIn("Oops!", body)
 
             for param, value in task.param_kwargs.items():
-                self.assertIn('<th>{}</th><td>{}</td>'.format(param, value), body)
+                self.assertIn("<th>{}</th><td>{}</td>".format(param, value), body)
         else:
-            self.assertIn('Name: {}\n'.format(task.task_family), body)
-            self.assertIn('Parameters:\n', body)
-            self.assertIn('TestException: Oops!', body)
+            self.assertIn("Name: {}\n".format(task.task_family), body)
+            self.assertIn("Parameters:\n", body)
+            self.assertIn("TestException: Oops!", body)
 
             for param, value in task.param_kwargs.items():
-                self.assertIn('{}: {}\n'.format(param, value), body)
+                self.assertIn("{}: {}\n".format(param, value), body)
 
     @with_config({"email": {"receiver": "a@a.a"}})
     def testEmailRecipients(self):
@@ -147,10 +142,10 @@ class ExceptionFormatTest(unittest.TestCase):
 
     def test_generate_unicode_email(self):
         generate_email(
-            sender='test@example.com',
-            subject='sübjéct',
+            sender="test@example.com",
+            subject="sübjéct",
             message="你好",
-            recipients=['receiver@example.com'],
+            recipients=["receiver@example.com"],
             image_png=None,
         )
 
@@ -161,15 +156,16 @@ class NotificationFixture:
 
     config, sender, subject, message, recipients, image_png
     """
-    sender = 'luigi@unittest'
-    subject = 'Oops!'
+
+    sender = "luigi@unittest"
+    subject = "Oops!"
     message = """A multiline
                  message."""
-    recipients = ['noone@nowhere.no', 'phantom@opera.fr']
+    recipients = ["noone@nowhere.no", "phantom@opera.fr"]
     image_png = None
 
     notification_args = [sender, subject, message, recipients, image_png]
-    mocked_email_msg = '''Content-Type: multipart/related; boundary="===============0998157881=="
+    mocked_email_msg = """Content-Type: multipart/related; boundary="===============0998157881=="
 MIME-Version: 1.0
 Subject: Oops!
 From: luigi@unittest
@@ -182,7 +178,7 @@ Content-Type: text/plain; charset="utf-8"
 
 A multiline
 message.
---===============0998157881==--'''
+--===============0998157881==--"""
 
 
 class TestSMTPEmail(unittest.TestCase, NotificationFixture):
@@ -191,101 +187,103 @@ class TestSMTPEmail(unittest.TestCase, NotificationFixture):
     """
 
     def setUp(self):
-        sys.modules['smtplib'] = mock.MagicMock()
+        sys.modules["smtplib"] = mock.MagicMock()
         import smtplib  # noqa: F401
 
     def tearDown(self):
-        del sys.modules['smtplib']
+        del sys.modules["smtplib"]
 
-    @with_config({"smtp": {"ssl": "False",
-                           "host": "my.smtp.local",
-                           "port": "999",
-                           "local_hostname": "ptms",
-                           "timeout": "1200",
-                           "username": "Robin",
-                           "password": "dooH",
-                           "no_tls": "False"}})
+    @with_config(
+        {
+            "smtp": {
+                "ssl": "False",
+                "host": "my.smtp.local",
+                "port": "999",
+                "local_hostname": "ptms",
+                "timeout": "1200",
+                "username": "Robin",
+                "password": "dooH",
+                "no_tls": "False",
+            }
+        }
+    )
     def test_sends_smtp_email(self):
         """
         Call notifications.send_email_smtp with fixture parameters with smtp_without_tls  set to False
         and check that sendmail is properly called.
         """
 
-        smtp_kws = {"host": "my.smtp.local",
-                    "port": 999,
-                    "local_hostname": "ptms",
-                    "timeout": 1200}
+        smtp_kws = {"host": "my.smtp.local", "port": 999, "local_hostname": "ptms", "timeout": 1200}
 
-        with mock.patch('smtplib.SMTP') as SMTP:
-            with mock.patch('luigi.notifications.generate_email') as generate_email:
-                generate_email.return_value\
-                    .as_string.return_value = self.mocked_email_msg
+        with mock.patch("smtplib.SMTP") as SMTP:
+            with mock.patch("luigi.notifications.generate_email") as generate_email:
+                generate_email.return_value.as_string.return_value = self.mocked_email_msg
 
                 notifications.send_email_smtp(*self.notification_args)
 
                 SMTP.assert_called_once_with(**smtp_kws)
                 SMTP.return_value.login.assert_called_once_with("Robin", "dooH")
                 SMTP.return_value.starttls.assert_called_once_with()
-                SMTP.return_value.sendmail\
-                    .assert_called_once_with(self.sender, self.recipients,
-                                             self.mocked_email_msg)
+                SMTP.return_value.sendmail.assert_called_once_with(self.sender, self.recipients, self.mocked_email_msg)
 
-    @with_config({"smtp": {"ssl": "False",
-                           "host": "my.smtp.local",
-                           "port": "999",
-                           "local_hostname": "ptms",
-                           "timeout": "1200",
-                           "username": "Robin",
-                           "password": "dooH",
-                           "no_tls": "True"}})
+    @with_config(
+        {
+            "smtp": {
+                "ssl": "False",
+                "host": "my.smtp.local",
+                "port": "999",
+                "local_hostname": "ptms",
+                "timeout": "1200",
+                "username": "Robin",
+                "password": "dooH",
+                "no_tls": "True",
+            }
+        }
+    )
     def test_sends_smtp_email_without_tls(self):
         """
         Call notifications.send_email_smtp with fixture parameters with no_tls  set to True
         and check that sendmail is properly called without also calling
         starttls.
         """
-        smtp_kws = {"host": "my.smtp.local",
-                    "port": 999,
-                    "local_hostname": "ptms",
-                    "timeout": 1200}
+        smtp_kws = {"host": "my.smtp.local", "port": 999, "local_hostname": "ptms", "timeout": 1200}
 
-        with mock.patch('smtplib.SMTP') as SMTP:
-            with mock.patch('luigi.notifications.generate_email') as generate_email:
-                generate_email.return_value \
-                    .as_string.return_value = self.mocked_email_msg
+        with mock.patch("smtplib.SMTP") as SMTP:
+            with mock.patch("luigi.notifications.generate_email") as generate_email:
+                generate_email.return_value.as_string.return_value = self.mocked_email_msg
 
                 notifications.send_email_smtp(*self.notification_args)
 
                 SMTP.assert_called_once_with(**smtp_kws)
                 self.assertEqual(SMTP.return_value.starttls.called, False)
                 SMTP.return_value.login.assert_called_once_with("Robin", "dooH")
-                SMTP.return_value.sendmail \
-                    .assert_called_once_with(self.sender, self.recipients,
-                                             self.mocked_email_msg)
+                SMTP.return_value.sendmail.assert_called_once_with(self.sender, self.recipients, self.mocked_email_msg)
 
-    @with_config({"smtp": {"ssl": "False",
-                           "host": "my.smtp.local",
-                           "port": "999",
-                           "local_hostname": "ptms",
-                           "timeout": "1200",
-                           "username": "Robin",
-                           "password": "dooH",
-                           "no_tls": "True"}})
+    @with_config(
+        {
+            "smtp": {
+                "ssl": "False",
+                "host": "my.smtp.local",
+                "port": "999",
+                "local_hostname": "ptms",
+                "timeout": "1200",
+                "username": "Robin",
+                "password": "dooH",
+                "no_tls": "True",
+            }
+        }
+    )
     def test_sends_smtp_email_exceptions(self):
         """
         Call notifications.send_email_smtp when it cannot connect to smtp server (socket.error)
         starttls.
         """
-        smtp_kws = {"host": "my.smtp.local",
-                    "port": 999,
-                    "local_hostname": "ptms",
-                    "timeout": 1200}
+        smtp_kws = {"host": "my.smtp.local", "port": 999, "local_hostname": "ptms", "timeout": 1200}
 
-        with mock.patch('smtplib.SMTP') as SMTP:
-            with mock.patch('luigi.notifications.generate_email') as generate_email:
+        with mock.patch("smtplib.SMTP") as SMTP:
+            with mock.patch("luigi.notifications.generate_email") as generate_email:
                 SMTP.side_effect = socket.error()
-                generate_email.return_value \
-                    .as_string.return_value = self.mocked_email_msg
+                generate_email.return_value.as_string.return_value = self.mocked_email_msg
 
                 try:
                     notifications.send_email_smtp(*self.notification_args)
@@ -303,11 +301,11 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
     """
 
     def setUp(self):
-        sys.modules['sendgrid'] = mock.MagicMock()
+        sys.modules["sendgrid"] = mock.MagicMock()
         import sendgrid  # noqa: F401
 
     def tearDown(self):
-        del sys.modules['sendgrid']
+        del sys.modules["sendgrid"]
 
     @with_config({"sendgrid": {"apikey": "456abcdef123"}})
     def test_sends_sendgrid_email(self):
@@ -316,7 +314,7 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
         and check that SendGridAPIClient is properly called.
         """
 
-        with mock.patch('sendgrid.SendGridAPIClient') as SendGridAPIClient:
+        with mock.patch("sendgrid.SendGridAPIClient") as SendGridAPIClient:
             notifications.send_email_sendgrid(*self.notification_args)
 
             SendGridAPIClient.assert_called_once_with("456abcdef123")
@@ -329,11 +327,11 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
     """
 
     def setUp(self):
-        sys.modules['boto3'] = mock.MagicMock()
+        sys.modules["boto3"] = mock.MagicMock()
         import boto3  # noqa: F401
 
     def tearDown(self):
-        del sys.modules['boto3']
+        del sys.modules["boto3"]
 
     @with_config({})
     def test_sends_ses_email(self):
@@ -342,18 +340,14 @@ class TestSESEmail(unittest.TestCase, NotificationFixture):
         and check that boto is properly called.
         """
 
-        with mock.patch('boto3.client') as boto_client:
-            with mock.patch('luigi.notifications.generate_email') as generate_email:
-                generate_email.return_value\
-                    .as_string.return_value = self.mocked_email_msg
+        with mock.patch("boto3.client") as boto_client:
+            with mock.patch("luigi.notifications.generate_email") as generate_email:
+                generate_email.return_value.as_string.return_value = self.mocked_email_msg
 
                 notifications.send_email_ses(*self.notification_args)
 
                 SES = boto_client.return_value
-                SES.send_raw_email.assert_called_once_with(
-                    Source=self.sender,
-                    Destinations=self.recipients,
-                    RawMessage={'Data': self.mocked_email_msg})
+                SES.send_raw_email.assert_called_once_with(Source=self.sender, Destinations=self.recipients, RawMessage={"Data": self.mocked_email_msg})
 
 
 class TestSNSNotification(unittest.TestCase, NotificationFixture):
@@ -362,11 +356,11 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
     """
 
     def setUp(self):
-        sys.modules['boto3'] = mock.MagicMock()
+        sys.modules["boto3"] = mock.MagicMock()
         import boto3  # noqa: F401
 
     def tearDown(self):
-        del sys.modules['boto3']
+        del sys.modules["boto3"]
 
     @with_config({})
     def test_sends_sns_email(self):
@@ -375,13 +369,12 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
         and check that boto3 is properly called.
         """
 
-        with mock.patch('boto3.resource') as res:
+        with mock.patch("boto3.resource") as res:
             notifications.send_email_sns(*self.notification_args)
 
             SNS = res.return_value
             SNS.Topic.assert_called_once_with(self.recipients[0])
-            SNS.Topic.return_value.publish.assert_called_once_with(
-                Subject=self.subject, Message=self.message)
+            SNS.Topic.return_value.publish.assert_called_once_with(Subject=self.subject, Message=self.message)
 
     @with_config({})
     def test_sns_subject_is_shortened(self):
@@ -390,18 +383,17 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
         and check that it is cut to length of 100 chars.
         """
 
-        long_subject = 'Luigi: SanityCheck(regexPattern=aligned-source\\|data-not-older\\|source-chunks-compl,'\
-                       'mailFailure=False, mongodb=mongodb://localhost/stats) FAILED'
+        long_subject = (
+            "Luigi: SanityCheck(regexPattern=aligned-source\\|data-not-older\\|source-chunks-compl,mailFailure=False, mongodb=mongodb://localhost/stats) FAILED"
+        )
 
-        with mock.patch('boto3.resource') as res:
-            notifications.send_email_sns(self.sender, long_subject, self.message,
-                                         self.recipients, self.image_png)
+        with mock.patch("boto3.resource") as res:
+            notifications.send_email_sns(self.sender, long_subject, self.message, self.recipients, self.image_png)
 
             SNS = res.return_value
             SNS.Topic.assert_called_once_with(self.recipients[0])
-            called_subj = SNS.Topic.return_value.publish.call_args[1]['Subject']
-            self.assertTrue(len(called_subj) <= 100,
-                            "Subject can be max 100 chars long! Found {}.".format(len(called_subj)))
+            called_subj = SNS.Topic.return_value.publish.call_args[1]["Subject"]
+            self.assertTrue(len(called_subj) <= 100, "Subject can be max 100 chars long! Found {}.".format(len(called_subj)))
 
 
 class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
@@ -417,9 +409,8 @@ class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
 
         expected_args = self.notification_args
 
-        with mock.patch('luigi.notifications.{}'.format(target)) as sender:
-            notifications.send_email(self.subject, self.message, self.sender,
-                                     self.recipients, image_png=self.image_png)
+        with mock.patch("luigi.notifications.{}".format(target)) as sender:
+            notifications.send_email(self.subject, self.message, self.sender, self.recipients, image_png=self.image_png)
 
             self.assertTrue(sender.called)
 
@@ -427,22 +418,18 @@ class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
 
             self.assertEqual(tuple(expected_args), call_args)
 
-    @with_config({'email': {'force_send': 'True',
-                            'method': 'smtp'}})
+    @with_config({"email": {"force_send": "True", "method": "smtp"}})
     def test_smtp(self):
-        return self.check_dispatcher('send_email_smtp')
+        return self.check_dispatcher("send_email_smtp")
 
-    @with_config({'email': {'force_send': 'True',
-                            'method': 'ses'}})
+    @with_config({"email": {"force_send": "True", "method": "ses"}})
     def test_ses(self):
-        return self.check_dispatcher('send_email_ses')
+        return self.check_dispatcher("send_email_ses")
 
-    @with_config({'email': {'force_send': 'True',
-                            'method': 'sendgrid'}})
+    @with_config({"email": {"force_send": "True", "method": "sendgrid"}})
     def test_sendgrid(self):
-        return self.check_dispatcher('send_email_sendgrid')
+        return self.check_dispatcher("send_email_sendgrid")
 
-    @with_config({'email': {'force_send': 'True',
-                            'method': 'sns'}})
+    @with_config({"email": {"force_send": "True", "method": "sns"}})
     def test_sns(self):
-        return self.check_dispatcher('send_email_sns')
+        return self.check_dispatcher("send_email_sns")

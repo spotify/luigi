@@ -36,15 +36,17 @@
 # [--upstream-family MyUpstreamTask]
 #
 
+import sys
+
 import luigi.interface
-from luigi.contrib.ssh import RemoteTarget
+from luigi import parameter
+from luigi.cmdline_parser import CmdlineParser
 from luigi.contrib.postgres import PostgresTarget
 from luigi.contrib.s3 import S3Target
+from luigi.contrib.ssh import RemoteTarget
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
-from luigi import parameter
-import sys
-from luigi.cmdline_parser import CmdlineParser
+
 try:
     from collections.abc import Iterable
 except ImportError:
@@ -67,35 +69,36 @@ def dfs_paths(start_task, goal_task_family, path=None):
 
 
 class upstream(luigi.task.Config):
-    '''
+    """
     Used to provide the parameter upstream-family
-    '''
+    """
+
     family = parameter.OptionalParameter(default=None)
 
 
 def find_deps(task, upstream_task_family):
-    '''
+    """
     Finds all dependencies that start with the given task and have a path
     to upstream_task_family
 
     Returns all deps on all paths between task and upstream
-    '''
+    """
     return {t for t in dfs_paths(task, upstream_task_family)}
 
 
 def find_deps_cli():
-    '''
+    """
     Finds all tasks on all paths from provided CLI task
-    '''
+    """
     cmdline_args = sys.argv[1:]
     with CmdlineParser.global_instance(cmdline_args) as cp:
         return find_deps(cp.get_task_obj(), upstream().family)
 
 
 def get_task_output_description(task_output):
-    '''
+    """
     Returns a task's output as a string
-    '''
+    """
     output_description = "n/a"
 
     if isinstance(task_output, RemoteTarget):
@@ -129,5 +132,5 @@ def main():
             print("                       : {0}".format(desc))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

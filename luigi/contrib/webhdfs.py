@@ -25,9 +25,9 @@ contrib module. You can consider migrating to
 
 import logging
 
-from luigi.target import FileSystemTarget, AtomicLocalFile
-from luigi.format import get_default_format
 import luigi.contrib.hdfs
+from luigi.format import get_default_format
+from luigi.target import AtomicLocalFile, FileSystemTarget
 
 logger = logging.getLogger("luigi-interface")
 
@@ -44,22 +44,17 @@ class WebHdfsTarget(FileSystemTarget):
 
         self.format = format
 
-    def open(self, mode='r'):
-        if mode not in ('r', 'w'):
+    def open(self, mode="r"):
+        if mode not in ("r", "w"):
             raise ValueError("Unsupported open mode '%s'" % mode)
 
-        if mode == 'r':
-            return self.format.pipe_reader(
-                ReadableWebHdfsFile(path=self.path, client=self.fs)
-            )
+        if mode == "r":
+            return self.format.pipe_reader(ReadableWebHdfsFile(path=self.path, client=self.fs))
 
-        return self.format.pipe_writer(
-            AtomicWebHdfsFile(path=self.path, client=self.fs)
-        )
+        return self.format.pipe_writer(AtomicWebHdfsFile(path=self.path, client=self.fs))
 
 
 class ReadableWebHdfsFile:
-
     def __init__(self, path, client):
         self.path = path
         self.client = client
@@ -70,7 +65,7 @@ class ReadableWebHdfsFile:
         res = list(self.generator)[0]
         return res
 
-    def readlines(self, char='\n'):
+    def readlines(self, char="\n"):
         self.generator = self.client.read(self.path, buffer_char=char)
         return self.generator
 
@@ -81,7 +76,7 @@ class ReadableWebHdfsFile:
         self.close()
 
     def __iter__(self):
-        self.generator = self.readlines('\n')
+        self.generator = self.readlines("\n")
         yield from self.generator
         self.close()
 

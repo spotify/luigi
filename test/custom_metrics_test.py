@@ -38,7 +38,7 @@ class CustomMetricsTestMyTask(luigi.Task):
 
     def run(self):
         time.sleep(self.n)
-        with self.output().open('w') as f:
+        with self.output().open("w") as f:
             f.write("content\n")
 
 
@@ -47,7 +47,7 @@ class CustomMetricsTestWrapper(CustomMetricsTestMyTask):
         return [self.clone(CustomMetricsTestMyTask, n=n) for n in range(self.n)]
 
 
-METRICS_COLLECTOR_MODULE = b'''
+METRICS_COLLECTOR_MODULE = b"""
 from luigi.metrics import NoMetricsCollector
 
 class CustomMetricsCollector(NoMetricsCollector):
@@ -58,10 +58,10 @@ class CustomMetricsCollector(NoMetricsCollector):
     def handle_task_statistics(self, task, statistics):
         if "elapsed" in statistics:
             self.elapsed[(task.family, task.params.get("n"))] = statistics["elapsed"]
-'''
+"""
 
 
-TASK_CONTEXT_MODULE = b'''
+TASK_CONTEXT_MODULE = b"""
 import time
 
 class CustomTaskContext:
@@ -77,7 +77,7 @@ class CustomTaskContext:
         assert self._start is not None
         elapsed = time.perf_counter() - self._start
         self._task_process.status_reporter.report_task_statistics({"elapsed": elapsed})
-'''
+"""
 
 
 class CustomMetricsTest(LuigiTestCase):
@@ -94,13 +94,13 @@ class CustomMetricsTest(LuigiTestCase):
 
     def _create_worker_and_run_task(self, scheduler):
         with temporary_unloaded_module(TASK_CONTEXT_MODULE) as task_context_module:
-            with Worker(scheduler=scheduler, worker_id='X', task_process_context=task_context_module + '.CustomTaskContext') as worker:
+            with Worker(scheduler=scheduler, worker_id="X", task_process_context=task_context_module + ".CustomTaskContext") as worker:
                 self._run_task_on_worker(worker)
 
     def test_custom_metrics(self):
         with temporary_unloaded_module(METRICS_COLLECTOR_MODULE) as metrics_collector_module:
-            scheduler = Scheduler(metrics_collector=MetricsCollectors.custom, metrics_custom_import=metrics_collector_module + '.CustomMetricsCollector')
+            scheduler = Scheduler(metrics_collector=MetricsCollectors.custom, metrics_custom_import=metrics_collector_module + ".CustomMetricsCollector")
             self._create_worker_and_run_task(scheduler)
             for (family, n), elapsed in scheduler._state._metrics_collector.elapsed.items():
-                self.assertTrue(family in {'CustomMetricsTestMyTask', 'CustomMetricsTestWrapper'})
+                self.assertTrue(family in {"CustomMetricsTestMyTask", "CustomMetricsTestWrapper"})
                 self.assertTrue(elapsed >= float(n))

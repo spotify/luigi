@@ -32,11 +32,10 @@ from luigi.contrib.hdfs import get_autoconfig_client
 from luigi.target import FileAlreadyExists, FileSystemTarget
 from luigi.task import flatten
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class HiveCommandError(RuntimeError):
-
     def __init__(self, message, out=None, err=None):
         super(HiveCommandError, self).__init__(message, out, err)
         self.message = message
@@ -45,19 +44,19 @@ class HiveCommandError(RuntimeError):
 
 
 def load_hive_cmd():
-    return luigi.configuration.get_config().get('hive', 'command', 'hive').split(' ')
+    return luigi.configuration.get_config().get("hive", "command", "hive").split(" ")
 
 
 def get_hive_syntax():
-    return luigi.configuration.get_config().get('hive', 'release', 'cdh4')
+    return luigi.configuration.get_config().get("hive", "release", "cdh4")
 
 
 def get_hive_warehouse_location():
-    return luigi.configuration.get_config().get('hive', 'warehouse_location', '/user/hive/warehouse')
+    return luigi.configuration.get_config().get("hive", "warehouse_location", "/user/hive/warehouse")
 
 
 def get_ignored_file_masks():
-    return luigi.configuration.get_config().get('hive', 'ignored_file_masks', None)
+    return luigi.configuration.get_config().get("hive", "ignored_file_masks", None)
 
 
 def run_hive(args, check_return_code=True):
@@ -73,16 +72,15 @@ def run_hive(args, check_return_code=True):
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if check_return_code and p.returncode != 0:
-        raise HiveCommandError("Hive command: {0} failed with error code: {1}".format(" ".join(cmd), p.returncode),
-                               stdout, stderr)
-    return stdout.decode('utf-8')
+        raise HiveCommandError("Hive command: {0} failed with error code: {1}".format(" ".join(cmd), p.returncode), stdout, stderr)
+    return stdout.decode("utf-8")
 
 
 def run_hive_cmd(hivecmd, check_return_code=True):
     """
     Runs the given hive query and returns stdout.
     """
-    return run_hive(['-e', hivecmd], check_return_code)
+    return run_hive(["-e", hivecmd], check_return_code)
 
 
 def run_hive_script(script):
@@ -91,7 +89,7 @@ def run_hive_script(script):
     """
     if not os.path.isfile(script):
         raise RuntimeError("Hive script: {0} does not exist.".format(script))
-    return run_hive(['-f', script])
+    return run_hive(["-f", script])
 
 
 def _is_ordered_dict(dikt):
@@ -109,18 +107,13 @@ def _validate_partition(partition):
     If partition is set and its size is more than one and not ordered,
     then we're unable to restore its path in the warehouse
     """
-    if (
-            partition
-            and len(partition) > 1
-            and not _is_ordered_dict(partition)
-    ):
-        raise ValueError('Unable to restore table/partition location')
+    if partition and len(partition) > 1 and not _is_ordered_dict(partition):
+        raise ValueError("Unable to restore table/partition location")
 
 
 class HiveClient(metaclass=abc.ABCMeta):
-
     @abc.abstractmethod
-    def table_location(self, table, database='default', partition=None):
+    def table_location(self, table, database="default", partition=None):
         """
         Returns location of db.table (or db.table.partition). partition is a dict of partition key to
         value.
@@ -128,14 +121,14 @@ class HiveClient(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def table_schema(self, table, database='default'):
+    def table_schema(self, table, database="default"):
         """
         Returns list of [(name, type)] for each column in database.table.
         """
         pass
 
     @abc.abstractmethod
-    def table_exists(self, table, database='default', partition=None):
+    def table_exists(self, table, database="default", partition=None):
         """
         Returns true if db.table (or db.table.partition) exists. partition is a dict of partition key to
         value.
@@ -144,7 +137,7 @@ class HiveClient(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def partition_spec(self, partition):
-        """ Turn a dict into a string partition specification """
+        """Turn a dict into a string partition specification"""
         pass
 
 
@@ -153,7 +146,7 @@ class HiveCommandClient(HiveClient):
     Uses `hive` invocations to find information.
     """
 
-    def table_location(self, table, database='default', partition=None):
+    def table_location(self, table, database="default", partition=None):
         cmd = "use {0}; describe formatted {1}".format(database, table)
         if partition is not None:
             cmd += " PARTITION ({0})".format(self.partition_spec(partition))
@@ -164,21 +157,24 @@ class HiveCommandClient(HiveClient):
             if "Location:" in line:
                 return line.split("\t")[1]
 
-    def table_exists(self, table, database='default', partition=None):
+    def table_exists(self, table, database="default", partition=None):
         if partition is None:
             stdout = run_hive_cmd('use {0}; show tables like "{1}";'.format(database, table))
 
             return stdout and table.lower() in stdout
         else:
-            stdout = run_hive_cmd("""use %s; show partitions %s partition
-                                (%s)""" % (database, table, self.partition_spec(partition)))
+            stdout = run_hive_cmd(
+                """use %s; show partitions %s partition
+                                (%s)"""
+                % (database, table, self.partition_spec(partition))
+            )
 
             if stdout:
                 return True
             else:
                 return False
 
-    def table_schema(self, table, database='default'):
+    def table_schema(self, table, database="default"):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table))
         if not describe or "does not exist" in describe:
             return None
@@ -188,8 +184,7 @@ class HiveCommandClient(HiveClient):
         """
         Turns a dict into the a Hive partition specification string.
         """
-        return ','.join(["`{0}`='{1}'".format(k, v) for (k, v) in
-                         sorted(partition.items(), key=operator.itemgetter(0))])
+        return ",".join(["`{0}`='{1}'".format(k, v) for (k, v) in sorted(partition.items(), key=operator.itemgetter(0))])
 
 
 class ApacheHiveCommandClient(HiveCommandClient):
@@ -198,7 +193,7 @@ class ApacheHiveCommandClient(HiveCommandClient):
     the hive command so that we can just parse the output.
     """
 
-    def table_schema(self, table, database='default'):
+    def table_schema(self, table, database="default"):
         describe = run_hive_cmd("use {0}; describe {1}".format(database, table), False)
         if not describe or "Table not found" in describe:
             return None
@@ -206,21 +201,21 @@ class ApacheHiveCommandClient(HiveCommandClient):
 
 
 class MetastoreClient(HiveClient):
-
-    def table_location(self, table, database='default', partition=None):
+    def table_location(self, table, database="default", partition=None):
         with HiveThriftContext() as client:
             if partition is not None:
                 try:
                     import hive_metastore.ttypes
+
                     partition_str = self.partition_spec(partition)
                     thrift_table = client.get_partition_by_name(database, table, partition_str)
                 except hive_metastore.ttypes.NoSuchObjectException:
-                    return ''
+                    return ""
             else:
                 thrift_table = client.get_table(database, table)
             return thrift_table.sd.location
 
-    def table_exists(self, table, database='default', partition=None):
+    def table_exists(self, table, database="default", partition=None):
         with HiveThriftContext() as client:
             if partition is None:
                 return table in client.get_all_tables(database)
@@ -239,7 +234,7 @@ class MetastoreClient(HiveClient):
         partition_strings = client.get_partition_names(database, table, -1)
         return [_parse_partition_string(existing_partition) for existing_partition in partition_strings]
 
-    def table_schema(self, table, database='default'):
+    def table_schema(self, table, database="default"):
         with HiveThriftContext() as client:
             return [(field_schema.name, field_schema.type) for field_schema in client.get_schema(database, table)]
 
@@ -254,16 +249,16 @@ class HiveThriftContext:
 
     def __enter__(self):
         try:
-            from thrift.transport import TSocket
-            from thrift.transport import TTransport
-            from thrift.protocol import TBinaryProtocol
             # Note that this will only work with a CDH release.
             # This uses the thrift bindings generated by the ThriftHiveMetastore service in Beeswax.
             # If using the Apache release of Hive this import will fail.
             from hive_metastore import ThriftHiveMetastore
+            from thrift.protocol import TBinaryProtocol
+            from thrift.transport import TSocket, TTransport
+
             config = luigi.configuration.get_config()
-            host = config.get('hive', 'metastore_host')
-            port = config.getint('hive', 'metastore_port')
+            host = config.get("hive", "metastore_host")
+            port = config.getint("hive", "metastore_port")
             transport = TSocket.TSocket(host, port)
             transport = TTransport.TBufferedTransport(transport)
             protocol = TBinaryProtocol.TBinaryProtocol(transport)
@@ -271,7 +266,7 @@ class HiveThriftContext:
             self.transport = transport
             return ThriftHiveMetastore.Client(protocol)
         except ImportError as e:
-            raise Exception('Could not import Hive thrift library:' + str(e))
+            raise Exception("Could not import Hive thrift library:" + str(e))
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.transport.close()
@@ -286,18 +281,13 @@ class WarehouseHiveClient(HiveClient):
         self.hdfs_client = hdfs_client or get_autoconfig_client()
         self.warehouse_location = warehouse_location or get_hive_warehouse_location()
 
-    def table_schema(self, table, database='default'):
+    def table_schema(self, table, database="default"):
         return NotImplemented
 
-    def table_location(self, table, database='default', partition=None):
-        return os.path.join(
-            self.warehouse_location,
-            database + '.db',
-            table,
-            self.partition_spec(partition)
-        )
+    def table_location(self, table, database="default", partition=None):
+        return os.path.join(self.warehouse_location, database + ".db", table, self.partition_spec(partition))
 
-    def table_exists(self, table, database='default', partition=None):
+    def table_exists(self, table, database="default", partition=None):
         """
         The table/partition is considered existing if corresponding path in hdfs exists
         and contains file except those which match pattern set in  `ignored_file_masks`
@@ -318,9 +308,7 @@ class WarehouseHiveClient(HiveClient):
 
     def partition_spec(self, partition):
         _validate_partition(partition)
-        return '/'.join([
-            '{}={}'.format(k, v) for (k, v) in (partition or {}).items()
-        ])
+        return "/".join(["{}={}".format(k, v) for (k, v) in (partition or {}).items()])
 
 
 def get_default_client():
@@ -329,7 +317,7 @@ def get_default_client():
         return ApacheHiveCommandClient()
     elif syntax == "metastore":
         return MetastoreClient()
-    elif syntax == 'warehouse':
+    elif syntax == "warehouse":
         return WarehouseHiveClient()
     else:
         return HiveCommandClient()
@@ -350,7 +338,7 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
 
     @abc.abstractmethod
     def query(self):
-        """ Text of query to run in hive """
+        """Text of query to run in hive"""
         raise RuntimeError("Must implement query!")
 
     def hiverc(self):
@@ -361,7 +349,7 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
 
         Returning a list of rc files will load all of them in order.
         """
-        return luigi.configuration.get_config().get('hive', 'hiverc-location', default=None)
+        return luigi.configuration.get_config().get("hive", "hiverc-location", default=None)
 
     def hivevars(self):
         """
@@ -384,20 +372,20 @@ class HiveQueryTask(luigi.contrib.hadoop.BaseHadoopJobTask):
         * hive.exec.reducers.max (reducers_max)
         """
         jcs = {}
-        jcs['mapred.job.name'] = "'" + self.task_id + "'"
+        jcs["mapred.job.name"] = "'" + self.task_id + "'"
         if self.n_reduce_tasks is not None:
-            jcs['mapred.reduce.tasks'] = self.n_reduce_tasks
+            jcs["mapred.reduce.tasks"] = self.n_reduce_tasks
         if self.pool is not None:
             # Supporting two schedulers: fair (default) and capacity using the same option
-            scheduler_type = luigi.configuration.get_config().get('hadoop', 'scheduler', 'fair')
-            if scheduler_type == 'fair':
-                jcs['mapred.fairscheduler.pool'] = self.pool
-            elif scheduler_type == 'capacity':
-                jcs['mapred.job.queue.name'] = self.pool
+            scheduler_type = luigi.configuration.get_config().get("hadoop", "scheduler", "fair")
+            if scheduler_type == "fair":
+                jcs["mapred.fairscheduler.pool"] = self.pool
+            elif scheduler_type == "capacity":
+                jcs["mapred.job.queue.name"] = self.pool
         if self.bytes_per_reducer is not None:
-            jcs['hive.exec.reducers.bytes.per.reducer'] = self.bytes_per_reducer
+            jcs["hive.exec.reducers.bytes.per.reducer"] = self.bytes_per_reducer
         if self.reducers_max is not None:
-            jcs['hive.exec.reducers.max'] = self.reducers_max
+            jcs["hive.exec.reducers.max"] = self.reducers_max
         return jcs
 
     def job_runner(self):
@@ -429,34 +417,33 @@ class HiveQueryRunner(luigi.contrib.hadoop.JobRunner):
                         pass
 
     def get_arglist(self, f_name, job):
-        arglist = load_hive_cmd() + ['-f', f_name]
+        arglist = load_hive_cmd() + ["-f", f_name]
         hiverc = job.hiverc()
         if hiverc:
             if isinstance(hiverc, str):
                 hiverc = [hiverc]
             for rcfile in hiverc:
-                arglist += ['-i', rcfile]
+                arglist += ["-i", rcfile]
         hiveconfs = job.hiveconfs()
         if hiveconfs:
             for k, v in hiveconfs.items():
-                arglist += ['--hiveconf', '{0}={1}'.format(k, v)]
+                arglist += ["--hiveconf", "{0}={1}".format(k, v)]
         hivevars = job.hivevars()
         if hivevars:
             for k, v in hivevars.items():
-                arglist += ['--hivevar', '{0}={1}'.format(k, v)]
+                arglist += ["--hivevar", "{0}={1}".format(k, v)]
         logger.info(arglist)
         return arglist
 
     def run_job(self, job, tracking_url_callback=None):
         if tracking_url_callback is not None:
-            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
-                          "used instead.", DeprecationWarning)
+            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is used instead.", DeprecationWarning)
 
         self.prepare_outputs(job)
         with tempfile.NamedTemporaryFile() as f:
             query = job.query()
             if isinstance(query, str):
-                query = query.encode('utf8')
+                query = query.encode("utf8")
             f.write(query)
             f.flush()
             arglist = self.get_arglist(f.name, job)
@@ -468,7 +455,7 @@ class HivePartitionTarget(luigi.Target):
     Target representing Hive table or Hive partition
     """
 
-    def __init__(self, table, partition, database='default', fail_missing_table=True, client=None):
+    def __init__(self, table, partition, database="default", fail_missing_table=True, client=None):
         """
         @param table: Table name
         @type table: str
@@ -493,13 +480,7 @@ class HivePartitionTarget(luigi.Target):
         returns `True` if the partition/table exists
         """
         try:
-            logger.debug(
-                "Checking Hive table '{d}.{t}' for partition {p}".format(
-                    d=self.database,
-                    t=self.table,
-                    p=str(self.partition or {})
-                )
-            )
+            logger.debug("Checking Hive table '{d}.{t}' for partition {p}".format(d=self.database, t=self.table, p=str(self.partition or {})))
 
             return self.client.table_exists(self.table, self.database, self.partition)
         except HiveCommandError:
@@ -529,7 +510,7 @@ class HiveTableTarget(HivePartitionTarget):
     Target representing non-partitioned table
     """
 
-    def __init__(self, table, database='default', client=None):
+    def __init__(self, table, database="default", client=None):
         super(HiveTableTarget, self).__init__(
             table=table,
             partition=None,
@@ -543,12 +524,10 @@ class ExternalHiveTask(luigi.ExternalTask):
     """
     External task that depends on a Hive table/partition.
     """
-    database = luigi.Parameter(default='default')
+
+    database = luigi.Parameter(default="default")
     table = luigi.Parameter()
-    partition = luigi.DictParameter(
-        default={},
-        description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}'
-    )
+    partition = luigi.DictParameter(default={}, description='Python dictionary specifying the target partition e.g. {"date": "2013-01-25"}')
 
     def output(self):
         return HivePartitionTarget(

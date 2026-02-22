@@ -22,7 +22,7 @@ import abc
 import logging
 from typing import Any, Dict, List
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class TaskClassException(Exception):
@@ -47,6 +47,7 @@ class Register(abc.ABCMeta):
        same object.
     2. Keep track of all subclasses of :py:class:`Task` and expose them.
     """
+
     __instance_cache: Dict[str, Any] = {}
     _default_namespace_dict: Dict[str, Any] = {}
     _reg: List[Any] = []
@@ -76,6 +77,7 @@ class Register(abc.ABCMeta):
         If a Task has already been instantiated with the same parameters,
         the previous instance is returned to reduce number of object instances.
         """
+
         def instantiate():
             return super(Register, cls).__call__(*args, **kwargs)
 
@@ -138,9 +140,10 @@ class Register(abc.ABCMeta):
                 continue
 
             name = task_cls.get_task_family()
-            if name in reg and \
-                    (reg[name] == Register.AMBIGUOUS_CLASS or  # Check so issubclass doesn't crash
-                     not issubclass(task_cls, reg[name])):
+            if name in reg and (
+                reg[name] == Register.AMBIGUOUS_CLASS  # Check so issubclass doesn't crash
+                or not issubclass(task_cls, reg[name])
+            ):
                 # Registering two different classes - this means we can't instantiate them by name
                 # The only exception is if one class is a subclass of the other. In that case, we
                 # instantiate the most-derived class (this fixes some issues with decorator wrappers).
@@ -152,8 +155,7 @@ class Register(abc.ABCMeta):
 
     @classmethod
     def _set_reg(cls, reg):
-        """The writing complement of _get_reg
-        """
+        """The writing complement of _get_reg"""
         cls._reg = [task_cls for task_cls in reg.values() if task_cls is not cls.AMBIGUOUS_CLASS]
 
     @classmethod
@@ -168,7 +170,7 @@ class Register(abc.ABCMeta):
         """
         Human-readable register contents dump.
         """
-        return ','.join(cls.task_names())
+        return ",".join(cls.task_names())
 
     @classmethod
     def get_task_cls(cls, name):
@@ -180,7 +182,7 @@ class Register(abc.ABCMeta):
             raise TaskClassNotFoundException(cls._missing_task_msg(name))
 
         if task_cls == cls.AMBIGUOUS_CLASS:
-            raise TaskClassAmbigiousException('Task %r is ambiguous' % name)
+            raise TaskClassAmbigiousException("Task %r is ambiguous" % name)
         return task_cls
 
     @classmethod
@@ -198,7 +200,7 @@ class Register(abc.ABCMeta):
 
     @staticmethod
     def _editdistance(a, b):
-        """ Simple unweighted Levenshtein distance """
+        """Simple unweighted Levenshtein distance"""
         r0 = range(0, len(b) + 1)
         r1 = [0] * (len(b) + 1)
 
@@ -219,7 +221,7 @@ class Register(abc.ABCMeta):
         ordered_tasks = sorted(weighted_tasks, key=lambda pair: pair[0])
         candidates = [task for (dist, task) in ordered_tasks if dist <= 5 and dist < len(task)]
         if candidates:
-            return "No task %s. Did you mean:\n%s" % (task_name, '\n'.join(candidates))
+            return "No task %s. Did you mean:\n%s" % (task_name, "\n".join(candidates))
         else:
             return "No task %s. Candidates are: %s" % (task_name, cls.tasks_str())
 
@@ -229,19 +231,19 @@ class Register(abc.ABCMeta):
             entry = mcs._default_namespace_dict.get(parent)
             if entry:
                 return entry
-        return ''  # Default if nothing specifies
+        return ""  # Default if nothing specifies
 
     @staticmethod
     def _module_parents(module_name):
-        '''
+        """
         >>> list(Register._module_parents('a.b'))
         ['a.b', 'a', '']
-        '''
-        spl = module_name.split('.')
+        """
+        spl = module_name.split(".")
         for i in range(len(spl), 0, -1):
-            yield '.'.join(spl[0:i])
+            yield ".".join(spl[0:i])
         if module_name:
-            yield ''
+            yield ""
 
 
 def load_task(module, task_name, params_str):

@@ -19,7 +19,6 @@ import luigi
 import luigi.contrib.hadoop
 import luigi.contrib.hdfs
 
-
 # To make this run, you probably want to edit /etc/luigi/client.cfg and add something like:
 #
 # [hadoop]
@@ -43,7 +42,7 @@ class InputText(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('/tmp/text/%Y-%m-%d.txt'))
+        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime("/tmp/text/%Y-%m-%d.txt"))
 
 
 class WordCount(luigi.contrib.hadoop.JobTask):
@@ -75,7 +74,7 @@ class WordCount(luigi.contrib.hadoop.JobTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.contrib.hdfs.HdfsTarget('/tmp/text-count/%s' % self.date_interval)
+        return luigi.contrib.hdfs.HdfsTarget("/tmp/text-count/%s" % self.date_interval)
 
     def mapper(self, line):
         for word in line.strip().split():
@@ -85,5 +84,5 @@ class WordCount(luigi.contrib.hadoop.JobTask):
         yield key, sum(values)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     luigi.run()

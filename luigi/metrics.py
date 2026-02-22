@@ -1,6 +1,5 @@
 import abc
 import importlib
-
 from enum import Enum
 
 
@@ -17,9 +16,11 @@ class MetricsCollectors(Enum):
             return NoMetricsCollector()
         elif which == MetricsCollectors.datadog:
             from luigi.contrib.datadog_metric import DatadogMetricsCollector
+
             return DatadogMetricsCollector()
         elif which == MetricsCollectors.prometheus:
             from luigi.contrib.prometheus_metric import PrometheusMetricsCollector
+
             return PrometheusMetricsCollector()
         elif which == MetricsCollectors.custom:
             if custom_import is None:
@@ -77,8 +78,7 @@ class MetricsCollector(metaclass=abc.ABCMeta):
 
 
 class NoMetricsCollector(MetricsCollector):
-    """Empty MetricsCollector when no collector is being used
-    """
+    """Empty MetricsCollector when no collector is being used"""
 
     def __init__(self):
         pass
