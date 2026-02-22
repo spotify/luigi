@@ -51,14 +51,6 @@ except ImportError:
     pass
 
 
-# on_rtd is whether we are on readthedocs.org, this line of code grabbed from docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
-if on_rtd:
-    # Run sphinx-apidoc automatically in readthedocs
-    # Taken from this: https://lists.torproject.org/pipermail/tor-commits/2012-September/046695.html
-    os.system('sphinx-apidoc -o api -T ../luigi --separate')
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -155,10 +147,7 @@ autodoc_member_order = 'bysource'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    html_theme = 'sphinx_rtd_theme'
-
-# otherwise, readthedocs.org uses their theme by default, so no need to specify it
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
