@@ -29,11 +29,9 @@ API Reference
 
 .. autosummary::
    :toctree: api
+   :recursive:
 
    luigi
-   luigi.contrib
-   luigi.tools
-   luigi.local_target
 
 
 Indices and tables
