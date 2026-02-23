@@ -807,14 +807,6 @@ class DynamicRequirements(object):
 
         The original, wrapped requirements.
 
-    .. py:attribute:: flat_requirements
-
-        Flattened view of the wrapped requirements (via :py:func:`flatten`). Read only.
-
-    .. py:attribute:: paths
-
-        Outputs of the requirements in the identical structure (via :py:func:`getpaths`). Read only.
-
     .. py:attribute:: custom_complete
 
        The optional, custom function performing the completeness check of the wrapped requirements.
