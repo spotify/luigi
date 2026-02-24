@@ -31,8 +31,10 @@ from json import JSONEncoder
 from pathlib import Path
 from typing import (
     Any,
+    Callable,
     Dict,
     Generic,
+    Iterable,
     Optional,
     Sequence,
     Tuple,
@@ -149,7 +151,7 @@ class _ParameterKwargs(TypedDict, total=False):
     config_path: Optional[str]
     positional: bool
     always_in_help: bool
-    batch_method: Any
+    batch_method: Optional[Callable[[Iterable[Any]], Any]]
     visibility: ParameterVisibility
 
 
@@ -203,8 +205,8 @@ class Parameter(Generic[T]):
         config_path: Optional[str] = None,
         positional: bool = True,
         always_in_help: bool = False,
-        batch_method=None,
-        visibility=ParameterVisibility.PUBLIC,
+        batch_method: Optional[Callable[[Iterable[Any]], Any]] = None,
+        visibility: ParameterVisibility = ParameterVisibility.PUBLIC,
     ):
         """
         :param default: the default value for this parameter. This should match the type of the
