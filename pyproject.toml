@@ -81,6 +81,7 @@ common = [
   "pymongo==3.4.0",
   "pytest",
   "pytest-cov",
+  "pytest-xdist",
   "requests>=2.20.0,<=2.31.0",
   "responses<1.0.0",
   "s3transfer>=0.3,<4.0",

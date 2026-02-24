@@ -35,6 +35,7 @@ luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
+    _visible_in_registry = False  # test fixture: invisible to registry to prevent name conflicts
     p = luigi.IntParameter()
 
 
@@ -51,6 +52,7 @@ class WithDefaultFalse(luigi.Task):
 
 
 class Foo(luigi.Task):
+    _visible_in_registry = False  # test fixture: invisible to registry to prevent name conflicts
     bar = luigi.Parameter()
     p2 = luigi.IntParameter()
     not_a_param = "lol"
@@ -1046,7 +1048,8 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         # TODO(arash): Why is `--p 200` hanging with multiprocessing stuff?
         # self.assertTrue(self.run_locally_split('mynamespace.A --p 200 --expected 200'))
         self.assertTrue(self.run_locally_split("mynamespace.A --mynamespace.A-p 200 --expected 200"))
-        self.assertFalse(self.run_locally_split("mynamespace.A --A-p 200 --expected 200"))
+        # --A-p is unrecognized since module-level A is _visible_in_registry=False (no CLI flag)
+        self.assertRaises(SystemExit, self.run_locally_split, "mynamespace.A --A-p 200 --expected 200")
 
     def testListWithNamespaceCli(self):
         class A(luigi.Task):
