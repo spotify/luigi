@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+from __future__ import annotations
+
 import abc
 import json
 import logging
@@ -222,7 +224,7 @@ class BeamDataflowJobTask(MixinNaiveBulkComplete, luigi.Task, metaclass=abc.ABCM
     service_account = None
     zone = None
     region = None
-    labels = {}
+    labels: dict[str, str] = {}
 
     cmd_line_runner = _CmdLineRunner
     dataflow_params = None

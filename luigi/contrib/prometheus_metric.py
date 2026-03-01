@@ -7,7 +7,7 @@ from luigi.task import Config
 
 class prometheus(Config):
     use_task_family_in_labels = parameter.BoolParameter(default=True, parsing=parameter.BoolParameter.EXPLICIT_PARSING)
-    task_parameters_to_use_in_labels = parameter.ListParameter(default=[])
+    task_parameters_to_use_in_labels = parameter.ListParameter(default=())
 
 
 class PrometheusMetricsCollector(MetricsCollector):

@@ -102,7 +102,7 @@ from luigi.contrib import sge_runner
 from luigi.contrib.hadoop import create_packages_archive
 
 logger = logging.getLogger("luigi-interface")
-logger.propagate = 0
+logger.propagate = False
 
 POLL_TIME = 5  # decided to hard-code rather than configure here
 

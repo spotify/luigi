@@ -29,6 +29,8 @@ Example:
 
 """
 
+from __future__ import annotations
+
 import json
 from urllib.parse import parse_qs, urlsplit
 
@@ -126,7 +128,7 @@ class Opener:
     """Base class for Opener objects."""
 
     # Dictionary of expected kwargs and flag for json loading values (bool/int)
-    allowed_kwargs = {}
+    allowed_kwargs: dict[str, bool] = {}
     # Flag to filter out unexpected kwargs
     filter_kwargs = True
 
