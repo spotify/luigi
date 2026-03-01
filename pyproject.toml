@@ -176,6 +176,28 @@ dev = [
   {include-group = "lint"},
 ]
 
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+# Gradually tighten: remove a module from the ignore list below after fixing its errors
+
+[[tool.mypy.overrides]]
+module = [
+    "luigi.contrib.gcs",
+    "luigi.contrib.hadoop",
+    "luigi.contrib.hdfs.config",
+    "luigi.contrib.postgres",
+    "luigi.contrib.redis_store",
+    "luigi.contrib.spark",
+    "luigi.contrib.sqla",
+    "luigi.interface",
+    "luigi.notifications",
+    "luigi.parameter",
+    "luigi.tools.range",
+    "luigi.worker",
+]
+ignore_errors = true
+
 [tool.ruff]
 line-length = 160
 exclude = ["doc"]

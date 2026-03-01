@@ -15,6 +15,8 @@
 # limitations under the License.
 #
 
+from __future__ import annotations
+
 import collections
 import logging
 import time
@@ -26,7 +28,7 @@ from luigi.contrib import gcp
 
 logger = logging.getLogger("luigi-interface")
 
-RETRYABLE_ERRORS = None
+RETRYABLE_ERRORS: tuple[type[BaseException], ...] = ()
 try:
     import httplib2
     from googleapiclient import discovery, errors, http

@@ -144,11 +144,16 @@ class UnconsumedParameterWarning(UserWarning):
 T = TypeVar("T", default=str)
 
 
+class ConfigPath(TypedDict):
+    section: str
+    name: str
+
+
 class _ParameterKwargs(TypedDict, total=False):
     is_global: bool
     significant: bool
     description: Optional[str]
-    config_path: Optional[str]
+    config_path: Optional[ConfigPath]
     positional: bool
     always_in_help: bool
     batch_method: Optional[Callable[[Iterable[Any]], Any]]
@@ -202,7 +207,7 @@ class Parameter(Generic[T]):
         is_global: bool = False,
         significant: bool = True,
         description: Optional[str] = None,
-        config_path: Optional[str] = None,
+        config_path: Optional[ConfigPath] = None,
         positional: bool = True,
         always_in_help: bool = False,
         batch_method: Optional[Callable[[Iterable[Any]], Any]] = None,
