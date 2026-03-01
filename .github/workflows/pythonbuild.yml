@@ -218,6 +218,7 @@ jobs:
         include:
           - tox-env: lint
           - tox-env: docs
+          - tox-env: mypy
     steps:
       - uses: actions/checkout@v4
       - name: Set up the latest version of uv
