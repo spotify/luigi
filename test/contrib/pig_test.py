@@ -106,8 +106,10 @@ class ComplexPigTest(unittest.TestCase):
         p = subprocess.Popen
         subprocess.Popen = _get_fake_Popen(arglist_result, 0)
 
-        with tempfile.NamedTemporaryFile(delete=False) as param_file_mock, tempfile.NamedTemporaryFile(delete=False) as prop_file_mock, patch(
-            "luigi.contrib.pig.tempfile.NamedTemporaryFile", side_effect=[param_file_mock, prop_file_mock]
+        with (
+            tempfile.NamedTemporaryFile(delete=False) as param_file_mock,
+            tempfile.NamedTemporaryFile(delete=False) as prop_file_mock,
+            patch("luigi.contrib.pig.tempfile.NamedTemporaryFile", side_effect=[param_file_mock, prop_file_mock]),
         ):
             try:
                 job = ComplexTestJob()
@@ -149,8 +151,10 @@ class ComplexPigTest(unittest.TestCase):
         p = subprocess.Popen
         subprocess.Popen = _get_fake_Popen(arglist_result, 1)
 
-        with tempfile.NamedTemporaryFile(delete=False) as param_file_mock, tempfile.NamedTemporaryFile(delete=False) as prop_file_mock, patch(
-            "luigi.contrib.pig.tempfile.NamedTemporaryFile", side_effect=[param_file_mock, prop_file_mock]
+        with (
+            tempfile.NamedTemporaryFile(delete=False) as param_file_mock,
+            tempfile.NamedTemporaryFile(delete=False) as prop_file_mock,
+            patch("luigi.contrib.pig.tempfile.NamedTemporaryFile", side_effect=[param_file_mock, prop_file_mock]),
         ):
             try:
                 job = ComplexTestJob()
