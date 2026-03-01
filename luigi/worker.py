@@ -214,12 +214,7 @@ class TaskProcess(multiprocessing.Process):
                 with self._forward_attributes():
                     new_deps = self._run_get_new_deps()
                 if not new_deps:
-                    if not self.check_complete_on_run:
-                        # update the cache
-                        if self.task_completion_cache is not None:
-                            self.task_completion_cache[self.task.task_id] = True
-                        status = DONE
-                    elif self.check_complete(self.task):
+                    if not self.check_complete_on_run or self.check_complete(self.task):
                         status = DONE
                     else:
                         raise TaskException("Task finished running, but complete() is still returning false.")
