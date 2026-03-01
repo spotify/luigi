@@ -18,8 +18,11 @@
 A common module for postgres like databases, such as postgres or redshift
 """
 
+from __future__ import annotations
+
 import abc
 import logging
+from typing import Any
 
 import luigi
 import luigi.task
@@ -200,7 +203,7 @@ class CopyToTable(luigi.task.MixinNaiveBulkComplete, _MetadataColumnsMixin, luig
     # e.g. ['id', 'username', 'inserted']
     # or tuples with column name, postgres column type strings:
     # e.g. [('id', 'SERIAL PRIMARY KEY'), ('username', 'VARCHAR(255)'), ('inserted', 'DATETIME')]
-    columns = []
+    columns: list[Any] = []
 
     # options
     null_values = (None,)  # container of values that should be inserted as NULL values

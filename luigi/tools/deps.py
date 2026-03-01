@@ -37,6 +37,7 @@
 #
 
 import sys
+from collections.abc import Iterable
 
 import luigi.interface
 from luigi import parameter
@@ -46,11 +47,6 @@ from luigi.contrib.s3 import S3Target
 from luigi.contrib.ssh import RemoteTarget
 from luigi.target import FileSystemTarget
 from luigi.task import flatten
-
-try:
-    from collections.abc import Iterable
-except ImportError:
-    from collections import Iterable
 
 
 def get_task_requires(task):
