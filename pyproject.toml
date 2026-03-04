@@ -9,7 +9,7 @@ authors = [
   {name = "The Luigi Authors"}
 ]
 license = {file = "LICENSE"}
-requires-python = ">=3.8.0, <3.14"
+requires-python = ">=3.9.0, <3.15"
 dependencies = [
   "python-dateutil>=2.7.5,<3",
   "tenacity>=9",
@@ -31,6 +31,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: System :: Monitoring",
 ]
 dynamic = ["version", "readme"]
@@ -59,15 +60,13 @@ cdh = [
 common = [
   "avro-python3",
   "azure-storage-blob<=12.20.0",
-  "boto>=2.42,<3.0",
-  "boto3>=1.11.0",
+  "boto3>=1.39.9",
   "codecov>=1.4.0",
   "coverage>=5.0,<6",
   "datadog==0.22.0",
   "docker>=2.1.0",
   "elasticsearch>=1.0.0,<2.0.0",
   "google-compute-engine",
-  "HTTPretty==0.8.10",
   "hypothesis>=6.7.0,<7.0.0",
   "jsonschema",
   "mock<2.0",
