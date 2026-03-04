@@ -19,6 +19,7 @@ jobs:
           - tox-env: py311-core
           - tox-env: py312-core
           - tox-env: py313-core
+          - tox-env: py314-core
 
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +55,7 @@ jobs:
           - tox-env: py311-mysql
           - tox-env: py312-mysql
           - tox-env: py313-mysql
+          - tox-env: py314-mysql
 
     steps:
       - uses: actions/checkout@v4
@@ -110,6 +112,7 @@ jobs:
           - tox-env: py311-postgres
           - tox-env: py312-postgres
           - tox-env: py313-postgres
+          - tox-env: py314-postgres
 
     steps:
       - uses: actions/checkout@v4
@@ -152,6 +155,7 @@ jobs:
           - tox-env: py311-aws
           - tox-env: py312-aws
           - tox-env: py313-aws
+          - tox-env: py314-aws
 
           - tox-env: py38-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
@@ -165,6 +169,8 @@ jobs:
             OVERRIDE_SKIP_CI_TESTS: True
           - tox-env: py313-unixsocket
             OVERRIDE_SKIP_CI_TESTS: True
+          - tox-env: py314-unixsocket
+            OVERRIDE_SKIP_CI_TESTS: True
 
           - tox-env: py38-apache
           - tox-env: py39-apache
@@ -172,6 +178,7 @@ jobs:
           - tox-env: py311-apache
           - tox-env: py312-apache
           - tox-env: py313-apache
+          - tox-env: py314-apache
 
           - tox-env: py38-azureblob
           - tox-env: py39-azureblob
@@ -179,6 +186,7 @@ jobs:
           - tox-env: py311-azureblob
           - tox-env: py312-azureblob
           - tox-env: py313-azureblob
+          - tox-env: py314-azureblob
 
           - tox-env: py38-contrib
           - tox-env: py39-contrib
@@ -186,6 +194,7 @@ jobs:
           - tox-env: py311-contrib
           - tox-env: py312-contrib
           - tox-env: py313-contrib
+          - tox-env: py314-contrib
 
     steps:
       - uses: actions/checkout@v4

@@ -9,7 +9,7 @@ authors = [
   {name = "The Luigi Authors"}
 ]
 license = {file = "LICENSE"}
-requires-python = ">=3.8.0, <3.14"
+requires-python = ">=3.8.0, <3.15"
 dependencies = [
   "python-dateutil>=2.7.5,<3",
   "tenacity>=9",
@@ -31,6 +31,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: System :: Monitoring",
 ]
 dynamic = ["version", "readme"]
