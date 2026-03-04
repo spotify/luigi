@@ -68,7 +68,6 @@ common = [
   "docker>=2.1.0",
   "elasticsearch>=1.0.0,<2.0.0",
   "google-compute-engine",
-  "HTTPretty==0.8.10",
   "hypothesis>=6.7.0,<7.0.0",
   "jsonschema",
   "mock<2.0",
