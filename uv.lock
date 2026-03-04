@@ -853,7 +853,6 @@ cdh = [
 common = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -891,7 +890,6 @@ common = [
 dev = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -965,7 +963,6 @@ postgres = [
 test-cdh = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -1004,7 +1001,6 @@ test-cdh = [
 test-dropbox = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -1043,7 +1039,6 @@ test-dropbox = [
 test-gcloud = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -1084,7 +1079,6 @@ test-gcloud = [
 test-hdp = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -1123,7 +1117,6 @@ test-hdp = [
 test-postgres = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -1163,7 +1156,6 @@ test-postgres = [
 test-unixsocket = [
     { name = "avro-python3" },
     { name = "azure-storage-blob" },
-    { name = "boto" },
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
@@ -1226,7 +1218,6 @@ cdh = [{ name = "hdfs", specifier = ">=2.0.4,<3.0.0" }]
 common = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1261,7 +1252,6 @@ common = [
 dev = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1326,7 +1316,6 @@ postgres = [
 test-cdh = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1362,7 +1351,6 @@ test-cdh = [
 test-dropbox = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1398,7 +1386,6 @@ test-dropbox = [
 test-gcloud = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1436,7 +1423,6 @@ test-gcloud = [
 test-hdp = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1472,7 +1458,6 @@ test-hdp = [
 test-postgres = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
@@ -1509,7 +1494,6 @@ test-postgres = [
 test-unixsocket = [
     { name = "avro-python3" },
     { name = "azure-storage-blob", specifier = "<=12.20.0" },
-    { name = "boto", specifier = ">=2.42,<3.0" },
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
