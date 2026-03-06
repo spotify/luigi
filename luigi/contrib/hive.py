@@ -22,7 +22,6 @@ import operator
 import os
 import re
 import subprocess
-import sys
 import tempfile
 import warnings
 
@@ -93,13 +92,7 @@ def run_hive_script(script):
 
 
 def _is_ordered_dict(dikt):
-    if isinstance(dikt, collections.OrderedDict):
-        return True
-
-    if sys.version_info >= (3, 7):
-        return isinstance(dikt, dict)
-
-    return False
+    return isinstance(dikt, (collections.OrderedDict, dict))
 
 
 def _validate_partition(partition):
