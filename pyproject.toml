@@ -175,6 +175,7 @@ dev = [
 ]
 
 [tool.mypy]
+# Keep this set to the minimum supported Python version (see requires-python in [project])
 python_version = "3.10"
 ignore_missing_imports = true
 # Gradually tighten: remove a module from the ignore list below after fixing its errors
