@@ -139,7 +139,7 @@ class MockTarget(target.FileSystemTarget):
                 if mock_target._mirror_on_stderr:
                     if self._write_line:
                         sys.stderr.write(fn + ": ")
-                    if bytes:
+                    if isinstance(data, bytes):
                         sys.stderr.write(data.decode("utf8"))
                     else:
                         sys.stderr.write(data)

@@ -15,8 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import annotations
+
 import datetime
 import logging
+from typing import Any
 
 import luigi
 
@@ -46,7 +49,7 @@ class ExternalDailySnapshot(luigi.ExternalTask):
     """
 
     date = luigi.DateParameter()
-    __cache = []
+    __cache: list[Any] = []
 
     @classmethod
     def latest(cls, *args, **kwargs):
