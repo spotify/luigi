@@ -191,7 +191,6 @@ module = [
     "luigi.contrib.sqla",
     "luigi.interface",
     "luigi.notifications",
-    "luigi.parameter",
     "luigi.tools.range",
     "luigi.worker",
 ]
