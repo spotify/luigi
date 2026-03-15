@@ -67,7 +67,6 @@ def get_spool_handler(filename):
     return handler
 
 
-
 def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_socket=None):
     import daemon
 
