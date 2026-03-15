@@ -89,7 +89,7 @@ def rpc_method(**request_args):
     def _rpc_method(fn):
         # If request args are passed, return this function again for use as
         # the decorator function with the request args attached.
-        args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, ann = inspect.getfullargspec(fn)
+        args, varargs, _, defaults, _, _, _ = inspect.getfullargspec(fn)
         assert not varargs
         first_arg, *all_args = args
         assert first_arg == "self"
