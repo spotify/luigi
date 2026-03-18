@@ -32,7 +32,7 @@ import re
 import time
 import warnings
 from collections import Counter
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from dateutil.relativedelta import relativedelta
 
@@ -216,7 +216,7 @@ class RangeBase(luigi.WrapperTask):
             raise ParameterException("Can't have start > stop")
         # TODO check overridden complete() and exists()
 
-        now = datetime.utcfromtimestamp(time.time() if self.now is None else self.now)
+        now = datetime.fromtimestamp(time.time() if self.now is None else self.now, tz=timezone.utc).replace(tzinfo=None)
 
         moving_start = self.moving_start(now)
         finite_start = moving_start if self.start is None else max(self.parameter_to_datetime(self.start), moving_start)
