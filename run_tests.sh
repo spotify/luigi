@@ -9,19 +9,24 @@
 set -e
 
 # Parse Python version flag
-VENV=".venv"
-PY_LABEL="py312"
+VENV=""
 for arg in "$@"; do
     case "$arg" in
-        --py39)  VENV=".venv39"; PY_LABEL="py39" ;;
-        --py312) VENV=".venv";   PY_LABEL="py312" ;;
+        --py39)  VENV=".venv39" ;;
+        --py312) VENV=".venv"   ;;
     esac
 done
 
 # Activate the selected virtualenv (skip if already active)
-if [[ "$VIRTUAL_ENV" != "$(pwd)/$VENV" ]]; then
+if [[ -n "$VENV" && "$VIRTUAL_ENV" != "$(pwd)/$VENV" ]]; then
     source "$VENV/bin/activate"
 fi
+
+# Derive label from the active venv path
+case "$VIRTUAL_ENV" in
+    */.venv39) PY_LABEL="py39"  ;;
+    *)         PY_LABEL="py312" ;;
+esac
 
 LOG_FILE="test_results_${PY_LABEL}.log"
 
