@@ -57,7 +57,7 @@ if os.environ.get('READTHEDOCS', None) == 'True':
 
 setup(
     name='luigi',
-    version='2.7.5+affirm.1.4.9.rc4',
+    version='2.7.5+affirm.1.4.9.rc7',
     description='Workflow mgmgt + task scheduling + dependency resolution',
     long_description=long_description,
     author='The Luigi Authors',

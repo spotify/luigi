@@ -48,7 +48,7 @@ All changes in PR #28 use standard Python 3 APIs available since Python 3.3. Non
 - [x] `luigi/server.py` — `pkg_resources.resource_filename()` → `importlib.resources.files()` (`pkg_resources` deprecated in Py312)
 - [x] `luigi/contrib/gcs.py` — `six.xrange` → `range`, `six.string_types` → `str`, `six.binary_type` → `bytes`, `six.BytesIO` → `io.BytesIO`, add `import io`
 - [x] `luigi/contrib/hdfs/target.py` — `luigi.six.moves.urllib` → `from urllib import parse as urlparse`, remove `luigi.six.moves.range`
-- [x] `luigi/contrib/s3.py` — `six.iteritems(config)` → `config.items()`, remove `from luigi import six`
+- [⚠️] `luigi/contrib/s3.py` — entry is wrong: current file is the full 1.4.8 boto3 rewrite, not just `six.iteritems` → `.items()`. See "Wrong Base Branch" section above for the correct fix.
 - [x] `luigi/contrib/salesforce.py` — `record.iteritems()` → `record.items()` (2 occurrences; `.iteritems()` is Python 2 only)
 
 #### Test Code
@@ -107,6 +107,36 @@ All changes in PR #28 use standard Python 3 APIs available since Python 3.3. Non
 - [x] `luigi/contrib/spark.py:310` — `pickle.dump(self, fd)`: `fd` is opened with `'wb'` at line 292 — no change needed
 - [x] `luigi/contrib/hadoop.py:987` — `pickle.dump(self, open(file_name, "wb"))`: already uses `"wb"` — no change needed
 - [x] `luigi/scheduler.py:461` — `pickle.dump(self.get_state(), fobj)` → `pickle.dump(self.get_state(), fobj, protocol=3)` (portable across all Py3.x runtimes)
+
+---
+
+### ⚠️ Wrong Base Branch — S3 Rewrite Leaked In
+
+#### Root Cause
+
+This branch was cut from `2.7.5.affirm.1.4.9` instead of `2.7.5+affirm.1.4.7`. The `1.4.8` release (`2.7.5+affirm.1.4.8`, tagged "upgrade luigi s3 to use boto3") introduced a complete rewrite of `luigi/contrib/s3.py` from `boto` to `boto3`. That rewrite was never intended to be part of this Py312 compatibility branch but leaked in via the wrong base.
+
+#### What Leaked In (1.4.8 changes that should not be here)
+
+| File | What changed in 1.4.8 | What should be here instead |
+|---|---|---|
+| `luigi/contrib/s3.py` | Full boto→boto3 rewrite (~300 line diff) | 1.4.7 boto version + Py312 compat fixes + dual boto/boto3 support |
+| `test/contrib/s3_test.py` | Rewritten for boto3 (moto API changes, `DeprecatedBotoClientException`, etc.) | 1.4.7 test version + Py312 compat fixes |
+
+`setup.py` and `tox.ini` also changed in 1.4.8 but only for version bumps / test runner config — those are not a concern.
+
+#### Required Fix
+
+- [x] **`luigi/contrib/s3.py`** — Reverted to 1.4.7 boto base. Applied Py312 fixes (removed `six`, fixed `iteritems`, Py3-only urlparse/configparser). Added boto3 fallback section at bottom of file inside `except ImportError` that redefines `S3Client` and `ReadableS3File` using botocore/boto3. Py39+boto uses boto path; Py312 (no boto) uses boto3 path automatically.
+
+- [x] **`test/contrib/s3_test.py`** — Reverted to 1.4.7 base. Added `HAS_BOTO` flag; boto-specific tests (`encrypt_key`, credential attrs, `Key.BufferSize`) guarded with `@unittest.skipIf(not HAS_BOTO, ...)`. `_create_bucket()` helper handles both boto and boto3 APIs. Fixed moto v4 import (`mock_s3`/`mock_sts` → `mock_aws` fallback). 58 tests collect on both Py39 and Py312.
+
+#### Reference Points
+
+- 1.4.7 base commit: `732759d5` (`bump version to 2.7.5+affirm.1.4.7`)
+- 1.4.8 boto3 migration tag: `2.7.5+affirm.1.4.8`
+- To get the clean 1.4.7 s3.py: `git show 732759d5:luigi/contrib/s3.py`
+- To get the clean 1.4.7 s3_test.py: `git show 732759d5:test/contrib/s3_test.py`
 
 ---
 

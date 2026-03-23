@@ -11,7 +11,8 @@ set -e
 # Parse Python version flag
 VENV=""
 for arg in "$@"; do
-    case "$arg" in
+    arg_lower="${arg,,}"
+    case "$arg_lower" in
         --py39)  VENV=".venv39" ;;
         --py312) VENV=".venv"   ;;
     esac

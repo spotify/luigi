@@ -147,6 +147,21 @@ kill $(cat /tmp/luigi.pid)
 pkill -f luigid
 ```
 
+## Building and Publishing
+
+### Build the package
+```bash
+source .venv/bin/activate
+python setup.py sdist bdist_wheel
+twine check dist/*
+```
+
+### Publish to Artifactory
+Credentials are in `.pypirc`. Upload using the `pypi-local` index:
+```bash
+twine upload --config-file .pypirc -r pypi-local dist/*
+```
+
 ## Common Test Issues
 - boto3 tests require AWS region configuration or proper mocking
 - SQLAlchemy tests need eager loading for relationships to avoid DetachedInstanceError
