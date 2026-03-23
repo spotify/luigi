@@ -254,7 +254,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self.conn.makedirs(directory)
 
         if atomic:
-            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, 1e10)))
+            tmp_path = os.path.join(directory, 'luigi-tmp-{:09d}'.format(random.randrange(0, int(1e10))))
         else:
             tmp_path = normpath
 
@@ -279,7 +279,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         # random file name
         if atomic:
-            tmp_path = folder + os.sep + 'luigi-tmp-%09d' % random.randrange(0, 1e10)
+            tmp_path = folder + os.sep + 'luigi-tmp-%09d' % random.randrange(0, int(1e10))
         else:
             tmp_path = normpath
 
@@ -297,7 +297,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         if folder and not os.path.exists(folder):
             os.makedirs(folder)
 
-        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, int(1e10))
 
         # download file
         self._connect()
@@ -408,7 +408,7 @@ class RemoteTarget(luigi.target.FileSystemTarget):
 
         elif mode == 'r':
             temp_dir = os.path.join(tempfile.gettempdir(), 'luigi-contrib-ftp')
-            self.__tmp_path = temp_dir + '/' + self.path.lstrip('/') + '-luigi-tmp-%09d' % random.randrange(0, 1e10)
+            self.__tmp_path = temp_dir + '/' + self.path.lstrip('/') + '-luigi-tmp-%09d' % random.randrange(0, int(1e10))
             # download file to local
             self._fs.get(self.path, self.__tmp_path)
 

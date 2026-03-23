@@ -278,9 +278,9 @@ class SGEJobTask(luigi.Task):
                 d = pickle.dumps(self)
                 module_name = os.path.basename(sys.argv[0]).rsplit('.', 1)[0]
                 d = d.replace('(c__main__', "(c" + module_name)
-                open(self.job_file, "w").write(d)
+                open(self.job_file, "wb").write(d)
             else:
-                pickle.dump(self, open(self.job_file, "w"))
+                pickle.dump(self, open(self.job_file, "wb"))
 
     def _run_job(self):
 

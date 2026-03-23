@@ -1,19 +1,35 @@
 #!/bin/bash
 # Run Luigi tests and log results to test_results.log
+#
+# Usage:
+#   ./run_tests.sh            # default: Py312 (.venv)
+#   ./run_tests.sh --py39     # Py39 (.venv39)
+#   ./run_tests.sh --py312    # Py312 (.venv)  explicit
 
 set -e
 
-# Activate virtual environment if not already active
-if [[ -z "$VIRTUAL_ENV" ]]; then
-    source .venv/bin/activate
+# Parse Python version flag
+VENV=".venv"
+PY_LABEL="py312"
+for arg in "$@"; do
+    case "$arg" in
+        --py39)  VENV=".venv39"; PY_LABEL="py39" ;;
+        --py312) VENV=".venv";   PY_LABEL="py312" ;;
+    esac
+done
+
+# Activate the selected virtualenv (skip if already active)
+if [[ "$VIRTUAL_ENV" != "$(pwd)/$VENV" ]]; then
+    source "$VENV/bin/activate"
 fi
+
+LOG_FILE="test_results_${PY_LABEL}.log"
 
 # Set config path for tests that need it
 export LUIGI_CONFIG_PATH=test/testconfig/luigi.cfg
 
-# Run tests and capture output
-echo "Running Luigi tests..."
-echo "Results will be written to test_results.log"
+echo "Running Luigi tests ($(python --version 2>&1))..."
+echo "Results will be written to $LOG_FILE"
 
 python -m pytest test/ \
     --ignore=test/contrib/_webhdfs_test.py \
@@ -29,7 +45,7 @@ python -m pytest test/ \
     --ignore=test/contrib/postgres_test.py \
     --ignore=test/contrib/postgres_with_server_test.py \
     -v \
-    2>&1 | tee test_results.log
+    2>&1 | tee "$LOG_FILE"
 
 echo ""
-echo "Test run complete. Results saved to test_results.log"
+echo "Test run complete. Results saved to $LOG_FILE"

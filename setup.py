@@ -38,12 +38,13 @@ with open('README.rst') as fobj:
     long_description = readme_note + fobj.read()
 
 install_requires = [
-    'tornado>=6.0,<7',
+    'tornado>=4.0,<=6.2 ; python_version < "3.12"',
+    'tornado>=6.0 ; python_version >= "3.12"',
     'python-daemon<3.0',
-    'requests>=2.31',
-    'urllib3>=2.0',
-    'setuptools>=68',
-    'packaging>=23',
+    'requests>=2.31 ; python_version >= "3.12"',
+    'urllib3>=2.0 ; python_version >= "3.12"',
+    'setuptools>=68 ; python_version >= "3.12"',
+    'packaging>=23 ; python_version >= "3.12"',
     'enum34>1.1.0 ; python_version < "3.4"'
 ]
 

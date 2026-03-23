@@ -29,7 +29,8 @@ from luigi.scheduler import Scheduler
 from urllib.parse import urlencode, ParseResult, quote as urlquote
 
 import tornado.ioloop
-from tornado.testing import AsyncHTTPTestCase
+from tornado.testing import AsyncHTTPTestCase as _AsyncHTTPTestCase
+_AsyncHTTPTestCase.__test__ = False  # tornado 6.2 compat: prevent pytest collecting tornado's base class
 # nose uses removed 'imp' module in Python 3.12, use helpers.attr instead
 from helpers import attr
 
@@ -54,7 +55,11 @@ def _is_running_from_main_thread():
     return tornado.ioloop.IOLoop.current(instance=False)
 
 
-class ServerTestBase(AsyncHTTPTestCase):
+class ServerTestBase(_AsyncHTTPTestCase):
+    __test__ = False  # prevent direct collection; concrete subclasses set __test__ = True
+
+    def runTest(self):
+        pass  # tornado 6.2 compat: __init__ wraps this via getattr; avoids AttributeError
 
     def get_app(self):
         return luigi.server.app(Scheduler())
@@ -82,6 +87,7 @@ class ServerTestBase(AsyncHTTPTestCase):
 
 
 class ServerTest(ServerTestBase):
+    __test__ = True  # override inherited False from ServerTestBase
 
     def test_visualiser(self):
         page = self.fetch('/').body

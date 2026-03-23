@@ -458,7 +458,7 @@ class SimpleTaskState(object):
     def dump(self):
         try:
             with open(self._state_path, 'wb') as fobj:
-                pickle.dump(self.get_state(), fobj)
+                pickle.dump(self.get_state(), fobj, protocol=3)
         except IOError:
             logger.warning("Failed saving scheduler state", exc_info=1)
         else:

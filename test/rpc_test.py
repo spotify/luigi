@@ -90,6 +90,7 @@ class RemoteSchedulerTest(unittest.TestCase):
 
 
 class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
+    __test__ = True  # override inherited False from ServerTestBase
 
     def get_app(self):
         conf = self.get_scheduler_config()
@@ -122,6 +123,7 @@ class RPCTest(scheduler_api_test.SchedulerApiTest, ServerTestBase):
 
 
 class RequestsFetcherTest(ServerTestBase):
+    __test__ = True  # override inherited False from ServerTestBase
     def test_fork_changes_session(self):
         session = requests.Session()
         fetcher = luigi.rpc.RequestsFetcher(session)
