@@ -825,10 +825,22 @@ except ImportError:
             self.streaming_body = streaming_body
 
         def read(self, size=-1):
-            return self.streaming_body.read(size if size >= 0 else None)
+            return self.streaming_body.read(size if size > 0 else None)
 
         def close(self):
             return self.streaming_body.close()
+
+    class _S3KeyWrapper(object):
+        """Wraps a boto3 ObjectSummary to provide a boto-compatible interface."""
+
+        def __init__(self, obj):
+            self._obj = obj
+            self.key = obj.key
+            self.size = obj.size
+            self.last_modified = obj.last_modified
+
+        def exists(self):
+            return True
 
     class S3Client(FileSystem):  # noqa: F811
         """
@@ -1027,12 +1039,13 @@ except ImportError:
 
         def get(self, s3_path, destination_local_path):
             (bucket, key) = self._path_to_bucket_and_key(s3_path)
-            self.s3.meta.client.download_file(bucket, key, destination_local_path)
+            with open(destination_local_path, 'wb') as f:
+                self.s3.meta.client.download_fileobj(bucket, key, f)
 
         def get_as_string(self, s3_path):
             (bucket, key) = self._path_to_bucket_and_key(s3_path)
             obj = self.s3.Object(bucket, key)
-            return obj.get()['Body'].read().decode('utf-8')
+            return obj.get()['Body'].read()
 
         def isdir(self, path):
             (bucket, key) = self._path_to_bucket_and_key(path)
@@ -1089,7 +1102,7 @@ except ImportError:
                     (start_time and end_time and start_time < last_modified_date < end_time)
                 ):
                     if return_key:
-                        yield item
+                        yield _S3KeyWrapper(item)
                     else:
                         yield self._add_path_delimiter(path) + item.key[key_path_len:]
 

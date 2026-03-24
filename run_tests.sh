@@ -37,12 +37,18 @@ export LUIGI_CONFIG_PATH=test/testconfig/luigi.cfg
 echo "Running Luigi tests ($(python --version 2>&1))..."
 echo "Results will be written to $LOG_FILE"
 
+# s3_test.py uses boto (SigV2) which moto v4+ no longer mocks; skip on Py39
+S3_IGNORE=""
+if [[ "$PY_LABEL" == "py39" ]]; then
+    S3_IGNORE="--ignore=test/contrib/s3_test.py"
+fi
+
 python -m pytest test/ \
     --ignore=test/contrib/_webhdfs_test.py \
     --ignore=test/redshift_test.py \
     --ignore=test/contrib/esindex_test.py \
     --ignore=test/contrib/hadoop_test.py \
-    --ignore=test/contrib/s3_test.py \
+    ${S3_IGNORE:+$S3_IGNORE} \
     --ignore=test/contrib/ecs_test.py \
     --ignore=test/contrib/sge_test.py \
     --ignore=test/contrib/bigquery_test.py \
