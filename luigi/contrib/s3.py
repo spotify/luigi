@@ -17,8 +17,7 @@
 """
 Implementation of Simple Storage Service support.
 :py:class:`S3Target` is a subclass of the Target class to support S3 file
-system operations. The `boto` library is used when available (Py39); when boto
-is not installed (Py312+), the `boto3` library is used as a fallback.
+system operations. The `boto` library is required to use S3 targets.
 """
 
 from __future__ import division
@@ -28,11 +27,13 @@ import itertools
 import logging
 import os
 import os.path
+
 import time
-import warnings
 from multiprocessing.pool import ThreadPool
 
 from urllib.parse import urlsplit
+import warnings
+
 from configparser import NoSectionError
 
 from luigi import configuration
@@ -57,10 +58,6 @@ class InvalidDeleteException(FileSystemException):
 class FileNotFoundException(FileSystemException):
     pass
 
-
-# ---------------------------------------------------------------------------
-# boto-based implementation (primary — used when boto is installed, e.g. Py39)
-# ---------------------------------------------------------------------------
 
 class S3Client(FileSystem):
     """
@@ -96,7 +93,7 @@ class S3Client(FileSystem):
         aws_access_key_id = options.get('aws_access_key_id')
         aws_secret_access_key = options.get('aws_secret_access_key')
 
-        # Removing key args would break backwards compatibility
+        # Removing key args would break backwards compability
         role_arn = options.get('aws_role_arn')
         role_session_name = options.get('aws_role_session_name')
 
@@ -246,6 +243,8 @@ class S3Client(FileSystem):
         :param part_size: Part size in bytes. Default: 67108864 (64MB), must be >= 5MB and <= 5 GB.
         :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
         """
+        # calculate number of parts to upload
+        # based on the size of the file
         source_size = os.stat(local_path).st_size
 
         if source_size <= part_size:
@@ -257,6 +256,9 @@ class S3Client(FileSystem):
         # grab and validate the bucket
         s3_bucket = self.s3.get_bucket(bucket, validate=True)
 
+        # calculate the number of parts (int division).
+        # use modulo to avoid float precision issues
+        # for exactly-sized fits
         num_parts = (source_size + part_size - 1) // part_size
 
         mp = None
@@ -264,6 +266,7 @@ class S3Client(FileSystem):
             mp = s3_bucket.initiate_multipart_upload(key, **kwargs)
 
             for i in range(num_parts):
+                # upload a part at a time to S3
                 offset = part_size * i
                 bytes = min(part_size, source_size - offset)
                 with open(local_path, 'rb') as fp:
@@ -272,10 +275,13 @@ class S3Client(FileSystem):
                     fp.seek(offset)
                     mp.upload_part_from_file(fp, part_num=part_num, size=bytes)
 
+            # finish the upload, making the file available in S3
             mp.complete_upload()
         except BaseException:
             if mp:
                 logger.info('Canceling multipart s3 upload for %s', destination_s3_path)
+                # cancel the upload so we don't get charged for
+                # storage consumed by uploaded parts
                 mp.cancel_upload()
             raise
 
@@ -330,12 +336,21 @@ class S3Client(FileSystem):
         (src_bucket, src_key) = self._path_to_bucket_and_key(source_path)
         (dst_bucket, dst_key) = self._path_to_bucket_and_key(destination_path)
 
+        # As the S3 copy command is completely server side, there is no issue with issuing a lot of threads
+        # to issue a single API call per copy, however, this may in theory cause issues on systems with low ulimits for
+        # number of threads when copying really large files (e.g. with a ~100GB file this will open ~1500
+        # threads), or large directories. Around 100 threads seems to work well.
+
         threads = 3 if threads < 3 else threads  # don't allow threads to be less than 3
         total_keys = 0
 
         copy_pool = ThreadPool(processes=threads)
 
         if self.isdir(source_path):
+            # The management pool is to ensure that there's no deadlock between the s3 copying threads, and the
+            # multipart_copy threads that monitors each group of s3 copy threads and returns a success once the entire file
+            # is copied. Without this, we could potentially fill up the pool with threads waiting to check if the s3 copies
+            # have completed, leaving no available threads to actually perform any copying.
             copy_jobs = []
             management_pool = ThreadPool(processes=threads)
 
@@ -348,6 +363,7 @@ class S3Client(FileSystem):
             dst_prefix = self._add_path_delimiter(dst_key)
             for item in self.list(source_path, start_time=start_time, end_time=end_time, return_key=True):
                 path = item.key[key_path_len:]
+                # prevents copy attempt of empty key in folder
                 if path != '' and path != '/':
                     total_keys += 1
                     total_size_bytes += item.size
@@ -359,11 +375,13 @@ class S3Client(FileSystem):
                                                       kwds=kwargs)
                     copy_jobs.append(job)
 
+            # Wait for the pools to finish scheduling all the copies
             management_pool.close()
             management_pool.join()
             copy_pool.close()
             copy_pool.join()
 
+            # Raise any errors encountered in any of the copy processes
             for result in copy_jobs:
                 result.get()
 
@@ -374,19 +392,39 @@ class S3Client(FileSystem):
 
             return total_keys, total_size_bytes
 
+        # If the file isn't a directory just perform a simple copy
         else:
             self.__copy_multipart(copy_pool, src_bucket, src_key, dst_bucket, dst_key, part_size, **kwargs)
+            # Close the pool
             copy_pool.close()
             copy_pool.join()
 
     def __copy_multipart(self, pool, src_bucket, src_key, dst_bucket, dst_key, part_size, **kwargs):
+        """
+        Copy a single S3 object to another S3 object, falling back to multipart copy where necessary
+
+        NOTE: This is a private method and should only be called from within the `s3.copy` method
+
+        :param pool: The threadpool to put the s3 copy processes onto
+        :param src_bucket: source bucket name
+        :param src_key: source key name
+        :param dst_bucket: destination bucket name
+        :param dst_key: destination key name
+        :param key_size: size of the key to copy in bytes
+        :param part_size: Part size in bytes. Must be >= 5MB and <= 5 GB.
+        :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
+        """
+
         source_bucket = self.s3.get_bucket(src_bucket, validate=True)
         dest_bucket = self.s3.get_bucket(dst_bucket, validate=True)
 
         key_size = source_bucket.lookup(src_key).size
 
+        # We can't do a multipart copy on an empty Key, so handle this specially.
+        # Also, don't bother using the multipart machinery if we're only dealing with a small non-multipart file
         if key_size == 0 or key_size <= part_size:
             result = pool.apply_async(dest_bucket.copy_key, args=(dst_key, src_bucket, src_key), kwds=kwargs)
+            # Bubble up any errors we may encounter
             return result.get()
 
         mp = None
@@ -394,10 +432,15 @@ class S3Client(FileSystem):
         try:
             mp = dest_bucket.initiate_multipart_upload(dst_key, **kwargs)
             cur_pos = 0
+
+            # Store the results from the apply_async in a list so we can check for failures
             results = []
+
+            # Calculate the number of chunks the file will be
             num_parts = (key_size + part_size - 1) // part_size
 
             for i in range(num_parts):
+                # Issue an S3 copy request, one part at a time, from one S3 object to another
                 part_start = cur_pos
                 cur_pos += part_size
                 part_end = min(cur_pos - 1, key_size - 1)
@@ -407,14 +450,17 @@ class S3Client(FileSystem):
 
             logger.info('Waiting for multipart copy of %s/%s to finish', dst_bucket, dst_key)
 
+            # This will raise any exceptions in any of the copy threads
             for result in results:
                 result.get()
 
+            # finish the copy, making the file available in S3
             mp.complete_upload()
             return mp.key_name
 
         except BaseException:
             logger.info('Error during multipart s3 copy for %s/%s to %s/%s...', src_bucket, src_key, dst_bucket, dst_key)
+            # cancel the copy so we don't get charged for storage consumed by copied parts
             if mp:
                 mp.cancel_upload()
             raise
@@ -447,10 +493,10 @@ class S3Client(FileSystem):
         for item in s3_bucket.list(prefix=key_path):
             last_modified_date = time.strptime(item.last_modified, "%Y-%m-%dT%H:%M:%S.%fZ")
             if (
-                    (not start_time and not end_time) or
-                    (start_time and not end_time and start_time < last_modified_date) or
-                    (not start_time and end_time and last_modified_date < end_time) or
-                    (start_time and end_time and start_time < last_modified_date < end_time)
+                    (not start_time and not end_time) or  # neither are defined, list all
+                    (start_time and not end_time and start_time < last_modified_date) or  # start defined, after start
+                    (not start_time and end_time and last_modified_date < end_time) or  # end defined, prior to end
+                    (start_time and end_time and start_time < last_modified_date < end_time)  # both defined, between
                ):
                 if return_key:
                     yield item
@@ -538,6 +584,22 @@ class S3Client(FileSystem):
         return key if key[-1:] == '/' or key == '' else key + '/'
 
 
+class AtomicS3File(AtomicLocalFile):
+    """
+    An S3 file that writes to a temp file and puts to S3 on close.
+
+    :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
+    """
+
+    def __init__(self, path, s3_client, **kwargs):
+        self.s3_client = s3_client
+        super(AtomicS3File, self).__init__(path)
+        self.s3_options = kwargs
+
+    def move_to_final_destination(self):
+        self.s3_client.put_multipart(self.tmp_path, self.path, **self.s3_options)
+
+
 class ReadableS3File(object):
     def __init__(self, s3_key):
         self.s3_key = s3_key
@@ -594,43 +656,29 @@ class ReadableS3File(object):
         has_next = True
         while has_next:
             try:
+                # grab the next chunk
                 chunk = next(key_iter)
 
+                # split on newlines, preserving the newline
                 for line in chunk.splitlines(True):
+
                     if not line.endswith(os.linesep):
+                        # no newline, so store in buffer
                         self._add_to_buffer(line)
                     else:
+                        # newline found, send it out
                         if self.buffer:
                             self._add_to_buffer(line)
                             yield self._flush_buffer()
                         else:
                             yield line
             except StopIteration:
+                # send out anything we have left in the buffer
                 output = self._flush_buffer()
                 if output:
                     yield output
                 has_next = False
         self.close()
-
-
-# ---------------------------------------------------------------------------
-# Shared classes — work with either boto or boto3 via S3Client
-# ---------------------------------------------------------------------------
-
-class AtomicS3File(AtomicLocalFile):
-    """
-    An S3 file that writes to a temp file and puts to S3 on close.
-
-    :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
-    """
-
-    def __init__(self, path, s3_client, **kwargs):
-        self.s3_client = s3_client
-        super(AtomicS3File, self).__init__(path)
-        self.s3_options = kwargs
-
-    def move_to_final_destination(self):
-        self.s3_client.put_multipart(self.tmp_path, self.path, **self.s3_options)
 
 
 class S3Target(FileSystemTarget):
@@ -757,11 +805,8 @@ class S3FlagTask(ExternalTask):
         return S3FlagTarget(self.path, flag=self.flag)
 
 
-# ---------------------------------------------------------------------------
 # boto3 fallback — redefines S3Client and ReadableS3File when boto is not
 # installed (e.g. Py312 environments that use boto3 instead).
-# ---------------------------------------------------------------------------
-
 try:
     import boto as _boto_check  # noqa: F401
 except ImportError:
