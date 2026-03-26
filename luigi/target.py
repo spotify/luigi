@@ -27,6 +27,8 @@ import random
 import tempfile
 import warnings
 from contextlib import contextmanager
+from types import TracebackType
+from typing import IO, Any, Generator, Iterator, Optional, Union
 
 logger = logging.getLogger("luigi-interface")
 
@@ -44,7 +46,7 @@ class Target(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def exists(self):
+    def exists(self) -> bool:
         """
         Returns ``True`` if the :py:class:`Target` exists and ``False`` otherwise.
         """
@@ -99,7 +101,7 @@ class FileSystem(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def exists(self, path):
+    def exists(self, path: str) -> bool:
         """
         Return ``True`` if file or directory at ``path`` exist, ``False`` otherwise
 
@@ -108,7 +110,7 @@ class FileSystem(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def remove(self, path, recursive=True, skip_trash=True):
+    def remove(self, path: str, recursive: bool = True, skip_trash: bool = True) -> None:
         """Remove file or directory at location ``path``
 
         :param str path: a path within the FileSystem to remove.
@@ -117,7 +119,7 @@ class FileSystem(metaclass=abc.ABCMeta):
         """
         pass
 
-    def mkdir(self, path, parents=True, raise_if_exists=False):
+    def mkdir(self, path: str, parents: bool = True, raise_if_exists: bool = False) -> None:
         """
         Create directory at location ``path``
 
@@ -133,7 +135,7 @@ class FileSystem(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("mkdir() not implemented on {0}".format(self.__class__.__name__))
 
-    def isdir(self, path):
+    def isdir(self, path: str) -> bool:
         """
         Return ``True`` if the location at ``path`` is a directory. If not, return ``False``.
 
@@ -143,7 +145,7 @@ class FileSystem(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("isdir() not implemented on {0}".format(self.__class__.__name__))
 
-    def listdir(self, path):
+    def listdir(self, path: str) -> Iterator[str]:
         """Return a list of files rooted in path.
 
         This returns an iterable of the files rooted at ``path``. This is intended to be a
@@ -155,13 +157,13 @@ class FileSystem(metaclass=abc.ABCMeta):
         """
         raise NotImplementedError("listdir() not implemented on {0}".format(self.__class__.__name__))
 
-    def move(self, path, dest):
+    def move(self, path: str, dest: str) -> None:
         """
         Move a file, as one would expect.
         """
         raise NotImplementedError("move() not implemented on {0}".format(self.__class__.__name__))
 
-    def rename_dont_move(self, path, dest):
+    def rename_dont_move(self, path: str, dest: str) -> None:
         """
         Potentially rename ``path`` to ``dest``, but don't move it into the
         ``dest`` folder (if it is a folder).  This relates to :ref:`AtomicWrites`.
@@ -175,13 +177,13 @@ class FileSystem(metaclass=abc.ABCMeta):
             raise FileAlreadyExists()
         self.move(path, dest)
 
-    def rename(self, *args, **kwargs):
+    def rename(self, *args: Any, **kwargs: Any) -> None:
         """
         Alias for ``move()``
         """
         self.move(*args, **kwargs)
 
-    def copy(self, path, dest):
+    def copy(self, path: str, dest: str) -> None:
         """
         Copy a file or a directory with contents.
         Currently, LocalFileSystem and MockFileSystem support only single file
@@ -209,7 +211,7 @@ class FileSystemTarget(Target):
             target.exists()  # False
     """
 
-    def __init__(self, path):
+    def __init__(self, path: Union[str, "os.PathLike[str]"]) -> None:
         """
         Initializes a FileSystemTarget instance.
 
@@ -218,19 +220,19 @@ class FileSystemTarget(Target):
         # cast to str to allow path to be objects like pathlib.PosixPath and py._path.local.LocalPath
         self.path = str(path)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.path
 
     @property
     @abc.abstractmethod
-    def fs(self):
+    def fs(self) -> FileSystem:
         """
         The :py:class:`FileSystem` associated with this FileSystemTarget.
         """
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def open(self, mode):
+    def open(self, mode: str) -> IO[Any]:
         """
         Open the FileSystem target.
 
@@ -244,7 +246,7 @@ class FileSystemTarget(Target):
         """
         pass
 
-    def exists(self):
+    def exists(self) -> bool:
         """
         Returns ``True`` if the path for this FileSystemTarget exists; ``False`` otherwise.
 
@@ -255,7 +257,7 @@ class FileSystemTarget(Target):
             logger.warning("Using wildcards in path %s might lead to processing of an incomplete dataset; override exists() to suppress the warning.", path)
         return self.fs.exists(path)
 
-    def remove(self):
+    def remove(self) -> None:
         """
         Remove the resource at the path specified by this FileSystemTarget.
 
@@ -264,7 +266,7 @@ class FileSystemTarget(Target):
         self.fs.remove(self.path)
 
     @contextmanager
-    def temporary_path(self):
+    def temporary_path(self) -> Generator[str, None, None]:
         """
         A context manager that enables a reasonably short, general and
         magic-less way to solve the :ref:`AtomicWrites`.
@@ -301,11 +303,11 @@ class FileSystemTarget(Target):
         # We won't reach here if there was an user exception.
         self.fs.rename_dont_move(_temp_path, self.path)
 
-    def _touchz(self):
+    def _touchz(self) -> None:
         with self.open("w"):
             pass
 
-    def _trailing_slash(self):
+    def _trailing_slash(self) -> str:
         # I suppose one day schema-like paths, like
         # file:///path/blah.txt?params=etc can be parsed too
         return self.path[-1] if self.path[-1] in r"\/" else ""
@@ -320,31 +322,36 @@ class AtomicLocalFile(io.BufferedWriter):
     :class:`luigi.local_target.LocalTarget` for example
     """
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.__tmp_path = self.generate_tmp_path(path)
         self.path = path
         super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, "w"))
 
-    def close(self):
+    def close(self) -> None:
         super(AtomicLocalFile, self).close()
         self.move_to_final_destination()
 
-    def generate_tmp_path(self, path):
+    def generate_tmp_path(self, path: str) -> str:
         return os.path.join(tempfile.gettempdir(), "luigi-s3-tmp-%09d" % random.randrange(0, 10_000_000_000))
 
-    def move_to_final_destination(self):
+    def move_to_final_destination(self) -> None:
         raise NotImplementedError()
 
-    def __del__(self):
+    def __del__(self) -> None:
         if os.path.exists(self.tmp_path):
             os.remove(self.tmp_path)
 
     @property
-    def tmp_path(self):
+    def tmp_path(self) -> str:
         return self.__tmp_path
 
-    def __exit__(self, exc_type, exc, traceback):
+    def __exit__(
+        self,
+        exc_type: Optional[type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
         "Close/commit the file if there are no exception"
         if exc_type:
             return
-        return super(AtomicLocalFile, self).__exit__(exc_type, exc, traceback)
+        super(AtomicLocalFile, self).__exit__(exc_type, exc, traceback)
