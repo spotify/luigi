@@ -58,7 +58,6 @@ cdh = [
 common = [
   "avro-python3",
   "azure-storage-blob<=12.20.0",
-  "boto>=2.42,<3.0",
   "boto3>=1.11.0",
   "codecov>=1.4.0",
   "coverage>=5.0,<6",
