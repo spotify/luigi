@@ -548,12 +548,6 @@ wheels = [
 ]
 
 [[package]]
-name = "httpretty"
-version = "0.8.10"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/e2/25/603bc6b096385b02184cc94f9088fcc06abd9398d0975bbbce97a8989ab5/httpretty-0.8.10.tar.gz", hash = "sha256:474a72722d66841f0e59cee285d837e1c6263be5be7bf2f8e824fc849a99adda", size = 41741, upload-time = "2015-05-18T18:10:15.177Z" }
-
-[[package]]
 name = "hypothesis"
 version = "6.124.9"
 source = { registry = "https://pypi.org/simple" }
@@ -697,7 +691,6 @@ common = [
     { name = "docker" },
     { name = "elasticsearch" },
     { name = "google-compute-engine" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -738,7 +731,6 @@ dev = [
     { name = "google-auth-httplib2" },
     { name = "google-compute-engine" },
     { name = "hdfs" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -806,7 +798,6 @@ test-cdh = [
     { name = "elasticsearch" },
     { name = "google-compute-engine" },
     { name = "hdfs" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -843,7 +834,6 @@ test-dropbox = [
     { name = "dropbox" },
     { name = "elasticsearch" },
     { name = "google-compute-engine" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -882,7 +872,6 @@ test-gcloud = [
     { name = "google-auth" },
     { name = "google-auth-httplib2" },
     { name = "google-compute-engine" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -919,7 +908,6 @@ test-hdp = [
     { name = "elasticsearch" },
     { name = "google-compute-engine" },
     { name = "hdfs" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -955,7 +943,6 @@ test-postgres = [
     { name = "docker" },
     { name = "elasticsearch" },
     { name = "google-compute-engine" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -993,7 +980,6 @@ test-unixsocket = [
     { name = "docker" },
     { name = "elasticsearch" },
     { name = "google-compute-engine" },
-    { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
     { name = "mock" },
@@ -1054,7 +1040,6 @@ common = [
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-compute-engine" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1095,7 +1080,6 @@ dev = [
     { name = "google-auth-httplib2", specifier = "==0.0.3" },
     { name = "google-compute-engine" },
     { name = "hdfs", specifier = ">=2.0.4,<3.0.0" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1157,7 +1141,6 @@ test-cdh = [
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-compute-engine" },
     { name = "hdfs", specifier = ">=2.0.4,<3.0.0" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1194,7 +1177,6 @@ test-dropbox = [
     { name = "dropbox", specifier = ">=11.0.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-compute-engine" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1233,7 +1215,6 @@ test-gcloud = [
     { name = "google-auth", specifier = "==1.4.1" },
     { name = "google-auth-httplib2", specifier = "==0.0.3" },
     { name = "google-compute-engine" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1270,7 +1251,6 @@ test-hdp = [
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-compute-engine" },
     { name = "hdfs", specifier = ">=2.0.4,<3.0.0" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1306,7 +1286,6 @@ test-postgres = [
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-compute-engine" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
@@ -1344,7 +1323,6 @@ test-unixsocket = [
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
     { name = "google-compute-engine" },
-    { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
     { name = "mock", specifier = "<2.0" },
