@@ -415,6 +415,14 @@ class ParameterTest(LuigiTestCase):
             'OptionalParameter "param" with value "1" is not of type "str" or None.', luigi.parameter.OptionalParameterTypeWarning
         )
 
+    def test_optional_parameter_task_without_value(self):
+        class MyTask(luigi.Task):
+            _visible_in_registry = False
+            x = luigi.OptionalParameter()
+
+        task = MyTask()
+        self.assertIsNone(task.x)
+
     def test_optional_parameter_parse_none(self):
         self.assertIsNone(luigi.OptionalParameter().parse(""))
 
@@ -1137,7 +1145,6 @@ class TestSerializeTimeDeltaParameters(LuigiTestCase):
 
 class TestTaskParameter(LuigiTestCase):
     def testUsage(self):
-
         class MetaTask(luigi.Task):
             task_namespace = "mynamespace"
             a = luigi.TaskParameter()
@@ -1164,7 +1171,6 @@ class TestTaskParameter(LuigiTestCase):
         self.assertEqual(MetaTask.saved_value, OtherTask)
 
     def testSerialize(self):
-
         class OtherTask(luigi.Task):
             def complete(self):
                 return True
@@ -1230,7 +1236,6 @@ class LocalParameters1304Test(LuigiTestCase):
     """
 
     def test_local_params(self):
-
         class MyTask(RunOnceTask):
             param1 = luigi.IntParameter()
             param2 = luigi.BoolParameter(default=False)
@@ -1246,7 +1251,6 @@ class LocalParameters1304Test(LuigiTestCase):
         self.assertTrue(self.run_locally_split("MyTask --param1 1 --param2"))
 
     def test_local_takes_precedence(self):
-
         class MyTask(luigi.Task):
             param = luigi.IntParameter()
 
@@ -1259,7 +1263,6 @@ class LocalParameters1304Test(LuigiTestCase):
         self.assertTrue(self.run_locally_split("MyTask --param 5 --MyTask-param 6"))
 
     def test_local_only_affects_root(self):
-
         class MyTask(RunOnceTask):
             param = luigi.IntParameter(default=3)
 
@@ -1292,7 +1295,6 @@ class LocalParameters1304Test(LuigiTestCase):
 
 class TaskAsParameterName1335Test(LuigiTestCase):
     def test_parameter_can_be_named_task(self):
-
         class MyTask(luigi.Task):
             # Indeed, this is not the most realistic example, but still ...
             task = luigi.IntParameter()
