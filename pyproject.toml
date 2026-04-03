@@ -89,6 +89,7 @@ common = [
   "types-python-dateutil",
   "types-requests",
   "types-toml",
+  "types-ujson>=5.10.0.20250822",
 ]
 
 docs = [
@@ -182,7 +183,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-    "luigi.contrib.hadoop",
     "luigi.contrib.hdfs.config",
     "luigi.contrib.postgres",
     "luigi.contrib.redis_store",

@@ -721,6 +721,7 @@ common = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 dev = [
     { name = "avro-python3" },
@@ -766,6 +767,7 @@ dev = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 docs = [
     { name = "azure-storage-blob" },
@@ -830,6 +832,7 @@ test-cdh = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 test-dropbox = [
     { name = "avro-python3" },
@@ -867,6 +870,7 @@ test-dropbox = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 test-gcloud = [
     { name = "avro-python3" },
@@ -906,6 +910,7 @@ test-gcloud = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 test-hdp = [
     { name = "avro-python3" },
@@ -943,6 +948,7 @@ test-hdp = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 test-postgres = [
     { name = "avro-python3" },
@@ -981,6 +987,7 @@ test-postgres = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 test-unixsocket = [
     { name = "avro-python3" },
@@ -1018,6 +1025,7 @@ test-unixsocket = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson" },
 ]
 unixsocket = [
     { name = "requests-unixsocket" },
@@ -1078,6 +1086,7 @@ common = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 dev = [
     { name = "avro-python3" },
@@ -1123,6 +1132,7 @@ dev = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 docs = [
     { name = "azure-storage-blob", specifier = "<=12.28.0" },
@@ -1181,6 +1191,7 @@ test-cdh = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 test-dropbox = [
     { name = "avro-python3" },
@@ -1218,6 +1229,7 @@ test-dropbox = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 test-gcloud = [
     { name = "avro-python3" },
@@ -1257,6 +1269,7 @@ test-gcloud = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 test-hdp = [
     { name = "avro-python3" },
@@ -1294,6 +1307,7 @@ test-hdp = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 test-postgres = [
     { name = "avro-python3" },
@@ -1332,6 +1346,7 @@ test-postgres = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 test-unixsocket = [
     { name = "avro-python3" },
@@ -1369,6 +1384,7 @@ test-unixsocket = [
     { name = "types-python-dateutil" },
     { name = "types-requests" },
     { name = "types-toml" },
+    { name = "types-ujson", specifier = ">=5.10.0.20250822" },
 ]
 unixsocket = [{ name = "requests-unixsocket", specifier = "<1.0" }]
 visualizer = [
@@ -2388,6 +2404,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/86/47/3e4c75042792bff8e90d7991aa5c51812cc668828cc6cce711e97f63a607/types-toml-0.10.8.20240310.tar.gz", hash = "sha256:3d41501302972436a6b8b239c850b26689657e25281b48ff0ec06345b8830331", size = 4392, upload-time = "2024-03-10T02:18:37.518Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/da/a2/d32ab58c0b216912638b140ab2170ee4b8644067c293b170e19fba340ccc/types_toml-0.10.8.20240310-py3-none-any.whl", hash = "sha256:627b47775d25fa29977d9c70dc0cbab3f314f32c8d8d0c012f2ef5de7aaec05d", size = 4777, upload-time = "2024-03-10T02:18:36.568Z" },
+]
+
+[[package]]
+name = "types-ujson"
+version = "5.10.0.20250822"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/bd/d372d44534f84864a96c19a7059d9b4d29db8541828b8b9dc3040f7a46d0/types_ujson-5.10.0.20250822.tar.gz", hash = "sha256:0a795558e1f78532373cf3f03f35b1f08bc60d52d924187b97995ee3597ba006", size = 8437, upload-time = "2025-08-22T03:02:19.433Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/f2/d812543c350674d8b3f6e17c8922248ee3bb752c2a76f64beb8c538b40cf/types_ujson-5.10.0.20250822-py3-none-any.whl", hash = "sha256:3e9e73a6dc62ccc03449d9ac2c580cd1b7a8e4873220db498f7dd056754be080", size = 7657, upload-time = "2025-08-22T03:02:18.699Z" },
 ]
 
 [[package]]
