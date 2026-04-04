@@ -858,11 +858,15 @@ class Scheduler:
 
         task = self._state.get_task(task_id, setdefault=_default_task)
 
-        if task is None or (task.status != RUNNING and not worker.enabled):
+        task_does_not_exist = task is None
+        worker_disabled_and_task_not_running = task is not None and task.status != RUNNING and not worker.enabled
+        if task_does_not_exist or worker_disabled_and_task_not_running:
             return
 
-        # Ignore claims that the task is PENDING if it very recently was marked as DONE.
-        if status == PENDING and task.status == DONE and (time.time() - task.updated) < self._config.stable_done_cooldown_secs:
+        claimed_pending = status == PENDING
+        currently_done = task.status == DONE
+        within_cooldown = (time.time() - task.updated) < self._config.stable_done_cooldown_secs
+        if claimed_pending and currently_done and within_cooldown:
             return
 
         # for setting priority, we'll sometimes create tasks with unset family and params
