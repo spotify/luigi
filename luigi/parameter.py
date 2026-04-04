@@ -436,7 +436,7 @@ class OptionalParameterMixin(Generic[_OptT]):
 
     def __init__(
         self,
-        default: Union[_OptT, None, _NoValueType] = _no_value,
+        default: Union[_OptT, None, _NoValueType] = None,
         **kwargs: Unpack[_ParameterKwargs],
     ):
         super().__init__(default=default, **kwargs)  # type: ignore[arg-type, call-arg, misc]
