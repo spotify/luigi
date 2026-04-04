@@ -508,7 +508,7 @@ class OptionalStrParameter(OptionalParameterMixin[str], Parameter[Optional[str]]
     expected_type = str
 
 
-_UNIX_EPOCH = datetime.datetime.utcfromtimestamp(0)
+_UNIX_EPOCH = datetime.datetime(1970, 1, 1)
 
 
 class _DateParameterBase(Parameter[datetime.date]):
