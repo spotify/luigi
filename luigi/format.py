@@ -491,5 +491,5 @@ Bzip2 = Bzip2Format()
 MixedUnicodeBytes = MixedUnicodeBytesFormat()
 
 
-def get_default_format():
+def get_default_format() -> Format:
     return Text
