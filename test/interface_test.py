@@ -192,3 +192,34 @@ class CoreConfigTest(LuigiTestCase):
         from luigi.interface import core
 
         self.assertEqual(1234, core().parallel_scheduling_processes)
+
+
+class RunArgValidationTest(LuigiTestCase):
+
+    def test_run_with_int_raises_type_error(self):
+        with self.assertRaises(TypeError) as ctx:
+            luigi.run(123)
+        self.assertIn("int", str(ctx.exception))
+        self.assertIn("list or tuple", str(ctx.exception))
+
+    def test_run_with_dict_raises_type_error(self):
+        with self.assertRaises(TypeError) as ctx:
+            luigi.run({"task": "MyTask"})
+        self.assertIn("dict", str(ctx.exception))
+        self.assertIn("list or tuple", str(ctx.exception))
+
+    def test_run_with_none_does_not_raise_type_error(self):
+        try:
+            luigi.run(None)
+        except TypeError:
+            self.fail("luigi.run() raised TypeError for None argument")
+        except Exception:
+            pass  # scheduler/task errors are fine
+
+    def test_run_with_valid_list_does_not_raise_type_error(self):
+        try:
+            luigi.run(["MyTask"])
+        except TypeError:
+            self.fail("luigi.run() raised TypeError for a valid list argument")
+        except Exception:
+            pass  # scheduler/task errors are fine
