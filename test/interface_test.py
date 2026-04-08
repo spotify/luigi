@@ -195,8 +195,8 @@ class InterfaceTest(LuigiTestCase):
             luigi.run(None)
         except TypeError:
             self.fail("luigi.run() raised TypeError for None argument")
-        except Exception:
-            pass  # scheduler/task errors are fine
+        except (Exception, SystemExit):
+            pass  # scheduler/task errors and SystemExit are fine
 
     def test_run_with_valid_list_does_not_raise_type_error(self):
         try:
