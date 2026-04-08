@@ -761,6 +761,10 @@ class Scheduler:
         Priority can only be increased.
         If the task doesn't exist, a placeholder task is created to preserve priority when the task is later scheduled.
         """
+        existing_priority = (
+            task.priority if isinstance(task.priority, (int, float)) else 0
+        )
+        task.priority = prio = max(prio, existing_priority)
         task.priority = prio = max(prio, task.priority)
         for dep in task.deps or []:
             t = self._state.get_task(dep)
