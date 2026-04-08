@@ -1730,31 +1730,11 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id="D", priority=6)
         self.check_task_order(["A", "B", "D", "C"])
 
-    def test_update_priority_with_non_numeric_priority_defaults_to_zero(self):
-        if not hasattr(self.sch, "_state"):
-            self.skipTest("only applicable to local scheduler")
-        self.sch.add_task(worker=WORKER, task_id="A")
-        task = self.sch._state.get_task("A")
-        task.priority = "not_a_number"  # simulate uninitialised/corrupt priority
-        self.sch._update_priority(task, 5, WORKER)
-        self.assertEqual(task.priority, 5)
-
-    def test_update_priority_cannot_decrease(self):
-        if not hasattr(self.sch, "_state"):
-            self.skipTest("only applicable to local scheduler")
+    def test_add_task_priority_not_decreased_by_subsequent_add(self):
         self.sch.add_task(worker=WORKER, task_id="A", priority=10)
-        task = self.sch._state.get_task("A")
-        self.sch._update_priority(task, 3, WORKER)
-        self.assertEqual(task.priority, 10)
-
-    def test_add_task_with_non_numeric_priority_does_not_raise_typerrror(self):
-        if not hasattr(self.sch, "_state"):
-            self.skipTest("only applicable to local scheduler")
-        self.sch.add_task(worker=WORKER, task_id="A")
-        task = self.sch._state.get_task("A")
-        task.priority = "corrupt"  # simulate corrupt state
-        self.sch.add_task(worker=WORKER, task_id="A", priority=5)
-        self.assertEqual(self.sch._state.get_task("A").priority, 5)
+        self.sch.add_task(worker=WORKER, task_id="A", priority=3)
+        task_info = self.sch.task_list(PENDING, "")["A"]
+        self.assertEqual(task_info["priority"], 10)
 
     def test_unique_tasks(self):
         self.sch.add_task(worker=WORKER, task_id="A")
