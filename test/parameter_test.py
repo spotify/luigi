@@ -206,20 +206,40 @@ class ParameterTest(LuigiTestCase):
         self.assertEqual(f.not_a_param, "lol")
 
     def test_bool_parsing(self):
+        self.assertEqual(luigi.BoolParameter.parsing, luigi.BoolParameter.IMPLICIT_PARSING)
+
+        # test defaults
         self.run_locally(["Baz"])
         self.assertFalse(Baz._val)
         self.assertTrue(Baz._val_true)
         self.assertFalse(Baz._val_explicit)
 
+        # test flags with implicit parsing only
         self.run_locally(["Baz", "--bool", "--bool-true"])
         self.assertTrue(Baz._val)
         self.assertTrue(Baz._val_true)
+        self.assertFalse(Baz._val_explicit)
 
+        # test explicit parsing
         self.run_locally(["Baz", "--bool-explicit", "true"])
+        self.assertFalse(Baz._val)
+        self.assertTrue(Baz._val_true)
         self.assertTrue(Baz._val_explicit)
-
         self.run_locally(["Baz", "--bool-explicit", "false"])
         self.assertFalse(Baz._val_explicit)
+
+        # argparse should exit when explicit values are passed to implicit parsing
+        self.assertRaises(SystemExit, self.run_locally, ["Baz", "--bool", "true"])
+
+        # test explicit parsing globally with the same command
+        luigi.BoolParameter.parsing = luigi.BoolParameter.EXPLICIT_PARSING
+
+        class BazSub(Baz):
+            bool = luigi.BoolParameter()
+
+        luigi.BoolParameter.parsing = luigi.BoolParameter.IMPLICIT_PARSING
+        self.run_locally(["BazSub", "--bool", "true"])
+        self.assertTrue(Baz._val)
 
     def test_bool_default(self):
         self.assertTrue(WithDefaultTrue().x)
