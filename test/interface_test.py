@@ -178,6 +178,34 @@ class InterfaceTest(LuigiTestCase):
         with patch.object(sys, "argv", ["my_module.py", "--no-lock", "--my-param", "my_value", "--local-scheduler"]):
             luigi.run(main_task_cls=MyOtherTestTask)
 
+    def test_run_with_int_raises_type_error(self):
+        with self.assertRaises(TypeError) as ctx:
+            luigi.run(123)
+        self.assertIn("int", str(ctx.exception))
+        self.assertIn("list or tuple", str(ctx.exception))
+
+    def test_run_with_dict_raises_type_error(self):
+        with self.assertRaises(TypeError) as ctx:
+            luigi.run({"task": "MyTask"})
+        self.assertIn("dict", str(ctx.exception))
+        self.assertIn("list or tuple", str(ctx.exception))
+
+    def test_run_with_none_does_not_raise_type_error(self):
+        try:
+            luigi.run(None)
+        except TypeError:
+            self.fail("luigi.run() raised TypeError for None argument")
+        except (Exception, SystemExit):
+            pass  # scheduler/task errors and SystemExit are fine
+
+    def test_run_with_valid_list_does_not_raise_type_error(self):
+        try:
+            luigi.run(["MyTask"])
+        except TypeError:
+            self.fail("luigi.run() raised TypeError for a valid list argument")
+        except Exception:
+            pass  # scheduler/task errors are fine
+
     def _run_interface(self, **env_params):
         return luigi.interface.build([self.task_a, self.task_b], worker_scheduler_factory=self.worker_scheduler_factory, **env_params)
 
