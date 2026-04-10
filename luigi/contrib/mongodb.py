@@ -166,7 +166,7 @@ class MongoCollectionTarget(MongoTarget):
         """
         Return if the target collection exists in the database
         """
-        return self._collection in self.get_index().collection_names()
+        return self._collection in self.get_index().list_collection_names()
 
 
 class MongoCountTarget(MongoTarget):
