@@ -239,7 +239,7 @@ class ParameterTest(LuigiTestCase):
 
         luigi.BoolParameter.parsing = luigi.BoolParameter.IMPLICIT_PARSING
         self.run_locally(["BazSub", "--bool", "true"])
-        self.assertTrue(Baz._val)
+        self.assertTrue(BazSub._val)
 
     def test_bool_default(self):
         self.assertTrue(WithDefaultTrue().x)
