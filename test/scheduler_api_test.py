@@ -1730,6 +1730,12 @@ class SchedulerApiTest(unittest.TestCase):
         self.sch.add_task(worker=WORKER, task_id="D", priority=6)
         self.check_task_order(["A", "B", "D", "C"])
 
+    def test_add_task_priority_not_decreased_by_subsequent_add(self):
+        self.sch.add_task(worker=WORKER, task_id="A", priority=10)
+        self.sch.add_task(worker=WORKER, task_id="A", priority=3)
+        task_info = self.sch.task_list(PENDING, "")["A"]
+        self.assertEqual(task_info["priority"], 10)
+
     def test_unique_tasks(self):
         self.sch.add_task(worker=WORKER, task_id="A")
         self.sch.add_task(worker=WORKER, task_id="B")
