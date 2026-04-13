@@ -928,6 +928,7 @@ class S3ClientBoto3(FileSystem):
 
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
                  **kwargs):
+        import boto3  # noqa: F401 — fail fast if boto3 is not installed
         options = self._get_s3_config()
         options.update(kwargs)
         if aws_access_key_id:
