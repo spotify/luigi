@@ -200,6 +200,7 @@ jobs:
         include:
           - tox-env: lint
           - tox-env: docs
+          - tox-env: typecheck
     steps:
       - uses: actions/checkout@v6
       - name: Set up the latest version of uv
