@@ -515,7 +515,7 @@ class RedshiftManifestTask(S3PathTask):
     def run(self):
         entries = []
         for folder_path in self.folder_paths:
-            s3 = S3Target(folder_path)
+            s3 = S3Target(folder_path, client=self._client)
             client = s3.fs
             for file_name in client.list(s3.path):
                 entries.append({

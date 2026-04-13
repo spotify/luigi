@@ -24,7 +24,7 @@ from target_test import FileSystemTargetTestMixin
 from helpers import with_config, unittest, skipOnTravis
 
 from luigi import configuration
-from luigi.contrib.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3Target
+from luigi.contrib.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3ClientBoto3, S3Target
 from luigi.target import MissingParentDirectory
 
 try:
@@ -36,6 +36,8 @@ except ImportError:
     import boto3
     from botocore.exceptions import ClientError as S3ResponseError
     HAS_BOTO = False
+    # boto1 is not available; use the boto3 client for all tests in this file
+    S3Client = S3ClientBoto3
 
 try:
     from moto import mock_s3, mock_sts

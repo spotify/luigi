@@ -40,7 +40,7 @@ echo "Results will be written to $LOG_FILE"
 # s3_test.py uses boto (SigV2) which moto v4+ no longer mocks; skip on Py39
 S3_IGNORE=""
 if [[ "$PY_LABEL" == "py39" ]]; then
-    S3_IGNORE="--ignore=test/contrib/s3_test.py"
+    S3_IGNORE="--ignore="test/contrib/s3_test.py
 fi
 
 python -m pytest test/ \
