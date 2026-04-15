@@ -28,10 +28,11 @@ import os.path
 import warnings
 from configparser import NoSectionError
 from multiprocessing.pool import ThreadPool
+from typing import Optional
 from urllib.parse import urlsplit
 
 from luigi import configuration
-from luigi.format import get_default_format
+from luigi.format import Format, get_default_format
 from luigi.parameter import OptionalParameter, Parameter
 from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, MissingParentDirectory
 from luigi.task import ExternalTask
@@ -618,9 +619,9 @@ class S3Target(FileSystemTarget):
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
 
-    fs = None
+    fs: FileSystem
 
-    def __init__(self, path, format=None, client=None, **kwargs):
+    def __init__(self, path: str, format: Optional[Format] = None, client: Optional[S3Client] = None, **kwargs):
         super(S3Target, self).__init__(path)
         if format is None:
             format = get_default_format()
@@ -665,9 +666,9 @@ class S3FlagTarget(S3Target):
     If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
     """
 
-    fs = None
+    fs: FileSystem
 
-    def __init__(self, path, format=None, client=None, flag="_SUCCESS"):
+    def __init__(self, path: str, format: Optional[Format] = None, client: Optional[S3Client] = None, flag="_SUCCESS"):
         """
         Initializes a S3FlagTarget.
 
