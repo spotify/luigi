@@ -184,7 +184,7 @@ class TestS3Client(unittest.TestCase):
     @with_config({"s3": {"aws_role_arn": "role", "aws_role_session_name": "name"}})
     def test_init_with_config_and_roles(self, sts_mock, s3_mock):
         S3Client().s3
-        sts_mock.client.assume_role.called_with(RoleArn="role", RoleSessionName="name")
+        sts_mock.return_value.assume_role.assert_called_with(RoleArn="role", RoleSessionName="name")
 
     @patch("boto3.client")
     def test_init_with_host_deprecated(self, mock):
