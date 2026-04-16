@@ -2,9 +2,11 @@ version = 1
 revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
-    "python_full_version >= '3.12' and sys_platform == 'win32'",
+    "python_full_version >= '3.13' and sys_platform == 'win32'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32'",
     "python_full_version < '3.12' and sys_platform == 'win32'",
-    "python_full_version >= '3.12' and sys_platform != 'win32'",
+    "python_full_version >= '3.13' and sys_platform != 'win32'",
+    "python_full_version == '3.12.*' and sys_platform != 'win32'",
     "python_full_version < '3.12' and sys_platform != 'win32'",
 ]
 
@@ -114,15 +116,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a5/0f/6b92050154ad0e286b82ca36de5f87a466723e1cdc525df53270bcc36f60/botocore-1.36.11.tar.gz", hash = "sha256:c919be883f95b9e0c3021429a365d40cd7944b8345a07af30dc8d891ceefe07a", size = 13497505, upload-time = "2025-01-31T20:43:49.233Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2c/ce/e97be00389d51a010c0680ea688a073737ca3b2de6f924800fc61bf68e41/botocore-1.36.11-py3-none-any.whl", hash = "sha256:82c5660027f696608d0e55feb08c146c11c7ebeba7615961c7765dcf6009a00d", size = 13327743, upload-time = "2025-01-31T20:43:43.995Z" },
-]
-
-[[package]]
-name = "cachetools"
-version = "5.5.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/d9/74/57df1ab0ce6bc5f6fa868e08de20df8ac58f9c44330c7671ad922d2bbeae/cachetools-5.5.1.tar.gz", hash = "sha256:70f238fbba50383ef62e55c6aff6d9673175fe59f7c6782c7a0b9e38f4a9df95", size = 28044, upload-time = "2025-01-21T21:27:56.736Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/ec/4e/de4ff18bcf55857ba18d3a4bd48c8a9fde6bb0980c9d20b263f05387fd88/cachetools-5.5.1-py3-none-any.whl", hash = "sha256:b76651fdc3b24ead3c648bbdeeb940c1b04d365b38b4af66788f9ec4a81d42bb", size = 9530, upload-time = "2025-01-21T21:27:54.511Z" },
 ]
 
 [[package]]
@@ -440,65 +433,60 @@ wheels = [
 
 [[package]]
 name = "google-api-core"
-version = "1.16.0"
+version = "2.30.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-auth" },
     { name = "googleapis-common-protos" },
+    { name = "proto-plus" },
     { name = "protobuf" },
-    { name = "pytz" },
     { name = "requests" },
-    { name = "setuptools" },
-    { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b9/c6/b9483b94e85e4088198bc99c807a6a458800d278ae49f79a0dee0cfdc171/google-api-core-1.16.0.tar.gz", hash = "sha256:92e962a087f1c4b8d1c5c88ade1c1dfd550047dcffb320c57ef6a534a20403e2", size = 76972, upload-time = "2020-01-14T01:30:55.089Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/16/ce/502a57fb0ec752026d24df1280b162294b22a0afb98a326084f9a979138b/google_api_core-2.30.3.tar.gz", hash = "sha256:e601a37f148585319b26db36e219df68c5d07b6382cff2d580e83404e44d641b", size = 177001, upload-time = "2026-04-10T00:41:28.035Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/63/7e/a523169b0cc9ce62d56e07571db927286a94b1a5f51ac220bd97db825c77/google_api_core-1.16.0-py2.py3-none-any.whl", hash = "sha256:859f7392676761f2b160c6ee030c3422135ada4458f0948c5690a6a7c8d86294", size = 70410, upload-time = "2020-01-14T01:30:53.092Z" },
+    { url = "https://files.pythonhosted.org/packages/03/15/e56f351cf6ef1cfea58e6ac226a7318ed1deb2218c4b3cc9bd9e4b786c5a/google_api_core-2.30.3-py3-none-any.whl", hash = "sha256:a85761ba72c444dad5d611c2220633480b2b6be2521eca69cca2dbb3ffd6bfe8", size = 173274, upload-time = "2026-04-09T22:57:16.198Z" },
 ]
 
 [[package]]
 name = "google-api-python-client"
-version = "1.8.4"
+version = "2.194.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core" },
     { name = "google-auth" },
     { name = "google-auth-httplib2" },
     { name = "httplib2" },
-    { name = "six" },
     { name = "uritemplate" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8d/c1/dcac1376ce4e247df687384d1417dc8fa9bfa13c3684a7ee9aae1729dd14/google-api-python-client-1.8.4.tar.gz", hash = "sha256:bbe212611fdc05364f3d20271cae53971bf4d485056e6c0d40748eddeeda9a19", size = 141206, upload-time = "2020-05-26T20:19:41.241Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/ab/e83af0eb043e4ccc49571ca7a6a49984e9d00f4e9e6e6f1238d60bc84dce/google_api_python_client-2.194.0.tar.gz", hash = "sha256:db92647bd1a90f40b79c9618461553c2b20b6a43ce7395fa6de07132dc14f023", size = 14443469, upload-time = "2026-04-08T23:07:35.757Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/dc/1207147686a770a867c918fac580e73fd5c8dcac1ec918ebd868b3f62c8b/google_api_python_client-1.8.4-py3-none-any.whl", hash = "sha256:e7980ba66288f815b41f10c4561b37f45cd568d302b0d801709e51f75b21f61b", size = 58948, upload-time = "2020-05-26T20:19:39.735Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/34/5a624e49f179aa5b0cb87b2ce8093960299030ff40423bfbde09360eb908/google_api_python_client-2.194.0-py3-none-any.whl", hash = "sha256:61eaaac3b8fc8fdf11c08af87abc3d1342d1b37319cc1b57405f86ef7697e717", size = 15016514, upload-time = "2026-04-08T23:07:33.093Z" },
 ]
 
 [[package]]
 name = "google-auth"
-version = "1.4.1"
+version = "2.49.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cachetools" },
+    { name = "cryptography" },
     { name = "pyasn1-modules" },
-    { name = "rsa" },
-    { name = "six" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/76/dcd8257b2156baafd776a02696ee76a663001360b56441724652527611c4/google-auth-1.4.1.tar.gz", hash = "sha256:9051802d3dae256036cca9e34633a32c0ed1427730d4ebc513dff91ec8b6dd45", size = 74272, upload-time = "2018-02-12T19:03:43.105Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/fc/e925290a1ad95c975c459e2df070fac2b90954e13a0370ac505dff78cb99/google_auth-2.49.2.tar.gz", hash = "sha256:c1ae38500e73065dcae57355adb6278cf8b5c8e391994ae9cbadbcb9631ab409", size = 333958, upload-time = "2026-04-10T00:41:21.888Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e0/18/e282ecb28c7eb0ef5ea9a69fb3290658a9ab37bb69647f6ba7f0f78987c4/google_auth-1.4.1-py2.py3-none-any.whl", hash = "sha256:34088434cb2a2409360b8f3cbc04195a465df1fb2aafad71ebbded77cbf08803", size = 65844, upload-time = "2018-02-12T19:03:39.895Z" },
+    { url = "https://files.pythonhosted.org/packages/73/76/d241a5c927433420507215df6cac1b1fa4ac0ba7a794df42a84326c68da8/google_auth-2.49.2-py3-none-any.whl", hash = "sha256:c2720924dfc82dedb962c9f52cabb2ab16714fd0a6a707e40561d217574ed6d5", size = 240638, upload-time = "2026-04-10T00:41:14.501Z" },
 ]
 
 [[package]]
 name = "google-auth-httplib2"
-version = "0.0.3"
+version = "0.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-auth" },
     { name = "httplib2" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/32/ac7f30b742276b4911a1439c5291abab1b797ccfd30bc923c5ad67892b13/google-auth-httplib2-0.0.3.tar.gz", hash = "sha256:098fade613c25b4527b2c08fa42d11f3c2037dda8995d86de0745228e965d445", size = 9957, upload-time = "2017-11-14T17:38:01.412Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ed/99/107612bef8d24b298bb5a7c8466f908ecda791d43f9466f5c3978f5b24c1/google_auth_httplib2-0.3.1.tar.gz", hash = "sha256:0af542e815784cb64159b4469aa5d71dd41069ba93effa006e1916b1dcd88e55", size = 11152, upload-time = "2026-03-30T22:50:26.766Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/33/49/c814d6d438b823441552198f096fcd0377fd6c88714dbed34f1d3c8c4389/google_auth_httplib2-0.0.3-py2.py3-none-any.whl", hash = "sha256:f1c437842155680cf9918df9bc51c1182fda41feef88c34004bd1978c8157e08", size = 6257, upload-time = "2017-11-14T17:37:59.634Z" },
+    { url = "https://files.pythonhosted.org/packages/97/e9/93afb14d23a949acaa3f4e7cc51a0024671174e116e35f42850764b99634/google_auth_httplib2-0.3.1-py3-none-any.whl", hash = "sha256:682356a90ef4ba3d06548c37e9112eea6fc00395a11b0303a644c1a86abc275c", size = 9534, upload-time = "2026-03-30T22:49:03.384Z" },
 ]
 
 [[package]]
@@ -738,6 +726,7 @@ dev = [
     { name = "google-auth-httplib2" },
     { name = "google-compute-engine" },
     { name = "hdfs" },
+    { name = "httplib2" },
     { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
@@ -783,6 +772,7 @@ gcloud = [
     { name = "google-api-python-client" },
     { name = "google-auth" },
     { name = "google-auth-httplib2" },
+    { name = "httplib2" },
 ]
 hdp = [
     { name = "hdfs" },
@@ -882,6 +872,7 @@ test-gcloud = [
     { name = "google-auth" },
     { name = "google-auth-httplib2" },
     { name = "google-compute-engine" },
+    { name = "httplib2" },
     { name = "httpretty" },
     { name = "hypothesis" },
     { name = "jsonschema" },
@@ -1057,7 +1048,7 @@ common = [
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1090,15 +1081,16 @@ dev = [
     { name = "docker", specifier = ">=2.1.0" },
     { name = "dropbox", specifier = ">=11.0.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
-    { name = "google-api-python-client", specifier = ">=1.6.6,<2.0" },
-    { name = "google-auth", specifier = "==1.4.1" },
-    { name = "google-auth-httplib2", specifier = "==0.0.3" },
+    { name = "google-api-python-client", specifier = ">=2.0" },
+    { name = "google-auth", specifier = ">=2.0" },
+    { name = "google-auth-httplib2", specifier = ">=0.2" },
     { name = "google-compute-engine" },
     { name = "hdfs", specifier = ">=2.0.4,<3.0.0" },
+    { name = "httplib2", specifier = ">=0.22" },
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1135,9 +1127,10 @@ docs = [
 ]
 dropbox = [{ name = "dropbox", specifier = ">=11.0.0" }]
 gcloud = [
-    { name = "google-api-python-client", specifier = ">=1.6.6,<2.0" },
-    { name = "google-auth", specifier = "==1.4.1" },
-    { name = "google-auth-httplib2", specifier = "==0.0.3" },
+    { name = "google-api-python-client", specifier = ">=2.0" },
+    { name = "google-auth", specifier = ">=2.0" },
+    { name = "google-auth-httplib2", specifier = ">=0.2" },
+    { name = "httplib2", specifier = ">=0.22" },
 ]
 hdp = [{ name = "hdfs", specifier = ">=2.0.4,<3.0.0" }]
 lint = [{ name = "ruff" }]
@@ -1160,7 +1153,7 @@ test-cdh = [
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1197,7 +1190,7 @@ test-dropbox = [
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1229,14 +1222,15 @@ test-gcloud = [
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
-    { name = "google-api-python-client", specifier = ">=1.6.6,<2.0" },
-    { name = "google-auth", specifier = "==1.4.1" },
-    { name = "google-auth-httplib2", specifier = "==0.0.3" },
+    { name = "google-api-python-client", specifier = ">=2.0" },
+    { name = "google-auth", specifier = ">=2.0" },
+    { name = "google-auth-httplib2", specifier = ">=0.2" },
     { name = "google-compute-engine" },
+    { name = "httplib2", specifier = ">=0.22" },
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1273,7 +1267,7 @@ test-hdp = [
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1309,7 +1303,7 @@ test-postgres = [
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1347,7 +1341,7 @@ test-unixsocket = [
     { name = "httpretty", specifier = "==0.8.10" },
     { name = "hypothesis", specifier = ">=6.7.0,<7.0.0" },
     { name = "jsonschema" },
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "moto", specifier = ">=1.3.10,<5.0" },
     { name = "mypy" },
     { name = "mysql-connector-python" },
@@ -1372,7 +1366,7 @@ test-unixsocket = [
 ]
 unixsocket = [{ name = "requests-unixsocket", specifier = "<1.0" }]
 visualizer = [
-    { name = "mock", specifier = "<2.0" },
+    { name = "mock" },
     { name = "selenium", specifier = "==3.0.2" },
 ]
 
@@ -1436,15 +1430,11 @@ wheels = [
 
 [[package]]
 name = "mock"
-version = "1.3.0"
+version = "5.2.0"
 source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pbr" },
-    { name = "six" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/98/05/dd44a19f1dd9f274baae2018b843d31fbeff99399114b16ac965b4f99269/mock-1.3.0.tar.gz", hash = "sha256:1e247dbecc6ce057299eb7ee019ad68314bb93152e81d9a6110d35f4d5eca0f6", size = 70908, upload-time = "2015-07-23T23:17:28.263Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/07/8c/14c2ae915e5f9dca5a22edd68b35be94400719ccfa068a03e0fb63d0f6f6/mock-5.2.0.tar.gz", hash = "sha256:4e460e818629b4b173f32d08bf30d3af8123afbb8e04bb5707a1fd4799e503f0", size = 92796, upload-time = "2025-03-03T12:31:42.911Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b2/50/664a70b87408bb6c14c1af2337efa64eb8d1af80c933531758b8fb41ec25/mock-1.3.0-py2.py3-none-any.whl", hash = "sha256:3f573a18be94de886d1191f27c168427ef693e8dcfcecf95b170577b2eb69cbb", size = 56278, upload-time = "2015-07-23T23:17:48.546Z" },
+    { url = "https://files.pythonhosted.org/packages/bd/d9/617e6af809bf3a1d468e0d58c3997b1dc219a9a9202e650d30c2fc85d481/mock-5.2.0-py3-none-any.whl", hash = "sha256:7ba87f72ca0e915175596069dbbcc7c75af7b5e9b9bc107ad6349ede0819982f", size = 31617, upload-time = "2025-03-03T12:31:41.518Z" },
 ]
 
 [[package]]
@@ -1552,15 +1542,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pbr"
-version = "6.1.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/b2/35/80cf8f6a4f34017a7fe28242dc45161a1baa55c41563c354d8147e8358b2/pbr-6.1.0.tar.gz", hash = "sha256:788183e382e3d1d7707db08978239965e8b9e4e5ed42669bf4758186734d5f24", size = 124032, upload-time = "2024-08-27T13:18:17.792Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/44/6a65ecd630393d47ad3e7d5354768cb7f9a10b3a0eb2cd8c6f52b28211ee/pbr-6.1.0-py2.py3-none-any.whl", hash = "sha256:a776ae228892d8013649c0aeccbb3d5f99ee15e005a4cbb7e61d55a067b28a2a", size = 108529, upload-time = "2024-08-27T13:18:16.26Z" },
-]
-
-[[package]]
 name = "pg8000"
 version = "1.31.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1596,6 +1577,18 @@ name = "prometheus-client"
 version = "0.5.0"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bc/e1/3cddac03c8992815519c5f50493097f6508fa153d067b494db8ab5e9c4ce/prometheus_client-0.5.0.tar.gz", hash = "sha256:e8c11ff5ca53de6c3d91e1510500611cafd1d247a937ec6c588a0a7cc3bef93c", size = 31809, upload-time = "2018-12-06T15:45:49.471Z" }
+
+[[package]]
+name = "proto-plus"
+version = "1.27.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "protobuf" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/0d/94dfe80193e79d55258345901acd2917523d56e8381bc4dee7fd38e3868a/proto_plus-1.27.2.tar.gz", hash = "sha256:b2adde53adadf75737c44d3dcb0104fde65250dfc83ad59168b4aa3e574b6a24", size = 57204, upload-time = "2026-03-26T22:18:57.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/84/f3/1fba73eeffafc998a25d59703b63f8be4fe8a5cb12eaff7386a0ba0f7125/proto_plus-1.27.2-py3-none-any.whl", hash = "sha256:6432f75893d3b9e70b9c412f1d2f03f65b11fb164b793d14ae2ca01821d22718", size = 50450, upload-time = "2026-03-26T22:13:42.927Z" },
+]
 
 [[package]]
 name = "protobuf"
@@ -1768,15 +1761,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/66/c0/0c8b6ad9f17a802ee498c46e004a0eb49bc148f2fd230864601a86dcf6db/python-dateutil-2.9.0.post0.tar.gz", hash = "sha256:37dd54208da7e1cd875388217d5e00ebd4179249f90fb72437e91a35459a0ad3", size = 342432, upload-time = "2024-03-01T18:36:20.211Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ec/57/56b9bcc3c9c6a792fcbaf139543cee77261f3651ca9da0c93f5c1221264b/python_dateutil-2.9.0.post0-py2.py3-none-any.whl", hash = "sha256:a8b2bc7bffae282281c8140a97d3aa9c14da0b136dfe83f850eea9a5f7470427", size = 229892, upload-time = "2024-03-01T18:36:18.57Z" },
-]
-
-[[package]]
-name = "pytz"
-version = "2025.1"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5f/57/df1c9157c8d5a05117e455d66fd7cf6dbc46974f832b1058ed4856785d8a/pytz-2025.1.tar.gz", hash = "sha256:c2db42be2a2518b28e65f9207c4d05e6ff547d1efa4086469ef855e4ab70178e", size = 319617, upload-time = "2025-01-31T01:54:48.615Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/38/ac33370d784287baa1c3d538978b5e2ea064d4c1b93ffbd12826c190dd10/pytz-2025.1-py2.py3-none-any.whl", hash = "sha256:89dd22dca55b46eac6eda23b2d72721bf1bdfef212645d81513ef5d03038de57", size = 507930, upload-time = "2025-01-31T01:54:45.634Z" },
 ]
 
 [[package]]
@@ -1989,18 +1973,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/11/23/cd8f566de444a137bc1ee5795e47069a947e60810ba4152886fe5308e1b7/rpds_py-0.22.3-pp310-pypy310_pp73-musllinux_1_2_i686.whl", hash = "sha256:e35ba67d65d49080e8e5a1dd40101fccdd9798adb9b050ff670b7d74fa41c566", size = 583780, upload-time = "2024-12-04T15:33:48.247Z" },
     { url = "https://files.pythonhosted.org/packages/8d/63/79c3602afd14d501f751e615a74a59040328da5ef29ed5754ae80d236b84/rpds_py-0.22.3-pp310-pypy310_pp73-musllinux_1_2_x86_64.whl", hash = "sha256:26fd7cac7dd51011a245f29a2cc6489c4608b5a8ce8d75661bb4a1066c52dfbe", size = 553619, upload-time = "2024-12-04T15:33:50.449Z" },
     { url = "https://files.pythonhosted.org/packages/9f/2e/c5c1689e80298d4e94c75b70faada4c25445739d91b94c211244a3ed7ed1/rpds_py-0.22.3-pp310-pypy310_pp73-win_amd64.whl", hash = "sha256:177c7c0fce2855833819c98e43c262007f42ce86651ffbb84f37883308cb0e7d", size = 233338, upload-time = "2024-12-04T15:33:51.954Z" },
-]
-
-[[package]]
-name = "rsa"
-version = "4.9"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "pyasn1" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/aa/65/7d973b89c4d2351d7fb232c2e452547ddfa243e93131e7cfa766da627b52/rsa-4.9.tar.gz", hash = "sha256:e38464a49c6c85d7f1351b0126661487a7e0a14a50f1675ec50eb34d4f20ef21", size = 29711, upload-time = "2022-07-20T10:28:36.115Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/49/97/fa78e3d2f65c02c8e1268b9aba606569fe97f6c8f7c2d74394553347c145/rsa-4.9-py3-none-any.whl", hash = "sha256:90260d9058e514786967344d0ef75fa8727eed8a7d2e43ce9f4bcf1b536174f7", size = 34315, upload-time = "2022-07-20T10:28:34.978Z" },
 ]
 
 [[package]]
