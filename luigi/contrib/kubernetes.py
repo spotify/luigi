@@ -46,8 +46,10 @@ try:
     from pykube.config import KubeConfig
     from pykube.http import HTTPClient
     from pykube.objects import Job, Pod
+
+    _pykube_enabled = True
 except ImportError:
-    logger.warning("pykube is not installed. KubernetesJobTask requires pykube.")
+    _pykube_enabled = False
 
 
 class kubernetes(luigi.Config):
@@ -61,6 +63,11 @@ class KubernetesJobTask(luigi.Task):
     __DEFAULT_POLL_INTERVAL = 5  # see __track_job
     __DEFAULT_POD_CREATION_INTERVAL = 5
     _kubernetes_config = None  # Needs to be loaded at runtime
+
+    def __init__(self, *args, **kwargs):
+        if not _pykube_enabled:
+            raise ImportError("pykube is required for KubernetesJobTask. Install it with: pip install pykube-ng")
+        super().__init__(*args, **kwargs)
 
     def _init_kubernetes(self):
         self.__logger = logger

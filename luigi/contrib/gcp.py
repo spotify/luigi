@@ -9,11 +9,10 @@ logger = logging.getLogger("luigi-interface")
 try:
     import google.auth
     import httplib2
+
+    _gcp_enabled = True
 except ImportError:
-    logger.warning(
-        "Loading GCP module without the python packages httplib2, google-auth. \
-        This *could* crash at runtime if no other credentials are provided."
-    )
+    _gcp_enabled = False
 
 
 def get_authenticate_kwargs(oauth_credentials=None, http_=None):
@@ -25,6 +24,8 @@ def get_authenticate_kwargs(oauth_credentials=None, http_=None):
 
     Used by `gcs.GCSClient` and `bigquery.BigQueryClient` to initiate the API Client
     """
+    if not _gcp_enabled:
+        raise ImportError("google-auth and httplib2 are required for GCP functionality. Install them with: pip install google-auth httplib2")
     if oauth_credentials:
         authenticate_kwargs = {"credentials": oauth_credentials}
     elif http_:

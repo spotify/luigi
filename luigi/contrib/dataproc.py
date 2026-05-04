@@ -19,11 +19,9 @@ try:
     DEFAULT_CREDENTIALS, _ = google.auth.default()
     authenticate_kwargs = gcp.get_authenticate_kwargs(DEFAULT_CREDENTIALS)
     _dataproc_client = discovery.build("dataproc", "v1", cache_discovery=False, **authenticate_kwargs)
+    _dataproc_enabled = True
 except ImportError:
-    logger.warning(
-        "Loading Dataproc module without the python packages googleapiclient & google-auth. \
-        This will crash at runtime if Dataproc functionality is used."
-    )
+    _dataproc_enabled = False
 
 
 def get_dataproc_client():
@@ -41,6 +39,11 @@ class _DataprocBaseTask(luigi.Task):
     dataproc_region = luigi.Parameter(default="global", significant=False, positional=False)
 
     dataproc_client = get_dataproc_client()
+
+    def __init__(self, *args, **kwargs):
+        if not _dataproc_enabled:
+            raise ImportError("google-api-python-client is required for Dataproc functionality. Install it with: pip install google-api-python-client")
+        super().__init__(*args, **kwargs)
 
 
 class DataprocBaseTask(_DataprocBaseTask):

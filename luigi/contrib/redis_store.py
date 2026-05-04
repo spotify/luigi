@@ -26,8 +26,9 @@ logger = logging.getLogger("luigi-interface")
 try:
     import redis
 
+    _redis_enabled = True
 except ImportError:
-    logger.warning("Loading redis_store module without redis installed. Will crash at runtime if redis_store functionality is used.")
+    _redis_enabled = False
 
 
 class RedisTarget(Target):
@@ -53,6 +54,8 @@ class RedisTarget(Target):
         :type expire: int
 
         """
+        if not _redis_enabled:
+            raise ImportError("redis is required for RedisTarget. Install it with: pip install redis")
         self.host = host
         self.port = port
         self.db = db

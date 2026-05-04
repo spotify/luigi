@@ -32,8 +32,10 @@ RETRYABLE_ERRORS: tuple[type[BaseException], ...] = ()
 try:
     import httplib2
     from googleapiclient import discovery, errors, http
+
+    _bigquery_enabled = True
 except ImportError:
-    logger.warning("BigQuery module imported, but google-api-python-client is not installed. Any BigQuery task will fail")
+    _bigquery_enabled = False
 else:
     RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError, TimeoutError, BrokenPipeError)
 
@@ -142,6 +144,8 @@ class BigQueryClient:
     """
 
     def __init__(self, oauth_credentials=None, descriptor="", http_=None):
+        if not _bigquery_enabled:
+            raise ImportError("google-api-python-client is required for BigQuery functionality. Install it with: pip install google-api-python-client")
         # Save initialisation arguments in case we need to re-create client
         # due to connection timeout
         self.oauth_credentials = oauth_credentials
@@ -398,6 +402,8 @@ class BigQueryClient:
 
 class BigQueryTarget(luigi.target.Target):
     def __init__(self, project_id, dataset_id, table_id, client=None, location=None):
+        if not _bigquery_enabled:
+            raise ImportError("google-api-python-client is required for BigQuery functionality. Install it with: pip install google-api-python-client")
         self.table = BQTable(project_id=project_id, dataset_id=dataset_id, table_id=table_id, location=location)
         self.client = client or BigQueryClient()
 

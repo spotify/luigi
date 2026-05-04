@@ -23,11 +23,10 @@ logger = logging.getLogger("luigi-interface")
 
 try:
     from pymssql import _mssql
+
+    _pymssql_enabled = True
 except ImportError:
-    logger.warning(
-        "Loading MSSQL module without the python package pymssql. \
-        This will crash at runtime if SQL Server functionality is used."
-    )
+    _pymssql_enabled = False
 
 
 class MSSqlTarget(luigi.Target):
@@ -56,6 +55,8 @@ class MSSqlTarget(luigi.Target):
         :param update_id: an identifier for this data set.
         :type update_id: str
         """
+        if not _pymssql_enabled:
+            raise ImportError("pymssql is required for SQL Server functionality. Install it with: pip install pymssql")
         if ":" in host:
             self.host, self.port = host.split(":")
             self.port = int(self.port)

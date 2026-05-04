@@ -73,7 +73,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         try:
             import pysftp
         except ImportError:
-            logger.warning("Please install pysftp to use SFTP.")
+            raise ImportError("pysftp is required for SFTP functionality. Install it with: pip install pysftp")
 
         self.conn = pysftp.Connection(self.host, username=self.username, password=self.password, port=self.port, **self.pysftp_conn_kwargs)
 
