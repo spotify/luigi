@@ -8,8 +8,10 @@ logger = logging.getLogger("luigi-interface")
 
 try:
     from datadog import api, initialize, statsd
+
+    _datadog_enabled = True
 except ImportError:
-    logger.warning("Loading datadog module without datadog installed. Will crash at runtime if datadog functionality is used.")
+    _datadog_enabled = False
 
 
 class datadog(Config):
@@ -24,6 +26,8 @@ class datadog(Config):
 
 class DatadogMetricsCollector(MetricsCollector):
     def __init__(self, *args, **kwargs):
+        if not _datadog_enabled:
+            raise ImportError("datadog is required for DatadogMetricsCollector. Install it with: pip install datadog")
         self._config = datadog(**kwargs)
 
         initialize(api_key=self._config.api_key, app_key=self._config.app_key, statsd_host=self._config.statsd_host, statsd_port=self._config.statsd_port)

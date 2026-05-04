@@ -41,8 +41,10 @@ logger = logging.getLogger("luigi-interface")
 try:
     import botocore
     from boto3.s3.transfer import TransferConfig
+
+    _boto3_enabled = True
 except ImportError:
-    logger.warning("Loading S3 module without the python package boto3. Will crash at runtime if S3 functionality is used.")
+    _boto3_enabled = False
 
 # two different ways of marking a directory
 # with a suffix in S3
@@ -72,6 +74,8 @@ class S3Client(FileSystem):
     DEFAULT_THREADS = 100
 
     def __init__(self, aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None, **kwargs):
+        if not _boto3_enabled:
+            raise ImportError("boto3 is required for S3 functionality. Install it with: pip install boto3")
         options = self._get_s3_config()
         options.update(kwargs)
         if aws_access_key_id:

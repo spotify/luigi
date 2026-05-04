@@ -44,8 +44,9 @@ try:
     import requests as rs
     from requests.exceptions import HTTPError
 
+    _requests_enabled = True
 except ImportError:
-    logger.warning("requests is not installed. PaiTask requires requests.")
+    _requests_enabled = False
 
 
 def slot_to_dict(o):
@@ -240,6 +241,8 @@ class PaiTask(luigi.Task):
         :param pai_url: The rest server url of PAI clusters, default is 'http://127.0.0.1:9186'.
         :param token: The token used to auth the rest server of PAI.
         """
+        if not _requests_enabled:
+            raise ImportError("requests is required for PaiTask. Install it with: pip install requests")
         super(PaiTask, self).__init__(*args, **kwargs)
         self.__init_token()
 

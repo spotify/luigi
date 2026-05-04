@@ -11,8 +11,10 @@ logger = logging.getLogger("luigi-interface")
 try:
     import avro
     import avro.datafile
+
+    _avro_enabled = True
 except ImportError:
-    logger.warning("bigquery_avro module imported, but avro is not installed. Any BigQueryLoadAvro task will fail to propagate schema documentation")
+    _avro_enabled = False
 
 
 class BigQueryLoadAvro(BigQueryLoadTask):
@@ -29,6 +31,11 @@ class BigQueryLoadAvro(BigQueryLoadTask):
     """
 
     source_format = SourceFormat.AVRO
+
+    def __init__(self, *args, **kwargs):
+        if not _avro_enabled:
+            raise ImportError("avro is required for BigQueryLoadAvro. Install it with: pip install avro-python3")
+        super().__init__(*args, **kwargs)
 
     def _avro_uri(self, target):
         path_or_uri = target.uri if hasattr(target, "uri") else target.path

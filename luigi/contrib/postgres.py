@@ -68,10 +68,6 @@ if dbapi is None or DB_DRIVER == "pg8000":
         pass
 
 
-if dbapi is None:
-    logger.warning("Loading postgres module without psycopg2 nor pg8000 installed. Will crash at runtime if postgres functionality is used.")
-
-
 def _is_pg8000_error(exception):
     try:
         return (
@@ -255,6 +251,8 @@ class PostgresTarget(luigi.Target):
         """
         Get a DBAPI 2.0 connection object to the database where the table is.
         """
+        if dbapi is None:
+            raise ImportError("psycopg2 or pg8000 is required for Postgres functionality. Install it with: pip install psycopg2")
         connection = dbapi.connect(host=self.host, port=self.port, database=self.database, user=self.user, password=self.password)
         connection.set_client_encoding("utf-8")
         return connection
