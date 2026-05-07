@@ -37,7 +37,6 @@ See :doc:`/central_scheduler` for more info.
 
 import atexit
 import datetime
-import importlib
 import json
 import logging
 import os
@@ -157,7 +156,7 @@ class BaseTaskHistoryHandler(tornado.web.RequestHandler):
         self._scheduler = scheduler
 
     def get_template_path(self):
-        return importlib.resources.files("templates").name
+        return os.path.join(os.path.dirname(__file__), "templates")
 
 
 class AllRunHandler(BaseTaskHistoryHandler):

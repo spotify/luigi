@@ -483,6 +483,19 @@ class MetricsHandlerTest(unittest.TestCase):
             patched_write.assert_not_called()
 
 
+def test_get_template_path_returns_existing_directory():
+    """Regression test for https://github.com/spotify/luigi/issues/3415.
+
+    The returned path must point to the luigi/templates directory that
+    tornado uses to render task-history pages.
+    """
+    handler = luigi.server.BaseTaskHistoryHandler(tornado.web.Application(), mock.MagicMock(), scheduler=mock.MagicMock())
+    path = handler.get_template_path()
+    assert os.path.isdir(path), f"get_template_path() returned non-existent directory: {path!r}"
+    assert os.path.basename(path) == "templates"
+    assert os.path.isfile(os.path.join(path, "recent.html"))
+
+
 class FromUtcTest(unittest.TestCase):
     def test_with_microseconds(self):
         """Test parsing UTC time string with microseconds"""
