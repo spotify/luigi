@@ -291,6 +291,29 @@ class SchedulerIoTest(unittest.TestCase):
         collector = scheduler_state._metrics_collector
         self.assertTrue(isinstance(collector, PrometheusMetricsCollector))
 
+    def test_update_priority_with_non_numeric_priority_defaults_to_zero(self):
+        s = luigi.scheduler.Scheduler()
+        s.add_task(worker="worker", task_id="A")
+        task = s._state.get_task("A")
+        task.priority = "not_a_number"
+        s._update_priority(task, 5, "worker")
+        self.assertEqual(task.priority, 5)
+
+    def test_update_priority_cannot_decrease(self):
+        s = luigi.scheduler.Scheduler()
+        s.add_task(worker="worker", task_id="A", priority=10)
+        task = s._state.get_task("A")
+        s._update_priority(task, 3, "worker")
+        self.assertEqual(task.priority, 10)
+
+    def test_add_task_with_non_numeric_priority_does_not_raise_typeerror(self):
+        s = luigi.scheduler.Scheduler()
+        s.add_task(worker="worker", task_id="A")
+        task = s._state.get_task("A")
+        task.priority = "corrupt"
+        s.add_task(worker="worker", task_id="A", priority=5)
+        self.assertEqual(s._state.get_task("A").priority, 5)
+
 
 class SchedulerWorkerTest(unittest.TestCase):
     def get_pending_ids(self, worker, state):

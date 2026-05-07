@@ -225,13 +225,15 @@ class OrderedSet(MutableSet):
 
 
 class Task:
+    DEFAULT_PRIORITY = 0
+
     def __init__(
         self,
         task_id,
         status,
         deps,
         resources=None,
-        priority=0,
+        priority=DEFAULT_PRIORITY,
         family="",
         module=None,
         params=None,
@@ -761,7 +763,8 @@ class Scheduler:
         Priority can only be increased.
         If the task doesn't exist, a placeholder task is created to preserve priority when the task is later scheduled.
         """
-        task.priority = prio = max(prio, task.priority)
+        existing_priority = task.priority if isinstance(task.priority, (int, float)) else Task.DEFAULT_PRIORITY
+        task.priority = prio = max(prio, existing_priority)
         for dep in task.deps or []:
             t = self._state.get_task(dep)
             if t is not None and prio > t.priority:
