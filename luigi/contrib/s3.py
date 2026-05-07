@@ -39,6 +39,7 @@ import botocore
 from configparser import NoSectionError
 
 from luigi import configuration
+from luigi.contrib._luigi1_compat import IS_LUIGI1_DEPRECATED
 from luigi.format import get_default_format
 from luigi.parameter import OptionalParameter, Parameter
 from luigi.target import FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, AtomicLocalFile, MissingParentDirectory
@@ -1229,7 +1230,16 @@ class S3ClientBoto3(FileSystem):
         return True
 
 
-# Backwards-compatible aliases — preserve existing default behaviour (boto1).
-# To use boto3 explicitly, import S3ClientBoto3 directly and pass it as client=.
-S3Client = S3ClientBoto1
-ReadableS3File = ReadableS3FileBoto1
+# Default S3 client / readable-file implementations. The choice is gated by
+# IS_LUIGI1_DEPRECATED (see luigi/contrib/_luigi1_compat.py): while luigi1 is
+# still installed alongside this package the legacy boto1 stack is used to
+# preserve backwards compatibility; once luigi1 has been removed the modern
+# boto3 stack takes over. Callers that need to pin a specific implementation
+# should import S3ClientBoto1/S3ClientBoto3 (or the matching readable-file
+# class) directly and pass it via the ``client=`` kwarg.
+if IS_LUIGI1_DEPRECATED:
+    S3Client = S3ClientBoto3
+    ReadableS3File = ReadableS3FileBoto3
+else:
+    S3Client = S3ClientBoto1
+    ReadableS3File = ReadableS3FileBoto1

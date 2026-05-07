@@ -24,20 +24,64 @@ from target_test import FileSystemTargetTestMixin
 from helpers import with_config, unittest, skipOnTravis
 
 from luigi import configuration
-from luigi.contrib.s3 import FileNotFoundException, InvalidDeleteException, S3Client, S3ClientBoto3, S3Target
+from luigi.contrib._luigi1_compat import IS_LUIGI1_DEPRECATED
+from luigi.contrib.s3 import (
+    FileNotFoundException,
+    InvalidDeleteException,
+    ReadableS3File,
+    ReadableS3FileBoto1,
+    ReadableS3FileBoto3,
+    S3Client,
+    S3ClientBoto1,
+    S3ClientBoto3,
+    S3EmrTask,
+    S3FlagTask,
+    S3PathTask,
+    S3Target,
+)
 from luigi.target import MissingParentDirectory
 
+# `S3Client` is the flag-resolved alias from luigi.contrib.s3:
+#   IS_LUIGI1_DEPRECATED is False  → S3Client is S3ClientBoto1 (legacy boto1 stack)
+#   IS_LUIGI1_DEPRECATED is True   → S3Client is S3ClientBoto3 (modern boto3 stack)
+USING_BOTO1 = S3Client is S3ClientBoto1
+
+# Try to import boto1 unconditionally so the file can collect cleanly even
+# in degenerate configs (e.g. luigi1 installed but boto missing). The
+# resulting symbol bindings let us pick the right exception class to match
+# whichever stack is actually live.
 try:
-    import boto
-    from boto.exception import S3ResponseError
+    from boto.exception import S3ResponseError as _Boto1ResponseError
     from boto.s3 import key
-    HAS_BOTO = True
+    HAS_BOTO_PKG = True
 except ImportError:
-    import boto3
-    from botocore.exceptions import ClientError as S3ResponseError
-    HAS_BOTO = False
-    # boto1 is not available; use the boto3 client for all tests in this file
-    S3Client = S3ClientBoto3
+    _Boto1ResponseError = None
+    key = None
+    HAS_BOTO_PKG = False
+
+from botocore.exceptions import ClientError as _Boto3ResponseError
+
+# ``S3ResponseError`` must match whatever the active stack actually raises,
+# not just whichever package happens to be installed. e.g. boto can be on
+# the path while the flag still selects boto3 — in that case errors come
+# from botocore, not boto.
+if USING_BOTO1 and HAS_BOTO_PKG:
+    S3ResponseError = _Boto1ResponseError
+else:
+    S3ResponseError = _Boto3ResponseError
+
+# Tests that exercise boto1-only behaviour (encrypt_key kwarg,
+# key.Key.BufferSize, boto-specific credential attrs) need both the flag
+# pointing at boto1 AND the boto package to be importable.
+BOTO1_RUNNABLE = USING_BOTO1 and HAS_BOTO_PKG
+
+# True when ``S3Client()`` (the flag-resolved default) can actually be
+# instantiated in this env. ``S3ClientBoto1.__init__`` does ``from boto.s3.key
+# import Key``, so when the flag selects boto1 but the boto package is missing,
+# instantiation fails. Tests that construct ``S3Client()`` (or any class that
+# transitively does, like ``S3Target('s3://...')`` with no explicit client)
+# must skip in that degenerate case.
+S3CLIENT_INSTANTIABLE = HAS_BOTO_PKG if USING_BOTO1 else True
 
 try:
     from moto import mock_s3, mock_sts
@@ -54,6 +98,8 @@ AWS_ACCESS_KEY = "XXXXXXXXXXXXXXXXXXXX"
 AWS_SECRET_KEY = "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 
+@unittest.skipUnless(S3CLIENT_INSTANTIABLE,
+                     'flag selects boto1 stack but boto package is not installed')
 class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
 
     def setUp(self):
@@ -71,7 +117,7 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         self.addCleanup(self.mock_s3.stop)
 
     def _create_bucket(self, client):
-        if HAS_BOTO:
+        if USING_BOTO1:
             client.s3.create_bucket('mybucket')
         else:
             import boto3
@@ -96,12 +142,12 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         t = self.create_target()
         self.assertRaises(FileNotFoundException, t.open)
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_read_no_file_sse(self):
         t = self.create_target(encrypt_key=True)
         self.assertRaises(FileNotFoundException, t.open)
 
-    @unittest.skipIf(not HAS_BOTO, 'boto Key.BufferSize not available with boto3')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'boto Key.BufferSize not available with boto3')
     def test_read_iterator_long(self):
         # write a file that is 5X the boto buffersize
         # to test line buffering
@@ -134,13 +180,15 @@ class TestS3Target(unittest.TestCase, FileSystemTargetTestMixin):
         path = t.path
         self.assertEqual('s3://mybucket/test_file', path)
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_get_path_sse(self):
         t = self.create_target(encrypt_key=True)
         path = t.path
         self.assertEqual('s3://mybucket/test_file', path)
 
 
+@unittest.skipUnless(S3CLIENT_INSTANTIABLE,
+                     'flag selects boto1 stack but boto package is not installed')
 class TestS3Client(unittest.TestCase):
 
     def setUp(self):
@@ -159,14 +207,14 @@ class TestS3Client(unittest.TestCase):
         self.addCleanup(self.mock_sts.stop)
 
     def _create_bucket(self, client=None, name='mybucket'):
-        if HAS_BOTO:
+        if USING_BOTO1:
             (client or S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)).s3.create_bucket(name)
         else:
             import boto3
             conn = boto3.resource('s3', region_name='us-east-1')
             conn.create_bucket(Bucket=name)
 
-    @unittest.skipIf(not HAS_BOTO, 'boto-specific credential attribute gs_access_key_id')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'boto-specific credential attribute gs_access_key_id')
     def test_init_with_environment_variables(self):
         os.environ['AWS_ACCESS_KEY_ID'] = 'foo'
         os.environ['AWS_SECRET_ACCESS_KEY'] = 'bar'
@@ -180,14 +228,14 @@ class TestS3Client(unittest.TestCase):
         self.assertEqual(s3_client.s3.gs_access_key_id, 'foo')
         self.assertEqual(s3_client.s3.gs_secret_access_key, 'bar')
 
-    @unittest.skipIf(not HAS_BOTO, 'boto-specific credential attributes access_key/secret_key')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'boto-specific credential attributes access_key/secret_key')
     @with_config({'s3': {'aws_access_key_id': 'foo', 'aws_secret_access_key': 'bar'}})
     def test_init_with_config(self):
         s3_client = S3Client()
         self.assertEqual(s3_client.s3.access_key, 'foo')
         self.assertEqual(s3_client.s3.secret_key, 'bar')
 
-    @unittest.skipIf(not HAS_BOTO, 'boto-specific STS credential attributes')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'boto-specific STS credential attributes')
     @with_config({'s3': {'aws_role_arn': 'role', 'aws_role_session_name': 'name'}})
     def test_init_with_config_and_roles(self):
         s3_client = S3Client()
@@ -200,7 +248,7 @@ class TestS3Client(unittest.TestCase):
         s3_client.put(self.tempFilePath, 's3://mybucket/putMe')
         self.assertTrue(s3_client.exists('s3://mybucket/putMe'))
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_put_sse(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         self._create_bucket(s3_client)
@@ -213,7 +261,7 @@ class TestS3Client(unittest.TestCase):
         s3_client.put_string("SOMESTRING", 's3://mybucket/putString')
         self.assertTrue(s3_client.exists('s3://mybucket/putString'))
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_put_string_sse(self):
         s3_client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
         self._create_bucket(s3_client)
@@ -229,7 +277,7 @@ class TestS3Client(unittest.TestCase):
         file_size = (part_size * 2) - 5000
         self._run_multipart_test(part_size, file_size)
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_put_multipart_multiple_parts_non_exact_fit_with_sse(self):
         part_size = (1024 ** 2) * 5
         file_size = (part_size * 2) - 5000
@@ -243,7 +291,7 @@ class TestS3Client(unittest.TestCase):
         file_size = part_size * 2
         self._run_multipart_test(part_size, file_size)
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_put_multipart_multiple_parts_exact_fit_wit_sse(self):
         part_size = (1024 ** 2) * 5
         file_size = part_size * 2
@@ -257,7 +305,7 @@ class TestS3Client(unittest.TestCase):
         file_size = 5000
         self._run_multipart_test(part_size, file_size)
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_put_multipart_less_than_split_size_with_sse(self):
         part_size = (1024 ** 2) * 5
         file_size = 5000
@@ -271,7 +319,7 @@ class TestS3Client(unittest.TestCase):
         file_size = 0
         self._run_multipart_test(part_size, file_size)
 
-    @unittest.skipIf(not HAS_BOTO, 'encrypt_key is boto-only')
+    @unittest.skipIf(not BOTO1_RUNNABLE, 'encrypt_key is boto-only')
     def test_put_multipart_empty_file_with_sse(self):
         part_size = (1024 ** 2) * 5
         file_size = 0
@@ -531,3 +579,125 @@ class TestS3Client(unittest.TestCase):
         key_size = s3_client.get_key(s3_path).size
         self.assertEqual(file_size, key_size)
         tmp_file.close()
+
+
+class TestFlagDrivenS3Dispatch(unittest.TestCase):
+    """``S3Client`` / ``ReadableS3File`` and the default client injected by
+    ``S3Target`` / ``S3PathTask`` / ``S3EmrTask`` / ``S3FlagTask`` are all
+    chosen by ``IS_LUIGI1_DEPRECATED``. These tests pin that contract."""
+
+    def test_alias_matches_current_flag(self):
+        if IS_LUIGI1_DEPRECATED:
+            self.assertIs(S3Client, S3ClientBoto3)
+            self.assertIs(ReadableS3File, ReadableS3FileBoto3)
+        else:
+            self.assertIs(S3Client, S3ClientBoto1)
+            self.assertIs(ReadableS3File, ReadableS3FileBoto1)
+
+    def test_readable_file_class_wired_to_each_client(self):
+        # Independently of which is currently aliased as the default, each
+        # client class must point at its matching readable-file impl so that
+        # S3Target.open() resolves correctly regardless of which client was
+        # injected.
+        self.assertIs(S3ClientBoto1._readable_file_cls, ReadableS3FileBoto1)
+        self.assertIs(S3ClientBoto3._readable_file_cls, ReadableS3FileBoto3)
+
+    @unittest.skipUnless(S3CLIENT_INSTANTIABLE, 'flag selects boto1 but boto is not installed')
+    def test_default_client_injection_in_s3_target(self):
+        target = S3Target('s3://mybucket/key')
+        self.assertIsInstance(target.fs, S3Client)
+
+    @unittest.skipUnless(S3CLIENT_INSTANTIABLE, 'flag selects boto1 but boto is not installed')
+    def test_default_client_injection_in_s3_path_task(self):
+        task = S3PathTask(path='s3://mybucket/key')
+        self.assertIsInstance(task.output().fs, S3Client)
+
+    @unittest.skipUnless(S3CLIENT_INSTANTIABLE, 'flag selects boto1 but boto is not installed')
+    def test_default_client_injection_in_s3_emr_task(self):
+        # S3EmrTarget (via S3FlagTarget) requires path to end with '/'
+        task = S3EmrTask(path='s3://mybucket/dir/')
+        self.assertIsInstance(task.output().fs, S3Client)
+
+    @unittest.skipUnless(S3CLIENT_INSTANTIABLE, 'flag selects boto1 but boto is not installed')
+    def test_default_client_injection_in_s3_flag_task(self):
+        task = S3FlagTask(path='s3://mybucket/dir/')
+        self.assertIsInstance(task.output().fs, S3Client)
+
+    @unittest.skipUnless(S3CLIENT_INSTANTIABLE, 'flag selects boto1 but boto is not installed')
+    def test_explicit_client_overrides_flag_default(self):
+        # Same-stack override — always runs (when S3Client is instantiable).
+        # Confirms the ``client or S3Client()`` branch in S3Target.__init__
+        # uses the injected instance verbatim, regardless of which stack the
+        # flag selected as the default.
+        same_stack = S3Client()
+        target = S3Target('s3://mybucket/key', client=same_stack)
+        self.assertIs(target.fs, same_stack)
+
+    def test_explicit_client_cross_stack_override(self):
+        # Cross-stack override — pick the OTHER stack from the flag-resolved
+        # default and confirm S3Target uses the injected instance. Skipped
+        # when the other stack's backing package is not installed.
+        other_cls = S3ClientBoto1 if S3Client is S3ClientBoto3 else S3ClientBoto3
+        try:
+            cross_stack = other_cls()
+        except ImportError:
+            self.skipTest(
+                '{} backing package not installed; cross-stack override path '
+                'not exercised in this env'.format(other_cls.__name__)
+            )
+        target = S3Target('s3://mybucket/key', client=cross_stack)
+        self.assertIs(target.fs, cross_stack)
+        self.assertIsInstance(target.fs, other_cls)
+
+    def test_aliases_flip_when_flag_flipped(self):
+        # Reload luigi.contrib.s3 with luigi1 forcibly importable (flag → False)
+        # and confirm the aliases flip to the boto1 stack; then with luigi1
+        # forcibly unimportable (flag → True) and confirm they flip back to
+        # boto3. Both directions must be simulated actively because luigi1
+        # may or may not be genuinely installed in this env — popping
+        # ``sys.modules['luigi1']`` alone is not enough when luigi1 is on
+        # disk, since Python would re-import it from there.
+        import importlib
+        import sys
+        import types
+
+        class _BlockLuigi1Finder:
+            """A meta_path finder that forces ``import luigi1`` to fail."""
+            def find_spec(self, fullname, path, target=None):
+                if fullname == 'luigi1':
+                    raise ImportError("luigi1 blocked by test")
+                return None
+
+        saved_luigi1 = sys.modules.get('luigi1', None)
+        had_luigi1 = 'luigi1' in sys.modules
+        saved_meta_path = list(sys.meta_path)
+        blocker = _BlockLuigi1Finder()
+        try:
+            # Flag → False: stub luigi1 in sys.modules so import succeeds.
+            sys.modules['luigi1'] = types.ModuleType('luigi1')
+            sys.modules.pop('luigi.contrib._luigi1_compat', None)
+            sys.modules.pop('luigi.contrib.s3', None)
+            s3mod = importlib.import_module('luigi.contrib.s3')
+            self.assertIs(s3mod.S3Client, s3mod.S3ClientBoto1)
+            self.assertIs(s3mod.ReadableS3File, s3mod.ReadableS3FileBoto1)
+
+            # Flag → True: install a meta_path finder that raises ImportError
+            # for ``luigi1``, so ``import luigi1`` fails even if the package
+            # is installed on disk.
+            sys.modules.pop('luigi1', None)
+            sys.meta_path.insert(0, blocker)
+            sys.modules.pop('luigi.contrib._luigi1_compat', None)
+            sys.modules.pop('luigi.contrib.s3', None)
+            s3mod = importlib.import_module('luigi.contrib.s3')
+            self.assertIs(s3mod.S3Client, s3mod.S3ClientBoto3)
+            self.assertIs(s3mod.ReadableS3File, s3mod.ReadableS3FileBoto3)
+        finally:
+            sys.meta_path[:] = saved_meta_path
+            if had_luigi1:
+                sys.modules['luigi1'] = saved_luigi1
+            else:
+                sys.modules.pop('luigi1', None)
+            sys.modules.pop('luigi.contrib._luigi1_compat', None)
+            sys.modules.pop('luigi.contrib.s3', None)
+            importlib.import_module('luigi.contrib._luigi1_compat')
+            importlib.import_module('luigi.contrib.s3')

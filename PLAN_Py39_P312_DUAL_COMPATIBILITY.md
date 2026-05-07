@@ -265,6 +265,145 @@ target = S3Target("s3://bucket/key", client=S3ClientBoto3())
 
 ---
 
+## May 6 2026 — `IS_LUIGI1_DEPRECATED` flag gates default boto1 ↔ boto3 dispatch
+
+**Supersedes** the April 13 2026 decision that pinned `S3Client = S3ClientBoto1` unconditionally.
+
+### Why
+
+Affirm has two coexisting deployment shapes during the migration:
+
+* **Legacy** — Affirm's internal `luigi1` package is still installed alongside this fork. Existing call sites that don't pass `client=` must continue to land on the boto1 stack.
+* **Modern** — `luigi1` has been removed. The same default call sites should land on the boto3 stack with no per-caller change.
+
+Hard-coding the default to boto1 forced every caller in the modern environment to migrate explicitly to `client=S3ClientBoto3()` before they could drop `luigi1`. We now key the default off whether `luigi1` is importable, so the cutover is environmental rather than per-call-site.
+
+### What
+
+* New private module `luigi/contrib/_luigi1_compat.py` exporting one symbol:
+
+  ```python
+  try:
+      import luigi1  # noqa: F401
+      IS_LUIGI1_DEPRECATED = False
+  except Exception:
+      IS_LUIGI1_DEPRECATED = True
+  ```
+
+  `Exception` (not just `ImportError`) is caught so an import-time error inside `luigi1` itself also flips the flag — if `luigi1` can't be loaded, treat it as gone.
+
+* `luigi/contrib/s3.py` now imports the flag and resolves the public aliases conditionally:
+
+  ```python
+  from luigi.contrib._luigi1_compat import IS_LUIGI1_DEPRECATED
+
+  if IS_LUIGI1_DEPRECATED:
+      S3Client = S3ClientBoto3
+      ReadableS3File = ReadableS3FileBoto3
+  else:
+      S3Client = S3ClientBoto1
+      ReadableS3File = ReadableS3FileBoto1
+  ```
+
+### Surface controlled by the flag
+
+Because every `client=`-accepting class falls back to `S3Client()` when no client is injected, this single dispatch flows through:
+
+* `S3Target.__init__` → `self.fs = client or S3Client()`
+* `S3FlagTarget`, `S3EmrTarget` (subclasses of `S3Target`)
+* `S3PathTask`, `S3EmrTask`, `S3FlagTask` — all forward `client` to their target constructors
+* `ReadableS3File` is selected indirectly via `S3Client._readable_file_cls`, which is wired correctly on both `S3ClientBoto1` and `S3ClientBoto3`, so `S3Target.open()` always picks the matching readable-file impl.
+
+The classes `S3ClientBoto1`, `S3ClientBoto3`, `ReadableS3FileBoto1`, `ReadableS3FileBoto3` remain public and pinnable. Callers that need a specific stack regardless of environment continue to import the concrete class and pass it via `client=`.
+
+### Files changed
+
+* **new** — `luigi/contrib/_luigi1_compat.py`
+* **modified** — `luigi/contrib/s3.py` (added flag import; replaced static aliases with conditional dispatch at module bottom)
+* **docs** — `CLAUDE.md`, this file
+
+### Out of scope (no fork to gate)
+
+`luigi/contrib/batch.py`, `luigi/contrib/ecs.py`, and `luigi/notifications.py` already use boto3 only — no boto1 implementation exists for them, so the flag does not apply.
+
+### Verification performed
+
+* Import smoke test in the dev venv (`luigi1` not installed) — `IS_LUIGI1_DEPRECATED == True`, `S3Client is S3ClientBoto3`, `ReadableS3File is ReadableS3FileBoto3`, and `S3Target('s3://x/y').fs` is an `S3ClientBoto3`.
+* Inverse smoke test with `sys.modules['luigi1']` stubbed and `luigi.contrib.s3` reloaded — `IS_LUIGI1_DEPRECATED == False`, aliases resolve back to the boto1 stack.
+
+### Caveat
+
+The flag is evaluated once at module-import time. If `luigi1` is added or removed at runtime, modules that branch on the flag must be re-imported (or the process restarted) for the change to take effect. This matches normal Python import semantics and is acceptable for the deployment shapes above.
+
+### Evaluation — are the `client=` parameters on `S3PathTask` / `S3EmrTask` / `S3FlagTask` still required?
+
+The April 13 commit `05c71137` added a `client=None` kwarg to `S3PathTask`, `S3EmrTask`, and `S3FlagTask` so callers could opt into boto3. With the flag now driving the default, that *specific* motivation is gone — `S3PathTask(path=...)` already lands on `S3ClientBoto3` whenever `IS_LUIGI1_DEPRECATED == True`. **However, keep the parameters.** They remain useful for:
+
+* **Pinning a stack against the env-driven default.** Callers in a legacy env (`luigi1` still installed → flag False → default boto1) who need boto3 for a specific task, or vice versa, still need an injection point.
+* **General dependency injection** — custom credentials, assumed-role clients, alternate regions, moto-mocked clients in tests. This is independent of the boto1↔boto3 dichotomy and matches the long-standing `S3Target(client=...)` pattern.
+* **`RedshiftManifestTask`** (`luigi/contrib/redshift.py:518`) calls `S3Target(folder_path, client=self._client)` where `self._client` comes from the inherited `S3PathTask.__init__`. Removing the parameter would force a parallel rewrite there.
+
+In this repo, no call site currently passes an explicit `client=S3ClientBoto1()` / `client=S3ClientBoto3()` to those task classes, so flipping the flag introduces no in-repo redundancy. Downstream consumers (e.g., `all-the-things`) that previously added `client=S3ClientBoto3()` purely to opt into boto3 may now drop that argument once `luigi1` is gone — that cleanup is optional, not forced.
+
+**Conclusion:** the flag handles the *default* dispatch; the `client=` parameter handles *explicit* injection. They compose; both stay.
+
+### Test coverage for the flag
+
+* **`test/contrib/luigi1_compat_test.py`** — new file. Pins the three branches of `IS_LUIGI1_DEPRECATED`:
+  * `True` when `import luigi1` raises `ImportError` (real env state)
+  * `False` when `luigi1` is importable (stubbed via `sys.modules['luigi1'] = types.ModuleType(...)` and `importlib.reload`)
+  * `True` when `import luigi1` raises a non-`ImportError` exception (simulated via a custom `sys.meta_path` finder)
+
+  The test class snapshots and restores `sys.modules['luigi1']` and `sys.meta_path` in `setUp`/`tearDown`, and re-imports `luigi.contrib._luigi1_compat` on exit so subsequent test files see the real flag.
+
+* **`test/contrib/s3_test.py::TestFlagDrivenS3Dispatch`** — new test class in the existing s3 test file. Pins the dispatch contract end-to-end:
+  * `S3Client is S3ClientBoto3` and `ReadableS3File is ReadableS3FileBoto3` when the flag is True; the boto1 equivalents when False.
+  * `S3ClientBoto1._readable_file_cls` and `S3ClientBoto3._readable_file_cls` are wired to the matching readable-file impl, so `S3Target.open()` resolves correctly regardless of which client was injected.
+  * `S3Target('s3://...')`, `S3PathTask(path=...).output()`, `S3EmrTask(path=...).output()`, and `S3FlagTask(path=...).output()` all default `fs` to an instance of the flag-resolved `S3Client`.
+  * Same-stack explicit `client=` override: an injected instance is preserved verbatim by `S3Target`.
+  * Cross-stack explicit override: same assertion against the *other* stack — runs only when both backing packages are installed (skipped otherwise).
+  * Aliases flip in both directions when `luigi.contrib._luigi1_compat` and `luigi.contrib.s3` are reloaded with `luigi1` stubbed in / out of `sys.modules`. Cleanup re-imports the real modules so subsequent tests aren't poisoned.
+
+* **`test/contrib/s3_test.py` setup change** — the legacy `try: import boto / HAS_BOTO` block is replaced by `USING_BOTO1 = S3Client is S3ClientBoto1`. Every existing `@unittest.skipIf(not HAS_BOTO, ...)` decorator is preserved verbatim as `@unittest.skipIf(not USING_BOTO1, ...)` — same skip semantics, now sourced from the flag rather than from probing `boto`. The previous `S3Client = S3ClientBoto3` rebinding (when `boto` was missing) is no longer needed because `S3Client` is already flag-resolved at import time.
+
+### Test results in the dev env (`luigi1` not installed → flag True → boto3 default)
+
+`pytest test/contrib/luigi1_compat_test.py test/contrib/s3_test.py`: **58 passed, 13 skipped**. The 13 skips break down as 12 boto1-only tests (encrypt_key, `key.Key.BufferSize`, boto-specific credential attrs) plus one cross-stack override that needs `S3ClientBoto1()` to be instantiable. All consistent with running on the boto3 stack without `boto` installed.
+
+### Test infra refinements after running the 7-scenario uv matrix
+
+Two fragility points surfaced when running the test file under scenarios that flip the flag (luigi1 installed):
+
+1. **Top-level `from boto.exception import S3ResponseError` blew up at collection time** when the flag selected boto1 but `boto` was not installed (scenario 7). Wrapped in `try/except` and added two new module-level predicates:
+   * `HAS_BOTO_PKG` — is the boto package importable?
+   * `BOTO1_RUNNABLE = USING_BOTO1 and HAS_BOTO_PKG` — used by all existing `@unittest.skipIf` decorators (renamed from `not HAS_BOTO`/`not USING_BOTO1`, identical semantics).
+   * `S3CLIENT_INSTANTIABLE = HAS_BOTO_PKG if USING_BOTO1 else True` — used as a class-level `@unittest.skipUnless(...)` on `TestS3Target` and `TestS3Client` and per-test on the instantiating dispatch tests, so the file collects and the dispatch contract still gets verified even in degenerate configs.
+
+2. **`S3ResponseError` binding** previously followed *boto-package-availability*, but with the flag in play that's no longer the same as *active-stack*. boto can be on path while the flag still selects boto3 (scenario 3 — boto installed, no luigi1, flag True). Now bound based on the active stack:
+   ```python
+   S3ResponseError = _Boto1ResponseError if (USING_BOTO1 and HAS_BOTO_PKG) else _Boto3ResponseError
+   ```
+
+3. **`test_aliases_flip_when_flag_flipped`** previously simulated "flag → True" by `sys.modules.pop('luigi1')` and reloading. That fails when `luigi1` is genuinely installed because Python re-imports it from disk. Replaced with an active `sys.meta_path` finder that raises `ImportError` for `luigi1` during the reload.
+
+### `uv run` scenario matrix
+
+Each scenario runs `uv run --python <ver> --no-project --index-url https://pypi.affirm-build.com/artifactory/api/pypi/pypi/simple/ --with-editable . --with pytest --with mock <stack-deps> python -m pytest -q test/contrib/s3_test.py --override-ini addopts=''`.
+
+| # | Python | Stack deps | luigi1 | Result | Notes |
+|---|--------|-----------|--------|--------|-------|
+| 1 | 3.12 | boto + boto3==1.33.13 + moto==1.3.14 | — | **install fails** | `boto@2.49.0+affirm0` references `boto.vendored.six.moves`, not py3.12-compatible |
+| 2 | 3.12 | boto3 + moto>=5,<6 | — | 54 / 13 skip / 0 fail | modern stack, flag True, S3Client=S3ClientBoto3 |
+| 3 | 3.9 | boto + boto3==1.33.13 + moto==1.3.14 | — | 55 / 12 skip / 0 fail | flag True (no luigi1), S3Client=S3ClientBoto3 even though boto is installed; cross-stack override runs |
+| 4 | 3.9 | boto3==1.33.13 + moto==1.3.14 | — | 55 / 12 skip / 0 fail | moto1 transitively requires boto, so this collapses to scenario 3 |
+| 5 | 3.9 | boto3 + moto>=5,<6 | — | 54 / 13 skip / 0 fail | clean modern py3.9 |
+| 6 | 3.9 | boto + boto3==1.33.13 + moto==1.3.14 | luigi1==1.1.2+affirm.1.1.1 | 11 / 0 skip / 56 fail | flag False, S3Client=S3ClientBoto1 — failures are **pre-existing** moto1+boto1 mocking issues (real AWS leak), already known and dodged by `run_tests.sh --ignore=test/contrib/s3_test.py` on py3.9 |
+| 7 | 3.9 | boto3 + moto>=5,<6 + luigi1 | luigi1 | 4 / 63 skip / 0 fail | degenerate: flag False (luigi1 installed) but boto missing; all S3-touching tests skip via `S3CLIENT_INSTANTIABLE`; flag dispatch contract still verified by the 4 non-instantiating tests |
+
+Scenarios that should run cleanly (2, 3, 5) do. Scenarios that should fail (1, 7) fail informatively. Scenario 6's failures are pre-existing test-infra issues unrelated to the flag work.
+
+---
+
 ## Migration Guide — `all-the-things` Repo
 
 The following covers every distinct usage pattern found in the `all-the-things` codebase and what, if anything, needs to change to migrate to boto3.
