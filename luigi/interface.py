@@ -159,22 +159,23 @@ def run(*args, **kwargs):
 
     :param use_dynamic_argparse: Deprecated and ignored
     """
-    cmdline_args = args[0] if args else kwargs.get("cmdline_args")
-    if cmdline_args is not None and not isinstance(cmdline_args, (list, tuple)):
-        raise TypeError(
-            f"luigi.run() expects a list or tuple of command-line arguments, "
-            f"got {type(cmdline_args).__name__!r}. "
-            "Example: luigi.run(['MyTask', '--param', 'value'])"
-        )
     luigi_run_result = _run(*args, **kwargs)
     return luigi_run_result if kwargs.get("detailed_summary") else luigi_run_result.scheduling_succeeded
 
 
 def _run(cmdline_args=None, main_task_cls=None, worker_scheduler_factory=None, use_dynamic_argparse=None, local_scheduler=False, detailed_summary=False):
+    if cmdline_args is not None and not isinstance(cmdline_args, (list, tuple)):
+        raise TypeError(
+            f"cmdline_args must be a list or tuple of command-line arguments, "
+            f"got {type(cmdline_args).__name__!r}. "
+            "Example: ['MyTask', '--param', 'value']"
+        )
     if use_dynamic_argparse is not None:
         warnings.warn("use_dynamic_argparse is deprecated, don't set it.", DeprecationWarning, stacklevel=2)
     if cmdline_args is None:
         cmdline_args = sys.argv[1:]
+    else:
+        cmdline_args = list(cmdline_args)
 
     if main_task_cls:
         cmdline_args.insert(0, main_task_cls.task_family)
