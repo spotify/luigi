@@ -870,7 +870,7 @@ class BoolParameter(Parameter[bool]):
     def __init__(
         self,
         default: Union[bool, _NoValueType] = _no_value,
-        parsing: str | None = None,
+        parsing: Optional[str] = None,
         **kwargs: Unpack[_ParameterKwargs],
     ):
         self.parsing = self.__class__.parsing if parsing is None else parsing
