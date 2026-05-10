@@ -676,7 +676,7 @@ class Task(metaclass=Register):
         """
         return getpaths(self.requires())
 
-    def deps(self):
+    def deps(self) -> list["Task"]:
         """
         Internal method used by the scheduler.
 
@@ -960,7 +960,7 @@ def getpaths(struct):
             raise Exception("Cannot map %s to Task/dict/list" % str(struct))
 
 
-def flatten(struct):
+def flatten(struct: Any) -> list[Any]:
     """
     Creates a flat list of all items in structured output (dicts, lists, items):
 
