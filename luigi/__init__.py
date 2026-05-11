@@ -83,6 +83,7 @@ __all__ = [
     "auto_namespace",
     "DynamicRequirements",
     "target",
+    "task_register",
     "Target",
     "LocalTarget",
     "rpc",
