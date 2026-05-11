@@ -20,6 +20,8 @@ It is a central concept of Luigi and represents the state of the workflow.
 See :doc:`/tasks` for an overview.
 """
 
+from __future__ import annotations
+
 import copy
 import functools
 import hashlib
@@ -30,7 +32,7 @@ import traceback
 import warnings
 from collections import OrderedDict, deque
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from luigi.target import Target
@@ -616,7 +618,7 @@ class Task(metaclass=Register):
         """
         raise BulkCompleteNotImplementedError()
 
-    def output(self) -> Union["Target", list["Target"], dict[str, "Target"]]:
+    def output(self) -> "Target" | list["Target"] | dict[str, "Target"]:
         """
         The output that this Task produces.
 
@@ -634,7 +636,7 @@ class Task(metaclass=Register):
         """
         return []  # default impl
 
-    def requires(self) -> Union["Task", list["Task"], dict[str, "Task"]]:
+    def requires(self) -> "Task" | list["Task"] | dict[str, "Task"]:
         """
         The Tasks that this Task depends on.
 
@@ -668,7 +670,7 @@ class Task(metaclass=Register):
         """
         return self.resources  # default impl
 
-    def input(self) -> Union["Target", list["Target"], dict[str, "Target"]]:
+    def input(self) -> "Target" | list["Target"] | dict[str, "Target"]:
         """
         Returns the outputs of the Tasks returned by :py:meth:`requires`
 
