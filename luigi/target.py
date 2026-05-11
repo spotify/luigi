@@ -27,6 +27,7 @@ import random
 import tempfile
 import warnings
 from contextlib import contextmanager
+from typing import IO, Any
 
 logger = logging.getLogger("luigi-interface")
 
@@ -44,7 +45,7 @@ class Target(metaclass=abc.ABCMeta):
     """
 
     @abc.abstractmethod
-    def exists(self):
+    def exists(self) -> bool:
         """
         Returns ``True`` if the :py:class:`Target` exists and ``False`` otherwise.
         """
@@ -230,7 +231,7 @@ class FileSystemTarget(Target):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def open(self, mode):
+    def open(self, mode: str) -> IO[Any]:
         """
         Open the FileSystem target.
 
