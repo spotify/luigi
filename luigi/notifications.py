@@ -196,7 +196,6 @@ def send_email_ses(sender, subject, message, recipients, images_png):
     client = boto3_client("ses")
 
     msg_root = generate_email(sender, subject, message, recipients, images_png)
-    
     try:
         response = client.send_raw_email(Source=sender, Destinations=recipients, RawMessage={"Data": msg_root.as_string()})
     except Exception as e:
