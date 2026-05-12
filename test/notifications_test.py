@@ -15,9 +15,9 @@
 # limitations under the License.
 #
 
+import os
 import socket
 import sys
-import os
 import tempfile
 
 import mock
