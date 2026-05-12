@@ -146,7 +146,7 @@ class ExceptionFormatTest(unittest.TestCase):
             subject="sübjéct",
             message="你好",
             recipients=["receiver@example.com"],
-            image_png=None,
+            images_png=None,
         )
 
 
@@ -154,7 +154,7 @@ class NotificationFixture:
     """
     Defines API and message fixture.
 
-    config, sender, subject, message, recipients, image_png
+    config, sender, subject, message, recipients, images_png
     """
 
     sender = "luigi@unittest"
@@ -162,9 +162,9 @@ class NotificationFixture:
     message = """A multiline
                  message."""
     recipients = ["noone@nowhere.no", "phantom@opera.fr"]
-    image_png = None
+    images_png = None
 
-    notification_args = [sender, subject, message, recipients, image_png]
+    notification_args = [sender, subject, message, recipients, images_png]
     mocked_email_msg = """Content-Type: multipart/related; boundary="===============0998157881=="
 MIME-Version: 1.0
 Subject: Oops!
@@ -388,7 +388,7 @@ class TestSNSNotification(unittest.TestCase, NotificationFixture):
         )
 
         with mock.patch("boto3.resource") as res:
-            notifications.send_email_sns(self.sender, long_subject, self.message, self.recipients, self.image_png)
+            notifications.send_email_sns(self.sender, long_subject, self.message, self.recipients, self.images_png)
 
             SNS = res.return_value
             SNS.Topic.assert_called_once_with(self.recipients[0])
@@ -410,7 +410,7 @@ class TestNotificationDispatcher(unittest.TestCase, NotificationFixture):
         expected_args = self.notification_args
 
         with mock.patch("luigi.notifications.{}".format(target)) as sender:
-            notifications.send_email(self.subject, self.message, self.sender, self.recipients, image_png=self.image_png)
+            notifications.send_email(self.subject, self.message, self.sender, self.recipients, images_png=self.images_png)
 
             self.assertTrue(sender.called)
 
