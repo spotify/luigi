@@ -119,7 +119,7 @@ def generate_email(sender, subject, message, recipients, images_png):
             with open(image_png, "rb") as fp:
                 msg_image = MIMEImage(fp.read(), "png")
                 filename = image_png.split("/")[-1]
-                msg_image.add_header('Content-Disposition', "attachment; filename={}".format(filename))
+                msg_image.add_header("Content-Disposition", "attachment; filename={}".format(filename))
             msg_root.attach(msg_image)
 
     msg_root["Subject"] = subject
