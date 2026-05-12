@@ -17,6 +17,8 @@
 
 import socket
 import sys
+import os
+import tempfile
 
 import mock
 from helpers import unittest, with_config
@@ -148,6 +150,35 @@ class ExceptionFormatTest(unittest.TestCase):
             recipients=["receiver@example.com"],
             images_png=None,
         )
+
+    def test_generate_email_with_multiple_images(self):
+        image_content_1 = b"fake-png-1"
+        image_content_2 = b"fake-png-2"
+
+        fd1, image_path_1 = tempfile.mkstemp(suffix=".png")
+        fd2, image_path_2 = tempfile.mkstemp(suffix=".png")
+        try:
+            with os.fdopen(fd1, "wb") as image_file_1:
+                image_file_1.write(image_content_1)
+            with os.fdopen(fd2, "wb") as image_file_2:
+                image_file_2.write(image_content_2)
+
+            msg = generate_email(
+                sender="test@example.com",
+                subject="subject",
+                message="body",
+                recipients=["receiver@example.com"],
+                images_png=[image_path_1, image_path_2],
+            )
+
+            payload = msg.get_payload()
+            self.assertEqual(3, len(payload))
+
+            filenames = [part.get_filename() for part in payload[1:]]
+            self.assertCountEqual(filenames, [os.path.basename(image_path_1), os.path.basename(image_path_2)])
+        finally:
+            os.unlink(image_path_1)
+            os.unlink(image_path_2)
 
 
 class NotificationFixture:
@@ -319,6 +350,36 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
 
             SendGridAPIClient.assert_called_once_with("456abcdef123")
             self.assertTrue(SendGridAPIClient.return_value.send.called)
+
+    @with_config({"sendgrid": {"apikey": "456abcdef123"}})
+    def test_sends_sendgrid_email_with_multiple_images(self):
+        image_content_1 = b"fake-png-1"
+        image_content_2 = b"fake-png-2"
+
+        fd1, image_path_1 = tempfile.mkstemp(suffix=".png")
+        fd2, image_path_2 = tempfile.mkstemp(suffix=".png")
+        try:
+            with os.fdopen(fd1, "wb") as image_file_1:
+                image_file_1.write(image_content_1)
+            with os.fdopen(fd2, "wb") as image_file_2:
+                image_file_2.write(image_content_2)
+
+            with mock.patch("sendgrid.SendGridAPIClient") as SendGridAPIClient:
+                notifications.send_email_sendgrid(
+                    self.sender,
+                    self.subject,
+                    self.message,
+                    self.recipients,
+                    [image_path_1, image_path_2],
+                )
+
+                to_send = SendGridAPIClient.return_value.send.call_args[0][0]
+                self.assertEqual(to_send.add_attachment.call_count, 2)
+                to_send.add_attachment.assert_any_call(image_content_1, filename=os.path.basename(image_path_1))
+                to_send.add_attachment.assert_any_call(image_content_2, filename=os.path.basename(image_path_2))
+        finally:
+            os.unlink(image_path_1)
+            os.unlink(image_path_2)
 
 
 class TestSESEmail(unittest.TestCase, NotificationFixture):
