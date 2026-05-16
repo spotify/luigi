@@ -47,6 +47,18 @@ def _normalize_images(images_png=None):
     return [images_png]
 
 
+def _iter_images(images_png):
+    """Yield image paths from various accepted `images_png` inputs.
+
+    Accepts None, a single path (str/bytes) or an iterable of paths.
+    Returns an iterator (possibly empty) of file paths (strings).
+    """
+    imgs = _normalize_images(images_png)
+    if not imgs:
+        return iter(())
+    return iter(imgs)
+
+
 class TestNotificationsTask(Task):
     """
     You may invoke this task to quickly check if you correctly have setup your
@@ -122,15 +134,12 @@ def generate_email(sender, subject, message, recipients, images_png=None):
     msg_text = MIMEText(message, email().format, "utf-8")
     msg_root.attach(msg_text)
 
-    images_png = _normalize_images(images_png)
-
-    if images_png:
-        for image_png in images_png:
-            with open(image_png, "rb") as fp:
-                msg_image = MIMEImage(fp.read(), "png")
-                filename = image_png.split("/")[-1]
-                msg_image.add_header("Content-Disposition", "attachment; filename={}".format(filename))
-            msg_root.attach(msg_image)
+    for image_png in _iter_images(images_png):
+        with open(image_png, "rb") as fp:
+            msg_image = MIMEImage(fp.read(), "png")
+            filename = image_png.split("/")[-1]
+            msg_image.add_header("Content-Disposition", "attachment; filename={}".format(filename))
+        msg_root.attach(msg_image)
 
     msg_root["Subject"] = subject
     msg_root["From"] = sender
@@ -184,7 +193,6 @@ def send_email_smtp(sender, subject, message, recipients, images_png=None):
         if smtp_config.username and smtp_config.password:
             smtp_conn.login(smtp_config.username, smtp_config.password)
 
-        images_png = _normalize_images(images_png)
         msg_root = generate_email(sender, subject, message, recipients, images_png=images_png)
 
         smtp_conn.sendmail(sender, recipients, msg_root.as_string())
@@ -206,7 +214,6 @@ def send_email_ses(sender, subject, message, recipients, images_png=None):
 
     client = boto3_client("ses")
 
-    images_png = _normalize_images(images_png)
     msg_root = generate_email(sender, subject, message, recipients, images_png=images_png)
     try:
         response = client.send_raw_email(Source=sender, Destinations=recipients, RawMessage={"Data": msg_root.as_string()})
@@ -233,12 +240,9 @@ def send_email_sendgrid(sender, subject, message, recipients, images_png=None):
     else:
         to_send.add_content(message, "text/plain")
 
-    images_png = _normalize_images(images_png)
-
-    if images_png:
-        for image_png in images_png:
-            with open(image_png, "rb") as fp:
-                to_send.add_attachment(fp.read(), filename=image_png.split("/")[-1])
+    for image_png in _iter_images(images_png):
+        with open(image_png, "rb") as fp:
+            to_send.add_attachment(fp.read(), filename=image_png.split("/")[-1])
 
     client.send(to_send)
 
@@ -317,7 +321,6 @@ def send_email(subject, message, sender, recipients, images_png=None):
 
     # Get appropriate sender and call it to send the notification
     email_sender = notifiers[email().method]
-    images_png = _normalize_images(images_png)
     email_sender(sender, subject, message, recipients, images_png=images_png)
 
 
