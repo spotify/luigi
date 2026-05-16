@@ -180,6 +180,30 @@ class ExceptionFormatTest(unittest.TestCase):
             os.unlink(image_path_1)
             os.unlink(image_path_2)
 
+    def test_generate_email_with_single_image_png_kwarg(self):
+        image_content = b"fake-png-single"
+
+        fd, image_path = tempfile.mkstemp(suffix=".png")
+        try:
+            with os.fdopen(fd, "wb") as image_file:
+                image_file.write(image_content)
+
+            msg = generate_email(
+                sender="test@example.com",
+                subject="subject",
+                message="body",
+                recipients=["receiver@example.com"],
+                images_png=image_path,
+            )
+
+            payload = msg.get_payload()
+            self.assertEqual(2, len(payload))
+
+            filenames = [part.get_filename() for part in payload[1:]]
+            self.assertEqual([os.path.basename(image_path)], filenames)
+        finally:
+            os.unlink(image_path)
+
 
 class NotificationFixture:
     """
@@ -380,6 +404,30 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
         finally:
             os.unlink(image_path_1)
             os.unlink(image_path_2)
+
+    @with_config({"sendgrid": {"apikey": "456abcdef123"}})
+    def test_sends_sendgrid_email_with_image_png_kwarg(self):
+        image_content = b"fake-png-single"
+
+        fd, image_path = tempfile.mkstemp(suffix=".png")
+        try:
+            with os.fdopen(fd, "wb") as image_file:
+                image_file.write(image_content)
+
+            with mock.patch("sendgrid.SendGridAPIClient") as SendGridAPIClient:
+                notifications.send_email_sendgrid(
+                    self.sender,
+                    self.subject,
+                    self.message,
+                    self.recipients,
+                    images_png=image_path,
+                )
+
+                to_send = SendGridAPIClient.return_value.send.call_args[0][0]
+                self.assertEqual(to_send.add_attachment.call_count, 1)
+                to_send.add_attachment.assert_any_call(image_content, filename=os.path.basename(image_path))
+        finally:
+            os.unlink(image_path)
 
 
 class TestSESEmail(unittest.TestCase, NotificationFixture):
