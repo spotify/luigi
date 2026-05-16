@@ -39,6 +39,14 @@ logger = logging.getLogger("luigi-interface")
 DEFAULT_CLIENT_EMAIL = "luigi-client@%s" % socket.gethostname()
 
 
+def _normalize_images(images_png=None):
+    if images_png is None:
+        return None
+    if isinstance(images_png, (list, tuple)):
+        return list(images_png)
+    return [images_png]
+
+
 class TestNotificationsTask(Task):
     """
     You may invoke this task to quickly check if you correctly have setup your
@@ -104,7 +112,7 @@ class sendgrid(Config):
     apikey = luigi.parameter.Parameter(config_path=dict(section="email", name="SENGRID_API_KEY"), description="API key for SendGrid login")
 
 
-def generate_email(sender, subject, message, recipients, images_png):
+def generate_email(sender, subject, message, recipients, images_png=None):
     from email.mime.image import MIMEImage
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
@@ -113,6 +121,8 @@ def generate_email(sender, subject, message, recipients, images_png):
 
     msg_text = MIMEText(message, email().format, "utf-8")
     msg_root.attach(msg_text)
+
+    images_png = _normalize_images(images_png)
 
     if images_png:
         for image_png in images_png:
@@ -154,7 +164,7 @@ def wrap_traceback(traceback):
     return wrapped
 
 
-def send_email_smtp(sender, subject, message, recipients, images_png):
+def send_email_smtp(sender, subject, message, recipients, images_png=None):
     import smtplib
 
     smtp_config = smtp()
@@ -174,14 +184,15 @@ def send_email_smtp(sender, subject, message, recipients, images_png):
         if smtp_config.username and smtp_config.password:
             smtp_conn.login(smtp_config.username, smtp_config.password)
 
-        msg_root = generate_email(sender, subject, message, recipients, images_png)
+        images_png = _normalize_images(images_png)
+        msg_root = generate_email(sender, subject, message, recipients, images_png=images_png)
 
         smtp_conn.sendmail(sender, recipients, msg_root.as_string())
     except socket.error as exception:
         logger.error("Not able to connect to smtp server: %s", exception)
 
 
-def send_email_ses(sender, subject, message, recipients, images_png):
+def send_email_ses(sender, subject, message, recipients, images_png=None):
     """
     Sends notification through AWS SES.
 
@@ -195,7 +206,8 @@ def send_email_ses(sender, subject, message, recipients, images_png):
 
     client = boto3_client("ses")
 
-    msg_root = generate_email(sender, subject, message, recipients, images_png)
+    images_png = _normalize_images(images_png)
+    msg_root = generate_email(sender, subject, message, recipients, images_png=images_png)
     try:
         response = client.send_raw_email(Source=sender, Destinations=recipients, RawMessage={"Data": msg_root.as_string()})
     except Exception as e:
@@ -209,7 +221,7 @@ def send_email_ses(sender, subject, message, recipients, images_png):
     )
 
 
-def send_email_sendgrid(sender, subject, message, recipients, images_png):
+def send_email_sendgrid(sender, subject, message, recipients, images_png=None):
     import sendgrid as sendgrid_lib
 
     client = sendgrid_lib.SendGridAPIClient(sendgrid().apikey)
@@ -220,6 +232,8 @@ def send_email_sendgrid(sender, subject, message, recipients, images_png):
         to_send.add_content(message, "text/html")
     else:
         to_send.add_content(message, "text/plain")
+
+    images_png = _normalize_images(images_png)
 
     if images_png:
         for image_png in images_png:
@@ -240,7 +254,7 @@ def _email_disabled_reason():
         return None
 
 
-def send_email_sns(sender, subject, message, topic_ARN, images_png):
+def send_email_sns(sender, subject, message, topic_ARN, images_png=None):
     """
     Sends notification through AWS SNS. Takes Topic ARN from recipients.
 
@@ -303,7 +317,8 @@ def send_email(subject, message, sender, recipients, images_png=None):
 
     # Get appropriate sender and call it to send the notification
     email_sender = notifiers[email().method]
-    email_sender(sender, subject, message, recipients, images_png)
+    images_png = _normalize_images(images_png)
+    email_sender(sender, subject, message, recipients, images_png=images_png)
 
 
 def _email_recipients(additional_recipients=None):
