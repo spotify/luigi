@@ -321,7 +321,7 @@ def send_email(subject, message, sender, recipients, images_png=None):
 
     # Get appropriate sender and call it to send the notification
     email_sender = notifiers[email().method]
-    email_sender(sender, subject, message, recipients, images_png=images_png)
+    email_sender(sender, subject, message, recipients, images_png)
 
 
 def _email_recipients(additional_recipients=None):
