@@ -30,6 +30,20 @@ from luigi.scheduler import Scheduler
 from luigi.worker import Worker
 
 
+class TestImageHelpers(unittest.TestCase):
+    """Test image normalization and iteration helpers."""
+
+    def test_normalize_images_handles_none_list_and_tuple(self):
+        self.assertIsNone(notifications._normalize_images(None))
+        self.assertEqual(["one.png"], notifications._normalize_images(["one.png"]))
+        self.assertEqual(["one.png", "two.png"], notifications._normalize_images(("one.png", "two.png")))
+
+    def test_iter_images_handles_none_list_and_tuple(self):
+        self.assertEqual([], list(notifications._iter_images(None)))
+        self.assertEqual(["one.png"], list(notifications._iter_images(["one.png"])))
+        self.assertEqual(["one.png", "two.png"], list(notifications._iter_images(("one.png", "two.png"))))
+
+
 class TestEmail(unittest.TestCase):
     def testEmailNoPrefix(self):
         self.assertEqual("subject", notifications._prefix("subject"))
@@ -142,6 +156,24 @@ class ExceptionFormatTest(unittest.TestCase):
         self.assertCountEqual(notifications._email_recipients("a@a.a"), ["a@a.a"])
         self.assertCountEqual(notifications._email_recipients(["a@a.a", "b@b.b"]), ["a@a.a", "b@b.b"])
 
+    @with_config({"email": {"format": "none"}})
+    def test_email_disabled_reason_format_none(self):
+        self.assertEqual("email format is 'none'", notifications._email_disabled_reason())
+
+    @with_config({"email": {"force_send": "True"}})
+    def test_email_disabled_reason_force_send(self):
+        self.assertIsNone(notifications._email_disabled_reason())
+
+    @with_config({"email": {}}, replace_sections=True)
+    def test_email_disabled_reason_tty(self):
+        with mock.patch("luigi.notifications.sys.stdout.isatty", return_value=True):
+            self.assertEqual("running from a tty", notifications._email_disabled_reason())
+
+    @with_config({"email": {}}, replace_sections=True)
+    def test_email_disabled_reason_default_allows_sending(self):
+        with mock.patch("luigi.notifications.sys.stdout.isatty", return_value=False):
+            self.assertIsNone(notifications._email_disabled_reason())
+
     def test_generate_unicode_email(self):
         generate_email(
             sender="test@example.com",
@@ -179,16 +211,6 @@ class ExceptionFormatTest(unittest.TestCase):
         finally:
             os.unlink(image_path_1)
             os.unlink(image_path_2)
-
-    def test_normalize_images_handles_none_list_and_tuple(self):
-        self.assertIsNone(notifications._normalize_images(None))
-        self.assertEqual(["one.png"], notifications._normalize_images(["one.png"]))
-        self.assertEqual(["one.png", "two.png"], notifications._normalize_images(("one.png", "two.png")))
-
-    def test_iter_images_handles_none_list_and_tuple(self):
-        self.assertEqual([], list(notifications._iter_images(None)))
-        self.assertEqual(["one.png"], list(notifications._iter_images(["one.png"])))
-        self.assertEqual(["one.png", "two.png"], list(notifications._iter_images(("one.png", "two.png"))))
 
     def test_generate_email_with_single_image_png_kwarg(self):
         image_content = b"fake-png-single"
