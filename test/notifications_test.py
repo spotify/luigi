@@ -43,6 +43,39 @@ class TestImageHelpers(unittest.TestCase):
         self.assertEqual(["one.png"], list(notifications._iter_images(["one.png"])))
         self.assertEqual(["one.png", "two.png"], list(notifications._iter_images(("one.png", "two.png"))))
 
+    def test_generate_email_attaches_multiple_images(self):
+        """Verify that generate_email actually opens and attaches image files."""
+        image_content_1 = b"test-image-1"
+        image_content_2 = b"test-image-2"
+
+        fd1, path1 = tempfile.mkstemp(suffix=".png")
+        fd2, path2 = tempfile.mkstemp(suffix=".png")
+        try:
+            with os.fdopen(fd1, "wb") as f:
+                f.write(image_content_1)
+            with os.fdopen(fd2, "wb") as f:
+                f.write(image_content_2)
+
+            msg = generate_email(
+                sender="test@example.com",
+                subject="test",
+                message="test message",
+                recipients=["user@example.com"],
+                images_png=[path1, path2],
+            )
+
+            # Verify message has text + 2 image attachments
+            parts = msg.get_payload()
+            self.assertEqual(len(parts), 3)
+        finally:
+            os.unlink(path1)
+            os.unlink(path2)
+
+    def test_iter_images_empty_list_returns_empty_iterator(self):
+        """Verify that _iter_images returns empty iterator for empty list."""
+        result = list(notifications._iter_images([]))
+        self.assertEqual(result, [])
+
 
 class TestEmail(unittest.TestCase):
     def testEmailNoPrefix(self):
