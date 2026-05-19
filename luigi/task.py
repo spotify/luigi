@@ -32,7 +32,7 @@ import traceback
 import warnings
 from collections import OrderedDict, deque
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional, TypeAlias, TypeVar
 
 if TYPE_CHECKING:
     from luigi.target import Target
@@ -43,6 +43,9 @@ import luigi
 from luigi import configuration, parameter
 from luigi.parameter import ParameterVisibility, UnconsumedParameterWarning
 from luigi.task_register import Register
+
+_T = TypeVar("_T")
+FlattenableItems: TypeAlias = _T | list["FlattenableItems[_T]"] | tuple["FlattenableItems[_T]", ...] | dict[str, "FlattenableItems[_T]"]
 
 Parameter = parameter.Parameter
 logger = logging.getLogger("luigi-interface")
@@ -618,7 +621,7 @@ class Task(metaclass=Register):
         """
         raise BulkCompleteNotImplementedError()
 
-    def output(self) -> "Target" | list["Target"] | dict[str, "Target"]:
+    def output(self) -> FlattenableItems["Target"]:
         """
         The output that this Task produces.
 
@@ -636,7 +639,7 @@ class Task(metaclass=Register):
         """
         return []  # default impl
 
-    def requires(self) -> "Task" | list["Task"] | dict[str, "Task"]:
+    def requires(self) -> FlattenableItems["Task"]:
         """
         The Tasks that this Task depends on.
 
@@ -670,7 +673,7 @@ class Task(metaclass=Register):
         """
         return self.resources  # default impl
 
-    def input(self) -> "Target" | list["Target"] | dict[str, "Target"]:
+    def input(self) -> FlattenableItems["Target"]:
         """
         Returns the outputs of the Tasks returned by :py:meth:`requires`
 
