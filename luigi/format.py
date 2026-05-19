@@ -180,10 +180,6 @@ class OutputPipeProcessWrapper:
             self._process.stdin.flush()
             self._flushcount = 0
 
-    def writeLine(self, line):
-        assert "\n" not in line
-        self.write(line + "\n")
-
     def _finish(self):
         """
         Closes and waits for subprocess to exit.

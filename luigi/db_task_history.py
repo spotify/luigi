@@ -59,8 +59,6 @@ class DbTaskHistory(task_history.TaskHistory):
     Also has methods for useful db queries.
     """
 
-    CURRENT_SOURCE_VERSION = 1
-
     @contextmanager
     def _session(self, session=None):
         if session:
