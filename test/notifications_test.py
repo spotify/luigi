@@ -269,14 +269,6 @@ class ExceptionFormatTest(unittest.TestCase):
         finally:
             os.unlink(image_path)
 
-    @with_config({"sendgrid": {"apikey": "456abcdef123"}})
-    def test_sendgrid_with_empty_images_list_does_not_attach(self):
-        with mock.patch("sendgrid.SendGridAPIClient") as SendGridAPIClient:
-            notifications.send_email_sendgrid(self.sender, self.subject, self.message, self.recipients, images_png=[])
-            to_send = SendGridAPIClient.return_value.send.call_args[0][0]
-            # add_attachment should not be called
-            self.assertEqual(getattr(to_send, "add_attachment", mock.MagicMock()).call_count, 0)
-
     def test_generate_email_with_empty_images_list(self):
         msg = generate_email(
             sender="test@example.com",
@@ -595,6 +587,13 @@ class TestSendgridEmail(unittest.TestCase, NotificationFixture):
         finally:
             os.unlink(image_path_1)
             os.unlink(image_path_2)
+
+    @with_config({"sendgrid": {"apikey": "456abcdef123"}})
+    def test_sendgrid_with_empty_images_list_does_not_attach(self):
+        with mock.patch("sendgrid.SendGridAPIClient") as SendGridAPIClient:
+            notifications.send_email_sendgrid(self.sender, self.subject, self.message, self.recipients, images_png=[])
+            to_send = SendGridAPIClient.return_value.send.call_args[0][0]
+            self.assertEqual(to_send.add_attachment.call_count, 0)
 
     @with_config({"sendgrid": {"apikey": "456abcdef123"}})
     def test_sends_sendgrid_email_with_image_png_kwarg(self):
