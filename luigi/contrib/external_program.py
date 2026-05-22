@@ -43,7 +43,7 @@ from time import sleep
 import luigi
 from luigi.parameter import ParameterVisibility
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class ExternalProgramTask(luigi.Task):
@@ -67,9 +67,14 @@ class ExternalProgramTask(luigi.Task):
     capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
 
     stream_for_searching_tracking_url = luigi.parameter.ChoiceParameter(
-        var_type=str, choices=['none', 'stdout', 'stderr'], default='none',
-        significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
-        description="Stream for searching tracking URL")
+        var_type=str,
+        choices=["none", "stdout", "stderr"],
+        default="none",
+        significant=False,
+        positional=False,
+        visibility=ParameterVisibility.HIDDEN,
+        description="Stream for searching tracking URL",
+    )
     """
     Used for defining which stream should be tracked for URL, may be set to 'stdout', 'stderr' or 'none'.
 
@@ -77,8 +82,12 @@ class ExternalProgramTask(luigi.Task):
     """
 
     tracking_url_pattern = luigi.OptionalParameter(
-        default=None, significant=False, positional=False, visibility=ParameterVisibility.HIDDEN,
-        description="Regex pattern used for searching URL in the logs of the external program")
+        default=None,
+        significant=False,
+        positional=False,
+        visibility=ParameterVisibility.HIDDEN,
+        description="Regex pattern used for searching URL in the logs of the external program",
+    )
     """
     Regex pattern used for searching URL in the logs of the external program.
 
@@ -116,7 +125,7 @@ class ExternalProgramTask(luigi.Task):
 
     def _clean_output_file(self, file_object):
         file_object.seek(0)
-        return ''.join(map(lambda s: s.decode('utf-8'), file_object.readlines()))
+        return "".join(map(lambda s: s.decode("utf-8"), file_object.readlines()))
 
     def build_tracking_url(self, logs_output):
         """
@@ -129,16 +138,16 @@ class ExternalProgramTask(luigi.Task):
     def run(self):
         args = list(map(str, self.program_args()))
 
-        logger.info('Running command: %s', ' '.join(args))
+        logger.info("Running command: %s", " ".join(args))
         env = self.program_environment()
-        kwargs = {'env': env}
+        kwargs = {"env": env}
         tmp_stdout, tmp_stderr = None, None
         if self.capture_output:
             tmp_stdout, tmp_stderr = tempfile.TemporaryFile(), tempfile.TemporaryFile()
-            kwargs.update({'stdout': tmp_stdout, 'stderr': tmp_stderr})
+            kwargs.update({"stdout": tmp_stdout, "stderr": tmp_stderr})
 
         try:
-            if self.stream_for_searching_tracking_url != 'none' and self.tracking_url_pattern is not None:
+            if self.stream_for_searching_tracking_url != "none" and self.tracking_url_pattern is not None:
                 with self._proc_with_tracking_url_context(proc_args=args, proc_kwargs=kwargs) as proc:
                     proc.wait()
             else:
@@ -152,17 +161,15 @@ class ExternalProgramTask(luigi.Task):
                 stderr = self._clean_output_file(tmp_stderr)
 
                 if stdout:
-                    logger.info('Program stdout:\n{}'.format(stdout))
+                    logger.info("Program stdout:\n{}".format(stdout))
                 if stderr:
                     if self.always_log_stderr or not success:
-                        logger.info('Program stderr:\n{}'.format(stderr))
+                        logger.info("Program stderr:\n{}".format(stderr))
             else:
                 stdout, stderr = None, None
 
             if not success:
-                raise ExternalProgramRunError(
-                    'Program failed with return code={}:'.format(proc.returncode),
-                    args, env=env, stdout=stdout, stderr=stderr)
+                raise ExternalProgramRunError("Program failed with return code={}:".format(proc.returncode), args, env=env, stdout=stdout, stderr=stderr)
         finally:
             if self.capture_output:
                 tmp_stderr.close()
@@ -174,7 +181,7 @@ class ExternalProgramTask(luigi.Task):
         file_to_write = proc_kwargs.get(self.stream_for_searching_tracking_url)
         proc_kwargs.update({self.stream_for_searching_tracking_url: subprocess.PIPE})
         main_proc = subprocess.Popen(proc_args, **proc_kwargs)
-        pipe_to_read = main_proc.stderr if self.stream_for_searching_tracking_url == 'stderr' else main_proc.stdout
+        pipe_to_read = main_proc.stderr if self.stream_for_searching_tracking_url == "stderr" else main_proc.stdout
 
         def _track_url_by_pattern():
             """
@@ -182,15 +189,13 @@ class ExternalProgramTask(luigi.Task):
             If tmp_stdout is passed, also appends lines to this file.
             """
             pattern = re.compile(self.tracking_url_pattern)
-            for new_line in iter(pipe_to_read.readline, ''):
+            for new_line in iter(pipe_to_read.readline, ""):
                 if new_line:
                     if file_to_write:
                         file_to_write.write(new_line)
-                    match = re.search(pattern, new_line.decode('utf-8'))
+                    match = re.search(pattern, new_line.decode("utf-8"))
                     if match:
-                        self.set_tracking_url(
-                            self.build_tracking_url(match.group(1))
-                        )
+                        self.set_tracking_url(self.build_tracking_url(match.group(1)))
                 else:
                     file_to_write.flush()
                     sleep(time_to_sleep)
@@ -240,15 +245,15 @@ class ExternalProgramRunError(RuntimeError):
 
     def __str__(self):
         info = self.message
-        info += '\nCOMMAND: {}'.format(' '.join(self.args))
-        info += '\nSTDOUT: {}'.format(self.out or '[empty]')
-        info += '\nSTDERR: {}'.format(self.err or '[empty]')
+        info += "\nCOMMAND: {}".format(" ".join(self.args))
+        info += "\nSTDOUT: {}".format(self.out or "[empty]")
+        info += "\nSTDERR: {}".format(self.err or "[empty]")
         env_string = None
         if self.env:
-            env_string = ' '.join(['='.join([k, '\'{}\''.format(v)]) for k, v in self.env.items()])
-        info += '\nENVIRONMENT: {}'.format(env_string or '[empty]')
+            env_string = " ".join(["=".join([k, "'{}'".format(v)]) for k, v in self.env.items()])
+        info += "\nENVIRONMENT: {}".format(env_string or "[empty]")
         # reset terminal color in case the ENVIRONMENT changes colors
-        info += '\033[m'
+        info += "\033[m"
         return info
 
 
@@ -260,33 +265,30 @@ class ExternalPythonProgramTask(ExternalProgramTask):
     :py:class:`luigi.parameter.Parameter` s for setting a virtualenv and for
     extending the ``PYTHONPATH``.
     """
+
     virtualenv = luigi.OptionalParameter(
         default=None,
         positional=False,
-        description='path to the virtualenv directory to use. It should point to '
-                    'the directory containing the ``bin/activate`` file used for '
-                    'enabling the virtualenv.')
+        description="path to the virtualenv directory to use. It should point to "
+        "the directory containing the ``bin/activate`` file used for "
+        "enabling the virtualenv.",
+    )
     extra_pythonpath = luigi.OptionalParameter(
-        default=None,
-        positional=False,
-        description='extend the search path for modules by prepending this '
-                    'value to the ``PYTHONPATH`` environment variable.')
+        default=None, positional=False, description="extend the search path for modules by prepending this value to the ``PYTHONPATH`` environment variable."
+    )
 
     def program_environment(self):
         env = super(ExternalPythonProgramTask, self).program_environment()
 
         if self.extra_pythonpath:
-            pythonpath = ':'.join([self.extra_pythonpath, env.get('PYTHONPATH', '')])
-            env.update({'PYTHONPATH': pythonpath})
+            pythonpath = ":".join([self.extra_pythonpath, env.get("PYTHONPATH", "")])
+            env.update({"PYTHONPATH": pythonpath})
 
         if self.virtualenv:
             # Make the same changes to the env that a normal venv/bin/activate script would
-            path = ':'.join(['{}/bin'.format(self.virtualenv), env.get('PATH', '')])
-            env.update({
-                'PATH': path,
-                'VIRTUAL_ENV': self.virtualenv
-            })
+            path = ":".join(["{}/bin".format(self.virtualenv), env.get("PATH", "")])
+            env.update({"PATH": path, "VIRTUAL_ENV": self.virtualenv})
             # remove PYTHONHOME env variable, if it exists
-            env.pop('PYTHONHOME', None)
+            env.pop("PYTHONHOME", None)
 
         return env

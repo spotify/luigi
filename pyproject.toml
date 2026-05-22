@@ -1,0 +1,236 @@
+[build-system]
+requires = ['hatchling', 'hatch-fancy-pypi-readme']
+build-backend = 'hatchling.build'
+
+[project]
+name = "luigi"
+description = "Workflow mgmgt + task scheduling + dependency resolution."
+authors = [
+  {name = "The Luigi Authors"}
+]
+license = {file = "LICENSE"}
+requires-python = ">=3.10, <3.14"
+dependencies = [
+  "python-dateutil>=2.7.5,<3",
+  "tenacity>=9",
+  "tornado>=5.0,<7",
+  "python-daemon<2.2.0; sys_platform == 'win32'",
+  "python-daemon; sys_platform != 'win32'",
+  "typing-extensions>=4.12.2",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: System :: Monitoring",
+]
+dynamic = ["version", "readme"]
+
+[project.urls]
+Homepage = "https://github.com/spotify/luigi"
+
+[project.scripts]
+luigi = "luigi.cmdline:luigi_run"
+luigid = "luigi.cmdline:luigid"
+luigi-grep = "luigi.tools.luigi_grep:main"
+luigi-deps = "luigi.tools.deps:main"
+luigi-deps-tree = "luigi.tools.deps_tree:main"
+
+[project.optional-dependencies]
+jsonschema = ["jsonschema"]
+prometheus = ["prometheus-client>=0.5,<0.25"]
+toml = ["toml<2.0.0"]
+
+[dependency-groups]
+# groups and dependencies should be sort in lexicographical order
+cdh = [
+  "hdfs>=2.0.4,<3.0.0",
+]
+
+common = [
+  "avro-python3",
+  "azure-storage-blob<=12.20.0",
+  "boto>=2.42,<3.0",
+  "boto3>=1.11.0",
+  "codecov>=1.4.0",
+  "coverage>=5.0,<6",
+  "datadog==0.22.0",
+  "docker>=2.1.0",
+  "elasticsearch>=1.0.0,<2.0.0",
+  "google-compute-engine",
+  "HTTPretty==0.8.10",
+  "hypothesis>=6.7.0,<7.0.0",
+  "jsonschema",
+  "mock<2.0",
+  "moto>=1.3.10,<5.0",
+  "mypy",
+  "mysql-connector-python",
+  "prometheus-client>=0.5.0,<0.25",
+  "psutil<4.0",
+  "pygments",
+  "pyhive[presto]==0.6.1",
+  "pymongo==3.4.0",
+  "pytest",
+  "pytest-cov",
+  "pytest-xdist",
+  "requests>=2.20.0,<=2.31.0",
+  "responses<1.0.0",
+  "s3transfer>=0.3,<4.0",
+  "selenium==3.0.2",
+  "sqlalchemy>2",
+  "toml<2.0.0",
+  "types-python-dateutil",
+  "types-requests",
+  "types-toml",
+]
+
+docs = [
+  "azure-storage-blob<=12.28.0",
+  "jinja2>=3.1,<4",
+  "mypy",
+  "prometheus-client>=0.5.0,<0.25",
+  "Sphinx>=9.0,<10; python_version >= '3.12'",
+  "sphinx-rtd-theme>=2.0; python_version >= '3.12'",
+  "sqlalchemy",
+]
+
+dropbox = [
+  "dropbox>=11.0.0",
+]
+
+gcloud = [
+  "google-api-python-client>=1.6.6,<2.0",
+  "google-auth==1.4.1",
+  "google-auth-httplib2==0.0.3",
+]
+
+hdp = [
+  "hdfs>=2.0.4,<3.0.0",
+]
+
+lint = [
+  "ruff",
+]
+
+postgres = [
+  "pg8000>=1.23.0",
+  "psycopg2<3.0",
+]
+
+unixsocket = [
+  "requests-unixsocket<1.0",
+]
+
+# for tox test dependencies
+test_cdh = [
+  {include-group = "cdh"},
+  {include-group = "common"},
+]
+
+test_dropbox = [
+  {include-group = "dropbox"},
+  {include-group = "common"},
+]
+
+test_gcloud = [
+  {include-group = "gcloud"},
+  {include-group = "common"},
+]
+test_hdp = [
+  {include-group = "hdp"},
+  {include-group = "common"},
+]
+
+test_postgres = [
+  {include-group = "postgres"},
+  {include-group = "common"},
+]
+
+test_unixsocket = [
+  {include-group = "unixsocket"},
+  {include-group = "common"},
+]
+
+visualizer = [
+  "mock<2.0",
+  "selenium==3.0.2"
+]
+
+# for local development
+dev = [
+  {include-group = "gcloud"},
+  {include-group = "postgres"},
+  {include-group = "dropbox"},
+  {include-group = "cdh"}, # same deps as hdp
+  {include-group = "unixsocket"},
+  {include-group = "common"},
+  {include-group = "lint"},
+]
+
+[tool.mypy]
+# Keep this set to the minimum supported Python version (see requires-python in [project])
+python_version = "3.10"
+ignore_missing_imports = true
+# Gradually tighten: remove a module from the ignore list below after fixing its errors
+
+[[tool.mypy.overrides]]
+module = [
+    "luigi.contrib.gcs",
+    "luigi.contrib.hadoop",
+    "luigi.contrib.hdfs.config",
+    "luigi.contrib.postgres",
+    "luigi.contrib.redis_store",
+    "luigi.contrib.spark",
+    "luigi.contrib.sqla",
+    "luigi.interface",
+    "luigi.notifications",
+    "luigi.tools.range",
+    "luigi.worker",
+]
+ignore_errors = true
+
+[tool.ruff]
+line-length = 160
+exclude = ["doc"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "W",  # pycodestyle warnings
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["luigi"]
+
+[tool.uv]
+default-groups = ['dev']
+cache-keys = [ { file = "pyproject.toml" }, { git = true } ]
+
+[tool.hatch.version]
+path = "luigi/__version__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/LICENSE",
+  "/README.rst",
+  "/examples",
+  "/luigi",
+  "/test",
+]
+
+[tool.hatch.metadata.hooks.fancy-pypi-readme]
+content-type = "text/x-rst"
+# construct the PyPI readme from README.md and HISTORY.md
+fragments = [
+  {text = "\n.. note::\n\tFor the latest source, discussion, etc, please visit the\n\t`GitHub repository <https://github.com/spotify/luigi>`_\n"},
+  {path = "README.rst"},
+]

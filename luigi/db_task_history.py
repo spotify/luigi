@@ -39,26 +39,25 @@ import datetime
 import logging
 from contextlib import contextmanager
 
-
-from luigi import configuration
-from luigi import task_history
-from luigi.task_status import DONE, FAILED, PENDING, RUNNING
-
 import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
 from sqlalchemy.engine import reflection
 
+from luigi import configuration, task_history
+from luigi.task_status import DONE, FAILED, PENDING, RUNNING
+
 Base = sqlalchemy.ext.declarative.declarative_base()
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
-if sqlalchemy.__version__.startswith('2'):
-    logger.warning('SQLAlchemy 2.x is not tested with luigi.db_task_history.DbTaskHistory')
+if sqlalchemy.__version__.startswith("2"):
+    logger.warning("SQLAlchemy 2.x is not tested with luigi.db_task_history.DbTaskHistory")
     from sqlalchemy import text
 
 else:
+
     def text(sql):
         return sql
 
@@ -68,6 +67,7 @@ class DbTaskHistory(task_history.TaskHistory):
     Task History that writes to a database using sqlalchemy.
     Also has methods for useful db queries.
     """
+
     CURRENT_SOURCE_VERSION = 1
 
     @contextmanager
@@ -86,7 +86,7 @@ class DbTaskHistory(task_history.TaskHistory):
 
     def __init__(self):
         config = configuration.get_config()
-        connection_string = config.get('task_history', 'db_connection')
+        connection_string = config.get("task_history", "db_connection")
         self.engine = sqlalchemy.create_engine(connection_string)
         self.session_factory = sqlalchemy.orm.sessionmaker(bind=self.engine, expire_on_commit=False)
         Base.metadata.create_all(self.engine)
@@ -118,7 +118,7 @@ class DbTaskHistory(task_history.TaskHistory):
         return htask
 
     def _add_task_event(self, task, event):
-        for (task_record, session) in self._find_or_create_task(task):
+        for task_record, session in self._find_or_create_task(task):
             task_record.events.append(event)
 
     def _find_or_create_task(self, task):
@@ -168,12 +168,14 @@ class DbTaskHistory(task_history.TaskHistory):
         """
         with self._session(session) as session:
             yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
-            return session.query(TaskRecord).\
-                join(TaskEvent).\
-                filter(TaskEvent.ts >= yesterday).\
-                group_by(TaskRecord.id, TaskEvent.event_name, TaskEvent.ts).\
-                order_by(TaskEvent.ts.desc()).\
-                all()
+            return (
+                session.query(TaskRecord)
+                .join(TaskEvent)
+                .filter(TaskEvent.ts >= yesterday)
+                .group_by(TaskRecord.id, TaskEvent.event_name, TaskEvent.ts)
+                .order_by(TaskEvent.ts.desc())
+                .all()
+            )
 
     def find_all_runs(self, session=None):
         """
@@ -208,8 +210,9 @@ class TaskParameter(Base):  # type: ignore
     """
     Table to track luigi.Parameter()s of a Task.
     """
-    __tablename__ = 'task_parameters'
-    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), primary_key=True)
+
+    __tablename__ = "task_parameters"
+    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("tasks.id"), primary_key=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), primary_key=True)
     value = sqlalchemy.Column(sqlalchemy.Text())
 
@@ -221,9 +224,10 @@ class TaskEvent(Base):  # type: ignore
     """
     Table to track when a task is scheduled, starts, finishes, and fails.
     """
-    __tablename__ = 'task_events'
+
+    __tablename__ = "task_events"
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
-    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('tasks.id'), index=True)
+    task_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("tasks.id"), index=True)
     event_name = sqlalchemy.Column(sqlalchemy.String(20))
     ts = sqlalchemy.Column(sqlalchemy.TIMESTAMP, index=True, nullable=False)
 
@@ -237,19 +241,16 @@ class TaskRecord(Base):  # type: ignore
 
     References to other tables are available through task.events, task.parameters, etc.
     """
-    __tablename__ = 'tasks'
+
+    __tablename__ = "tasks"
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     task_id = sqlalchemy.Column(sqlalchemy.String(200), index=True)
     name = sqlalchemy.Column(sqlalchemy.String(128), index=True)
     host = sqlalchemy.Column(sqlalchemy.String(128))
     parameters = sqlalchemy.orm.relationship(
-        'TaskParameter',
-        collection_class=sqlalchemy.orm.collections.attribute_mapped_collection('name'),
-        cascade="all, delete-orphan")
-    events = sqlalchemy.orm.relationship(
-        'TaskEvent',
-        order_by=(sqlalchemy.desc(TaskEvent.ts), sqlalchemy.desc(TaskEvent.id)),
-        backref='task')
+        "TaskParameter", collection_class=sqlalchemy.orm.collections.attribute_keyed_dict("name"), cascade="all, delete-orphan"
+    )
+    events = sqlalchemy.orm.relationship("TaskEvent", order_by=(sqlalchemy.desc(TaskEvent.ts), sqlalchemy.desc(TaskEvent.id)), backref="task")
 
     def __repr__(self):
         return "TaskRecord(name=%s, host=%s)" % (self.name, self.host)
@@ -263,37 +264,28 @@ def _upgrade_schema(engine):
     """
     inspector = reflection.Inspector.from_engine(engine)
     with engine.connect() as conn:
-
         # Upgrade 1.  Add task_id column and index to tasks
-        if 'task_id' not in [x['name'] for x in inspector.get_columns('tasks')]:
-            logger.warning('Upgrading DbTaskHistory schema: Adding tasks.task_id')
-            conn.execute(text('ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)'))
-            conn.execute(text('CREATE INDEX ix_task_id ON tasks (task_id)'))
+        if "task_id" not in [x["name"] for x in inspector.get_columns("tasks")]:
+            logger.warning(text("Upgrading DbTaskHistory schema: Adding tasks.task_id"))
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)"))
+            conn.execute(text("CREATE INDEX ix_task_id ON tasks (task_id)"))
 
         # Upgrade 2. Alter value column to be TEXT, note that this is idempotent so no if-guard
-        if 'mysql' in engine.dialect.name:
-            conn.execute(text('ALTER TABLE task_parameters MODIFY COLUMN value TEXT'))
-        elif 'oracle' in engine.dialect.name:
-            conn.execute(text('ALTER TABLE task_parameters MODIFY value TEXT'))
-        elif 'mssql' in engine.dialect.name:
-            conn.execute(text('ALTER TABLE task_parameters ALTER COLUMN value TEXT'))
-        elif 'postgresql' in engine.dialect.name:
-            if str([x for x in inspector.get_columns('task_parameters')
-                    if x['name'] == 'value'][0]['type']) != 'TEXT':
-                conn.execute(text('ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT'))
-        elif 'sqlite' in engine.dialect.name:
+        if "mysql" in engine.dialect.name:
+            conn.execute(text("ALTER TABLE task_parameters MODIFY COLUMN value TEXT"))
+        elif "oracle" in engine.dialect.name:
+            conn.execute(text("ALTER TABLE task_parameters MODIFY value TEXT"))
+        elif "mssql" in engine.dialect.name:
+            conn.execute(text("ALTER TABLE task_parameters ALTER COLUMN value TEXT"))
+        elif "postgresql" in engine.dialect.name:
+            if str([x for x in inspector.get_columns("task_parameters") if x["name"] == "value"][0]["type"]) != "TEXT":
+                conn.execute(text("ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT"))
+        elif "sqlite" in engine.dialect.name:
             # SQLite does not support changing column types. A database file will need
             # to be used to pickup this migration change.
-            for i in conn.execute(text('PRAGMA table_info(task_parameters);')).fetchall():
-                x = i._asdict()
-                if x['name'] == 'value' and x['type'] != 'TEXT':
-                    logger.warning(
-                        'SQLite can not change column types. Please use a new database '
-                        'to pickup column type changes.'
-                    )
+            for row in conn.execute(text("PRAGMA table_info(task_parameters);")).fetchall():
+                row_as_dict = row._mapping
+                if row_as_dict["name"] == "value" and row_as_dict["type"] != "TEXT":
+                    logger.warning(text("SQLite can not change column types. Please use a new database to pickup column type changes."))
         else:
-            logger.warning(
-                'SQLAlcheny dialect {} could not be migrated to the TEXT type'.format(
-                    engine.dialect
-                )
-            )
+            logger.warning("SQLAlcheny dialect {} could not be migrated to the TEXT type".format(engine.dialect))

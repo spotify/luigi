@@ -15,13 +15,12 @@
 # limitations under the License.
 #
 from .cfg_parser import LuigiConfigParser
-from .core import get_config, add_config_path
+from .core import add_config_path, get_config
 from .toml_parser import LuigiTomlParser
 
-
 __all__ = [
-    'add_config_path',
-    'get_config',
-    'LuigiConfigParser',
-    'LuigiTomlParser',
+    "add_config_path",
+    "get_config",
+    "LuigiConfigParser",
+    "LuigiTomlParser",
 ]

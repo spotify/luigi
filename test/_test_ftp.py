@@ -27,10 +27,9 @@ import ftplib
 import os
 import shutil
 import sys
-from helpers import unittest
-
 from io import StringIO
 
+from helpers import unittest
 
 from luigi.contrib.ftp import RemoteFileSystem, RemoteTarget
 
@@ -45,9 +44,8 @@ PWD = "some_password"
 
 
 class TestFTPFilesystem(unittest.TestCase):
-
     def setUp(self):
-        """ Creates structure
+        """Creates structure
 
         /test
         /test/file1
@@ -58,28 +56,28 @@ class TestFTPFilesystem(unittest.TestCase):
         """
         # create structure
         ftp = ftplib.FTP(HOST, USER, PWD)
-        ftp.cwd('/')
-        ftp.mkd('test')
-        ftp.cwd('test')
-        ftp.mkd('hola')
-        ftp.cwd('hola')
+        ftp.cwd("/")
+        ftp.mkd("test")
+        ftp.cwd("test")
+        ftp.mkd("hola")
+        ftp.cwd("hola")
         f2 = StringIO(FILE2)
-        ftp.storbinary('STOR file2', f2)     # send the file
+        ftp.storbinary("STOR file2", f2)  # send the file
         f3 = StringIO(FILE3)
-        ftp.storbinary('STOR file3', f3)     # send the file
-        ftp.cwd('..')
+        ftp.storbinary("STOR file3", f3)  # send the file
+        ftp.cwd("..")
         f1 = StringIO(FILE1)
-        ftp.storbinary('STOR file1', f1)     # send the file
+        ftp.storbinary("STOR file1", f1)  # send the file
         ftp.close()
 
     def test_file_remove(self):
-        """ Delete with recursive deactivated """
+        """Delete with recursive deactivated"""
         rfs = RemoteFileSystem(HOST, USER, PWD)
-        rfs.remove('/test/hola/file3', recursive=False)
-        rfs.remove('/test/hola/file2', recursive=False)
-        rfs.remove('/test/hola', recursive=False)
-        rfs.remove('/test/file1', recursive=False)
-        rfs.remove('/test', recursive=False)
+        rfs.remove("/test/hola/file3", recursive=False)
+        rfs.remove("/test/hola/file2", recursive=False)
+        rfs.remove("/test/hola", recursive=False)
+        rfs.remove("/test/file1", recursive=False)
+        rfs.remove("/test", recursive=False)
 
         ftp = ftplib.FTP(HOST, USER, PWD)
         list_dir = ftp.nlst()
@@ -87,9 +85,9 @@ class TestFTPFilesystem(unittest.TestCase):
         self.assertFalse("test" in list_dir)
 
     def test_recursive_remove(self):
-        """ Test FTP filesystem removing files recursive """
+        """Test FTP filesystem removing files recursive"""
         rfs = RemoteFileSystem(HOST, USER, PWD)
-        rfs.remove('/test')
+        rfs.remove("/test")
 
         ftp = ftplib.FTP(HOST, USER, PWD)
         list_dir = ftp.nlst()
@@ -98,14 +96,13 @@ class TestFTPFilesystem(unittest.TestCase):
 
 
 class TestFTPFilesystemUpload(unittest.TestCase):
-
     def test_single(self):
-        """ Test upload file with creation of intermediate folders """
+        """Test upload file with creation of intermediate folders"""
         ftp_path = "/test/nest/luigi-test"
         local_filepath = "/tmp/luigi-test-ftp"
 
         # create local temp file
-        with open(local_filepath, 'w') as outfile:
+        with open(local_filepath, "w") as outfile:
             outfile.write("something to fill")
 
         rfs = RemoteFileSystem(HOST, USER, PWD)
@@ -128,14 +125,13 @@ class TestFTPFilesystemUpload(unittest.TestCase):
 
 
 class TestRemoteTarget(unittest.TestCase):
-
     def test_put(self):
-        """ Test RemoteTarget put method with uploading to an FTP """
+        """Test RemoteTarget put method with uploading to an FTP"""
         local_filepath = "/tmp/luigi-remotetarget-write-test"
         remote_file = "/test/example.put.file"
 
         # create local temp file
-        with open(local_filepath, 'w') as outfile:
+        with open(local_filepath, "w") as outfile:
             outfile.write("something to fill")
 
         remotetarget = RemoteTarget(remote_file, HOST, username=USER, password=PWD)
@@ -157,19 +153,19 @@ class TestRemoteTarget(unittest.TestCase):
         ftp.close()
 
     def test_get(self):
-        """ Test Remote target get method downloading a file from ftp """
+        """Test Remote target get method downloading a file from ftp"""
         local_filepath = "/tmp/luigi-remotetarget-read-test"
         tmp_filepath = "/tmp/tmp-luigi-remotetarget-read-test"
         remote_file = "/test/example.get.file"
 
         # create local temp file
-        with open(tmp_filepath, 'w') as outfile:
+        with open(tmp_filepath, "w") as outfile:
             outfile.write("something to fill")
 
         # manualy upload to ftp
         ftp = ftplib.FTP(HOST, USER, PWD)
         ftp.mkd("test")
-        ftp.storbinary('STOR %s' % remote_file, open(tmp_filepath, 'rb'))
+        ftp.storbinary("STOR %s" % remote_file, open(tmp_filepath, "rb"))
         ftp.close()
 
         # execute command
@@ -177,7 +173,7 @@ class TestRemoteTarget(unittest.TestCase):
         remotetarget.get(local_filepath)
 
         # make sure that it can open file
-        with remotetarget.open('r') as fin:
+        with remotetarget.open("r") as fin:
             self.assertEqual(fin.read(), "something to fill")
 
         # check for cleaning temporary files
@@ -218,18 +214,18 @@ def _run_ftp_server():
     # Instantiate a dummy authorizer for managing 'virtual' users
     authorizer = DummyAuthorizer()
 
-    tmp_folder = '/tmp/luigi-test-ftp-server/'
+    tmp_folder = "/tmp/luigi-test-ftp-server/"
     if os.path.exists(tmp_folder):
         shutil.rmtree(tmp_folder)
     os.mkdir(tmp_folder)
 
-    authorizer.add_user(USER, PWD, tmp_folder, perm='elradfmwM')
+    authorizer.add_user(USER, PWD, tmp_folder, perm="elradfmwM")
     handler = FTPHandler
     handler.authorizer = authorizer
-    address = ('localhost', 21)
+    address = ("localhost", 21)
     server = FTPServer(address, handler)
     server.serve_forever()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     _run_ftp_server()

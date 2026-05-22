@@ -15,12 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import annotations
+
 import datetime
 import logging
+from typing import Any
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class ExternalDailySnapshot(luigi.ExternalTask):
@@ -44,8 +47,9 @@ class ExternalDailySnapshot(luigi.ExternalTask):
       ServiceLogs.latest(service="radio", lookback=21)
 
     """
+
     date = luigi.DateParameter()
-    __cache = []
+    __cache: list[Any] = []
 
     @classmethod
     def latest(cls, *args, **kwargs):
@@ -70,6 +74,5 @@ class ExternalDailySnapshot(luigi.ExternalTask):
             t = cls(date=d, *args, **kwargs)
             if t.complete():
                 return t
-        logger.debug("Could not find last dump for %s (looked back %d days)",
-                     cls.__name__, lookback)
+        logger.debug("Could not find last dump for %s (looked back %d days)", cls.__name__, lookback)
         return t

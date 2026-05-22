@@ -40,16 +40,15 @@ protocol or circumvent firewalls (as long as they are open for ssh traffic).
 import contextlib
 import logging
 import os
+import posixpath
 import random
 import subprocess
-import posixpath
 
 import luigi
 import luigi.format
 import luigi.target
 
-
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class RemoteCalledProcessError(subprocess.CalledProcessError):
@@ -58,25 +57,22 @@ class RemoteCalledProcessError(subprocess.CalledProcessError):
         self.host = host
 
     def __str__(self):
-        return "Command '%s' on host %s returned non-zero exit status %d" % (
-            self.cmd, self.host, self.returncode)
+        return "Command '%s' on host %s returned non-zero exit status %d" % (self.cmd, self.host, self.returncode)
 
 
 class RemoteContext:
-
     def __init__(self, host, **kwargs):
         self.host = host
-        self.username = kwargs.get('username', None)
-        self.key_file = kwargs.get('key_file', None)
-        self.connect_timeout = kwargs.get('connect_timeout', None)
-        self.port = kwargs.get('port', None)
-        self.no_host_key_check = kwargs.get('no_host_key_check', False)
-        self.sshpass = kwargs.get('sshpass', False)
-        self.tty = kwargs.get('tty', False)
+        self.username = kwargs.get("username", None)
+        self.key_file = kwargs.get("key_file", None)
+        self.connect_timeout = kwargs.get("connect_timeout", None)
+        self.port = kwargs.get("port", None)
+        self.no_host_key_check = kwargs.get("no_host_key_check", False)
+        self.sshpass = kwargs.get("sshpass", False)
+        self.tty = kwargs.get("tty", False)
 
     def __repr__(self):
-        return '%s(%r, %r, %r, %r, %r)' % (
-            type(self).__name__, self.host, self.username, self.key_file, self.connect_timeout, self.port)
+        return "%s(%r, %r, %r, %r, %r)" % (type(self).__name__, self.host, self.username, self.key_file, self.connect_timeout, self.port)
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -100,17 +96,16 @@ class RemoteContext:
             connection_cmd.extend(["-p", self.port])
 
         if self.connect_timeout is not None:
-            connection_cmd += ['-o', 'ConnectTimeout=%d' % self.connect_timeout]
+            connection_cmd += ["-o", "ConnectTimeout=%d" % self.connect_timeout]
 
         if self.no_host_key_check:
-            connection_cmd += ['-o', 'UserKnownHostsFile=/dev/null',
-                               '-o', 'StrictHostKeyChecking=no']
+            connection_cmd += ["-o", "UserKnownHostsFile=/dev/null", "-o", "StrictHostKeyChecking=no"]
 
         if self.key_file:
             connection_cmd.extend(["-i", self.key_file])
 
         if self.tty:
-            connection_cmd.append('-t')
+            connection_cmd.append("-t")
         return connection_cmd + cmd
 
     def Popen(self, cmd, **kwargs):
@@ -156,7 +151,6 @@ class RemoteContext:
 
 
 class RemoteFileSystem(luigi.target.FileSystem):
-
     def __init__(self, host, **kwargs):
         self.remote_context = RemoteContext(host, **kwargs)
 
@@ -174,12 +168,12 @@ class RemoteFileSystem(luigi.target.FileSystem):
         return True
 
     def listdir(self, path):
-        while path.endswith('/'):
+        while path.endswith("/"):
             path = path[:-1]
 
-        path = path or '.'
+        path = path or "."
         listing = self.remote_context.check_output(["find", "-L", path, "-type", "f"]).splitlines()
-        return [v.decode('utf-8') for v in listing]
+        return [v.decode("utf-8") for v in listing]
 
     def isdir(self, path):
         """
@@ -215,14 +209,14 @@ class RemoteFileSystem(luigi.target.FileSystem):
                 return
 
         if parents:
-            cmd = ['mkdir', '-p', path]
+            cmd = ["mkdir", "-p", path]
         else:
-            cmd = ['mkdir', path, '2>&1']
+            cmd = ["mkdir", path, "2>&1"]
 
         try:
             self.remote_context.check_output(cmd)
         except subprocess.CalledProcessError as e:
-            if b'no such file' in e.output.lower():
+            if b"no such file" in e.output.lower():
                 raise luigi.target.MissingParentDirectory()
             raise
 
@@ -233,8 +227,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         else:
             cmd.append("-B")
         if self.remote_context.no_host_key_check:
-            cmd.extend(['-o', 'UserKnownHostsFile=/dev/null',
-                        '-o', 'StrictHostKeyChecking=no'])
+            cmd.extend(["-o", "UserKnownHostsFile=/dev/null", "-o", "StrictHostKeyChecking=no"])
         if self.remote_context.key_file:
             cmd.extend(["-i", self.remote_context.key_file])
         if self.remote_context.port:
@@ -252,11 +245,11 @@ class RemoteFileSystem(luigi.target.FileSystem):
         normpath = posixpath.normpath(path)
         folder = os.path.dirname(normpath)
         if folder and not self.exists(folder):
-            self.remote_context.check_output(['mkdir', '-p', folder])
+            self.remote_context.check_output(["mkdir", "-p", folder])
 
-        tmp_path = path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
+        tmp_path = path + "-luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
         self._scp(local_path, "%s:%s" % (self.remote_context._host_ref(), tmp_path))
-        self.remote_context.check_output(['mv', tmp_path, path])
+        self.remote_context.check_output(["mv", tmp_path, path])
 
     def get(self, path, local_path):
         # Create folder if it does not exist
@@ -268,13 +261,12 @@ class RemoteFileSystem(luigi.target.FileSystem):
             except OSError:
                 pass
 
-        tmp_local_path = local_path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
+        tmp_local_path = local_path + "-luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
         self._scp("%s:%s" % (self.remote_context._host_ref(), path), tmp_local_path)
         os.replace(tmp_local_path, local_path)
 
 
 class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
-
     def __init__(self, fs, path):
         self._fs = fs
         self.path = path
@@ -285,23 +277,22 @@ class AtomicRemoteFileWriter(luigi.format.OutputPipeProcessWrapper):
         if folder:
             self.fs.mkdir(folder)
 
-        self.__tmp_path = self.path + '-luigi-tmp-%09d' % random.randrange(0, 10_000_000_000)
-        super(AtomicRemoteFileWriter, self).__init__(
-            self.fs.remote_context._prepare_cmd(['cat', '>', self.__tmp_path]))
+        self.__tmp_path = self.path + "-luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
+        super(AtomicRemoteFileWriter, self).__init__(self.fs.remote_context._prepare_cmd(["cat", ">", self.__tmp_path]))
 
     def __del__(self):
         super(AtomicRemoteFileWriter, self).__del__()
 
         try:
             if self.fs.exists(self.__tmp_path):
-                self.fs.remote_context.check_output(['rm', self.__tmp_path])
+                self.fs.remote_context.check_output(["rm", self.__tmp_path])
         except Exception:
             # Don't propagate the exception; bad things can happen.
-            logger.exception('Failed to delete in-flight file')
+            logger.exception("Failed to delete in-flight file")
 
     def close(self):
         super(AtomicRemoteFileWriter, self).close()
-        self.fs.remote_context.check_output(['mv', self.__tmp_path, self.path])
+        self.fs.remote_context.check_output(["mv", self.__tmp_path, self.path])
 
     @property
     def tmp_path(self):
@@ -330,16 +321,15 @@ class RemoteTarget(luigi.target.FileSystemTarget):
     def fs(self):
         return self._fs
 
-    def open(self, mode='r'):
-        if mode == 'w':
+    def open(self, mode="r"):
+        if mode == "w":
             file_writer = AtomicRemoteFileWriter(self.fs, self.path)
             if self.format:
                 return self.format.pipe_writer(file_writer)
             else:
                 return file_writer
-        elif mode == 'r':
-            file_reader = luigi.format.InputPipeProcessWrapper(
-                self.fs.remote_context._prepare_cmd(["cat", self.path]))
+        elif mode == "r":
+            file_reader = luigi.format.InputPipeProcessWrapper(self.fs.remote_context._prepare_cmd(["cat", self.path]))
             if self.format:
                 return self.format.pipe_reader(file_reader)
             else:

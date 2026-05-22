@@ -6,7 +6,6 @@ https://github.com/python/mypy/blob/0753e2a82dad35034e000609b6e8daa37238bfaa/myp
 
 from __future__ import annotations
 
-import sys
 from typing import Callable, Dict, Final, Iterator, List, Literal, Optional
 
 from mypy.expandtype import expand_type, expand_type_by_instance
@@ -60,24 +59,16 @@ from mypy.typevars import fill_typevars
 
 METADATA_TAG: Final[str] = "task"
 
-if sys.version_info[:2] < (3, 8):
-    # This plugin uses the walrus operator, which is only available in Python 3.8+
-    raise RuntimeError("This plugin requires Python 3.8+")
-
 
 class TaskPlugin(Plugin):
-    def get_base_class_hook(
-        self, fullname: str
-    ) -> Callable[[ClassDefContext], None] | None:
+    def get_base_class_hook(self, fullname: str) -> Callable[[ClassDefContext], None] | None:
         sym = self.lookup_fully_qualified(fullname)
         if sym and isinstance(sym.node, TypeInfo):
             if any(base.fullname == "luigi.task.Task" for base in sym.node.mro):
                 return self._task_class_maker_callback
         return None
 
-    def get_function_hook(
-        self, fullname: str
-    ) -> Callable[[FunctionContext], Type] | None:
+    def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         """Adjust the return type of the `Parameters` function."""
         if self.check_parameter(fullname):
             return self._task_parameter_field_callback
@@ -92,37 +83,79 @@ class TaskPlugin(Plugin):
         transformer = TaskTransformer(ctx.cls, ctx.reason, ctx.api, self)
         transformer.transform()
 
+    def _infer_choice_enum_element_type(self, ctx: FunctionContext, default_type: Instance) -> Type:
+        """Infer the element type for Choice/Enum parameter variants.
+
+        Checks the type argument first, then falls back to the 'choices' kwarg.
+        """
+        element_type: Type = default_type.args[0] if default_type.args else AnyType(TypeOfAny.unannotated)
+        for i, names in enumerate(ctx.arg_names):
+            for j, name in enumerate(names):
+                if name == "choices":
+                    choices_type = get_proper_type(ctx.arg_types[i][j])
+                    if isinstance(choices_type, Instance) and choices_type.args:
+                        element_type = choices_type.args[0]
+        return element_type
+
     def _task_parameter_field_callback(self, ctx: FunctionContext) -> Type:
         """Extract the type of the `default` argument from the Field function, and use it as the return type.
 
         In particular:
         * Retrieve the type of the argument which is specified, and use it as return type for the function.
-        * If no default argument is specified, return AnyType with unannotated type instead of parameter types like `luigi.Parameter()`
-          This makes mypy avoid conflict between the type annotation and the parameter type.
+        * If no default argument is specified, use the __new__ method's return type from the Parameter class
           e.g.
           ```python
-          foo: int = luigi.IntParameter()
+          foo: int = luigi.IntParameter()  # IntParameter.__new__ returns int
           ```
         """
+        # Try to get the return type from __new__ method
+        default_type = ctx.default_return_type
+        if isinstance(default_type, Instance):
+            # Handle Choice/Enum list parameters (ChoiceListParameter, EnumListParameter)
+            if default_type.type.fullname in (
+                "luigi.parameter.ChoiceListParameter",
+                "luigi.parameter.EnumListParameter",
+            ):
+                element_type = self._infer_choice_enum_element_type(ctx, default_type)
+                return ctx.api.named_generic_type("builtins.tuple", [element_type])
+
+            # Handle Choice/Enum scalar parameters (ChoiceParameter, EnumParameter)
+            if default_type.type.fullname in (
+                "luigi.parameter.ChoiceParameter",
+                "luigi.parameter.EnumParameter",
+            ):
+                return self._infer_choice_enum_element_type(ctx, default_type)
+
+            # Check if a 'default' argument is explicitly provided
+            try:
+                default_idx = ctx.callee_arg_names.index("default")
+                if ctx.args[default_idx]:
+                    default_arg = ctx.args[default_idx][0]
+                    if not isinstance(default_arg, EllipsisExpr):
+                        return ctx.arg_types[default_idx][0]
+            except ValueError:
+                pass
+
+            # For Parameter subclasses without explicit default, return Any
+            # so that both annotation styles work:
+            #   foo: int = IntParameter()           (resolved type annotation)
+            #   foo: IntParameter = IntParameter()  (parameter type annotation)
+            return AnyType(TypeOfAny.special_form)
+
         try:
             default_idx = ctx.callee_arg_names.index("default")
-        # if no `default` argument is found, return AnyType with unannotated type.
         except ValueError:
             return AnyType(TypeOfAny.unannotated)
 
         default_args = ctx.args[default_idx]
 
         if default_args:
-            default_type = ctx.arg_types[0][0]
+            default_type = ctx.arg_types[default_idx][0]
             default_arg = default_args[0]
 
-            # Fallback to default Any type if the field is required
             if not isinstance(default_arg, EllipsisExpr):
                 return default_type
-        # NOTE: This is a workaround to avoid the error between type annotation and parameter type.
-        #       As the following code snippet, the type of `foo` is `int` but the assigned value is `luigi.IntParameter()`.
-        #       foo: int = luigi.IntParameter()
-        # TODO: infer mypy type from the parameter type.
+
         return AnyType(TypeOfAny.unannotated)
 
 
@@ -145,9 +178,7 @@ class TaskAttribute:
         self.info = info
         self._api = api
 
-    def to_argument(
-        self, current_info: TypeInfo, *, of: Literal["__init__",]
-    ) -> Argument:
+    def to_argument(self, current_info: TypeInfo, *, of: Literal["__init__",]) -> Argument:
         if of == "__init__":
             # All arguments to __init__ are keyword-only and optional
             # This is because gokart can set parameters by configuration'
@@ -155,9 +186,7 @@ class TaskAttribute:
         return Argument(
             variable=self.to_var(current_info),
             type_annotation=self.expand_type(current_info),
-            initializer=EllipsisExpr()
-            if self.has_default
-            else None,  # Only used by stubgen
+            initializer=EllipsisExpr() if self.has_default else None,  # Only used by stubgen
             kind=arg_kind,
         )
 
@@ -168,9 +197,7 @@ class TaskAttribute:
             # Also, it is tricky to avoid eager expansion of Self types here (e.g. because
             # we serialize attributes).
             with state.strict_optional_set(self._api.options.strict_optional):
-                return expand_type(
-                    self.type, {self.info.self_type.id: fill_typevars(current_info)}
-                )
+                return expand_type(self.type, {self.info.self_type.id: fill_typevars(current_info)})
         return self.type
 
     def to_var(self, current_info: TypeInfo) -> Var:
@@ -187,9 +214,7 @@ class TaskAttribute:
         }
 
     @classmethod
-    def deserialize(
-        cls, info: TypeInfo, data: JsonDict, api: SemanticAnalyzerPluginInterface
-    ) -> TaskAttribute:
+    def deserialize(cls, info: TypeInfo, data: JsonDict, api: SemanticAnalyzerPluginInterface) -> TaskAttribute:
         data = data.copy()
         typ = deserialize_and_fixup_type(data.pop("type"), api)
         return cls(type=typ, info=info, **data, api=api)
@@ -232,31 +257,23 @@ class TaskTransformer:
         # processed them yet. In order to work around this, we can simply skip generating
         # __init__ if there are no attributes, because if the user truly did not define any,
         # then the object default __init__ with an empty signature will be present anyway.
-        if (
-            "__init__" not in info.names or info.names["__init__"].plugin_generated
-        ) and attributes:
+        if ("__init__" not in info.names or info.names["__init__"].plugin_generated) and attributes:
             args = [attr.to_argument(info, of="__init__") for attr in attributes]
-            add_method_to_class(
-                self._api, self._cls, "__init__", args=args, return_type=NoneType()
-            )
+            add_method_to_class(self._api, self._cls, "__init__", args=args, return_type=NoneType())
         info.metadata[METADATA_TAG] = {
             "attributes": [attr.serialize() for attr in attributes],
         }
 
         return True
 
-    def _get_assignment_statements_from_if_statement(
-        self, stmt: IfStmt
-    ) -> Iterator[AssignmentStmt]:
+    def _get_assignment_statements_from_if_statement(self, stmt: IfStmt) -> Iterator[AssignmentStmt]:
         for body in stmt.body:
             if not body.is_unreachable:
                 yield from self._get_assignment_statements_from_block(body)
         if stmt.else_body is not None and not stmt.else_body.is_unreachable:
             yield from self._get_assignment_statements_from_block(stmt.else_body)
 
-    def _get_assignment_statements_from_block(
-        self, block: Block
-    ) -> Iterator[AssignmentStmt]:
+    def _get_assignment_statements_from_block(self, block: Block) -> Iterator[AssignmentStmt]:
         for stmt in block.body:
             if isinstance(stmt, AssignmentStmt):
                 yield stmt
@@ -331,9 +348,7 @@ class TaskTransformer:
 
             assert isinstance(node, Var)
 
-            has_parameter_call, parameter_args = self._collect_parameter_args(
-                stmt.rvalue
-            )
+            has_parameter_call, parameter_args = self._collect_parameter_args(stmt.rvalue)
             has_default = False
             # Ensure that something like x: int = field() is rejected
             # after an attribute with a default.
@@ -356,6 +371,13 @@ class TaskTransformer:
             with state.strict_optional_set(self._api.options.strict_optional):
                 init_type = self._infer_task_attr_init_type(sym, stmt)
 
+            # When the type annotation is a Parameter type, update the
+            # symbol's type to the resolved type so that mypy uses it
+            # for the __init__ parameter type
+            if init_type is not None and init_type != sym.type:
+                assert isinstance(node, Var)
+                node.type = init_type
+
             found_attrs[lhs.name] = TaskAttribute(
                 name=lhs.name,
                 has_default=has_default,
@@ -368,9 +390,7 @@ class TaskTransformer:
 
         return list(found_attrs.values())
 
-    def _collect_parameter_args(
-        self, expr: Expression
-    ) -> tuple[bool, Dict[str, Expression]]:
+    def _collect_parameter_args(self, expr: Expression) -> tuple[bool, Dict[str, Expression]]:
         """Returns a tuple where the first value represents whether or not
         the expression is a call to luigi.Parameter()
         and the second value is a dictionary of the keyword arguments that luigi.Parameter() was called with.
@@ -390,17 +410,24 @@ class TaskTransformer:
             return True, args
         return False, {}
 
-    def _infer_task_attr_init_type(
-        self, sym: SymbolTableNode, context: Context
-    ) -> Type | None:
+    def _infer_task_attr_init_type(self, sym: SymbolTableNode, context: Context) -> Type | None:
         """Infer __init__ argument type for an attribute.
 
         In particular, possibly use the signature of __set__.
         """
         default = sym.type
+        t = get_proper_type(sym.type)
+
+        # If the type annotation is a Parameter subclass, resolve to the inner type T
+        # e.g. IntParameter -> int, StrParameter -> str
+        if isinstance(t, Instance):
+            is_param = self._task_plugin.check_parameter(t.type.fullname)
+            if is_param:
+                resolved = self._resolve_parameter_type(t)
+                return resolved
+
         if sym.implicit:
             return default
-        t = get_proper_type(sym.type)
 
         # Perform a simple-minded inference from the signature of __set__, if present.
         # We can't use mypy.checkmember here, since this plugin runs before type checking.
@@ -408,6 +435,7 @@ class TaskTransformer:
         # the vast majority of use cases.
         if not isinstance(t, Instance):
             return default
+
         setter = t.type.get("__set__")
 
         if not setter:
@@ -417,9 +445,7 @@ class TaskTransformer:
             super_info = t.type.get_containing_type_info("__set__")
             assert super_info
             if setter.type:
-                setter_type = get_proper_type(
-                    map_type_from_supertype(setter.type, t.type, super_info)
-                )
+                setter_type = get_proper_type(map_type_from_supertype(setter.type, t.type, super_info))
             else:
                 return AnyType(TypeOfAny.unannotated)
             if isinstance(setter_type, CallableType) and setter_type.arg_kinds == [
@@ -429,9 +455,7 @@ class TaskTransformer:
             ]:
                 return expand_type_by_instance(setter_type.arg_types[2], t)
             else:
-                self._api.fail(
-                    f'Unsupported signature for "__set__" in "{t.type.name}"', context
-                )
+                self._api.fail(f'Unsupported signature for "__set__" in "{t.type.name}"', context)
         else:
             self._api.fail(f'Unsupported "__set__" in "{t.type.name}"', context)
 
@@ -457,6 +481,24 @@ class TaskTransformer:
             fullname = type_info.fullname
 
         return fullname is not None and self._task_plugin.check_parameter(fullname)
+
+    def _resolve_parameter_type(self, t: Instance) -> Type:
+        """Resolve a Parameter type annotation to its inner type T.
+
+        e.g. IntParameter -> int, Parameter[str] -> str
+        """
+        # Direct Parameter[T] usage (e.g. Parameter[str])
+        if t.type.fullname == "luigi.parameter.Parameter" and t.args:
+            return t.args[0]
+
+        # Parameter subclass (e.g. IntParameter extends Parameter[int])
+        for base in t.type.bases:
+            if isinstance(base, Instance) and base.type.fullname == "luigi.parameter.Parameter":
+                if base.args:
+                    return base.args[0]
+                break
+
+        return AnyType(TypeOfAny.unannotated)
 
 
 def plugin(version: str) -> type[Plugin]:

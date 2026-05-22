@@ -16,6 +16,7 @@
 #
 
 import datetime
+
 from helpers import unittest
 
 import luigi
@@ -32,7 +33,6 @@ class DateTaskOk(luigi.Task):
 
 
 class DateTaskOkTest(unittest.TestCase):
-
     def test_previous(self):
         task = DateTaskOk(datetime.date(2000, 3, 1))
         prev = previous(task)
@@ -58,7 +58,6 @@ class DateHourTaskOk(luigi.Task):
 
 
 class DateHourTaskOkTest(unittest.TestCase):
-
     def test_previous(self):
         task = DateHourTaskOk(datetime.datetime(2000, 3, 1, 2))
         prev = previous(task)
@@ -84,7 +83,6 @@ class DateMinuteTaskOk(luigi.Task):
 
 
 class DateMinuteTaskOkTest(unittest.TestCase):
-
     def test_previous(self):
         task = DateMinuteTaskOk(datetime.datetime(2000, 3, 1, 2, 3))
         prev = previous(task)
@@ -109,7 +107,6 @@ class DateSecondTaskOk(luigi.Task):
 
 
 class DateSecondTaskOkTest(unittest.TestCase):
-
     def test_previous(self):
         task = DateSecondTaskOk(datetime.datetime(2000, 3, 1, 2, 3, 7))
         prev = previous(task)
@@ -134,7 +131,6 @@ class DateIntervalTaskOk(luigi.Task):
 
 
 class DateIntervalTaskOkTest(unittest.TestCase):
-
     def test_previous(self):
         task = DateIntervalTaskOk(luigi.date_interval.Week(2000, 1))
         prev = previous(task)
@@ -157,7 +153,6 @@ class ExtendedDateTaskOk(DateTaskOk):
 
 
 class ExtendedDateTaskOkTest(unittest.TestCase):
-
     def test_previous(self):
         task = ExtendedDateTaskOk(datetime.date(2000, 3, 1), "some value")
         prev = previous(task)
@@ -172,7 +167,6 @@ class MultiTemporalTaskNok(luigi.Task):
 
 
 class MultiTemporalTaskNokTest(unittest.TestCase):
-
     def test_previous(self):
         task = MultiTemporalTaskNok(datetime.date(2000, 1, 1), datetime.datetime(2000, 1, 1, 1))
         self.assertRaises(NotImplementedError, previous, task)
@@ -184,7 +178,6 @@ class NoTemporalTaskNok(luigi.Task):
 
 
 class NoTemporalTaskNokTest(unittest.TestCase):
-
     def test_previous(self):
         task = NoTemporalTaskNok("some value")
         self.assertRaises(NotImplementedError, previous, task)

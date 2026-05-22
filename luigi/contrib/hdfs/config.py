@@ -20,34 +20,33 @@ You can configure what client by setting the "client" config under the "hdfs" se
 "hadoopcli" is the slowest, but should work out of the box.
 """
 
+import getpass
+import os
 import random
+from urllib.parse import urlparse, urlunparse
+
 import luigi
 import luigi.configuration
-import os
-import getpass
-
-from urllib.parse import urlparse, urlunparse
 
 
 class hdfs(luigi.Config):
     client_version = luigi.IntParameter(default=None)
     namenode_host = luigi.OptionalParameter(default=None)
     namenode_port = luigi.IntParameter(default=None)
-    client = luigi.Parameter(default='hadoopcli')
+    client = luigi.Parameter(default="hadoopcli")
     tmp_dir = luigi.OptionalParameter(
         default=None,
-        config_path=dict(section='core', name='hdfs-tmp-dir'),
+        config_path=dict(section="core", name="hdfs-tmp-dir"),
     )
 
 
 class hadoopcli(luigi.Config):
-    command = luigi.Parameter(default="hadoop",
-                              config_path=dict(section="hadoop", name="command"),
-                              description='The hadoop command, will run split() on it, '
-                                          'so you can pass something like "hadoop --param"')
-    version = luigi.Parameter(default="cdh4",
-                              config_path=dict(section="hadoop", name="version"),
-                              description='Can also be cdh3 or apache1')
+    command = luigi.Parameter(
+        default="hadoop",
+        config_path=dict(section="hadoop", name="command"),
+        description='The hadoop command, will run split() on it, so you can pass something like "hadoop --param"',
+    )
+    version = luigi.Parameter(default="cdh4", config_path=dict(section="hadoop", name="version"), description="Can also be cdh3 or apache1")
 
 
 def load_hadoop_cmd():
@@ -85,7 +84,7 @@ def tmppath(path=None, include_unix_username=True):
     Note that include_unix_username might work on windows too.
     """
     addon = "luigitemp-%09d" % random.randrange(0, 10_000_000_000)
-    temp_dir = '/tmp'  # default tmp dir if none is specified in config
+    temp_dir = "/tmp"  # default tmp dir if none is specified in config
 
     # 1. Figure out to which temporary directory to place
     configured_hdfs_tmp_dir = hdfs().tmp_dir
@@ -95,24 +94,24 @@ def tmppath(path=None, include_unix_username=True):
     elif path is not None:
         # need to copy correct schema and network location
         parsed = urlparse(path)
-        base_dir = urlunparse((parsed.scheme, parsed.netloc, temp_dir, '', '', ''))
+        base_dir = urlunparse((parsed.scheme, parsed.netloc, temp_dir, "", "", ""))
     else:
         # just system temporary directory
         base_dir = temp_dir
 
     # 2. Figure out what to place
     if path is not None:
-        if path.startswith(temp_dir + '/'):
+        if path.startswith(temp_dir + "/"):
             # Not 100%, but some protection from directories like /tmp/tmp/file
-            subdir = path[len(temp_dir):]
+            subdir = path[len(temp_dir) :]
         else:
             # Protection from /tmp/hdfs:/dir/file
             parsed = urlparse(path)
             subdir = parsed.path
-        subdir = subdir.lstrip('/') + '-'
+        subdir = subdir.lstrip("/") + "-"
     else:
         # just return any random temporary location
-        subdir = ''
+        subdir = ""
 
     if include_unix_username:
         subdir = os.path.join(getpass.getuser(), subdir)

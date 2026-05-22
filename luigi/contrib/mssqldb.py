@@ -19,13 +19,15 @@ import logging
 
 import luigi
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     from pymssql import _mssql
 except ImportError:
-    logger.warning("Loading MSSQL module without the python package pymssql. \
-        This will crash at runtime if SQL Server functionality is used.")
+    logger.warning(
+        "Loading MSSQL module without the python package pymssql. \
+        This will crash at runtime if SQL Server functionality is used."
+    )
 
 
 class MSSqlTarget(luigi.Target):
@@ -37,9 +39,7 @@ class MSSqlTarget(luigi.Target):
     derived from.
     """
 
-    marker_table = luigi.configuration.get_config().get('mssql',
-                                                        'marker-table',
-                                                        'table_updates')
+    marker_table = luigi.configuration.get_config().get("mssql", "marker-table", "table_updates")
 
     def __init__(self, host, database, user, password, table, update_id):
         """
@@ -56,8 +56,8 @@ class MSSqlTarget(luigi.Target):
         :param update_id: an identifier for this data set.
         :type update_id: str
         """
-        if ':' in host:
-            self.host, self.port = host.split(':')
+        if ":" in host:
+            self.host, self.port = host.split(":")
             self.port = int(self.port)
         else:
             self.host = host
@@ -97,7 +97,8 @@ class MSSqlTarget(luigi.Target):
                     FROM {marker_table} t
                     WHERE update_id = %(update_id)s
               """.format(marker_table=self.marker_table),
-            {"update_id": self.update_id, "table": self.table})
+            {"update_id": self.update_id, "table": self.table},
+        )
 
         # make sure update is properly marked
         assert self.exists(connection)
@@ -106,10 +107,12 @@ class MSSqlTarget(luigi.Target):
         if connection is None:
             connection = self.connect()
         try:
-            row = connection.execute_row("""SELECT 1 FROM {marker_table}
+            row = connection.execute_row(
+                """SELECT 1 FROM {marker_table}
                                             WHERE update_id = %s
                                     """.format(marker_table=self.marker_table),
-                                         (self.update_id,))
+                (self.update_id,),
+            )
         except _mssql.MssqlDatabaseException as e:
             # Error number for table doesn't exist
             if e.number == 208:
@@ -123,11 +126,7 @@ class MSSqlTarget(luigi.Target):
         """
         Create a SQL Server connection and return a connection object
         """
-        connection = _mssql.connect(user=self.user,
-                                    password=self.password,
-                                    server=self.host,
-                                    port=self.port,
-                                    database=self.database)
+        connection = _mssql.connect(user=self.user, password=self.password, server=self.host, port=self.port, database=self.database)
         return connection
 
     def create_marker_table(self):
@@ -145,8 +144,7 @@ class MSSqlTarget(luigi.Target):
                         inserted      DATETIME DEFAULT(GETDATE()),
                         PRIMARY KEY (update_id)
                     )
-                """
-                .format(marker_table=self.marker_table)
+                """.format(marker_table=self.marker_table)
             )
         except _mssql.MssqlDatabaseException as e:
             # Table already exists code

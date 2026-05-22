@@ -26,26 +26,25 @@ luigi.notifications.DEBUG = True
 
 
 class SimpleTaskHistory(luigi.task_history.TaskHistory):
-
     def __init__(self):
         self.actions = []
 
     def task_scheduled(self, task):
-        self.actions.append(('scheduled', task.id))
+        self.actions.append(("scheduled", task.id))
 
     def task_finished(self, task, successful):
-        self.actions.append(('finished', task.id))
+        self.actions.append(("finished", task.id))
 
     def task_started(self, task, worker_host):
-        self.actions.append(('started', task.id))
+        self.actions.append(("started", task.id))
 
 
 class TaskHistoryTest(LuigiTestCase):
-
     def test_run(self):
         th = SimpleTaskHistory()
         sch = luigi.scheduler.Scheduler(task_history_impl=th)
         with luigi.worker.Worker(scheduler=sch) as w:
+
             class MyTask(luigi.Task):
                 pass
 
@@ -53,8 +52,4 @@ class TaskHistoryTest(LuigiTestCase):
             w.add(task)
             w.run()
 
-            self.assertEqual(th.actions, [
-                ('scheduled', task.task_id),
-                ('started', task.task_id),
-                ('finished', task.task_id)
-            ])
+            self.assertEqual(th.actions, [("scheduled", task.task_id), ("started", task.task_id), ("finished", task.task_id)])

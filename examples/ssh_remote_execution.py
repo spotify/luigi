@@ -38,16 +38,11 @@ class CreateRemoteData(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
-        return RemoteTarget(
-            "/tmp/stuff",
-            SSH_HOST
-        )
+        return RemoteTarget("/tmp/stuff", SSH_HOST)
 
     def run(self):
         remote = RemoteContext(SSH_HOST)
-        print(remote.check_output([
-            "ps aux > {0}".format(self.output().path)
-        ]))
+        print(remote.check_output(["ps aux > {0}".format(self.output().path)]))
 
 
 class ProcessRemoteData(luigi.Task):
@@ -69,18 +64,14 @@ class ProcessRemoteData(luigi.Task):
 
     def run(self):
         processes_per_user = defaultdict(int)
-        with self.input().open('r') as infile:
+        with self.input().open("r") as infile:
             for line in infile:
                 username = line.split()[0]
                 processes_per_user[username] += 1
 
-        toplist = sorted(
-            processes_per_user.items(),
-            key=lambda x: x[1],
-            reverse=True
-        )
+        toplist = sorted(processes_per_user.items(), key=lambda x: x[1], reverse=True)
 
-        with self.output().open('w') as outfile:
+        with self.output().open("w") as outfile:
             for user, n_processes in toplist:
                 print(n_processes, user, file=outfile)
 

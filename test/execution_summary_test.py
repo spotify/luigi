@@ -15,19 +15,19 @@
 # limitations under the License.
 #
 
+import datetime
+import threading
+from enum import Enum
+
+import mock
 from helpers import LuigiTestCase, RunOnceTask, with_config
 
 import luigi
-import luigi.worker
 import luigi.execution_summary
-import threading
-import datetime
-import mock
-from enum import Enum
+import luigi.worker
 
 
 class ExecutionSummaryTest(LuigiTestCase):
-
     def setUp(self):
         super(ExecutionSummaryTest, self).setUp()
         self.scheduler = luigi.scheduler.Scheduler(prune_on_get_work=False)
@@ -63,34 +63,36 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Bar(num=1)}, d['already_done'])
-        self.assertEqual({Bar(num=2), Bar(num=3), Bar(num=4)}, d['completed'])
-        self.assertEqual({Bar(num=0)}, d['failed'])
-        self.assertEqual({Foo()}, d['upstream_failure'])
-        self.assertFalse(d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertFalse(d['still_pending_ext'])
+        self.assertEqual({Bar(num=1)}, d["already_done"])
+        self.assertEqual({Bar(num=2), Bar(num=3), Bar(num=4)}, d["completed"])
+        self.assertEqual({Bar(num=0)}, d["failed"])
+        self.assertEqual({Foo()}, d["upstream_failure"])
+        self.assertFalse(d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertFalse(d["still_pending_ext"])
         summary = self.summary()
 
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 6 tasks of which:',
-                    '* 1 complete ones were encountered:',
-                    '    - 1 Bar(num=1)',
-                    '* 3 ran successfully:',
-                    '    - 3 Bar(num=2,3,4)',
-                    '* 1 failed:',
-                    '    - 1 Bar(num=0)',
-                    '* 1 were left pending, among these:',
-                    '    * 1 had failed dependencies:',
-                    '        - 1 Foo()',
-                    '',
-                    'This progress looks :( because there were failed tasks',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
-        result = summary.split('\n')
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 6 tasks of which:",
+            "* 1 complete ones were encountered:",
+            "    - 1 Bar(num=1)",
+            "* 3 ran successfully:",
+            "    - 3 Bar(num=2,3,4)",
+            "* 1 failed:",
+            "    - 1 Bar(num=0)",
+            "* 1 were left pending, among these:",
+            "    * 1 had failed dependencies:",
+            "        - 1 Foo()",
+            "",
+            "This progress looks :( because there were failed tasks",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
+        result = summary.split("\n")
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
@@ -121,7 +123,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             MaxBatchTask(4),
             MaxBatches(),
         }
-        self.assertEqual(expected_completed, d['completed'])
+        self.assertEqual(expected_completed, d["completed"])
 
     def test_batch_fail(self):
         class MaxBatchFailTask(luigi.Task):
@@ -146,7 +148,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             MaxBatchFailTask(3),
             MaxBatchFailTask(4),
         }
-        self.assertEqual(expected_failed, d['failed'])
+        self.assertEqual(expected_failed, d["failed"])
 
     def test_check_complete_error(self):
         class Bar(luigi.Task):
@@ -163,34 +165,36 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Foo()}, d['still_pending_not_ext'])
-        self.assertEqual({Foo()}, d['upstream_scheduling_error'])
-        self.assertEqual({Bar()}, d['scheduling_error'])
-        self.assertFalse(d['not_run'])
-        self.assertFalse(d['already_done'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['failed'])
-        self.assertFalse(d['upstream_failure'])
-        self.assertFalse(d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertFalse(d['still_pending_ext'])
+        self.assertEqual({Foo()}, d["still_pending_not_ext"])
+        self.assertEqual({Foo()}, d["upstream_scheduling_error"])
+        self.assertEqual({Bar()}, d["scheduling_error"])
+        self.assertFalse(d["not_run"])
+        self.assertFalse(d["already_done"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["failed"])
+        self.assertFalse(d["upstream_failure"])
+        self.assertFalse(d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertFalse(d["still_pending_ext"])
         summary = self.summary()
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 2 tasks of which:',
-                    '* 1 failed scheduling:',
-                    '    - 1 Bar()',
-                    '* 1 were left pending, among these:',
-                    "    * 1 had dependencies whose scheduling failed:",
-                    '        - 1 Foo()',
-                    '',
-                    'Did not run any tasks',
-                    'This progress looks :( because there were tasks whose scheduling failed',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
-        result = summary.split('\n')
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 2 tasks of which:",
+            "* 1 failed scheduling:",
+            "    - 1 Bar()",
+            "* 1 were left pending, among these:",
+            "    * 1 had dependencies whose scheduling failed:",
+            "        - 1 Foo()",
+            "",
+            "Did not run any tasks",
+            "This progress looks :( because there were tasks whose scheduling failed",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
+        result = summary.split("\n")
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
@@ -207,38 +211,40 @@ class ExecutionSummaryTest(LuigiTestCase):
         def new_func(*args, **kwargs):
             return None
 
-        with mock.patch('luigi.scheduler.Scheduler.add_task', new_func):
+        with mock.patch("luigi.scheduler.Scheduler.add_task", new_func):
             self.run_task(Foo())
 
         d = self.summary_dict()
-        self.assertEqual({Foo()}, d['still_pending_not_ext'])
-        self.assertEqual({Foo()}, d['not_run'])
-        self.assertEqual({Bar()}, d['already_done'])
-        self.assertFalse(d['upstream_scheduling_error'])
-        self.assertFalse(d['scheduling_error'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['failed'])
-        self.assertFalse(d['upstream_failure'])
-        self.assertFalse(d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertFalse(d['still_pending_ext'])
+        self.assertEqual({Foo()}, d["still_pending_not_ext"])
+        self.assertEqual({Foo()}, d["not_run"])
+        self.assertEqual({Bar()}, d["already_done"])
+        self.assertFalse(d["upstream_scheduling_error"])
+        self.assertFalse(d["scheduling_error"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["failed"])
+        self.assertFalse(d["upstream_failure"])
+        self.assertFalse(d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertFalse(d["still_pending_ext"])
         summary = self.summary()
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 2 tasks of which:',
-                    '* 1 complete ones were encountered:',
-                    '    - 1 Bar()',
-                    '* 1 were left pending, among these:',
-                    "    * 1 was not granted run permission by the scheduler:",
-                    '        - 1 Foo()',
-                    '',
-                    'Did not run any tasks',
-                    'This progress looks :| because there were tasks that were not granted run permission by the scheduler',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
-        result = summary.split('\n')
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 2 tasks of which:",
+            "* 1 complete ones were encountered:",
+            "    - 1 Bar()",
+            "* 1 were left pending, among these:",
+            "    * 1 was not granted run permission by the scheduler:",
+            "        - 1 Foo()",
+            "",
+            "Did not run any tasks",
+            "This progress looks :| because there were tasks that were not granted run permission by the scheduler",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
+        result = summary.split("\n")
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
@@ -258,35 +264,37 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Foo()}, d['scheduling_error'])
-        self.assertFalse(d['upstream_scheduling_error'])
-        self.assertFalse(d['not_run'])
-        self.assertFalse(d['already_done'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['failed'])
-        self.assertFalse(d['upstream_failure'])
-        self.assertFalse(d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertFalse(d['still_pending_ext'])
+        self.assertEqual({Foo()}, d["scheduling_error"])
+        self.assertFalse(d["upstream_scheduling_error"])
+        self.assertFalse(d["not_run"])
+        self.assertFalse(d["already_done"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["failed"])
+        self.assertFalse(d["upstream_failure"])
+        self.assertFalse(d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertFalse(d["still_pending_ext"])
         summary = self.summary()
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 1 tasks of which:',
-                    '* 1 failed scheduling:',
-                    '    - 1 Foo()',
-                    '',
-                    'Did not run any tasks',
-                    'This progress looks :( because there were tasks whose scheduling failed',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
-        result = summary.split('\n')
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 1 tasks of which:",
+            "* 1 failed scheduling:",
+            "    - 1 Foo()",
+            "",
+            "Did not run any tasks",
+            "This progress looks :( because there were tasks whose scheduling failed",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
+        result = summary.split("\n")
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
-    @with_config({'execution_summary': {'summary_length': '1'}})
+    @with_config({"execution_summary": {"summary_length": "1"}})
     def test_config_summary_limit(self):
         class Bar(luigi.Task):
             num = luigi.IntParameter()
@@ -319,29 +327,31 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Bat(1), Wut(1), Biz(1), Bar(0), Bar(1), Bar(2), Bar(3)}, d['already_done'])
-        self.assertEqual({Foo()}, d['completed'])
-        self.assertFalse(d['failed'])
-        self.assertFalse(d['upstream_failure'])
-        self.assertFalse(d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertFalse(d['still_pending_ext'])
+        self.assertEqual({Bat(1), Wut(1), Biz(1), Bar(0), Bar(1), Bar(2), Bar(3)}, d["already_done"])
+        self.assertEqual({Foo()}, d["completed"])
+        self.assertFalse(d["failed"])
+        self.assertFalse(d["upstream_failure"])
+        self.assertFalse(d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertFalse(d["still_pending_ext"])
         summary = self.summary()
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 8 tasks of which:',
-                    '* 7 complete ones were encountered:',
-                    '    - 4 Bar(num=0...3)',
-                    '    ...',
-                    '* 1 ran successfully:',
-                    '    - 1 Foo()',
-                    '',
-                    'This progress looks :) because there were no failed tasks or missing dependencies',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
-        result = summary.split('\n')
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 8 tasks of which:",
+            "* 7 complete ones were encountered:",
+            "    - 4 Bar(num=0...3)",
+            "    ...",
+            "* 1 ran successfully:",
+            "    - 1 Foo()",
+            "",
+            "This progress looks :) because there were no failed tasks or missing dependencies",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
+        result = summary.split("\n")
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
@@ -370,31 +380,33 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({ExternalBar(num=1)}, d['already_done'])
-        self.assertEqual({Bar(num=1), Bar(num=2), Bar(num=3), Bar(num=4)}, d['completed'])
-        self.assertEqual({Bar(num=0)}, d['failed'])
-        self.assertEqual({Foo()}, d['upstream_failure'])
-        self.assertEqual({Foo()}, d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({ExternalBar(num=0), ExternalBar(num=2), ExternalBar(num=3), ExternalBar(num=4)}, d['still_pending_ext'])
+        self.assertEqual({ExternalBar(num=1)}, d["already_done"])
+        self.assertEqual({Bar(num=1), Bar(num=2), Bar(num=3), Bar(num=4)}, d["completed"])
+        self.assertEqual({Bar(num=0)}, d["failed"])
+        self.assertEqual({Foo()}, d["upstream_failure"])
+        self.assertEqual({Foo()}, d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertEqual({ExternalBar(num=0), ExternalBar(num=2), ExternalBar(num=3), ExternalBar(num=4)}, d["still_pending_ext"])
         s = self.summary()
-        self.assertIn('\n* 1 complete ones were encountered:\n    - 1 ExternalBar(num=1)\n', s)
-        self.assertIn('\n* 4 ran successfully:\n    - 4 Bar(num=1...4)\n', s)
-        self.assertIn('\n* 1 failed:\n    - 1 Bar(num=0)\n', s)
-        self.assertIn('\n* 5 were left pending, among these:\n    * 4 were missing external dependencies:\n        - 4 ExternalBar(num=', s)
-        self.assertIn('\n    * 1 had failed dependencies:\n'
-                      '        - 1 Foo()\n'
-                      '    * 1 had missing dependencies:\n'
-                      '        - 1 Foo()\n\n'
-                      'This progress looks :( because there were failed tasks\n', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("\n* 1 complete ones were encountered:\n    - 1 ExternalBar(num=1)\n", s)
+        self.assertIn("\n* 4 ran successfully:\n    - 4 Bar(num=1...4)\n", s)
+        self.assertIn("\n* 1 failed:\n    - 1 Bar(num=0)\n", s)
+        self.assertIn("\n* 5 were left pending, among these:\n    * 4 were missing external dependencies:\n        - 4 ExternalBar(num=", s)
+        self.assertIn(
+            "\n    * 1 had failed dependencies:\n"
+            "        - 1 Foo()\n"
+            "    * 1 had missing dependencies:\n"
+            "        - 1 Foo()\n\n"
+            "This progress looks :( because there were failed tasks\n",
+            s,
+        )
+        self.assertNotIn("\n\n\n", s)
 
     def test_already_running(self):
         lock1 = threading.Lock()
         lock2 = threading.Lock()
 
         class ParentTask(RunOnceTask):
-
             def requires(self):
                 yield LockTask()
 
@@ -415,21 +427,27 @@ class ExecutionSummaryTest(LuigiTestCase):
         lock1.release()
         t1.join()
         d = self.summary_dict()
-        self.assertEqual({LockTask()}, d['run_by_other_worker'])
-        self.assertEqual({ParentTask()}, d['upstream_run_by_other_worker'])
+        self.assertEqual({LockTask()}, d["run_by_other_worker"])
+        self.assertEqual({ParentTask()}, d["upstream_run_by_other_worker"])
         s = self.summary()
-        self.assertIn('\nScheduled 2 tasks of which:\n'
-                      '* 2 were left pending, among these:\n'
-                      '    * 1 were being run by another worker:\n'
-                      '        - 1 LockTask()\n'
-                      '    * 1 had dependencies that were being run by other worker:\n'
-                      '        - 1 ParentTask()\n', s)
-        self.assertIn('\n\nThe other workers were:\n'
-                      '    - other_worker ran 1 tasks\n\n'
-                      'Did not run any tasks\n'
-                      'This progress looks :) because there were no failed '
-                      'tasks or missing dependencies\n', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn(
+            "\nScheduled 2 tasks of which:\n"
+            "* 2 were left pending, among these:\n"
+            "    * 1 were being run by another worker:\n"
+            "        - 1 LockTask()\n"
+            "    * 1 had dependencies that were being run by other worker:\n"
+            "        - 1 ParentTask()\n",
+            s,
+        )
+        self.assertIn(
+            "\n\nThe other workers were:\n"
+            "    - other_worker ran 1 tasks\n\n"
+            "Did not run any tasks\n"
+            "This progress looks :) because there were no failed "
+            "tasks or missing dependencies\n",
+            s,
+        )
+        self.assertNotIn("\n\n\n", s)
 
     def test_already_running_2(self):
         class AlreadyRunningTask(luigi.Task):
@@ -442,18 +460,18 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         def new_func(*args, **kwargs):
             new_kwargs = kwargs.copy()
-            new_kwargs['worker'] = 'other_worker'
+            new_kwargs["worker"] = "other_worker"
             old_func(*args, **new_kwargs)
             return old_func(*args, **kwargs)
 
-        with mock.patch('luigi.scheduler.Scheduler.get_work', new_func):
+        with mock.patch("luigi.scheduler.Scheduler.get_work", new_func):
             self.run_task(AlreadyRunningTask())
 
         d = self.summary_dict()
-        self.assertFalse(d['already_done'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['not_run'])
-        self.assertEqual({AlreadyRunningTask()}, d['run_by_other_worker'])
+        self.assertFalse(d["already_done"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["not_run"])
+        self.assertEqual({AlreadyRunningTask()}, d["run_by_other_worker"])
 
     def test_not_run(self):
         class AlreadyRunningTask(luigi.Task):
@@ -465,25 +483,28 @@ class ExecutionSummaryTest(LuigiTestCase):
         old_func = luigi.scheduler.Scheduler.get_work
 
         def new_func(*args, **kwargs):
-            kwargs['current_tasks'] = None
+            kwargs["current_tasks"] = None
             old_func(*args, **kwargs)
             return old_func(*args, **kwargs)
 
-        with mock.patch('luigi.scheduler.Scheduler.get_work', new_func):
+        with mock.patch("luigi.scheduler.Scheduler.get_work", new_func):
             self.run_task(AlreadyRunningTask())
 
         d = self.summary_dict()
-        self.assertFalse(d['already_done'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({AlreadyRunningTask()}, d['not_run'])
+        self.assertFalse(d["already_done"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertEqual({AlreadyRunningTask()}, d["not_run"])
 
         s = self.summary()
-        self.assertIn('\nScheduled 1 tasks of which:\n'
-                      '* 1 were left pending, among these:\n'
-                      '    * 1 was not granted run permission by the scheduler:\n'
-                      '        - 1 AlreadyRunningTask()\n', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn(
+            "\nScheduled 1 tasks of which:\n"
+            "* 1 were left pending, among these:\n"
+            "    * 1 was not granted run permission by the scheduler:\n"
+            "        - 1 AlreadyRunningTask()\n",
+            s,
+        )
+        self.assertNotIn("\n\n\n", s)
 
     def test_somebody_else_finish_task(self):
         class SomeTask(RunOnceTask):
@@ -497,10 +518,10 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.worker.run()
 
         d = self.summary_dict()
-        self.assertFalse(d['already_done'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({SomeTask()}, d['not_run'])
+        self.assertFalse(d["already_done"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertEqual({SomeTask()}, d["not_run"])
 
     def test_somebody_else_disables_task(self):
         class SomeTask(luigi.Task):
@@ -518,10 +539,10 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.worker.run()
 
         d = self.summary_dict()
-        self.assertFalse(d['already_done'])
-        self.assertFalse(d['completed'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({SomeTask()}, d['not_run'])
+        self.assertFalse(d["already_done"])
+        self.assertFalse(d["completed"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertEqual({SomeTask()}, d["not_run"])
 
     def test_larger_tree(self):
 
@@ -566,25 +587,24 @@ class ExecutionSummaryTest(LuigiTestCase):
                     yield Bar(i)
 
         class ExternalBar(luigi.ExternalTask):
-
             def complete(self):
                 return False
 
         self.run_task(Foo())
         d = self.summary_dict()
 
-        self.assertEqual({Cat(num=1)}, d['already_done'])
-        self.assertEqual({Cat(num=0), Bar(num=1)}, d['completed'])
-        self.assertEqual({Cat(num=2)}, d['failed'])
-        self.assertEqual({Dog(), Bar(num=2), Foo()}, d['upstream_failure'])
-        self.assertEqual({Bar(num=0), Foo()}, d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertEqual({ExternalBar()}, d['still_pending_ext'])
+        self.assertEqual({Cat(num=1)}, d["already_done"])
+        self.assertEqual({Cat(num=0), Bar(num=1)}, d["completed"])
+        self.assertEqual({Cat(num=2)}, d["failed"])
+        self.assertEqual({Dog(), Bar(num=2), Foo()}, d["upstream_failure"])
+        self.assertEqual({Bar(num=0), Foo()}, d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertEqual({ExternalBar()}, d["still_pending_ext"])
         s = self.summary()
-        self.assertNotIn('\n\n\n', s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_dates(self):
-        """ Just test that it doesn't crash with date params """
+        """Just test that it doesn't crash with date params"""
 
         start = datetime.date(1998, 3, 23)
 
@@ -601,13 +621,13 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         exp_set = {Bar(start + datetime.timedelta(days=i)) for i in range(10)}
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
-        self.assertIn('date=1998-0', s)
-        self.assertIn('Scheduled 11 tasks', s)
-        self.assertIn('Luigi Execution Summary', s)
-        self.assertNotIn('00:00:00', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("date=1998-0", s)
+        self.assertIn("Scheduled 11 tasks", s)
+        self.assertIn("Luigi Execution Summary", s)
+        self.assertNotIn("00:00:00", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_ranges_minutes(self):
 
@@ -626,10 +646,10 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         exp_set = {Bar(start + datetime.timedelta(minutes=i)) for i in range(300)}
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
-        self.assertIn('Bar(time=1998-03-23T0150...1998-03-23T0649)', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("Bar(time=1998-03-23T0150...1998-03-23T0649)", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_ranges_one_param(self):
 
@@ -645,10 +665,10 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         exp_set = {Bar(i) for i in range(11)}
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
-        self.assertIn('Bar(num=0...10)', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("Bar(num=0...10)", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_ranges_multiple_params(self):
 
@@ -666,10 +686,10 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         exp_set = {Bar(5, i, 25) for i in range(5)}
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
-        self.assertIn('- 5 Bar(num1=5, num2=0...4, num3=25)', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("- 5 Bar(num1=5, num2=0...4, num3=25)", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_two_tasks(self):
 
@@ -684,22 +704,24 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Foo(), Bar(num=0, num2=0), Bar(num=1, num2=2)}, d['completed'])
+        self.assertEqual({Foo(), Bar(num=0, num2=0), Bar(num=1, num2=2)}, d["completed"])
 
         summary = self.summary()
-        result = summary.split('\n')
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 3 tasks of which:',
-                    '* 3 ran successfully:',
-                    '    - 2 Bar(num=0, num2=0) and Bar(num=1, num2=2)',
-                    '    - 1 Foo()',
-                    '',
-                    'This progress looks :) because there were no failed tasks or missing dependencies',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
+        result = summary.split("\n")
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 3 tasks of which:",
+            "* 3 ran successfully:",
+            "    - 2 Bar(num=0, num2=0) and Bar(num=1, num2=2)",
+            "    - 1 Foo()",
+            "",
+            "This progress looks :) because there were no failed tasks or missing dependencies",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
 
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
@@ -716,9 +738,9 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         s = self.summary()
-        self.assertIn('Bar(...)', s)
+        self.assertIn("Bar(...)", s)
         self.assertNotIn("Did not run any tasks", s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_multiple_params_multiple_same_task_family(self):
 
@@ -734,19 +756,21 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.run_task(Foo())
         summary = self.summary()
 
-        result = summary.split('\n')
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 5 tasks of which:',
-                    '* 5 ran successfully:',
-                    '    - 4 Bar(num=0, num2=0) ...',
-                    '    - 1 Foo()',
-                    '',
-                    'This progress looks :) because there were no failed tasks or missing dependencies',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
+        result = summary.split("\n")
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 5 tasks of which:",
+            "* 5 ran successfully:",
+            "    - 4 Bar(num=0, num2=0) ...",
+            "    - 1 Foo()",
+            "",
+            "This progress looks :) because there were no failed tasks or missing dependencies",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
 
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
@@ -765,21 +789,19 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         s = self.summary()
-        self.assertIn('\nThis progress looks :) because there were no failed tasks or missing dependencies', s)
+        self.assertIn("\nThis progress looks :) because there were no failed tasks or missing dependencies", s)
         self.assertNotIn("Did not run any tasks", s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_happy_smiley_face_other_workers(self):
         lock1 = threading.Lock()
         lock2 = threading.Lock()
 
         class ParentTask(RunOnceTask):
-
             def requires(self):
                 yield LockTask()
 
         class LockTask(RunOnceTask):
-
             def run(self):
                 lock2.release()
                 lock1.acquire()
@@ -796,13 +818,12 @@ class ExecutionSummaryTest(LuigiTestCase):
         lock1.release()
         t1.join()
         s = self.summary()
-        self.assertIn('\nThis progress looks :) because there were no failed tasks or missing dependencies', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("\nThis progress looks :) because there were no failed tasks or missing dependencies", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_sad_smiley_face(self):
 
         class ExternalBar(luigi.ExternalTask):
-
             def complete(self):
                 return False
 
@@ -821,14 +842,13 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         s = self.summary()
-        self.assertIn('\nThis progress looks :( because there were failed tasks', s)
+        self.assertIn("\nThis progress looks :( because there were failed tasks", s)
         self.assertNotIn("Did not run any tasks", s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_neutral_smiley_face(self):
 
         class ExternalBar(luigi.ExternalTask):
-
             def complete(self):
                 return False
 
@@ -838,8 +858,8 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         s = self.summary()
-        self.assertIn('\nThis progress looks :| because there were missing external dependencies', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("\nThis progress looks :| because there were missing external dependencies", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_did_not_run_any_tasks(self):
 
@@ -852,24 +872,22 @@ class ExecutionSummaryTest(LuigiTestCase):
                 return False
 
         class Foo(luigi.Task):
-
             def requires(self):
                 for i in range(10):
                     yield ExternalBar(i)
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({ExternalBar(5)}, d['already_done'])
-        self.assertEqual({ExternalBar(i) for i in range(10) if i != 5}, d['still_pending_ext'])
-        self.assertEqual({Foo()}, d['upstream_missing_dependency'])
+        self.assertEqual({ExternalBar(5)}, d["already_done"])
+        self.assertEqual({ExternalBar(i) for i in range(10) if i != 5}, d["still_pending_ext"])
+        self.assertEqual({Foo()}, d["upstream_missing_dependency"])
         s = self.summary()
-        self.assertIn('\n\nDid not run any tasks\nThis progress looks :| because there were missing external dependencies', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("\n\nDid not run any tasks\nThis progress looks :| because there were missing external dependencies", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_example(self):
 
         class MyExternal(luigi.ExternalTask):
-
             def complete(self):
                 return False
 
@@ -903,7 +921,6 @@ class ExecutionSummaryTest(LuigiTestCase):
                 yield Boom(0)
 
         class EntryPoint(luigi.Task):
-
             def requires(self):
                 for i in range(10):
                     yield Foo(100, 2 * i)
@@ -913,34 +930,36 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.run_task(EntryPoint())
         summary = self.summary()
 
-        expected = ['',
-                    '===== Luigi Execution Summary =====',
-                    '',
-                    'Scheduled 218 tasks of which:',
-                    '* 195 complete ones were encountered:',
-                    '    - 195 Bar(num=5...199)',
-                    '* 1 ran successfully:',
-                    '    - 1 Boom(...)',
-                    '* 22 were left pending, among these:',
-                    '    * 1 were missing external dependencies:',
-                    '        - 1 MyExternal()',
-                    '    * 21 had missing dependencies:',
-                    '        - 10 DateTask(date=1998-03-23...1998-04-01, num=5)',
-                    '        - 1 EntryPoint()',
-                    '        - 10 Foo(num=100, num2=0) ...',
-                    '',
-                    'This progress looks :| because there were missing external dependencies',
-                    '',
-                    '===== Luigi Execution Summary =====',
-                    '']
-        result = summary.split('\n')
+        expected = [
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+            "Scheduled 218 tasks of which:",
+            "* 195 complete ones were encountered:",
+            "    - 195 Bar(num=5...199)",
+            "* 1 ran successfully:",
+            "    - 1 Boom(...)",
+            "* 22 were left pending, among these:",
+            "    * 1 were missing external dependencies:",
+            "        - 1 MyExternal()",
+            "    * 21 had missing dependencies:",
+            "        - 10 DateTask(date=1998-03-23...1998-04-01, num=5)",
+            "        - 1 EntryPoint()",
+            "        - 10 Foo(num=100, num2=0) ...",
+            "",
+            "This progress looks :| because there were missing external dependencies",
+            "",
+            "===== Luigi Execution Summary =====",
+            "",
+        ]
+        result = summary.split("\n")
 
         self.assertEqual(len(result), len(expected))
         for i, line in enumerate(result):
             self.assertEqual(line, expected[i])
 
     def test_with_datehours(self):
-        """ Just test that it doesn't crash with datehour params """
+        """Just test that it doesn't crash with datehour params"""
 
         start = datetime.datetime(1998, 3, 23, 5)
 
@@ -957,16 +976,16 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         exp_set = {Bar(start + datetime.timedelta(hours=i)) for i in range(10)}
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
-        self.assertIn('datehour=1998-03-23T0', s)
-        self.assertIn('Scheduled 11 tasks', s)
-        self.assertIn('Luigi Execution Summary', s)
-        self.assertNotIn('00:00:00', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("datehour=1998-03-23T0", s)
+        self.assertIn("Scheduled 11 tasks", s)
+        self.assertIn("Luigi Execution Summary", s)
+        self.assertNotIn("00:00:00", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_months(self):
-        """ Just test that it doesn't crash with month params """
+        """Just test that it doesn't crash with month params"""
 
         start = datetime.datetime(1998, 3, 23)
 
@@ -976,20 +995,20 @@ class ExecutionSummaryTest(LuigiTestCase):
         class Foo(luigi.Task):
             def requires(self):
                 for i in range(3):
-                    new_date = start + datetime.timedelta(days=30*i)
+                    new_date = start + datetime.timedelta(days=30 * i)
                     yield Bar(month=new_date)
 
         self.run_task(Foo())
         d = self.summary_dict()
-        exp_set = {Bar(start + datetime.timedelta(days=30*i)) for i in range(3)}
+        exp_set = {Bar(start + datetime.timedelta(days=30 * i)) for i in range(3)}
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
-        self.assertIn('month=1998-0', s)
-        self.assertIn('Scheduled 4 tasks', s)
-        self.assertIn('Luigi Execution Summary', s)
-        self.assertNotIn('00:00:00', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("month=1998-0", s)
+        self.assertIn("Scheduled 4 tasks", s)
+        self.assertIn("Luigi Execution Summary", s)
+        self.assertNotIn("00:00:00", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_multiple_dash_dash_workers(self):
         """
@@ -1002,16 +1021,17 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual(set(), d['run_by_other_worker'])
+        self.assertEqual(set(), d["run_by_other_worker"])
         s = self.summary()
-        self.assertNotIn('The other workers were', s)
-        self.assertIn('This progress looks :) because there were no failed ', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertNotIn("The other workers were", s)
+        self.assertIn("This progress looks :) because there were no failed ", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_uncomparable_parameters(self):
         """
         Don't rely on parameters being sortable
         """
+
         class Color(Enum):
             red = 1
             yellow = 2
@@ -1032,10 +1052,10 @@ class ExecutionSummaryTest(LuigiTestCase):
 
         self.run_task(Foo())
         s = self.summary()
-        self.assertIn('yellow', s)
+        self.assertIn("yellow", s)
 
     def test_with_dict_dependency(self):
-        """ Just test that it doesn't crash with dict params in dependencies """
+        """Just test that it doesn't crash with dict params in dependencies"""
 
         args = dict(start=datetime.date(1998, 3, 23), num=3)
 
@@ -1046,7 +1066,7 @@ class ExecutionSummaryTest(LuigiTestCase):
             def requires(self):
                 for i in range(10):
                     new_dict = args.copy()
-                    new_dict['start'] = str(new_dict['start'] + datetime.timedelta(days=i))
+                    new_dict["start"] = str(new_dict["start"] + datetime.timedelta(days=i))
                     yield Bar(args=new_dict)
 
         self.run_task(Foo())
@@ -1054,20 +1074,20 @@ class ExecutionSummaryTest(LuigiTestCase):
         exp_set = set()
         for i in range(10):
             new_dict = args.copy()
-            new_dict['start'] = str(new_dict['start'] + datetime.timedelta(days=i))
+            new_dict["start"] = str(new_dict["start"] + datetime.timedelta(days=i))
             exp_set.add(Bar(new_dict))
         exp_set.add(Foo())
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
         self.assertIn('"num": 3', s)
         self.assertIn('"start": "1998-0', s)
-        self.assertIn('Scheduled 11 tasks', s)
-        self.assertIn('Luigi Execution Summary', s)
-        self.assertNotIn('00:00:00', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("Scheduled 11 tasks", s)
+        self.assertIn("Luigi Execution Summary", s)
+        self.assertNotIn("00:00:00", s)
+        self.assertNotIn("\n\n\n", s)
 
     def test_with_dict_argument(self):
-        """ Just test that it doesn't crash with dict params """
+        """Just test that it doesn't crash with dict params"""
 
         args = dict(start=str(datetime.date(1998, 3, 23)), num=3)
 
@@ -1078,18 +1098,19 @@ class ExecutionSummaryTest(LuigiTestCase):
         d = self.summary_dict()
         exp_set = set()
         exp_set.add(Bar(args=args))
-        self.assertEqual(exp_set, d['completed'])
+        self.assertEqual(exp_set, d["completed"])
         s = self.summary()
         self.assertIn('"num": 3', s)
         self.assertIn('"start": "1998-0', s)
-        self.assertIn('Scheduled 1 task', s)
-        self.assertIn('Luigi Execution Summary', s)
-        self.assertNotIn('00:00:00', s)
-        self.assertNotIn('\n\n\n', s)
+        self.assertIn("Scheduled 1 task", s)
+        self.assertIn("Luigi Execution Summary", s)
+        self.assertNotIn("00:00:00", s)
+        self.assertNotIn("\n\n\n", s)
 
     """
     Test that a task once crashing and then succeeding should be counted as no failure.
     """
+
     def test_status_with_task_retry(self):
         class Foo(luigi.Task):
             run_count = 0
@@ -1105,15 +1126,15 @@ class ExecutionSummaryTest(LuigiTestCase):
         self.run_task(Foo())
         self.run_task(Foo())
         d = self.summary_dict()
-        self.assertEqual({Foo()}, d['completed'])
-        self.assertEqual({Foo()}, d['ever_failed'])
-        self.assertFalse(d['failed'])
-        self.assertFalse(d['upstream_failure'])
-        self.assertFalse(d['upstream_missing_dependency'])
-        self.assertFalse(d['run_by_other_worker'])
-        self.assertFalse(d['still_pending_ext'])
+        self.assertEqual({Foo()}, d["completed"])
+        self.assertEqual({Foo()}, d["ever_failed"])
+        self.assertFalse(d["failed"])
+        self.assertFalse(d["upstream_failure"])
+        self.assertFalse(d["upstream_missing_dependency"])
+        self.assertFalse(d["run_by_other_worker"])
+        self.assertFalse(d["still_pending_ext"])
         s = self.summary()
-        self.assertIn('Scheduled 1 task', s)
-        self.assertIn('Luigi Execution Summary', s)
-        self.assertNotIn('ever failed', s)
-        self.assertIn('\n\nThis progress looks :) because there were failed tasks but they all succeeded in a retry', s)
+        self.assertIn("Scheduled 1 task", s)
+        self.assertIn("Luigi Execution Summary", s)
+        self.assertNotIn("ever failed", s)
+        self.assertIn("\n\nThis progress looks :) because there were failed tasks but they all succeeded in a retry", s)

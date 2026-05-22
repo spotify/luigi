@@ -23,8 +23,9 @@ You can run this example like this:
             $ luigi --module examples.foo_complex examples.Foo --workers 2 --local-scheduler
 
 """
-import time
+
 import random
+import time
 
 import luigi
 
@@ -34,7 +35,7 @@ current_nodes = 0
 
 
 class Foo(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
 
     def run(self):
         print("Running Foo")
@@ -47,13 +48,13 @@ class Foo(luigi.Task):
 
 
 class Bar(luigi.Task):
-    task_namespace = 'examples'
+    task_namespace = "examples"
 
     num = luigi.IntParameter()
 
     def run(self):
         time.sleep(1)
-        self.output().open('w').close()
+        self.output().open("w").close()
 
     def requires(self):
         global current_nodes
@@ -72,4 +73,4 @@ class Bar(luigi.Task):
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
         time.sleep(1)
-        return luigi.LocalTarget('/tmp/bar/%d' % self.num)
+        return luigi.LocalTarget("/tmp/bar/%d" % self.num)

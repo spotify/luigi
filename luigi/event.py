@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-""" Definitions needed for events. See :ref:`Events` for info on how to use it."""
+"""Definitions needed for events. See :ref:`Events` for info on how to use it."""
 
 
 class Event:

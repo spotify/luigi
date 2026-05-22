@@ -33,15 +33,14 @@ class Configuration(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget('/tmp/Config_%d.txt' % self.seed)
+        return luigi.LocalTarget("/tmp/Config_%d.txt" % self.seed)
 
     def run(self):
         time.sleep(5)
         rnd.seed(self.seed)
 
-        result = ','.join(
-            [str(x) for x in rnd.sample(list(range(300)), rnd.randint(7, 25))])
-        with self.output().open('w') as f:
+        result = ",".join([str(x) for x in rnd.sample(list(range(300)), rnd.randint(7, 25))])
+        with self.output().open("w") as f:
             f.write(result)
 
 
@@ -56,12 +55,12 @@ class Data(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget('/tmp/Data_%d.txt' % self.magic_number)
+        return luigi.LocalTarget("/tmp/Data_%d.txt" % self.magic_number)
 
     def run(self):
         time.sleep(1)
-        with self.output().open('w') as f:
-            f.write('%s' % self.magic_number)
+        with self.output().open("w") as f:
+            f.write("%s" % self.magic_number)
 
 
 class Dynamic(luigi.Task):
@@ -75,7 +74,7 @@ class Dynamic(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget('/tmp/Dynamic_%d.txt' % self.seed)
+        return luigi.LocalTarget("/tmp/Dynamic_%d.txt" % self.seed)
 
     def run(self):
         # This could be done using regular requires method
@@ -83,14 +82,14 @@ class Dynamic(luigi.Task):
         yield config
 
         with config.output().open() as f:
-            data = [int(x) for x in f.read().split(',')]
+            data = [int(x) for x in f.read().split(",")]
 
         # ... but not this
         data_dependent_deps = [Data(magic_number=x) for x in data]
         yield data_dependent_deps
 
-        with self.output().open('w') as f:
-            f.write('Tada!')
+        with self.output().open("w") as f:
+            f.write("Tada!")
 
         # and in case data is rather long, consider wrapping the requirements
         # in DynamicRequirements and optionally define a custom complete method
@@ -107,5 +106,5 @@ class Dynamic(luigi.Task):
         yield luigi.DynamicRequirements(data_dependent_deps, custom_complete)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     luigi.run()

@@ -19,21 +19,22 @@ This file implements unit test cases for luigi/contrib/sqla.py
 Author: Gouthaman Balaraman
 Date: 01/02/2015
 """
+
 import os
 import shutil
 import tempfile
 import unittest
 
-import luigi
+import pytest
 import sqlalchemy
+from helpers import skipOnTravisAndGithubActions
+
+import luigi
 from luigi.contrib import sqla
 from luigi.mock import MockTarget
-import pytest
-from helpers import skipOnTravisAndGithubActions
 
 
 class BaseTask(luigi.Task):
-
     TASK_LIST = ["item%d\tproperty%d\n" % (i, i) for i in range(10)]
 
     def output(self):
@@ -53,21 +54,19 @@ class TestSQLA(unittest.TestCase):
     def _clear_tables(self):
         meta = sqlalchemy.MetaData()
         meta.reflect(bind=self.engine)
-        for table in reversed(meta.sorted_tables):
-            self.engine.execute(table.delete())
+        with self.engine.begin() as conn:
+            for table in reversed(meta.sorted_tables):
+                conn.execute(table.delete())
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
         self.connection_string = self.get_connection_string()
-        self.connect_args = {'timeout': 5.0}
+        self.connect_args = {"timeout": 5.0}
         self.engine = sqlalchemy.create_engine(self.connection_string, connect_args=self.connect_args)
 
         # Create SQLATask and store in self
         class SQLATask(sqla.CopyToTable):
-            columns = [
-                (["item", sqlalchemy.String(64)], {}),
-                (["property", sqlalchemy.String(64)], {})
-            ]
+            columns = [(["item", sqlalchemy.String(64)], {}), (["property", sqlalchemy.String(64)], {})]
             connection_string = self.connection_string
             connect_args = self.connect_args
             table = "item_property"
@@ -83,7 +82,7 @@ class TestSQLA(unittest.TestCase):
         if os.path.exists(self.tempdir):
             shutil.rmtree(self.tempdir)
 
-    def get_connection_string(self, db='sqlatest.db'):
+    def get_connection_string(self, db="sqlatest.db"):
         return "sqlite:///{path}".format(path=os.path.join(self.tempdir, db))
 
     def test_create_table(self):
@@ -91,15 +90,12 @@ class TestSQLA(unittest.TestCase):
         Test that this method creates table that we require
         :return:
         """
+
         class TestSQLData(sqla.CopyToTable):
             connection_string = self.connection_string
             connect_args = self.connect_args
             table = "test_table"
-            columns = [
-                (["id", sqlalchemy.Integer], dict(primary_key=True)),
-                (["name", sqlalchemy.String(64)], {}),
-                (["value", sqlalchemy.String(64)], {})
-            ]
+            columns = [(["id", sqlalchemy.Integer], dict(primary_key=True)), (["name", sqlalchemy.String(64)], {}), (["value", sqlalchemy.String(64)], {})]
             chunk_size = 1
 
             def output(self):
@@ -118,6 +114,7 @@ class TestSQLA(unittest.TestCase):
         Check that the test fails when the columns are not set
         :return:
         """
+
         class TestSQLData(sqla.CopyToTable):
             connection_string = self.connection_string
             table = "test_table"
@@ -135,12 +132,12 @@ class TestSQLA(unittest.TestCase):
         with engine.begin() as conn:
             meta = sqlalchemy.MetaData()
             meta.reflect(bind=engine)
-            self.assertEqual({'table_updates', 'item_property'}, set(meta.tables.keys()))
+            self.assertEqual({"table_updates", "item_property"}, set(meta.tables.keys()))
             table = meta.tables[self.SQLATask.table]
-            s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
+            s = sqlalchemy.select(sqlalchemy.func.count(table.c.item))
             result = conn.execute(s).fetchone()
             self.assertEqual(len(BaseTask.TASK_LIST), result[0])
-            s = sqlalchemy.select([table]).order_by(table.c.item)
+            s = sqlalchemy.select(table).order_by(table.c.item)
             result = conn.execute(s).fetchall()
             for i in range(len(BaseTask.TASK_LIST)):
                 given = BaseTask.TASK_LIST[i].strip("\n").split("\t")
@@ -199,9 +196,11 @@ class TestSQLA(unittest.TestCase):
                 return SQLATask()
 
             def copy(self, conn, ins_rows, table_bound):
-                ins = table_bound.update().\
-                    where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
-                    values({table_bound.c.item: sqlalchemy.bindparam("_item")})
+                ins = (
+                    table_bound.update()
+                    .where(table_bound.c.property == sqlalchemy.bindparam("_property"))
+                    .values({table_bound.c.item: sqlalchemy.bindparam("_item")})
+                )
                 conn.execute(ins, ins_rows)
 
             def rows(self):
@@ -236,18 +235,24 @@ class TestSQLA(unittest.TestCase):
         """Overload the rows method and we should be able to insert data into database"""
 
         class SQLARowOverloadTest(sqla.CopyToTable):
-            columns = [
-                (["item", sqlalchemy.String(64)], {}),
-                (["property", sqlalchemy.String(64)], {})
-            ]
+            columns = [(["item", sqlalchemy.String(64)], {}), (["property", sqlalchemy.String(64)], {})]
             connection_string = self.connection_string
             table = "item_property"
             chunk_size = 1
 
             def rows(self):
-                tasks = [("item0", "property0"), ("item1", "property1"), ("item2", "property2"), ("item3", "property3"),
-                         ("item4", "property4"), ("item5", "property5"), ("item6", "property6"), ("item7", "property7"),
-                         ("item8", "property8"), ("item9", "property9")]
+                tasks = [
+                    ("item0", "property0"),
+                    ("item1", "property1"),
+                    ("item2", "property2"),
+                    ("item3", "property3"),
+                    ("item4", "property4"),
+                    ("item5", "property5"),
+                    ("item6", "property6"),
+                    ("item7", "property7"),
+                    ("item8", "property8"),
+                    ("item9", "property9"),
+                ]
                 for row in tasks:
                     yield row
 
@@ -260,8 +265,8 @@ class TestSQLA(unittest.TestCase):
         Test alternate column row separator works
         :return:
         """
-        class ModBaseTask(luigi.Task):
 
+        class ModBaseTask(luigi.Task):
             def output(self):
                 return MockTarget("ModBaseTask", mirror_on_stderr=True)
 
@@ -273,10 +278,7 @@ class TestSQLA(unittest.TestCase):
                 out.close()
 
         class ModSQLATask(sqla.CopyToTable):
-            columns = [
-                (["item", sqlalchemy.String(64)], {}),
-                (["property", sqlalchemy.String(64)], {})
-            ]
+            columns = [(["item", sqlalchemy.String(64)], {}), (["property", sqlalchemy.String(64)], {})]
             connection_string = self.connection_string
             table = "item_property"
             column_separator = ","
@@ -294,8 +296,8 @@ class TestSQLA(unittest.TestCase):
         Overload the copy() method and implement an update action.
         :return:
         """
-        class ModBaseTask(luigi.Task):
 
+        class ModBaseTask(luigi.Task):
             def output(self):
                 return MockTarget("BaseTask", mirror_on_stderr=True)
 
@@ -308,10 +310,7 @@ class TestSQLA(unittest.TestCase):
         class ModSQLATask(sqla.CopyToTable):
             connection_string = self.connection_string
             table = "item_property"
-            columns = [
-                (["item", sqlalchemy.String(64)], {}),
-                (["property", sqlalchemy.String(64)], {})
-            ]
+            columns = [(["item", sqlalchemy.String(64)], {}), (["property", sqlalchemy.String(64)], {})]
             chunk_size = 1
 
             def requires(self):
@@ -327,9 +326,11 @@ class TestSQLA(unittest.TestCase):
                 return ModSQLATask()
 
             def copy(self, conn, ins_rows, table_bound):
-                ins = table_bound.update().\
-                    where(table_bound.c.property == sqlalchemy.bindparam("_property")).\
-                    values({table_bound.c.item: sqlalchemy.bindparam("_item")})
+                ins = (
+                    table_bound.update()
+                    .where(table_bound.c.property == sqlalchemy.bindparam("_property"))
+                    .values({table_bound.c.item: sqlalchemy.bindparam("_item")})
+                )
                 conn.execute(ins, ins_rows)
 
             def rows(self):
@@ -341,19 +342,17 @@ class TestSQLA(unittest.TestCase):
         luigi.build([task1, task2, task3], local_scheduler=True, workers=self.NUM_WORKERS)
         self._check_entries(self.engine)
 
-    @skipOnTravisAndGithubActions('AssertionError: 10 != 7; https://travis-ci.org/spotify/luigi/jobs/156732446')
+    @skipOnTravisAndGithubActions("AssertionError: 10 != 7; https://travis-ci.org/spotify/luigi/jobs/156732446")
     def test_multiple_tasks(self):
         """
         Test a case where there are multiple tasks
         :return:
         """
+
         class SmallSQLATask(sqla.CopyToTable):
             item = luigi.Parameter()
             property = luigi.Parameter()
-            columns = [
-                (["item", sqlalchemy.String(64)], {}),
-                (["property", sqlalchemy.String(64)], {})
-            ]
+            columns = [(["item", sqlalchemy.String(64)], {}), (["property", sqlalchemy.String(64)], {})]
             connection_string = self.connection_string
             table = "item_property"
             chunk_size = 1
@@ -389,6 +388,6 @@ class TestSQLA(unittest.TestCase):
 
 @pytest.mark.contrib
 class TestSQLA2(TestSQLA):
-    """ 2 workers version
-    """
+    """2 workers version"""
+
     NUM_WORKERS = 2

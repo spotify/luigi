@@ -16,7 +16,7 @@
 #
 import luigi
 from luigi.contrib.s3 import S3Target
-from luigi.contrib.spark import SparkSubmitTask, PySparkTask
+from luigi.contrib.spark import PySparkTask, SparkSubmitTask
 
 
 class InlinePySparkWordCount(PySparkTask):
@@ -35,21 +35,20 @@ class InlinePySparkWordCount(PySparkTask):
         # py-packages: numpy, pandas
 
     """
-    driver_memory = '2g'
-    executor_memory = '3g'
+
+    driver_memory = "2g"
+    executor_memory = "3g"
 
     def input(self):
         return S3Target("s3n://bucket.example.org/wordcount.input")
 
     def output(self):
-        return S3Target('s3n://bucket.example.org/wordcount.output')
+        return S3Target("s3n://bucket.example.org/wordcount.output")
 
     def main(self, sc, *args):
-        sc.textFile(self.input().path) \
-          .flatMap(lambda line: line.split()) \
-          .map(lambda word: (word, 1)) \
-          .reduceByKey(lambda a, b: a + b) \
-          .saveAsTextFile(self.output().path)
+        sc.textFile(self.input().path).flatMap(lambda line: line.split()).map(lambda word: (word, 1)).reduceByKey(lambda a, b: a + b).saveAsTextFile(
+            self.output().path
+        )
 
 
 class PySparkWordCount(SparkSubmitTask):
@@ -71,12 +70,13 @@ class PySparkWordCount(SparkSubmitTask):
         deploy-mode: client
 
     """
-    driver_memory = '2g'
-    executor_memory = '3g'
+
+    driver_memory = "2g"
+    executor_memory = "3g"
     total_executor_cores = luigi.IntParameter(default=100, significant=False)
 
     name = "PySpark Word Count"
-    app = 'wordcount.py'
+    app = "wordcount.py"
 
     def app_options(self):
         # These are passed to the Spark main args in the defined order.
@@ -86,10 +86,10 @@ class PySparkWordCount(SparkSubmitTask):
         return S3Target("s3n://bucket.example.org/wordcount.input")
 
     def output(self):
-        return S3Target('s3n://bucket.example.org/wordcount.output')
+        return S3Target("s3n://bucket.example.org/wordcount.output")
 
 
-'''
+"""
 // Corresponding example Spark Job, running Word count with Spark's Python API
 // This file would have to be saved into wordcount.py
 
@@ -104,4 +104,4 @@ if __name__ == "__main__":
       .map(lambda word: (word, 1)) \
       .reduceByKey(lambda a, b: a + b) \
       .saveAsTextFile(sys.argv[2])
-'''
+"""

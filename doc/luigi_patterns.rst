@@ -206,12 +206,12 @@ available while others are running.
 Avoiding concurrent writes to a single file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Updating a single file from several tasks is almost always a bad idea, and you 
+Updating a single file from several tasks is almost always a bad idea, and you
 need to be very confident that no other good solution exists before doing this.
 If, however, you have no other option, then you will probably at least need to ensure that
-no two tasks try to write to the file _simultaneously_.  
+no two tasks try to write to the file _simultaneously_.
 
-By turning 'resources' into a Python property, it can return a value dependent on 
+By turning 'resources' into a Python property, it can return a value dependent on
 the task parameters or other dynamic attributes:
 
 .. code-block:: python
@@ -223,7 +223,7 @@ the task parameters or other dynamic attributes:
         def resources(self):
             return { self.important_file_name: 1 }
 
-Since, by default, resources have a usage limit of 1, no two instances of Task A 
+Since, by default, resources have a usage limit of 1, no two instances of Task A
 will now run if they have the same `important_file_name` property.
 
 Decreasing resources of running tasks
@@ -321,7 +321,7 @@ atomic.
 Sending messages to tasks
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The central scheduler is able to send messages to particular tasks. When a running task accepts 
+The central scheduler is able to send messages to particular tasks. When a running task accepts
 messages, it can access a `multiprocessing.Queue <https://docs.python.org/3/library/multiprocessing.html#pipes-and-queues>`__
 object storing incoming messages. You can implement custom behavior to react and respond to
 messages:
@@ -353,3 +353,71 @@ messages:
 
 Messages can be sent right from the scheduler UI which also displays responses (if any). Note that
 this feature is only available when the scheduler is configured to send messages (see the :ref:`scheduler-config` config), and the task is configured to accept them.
+
+Gathering custom metrics from tasks' executions
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The central scheduler is able to gather custom metrics from tasks' executions with help of
+custom metrics collector (see the :ref:`scheduler-config` config). To obtain custom metrics,
+you need to implement:
+
+#. Custom metrics collector class inheriting from
+   :class:`~luigi.metrics.MetricsCollector` (or derived) and implementing the
+   :meth:`~luigi.metrics.MetricsCollector.handle_task_statistics`
+   method (default one does nothing). This method will be called for each task
+   that has been executed everytime, when
+   :meth:`~luigi.worker.TaskStatusReporter.report_task_statistics` is called.
+   For instance, following metrics collector adds monitoring tasks' execution
+   time and memory usage:
+
+   .. code-block:: python
+
+       class MetricsCollector(PrometheusMetricsCollector):
+           def __init__(self, *args, **kwargs):
+               super().__init__(*args, **kwargs)
+               self.task_run_execution_time = Gauge(
+                   'luigi_task_run_execution_time_seconds',
+                   'luigi task run method execution time in seconds',
+                   self.labels,
+                   registry=self.registry
+               )
+               self.task_execution_memory = Gauge(
+                   'luigi_task_max_memory_megabytes',
+                   'luigi task run method max memory usage in megabytes',
+                   self.labels,
+                   registry=self.registry
+               )
+
+           def handle_task_statistics(self, task, statistics):
+               if "elapsed" in statistics:
+                   self.task_run_execution_time.labels(**self._generate_task_labels(task)).set(statistics["elapsed"])
+               if "memory" in statistics:
+                   self.task_execution_memory.labels(**self._generate_task_labels(task)).set(statistics["memory"])
+
+#. Custom task context manager (see the :ref:`worker-config` config),
+   which in `__exit__` method would call
+   :meth:`~luigi.worker.TaskStatusReporter.report_task_statistics` method with
+   the statistics dictionary. For instance, following task context manager collects
+   task execution time and memory usage:
+
+   .. code-block:: python
+
+       class TaskContext:
+           def __init__(self, task_process):
+               self._task_process = task_process
+               self._start = None
+
+           def __enter__(self):
+               self._start = time.perf_counter()
+               return self
+
+           def __exit__(self, exc_type, exc_val, exc_tb):
+               assert self._start is not None
+               elapsed = time.perf_counter() - self._start
+               used_memory = max(
+                   resource.getrusage(resource.RUSAGE_SELF).ru_maxrss, resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss
+               )
+               logging.getLogger("luigi-interface").info(
+                   f'Task {self._task_process.task}: time: {elapsed:.2f}s, memory: {used_memory / 1024:.2f}MB '
+               )
+               self._task_process.status_reporter.report_task_statistics({"memory": used_memory / 1024, "elapsed": elapsed})

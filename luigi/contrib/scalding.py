@@ -28,7 +28,7 @@ import luigi.contrib.hdfs
 from luigi import LocalTarget
 from luigi.task import flatten
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 """
 Scalding support for Luigi.
@@ -66,48 +66,45 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
     def __init__(self):
         conf = luigi.configuration.get_config()
 
-        default = os.environ.get('SCALA_HOME', '/usr/share/scala')
-        self.scala_home = conf.get('scalding', 'scala-home', default)
+        default = os.environ.get("SCALA_HOME", "/usr/share/scala")
+        self.scala_home = conf.get("scalding", "scala-home", default)
 
-        default = os.environ.get('SCALDING_HOME', '/usr/share/scalding')
-        self.scalding_home = conf.get('scalding', 'scalding-home', default)
-        self.provided_dir = conf.get(
-            'scalding', 'scalding-provided', os.path.join(default, 'provided'))
-        self.libjars_dir = conf.get(
-            'scalding', 'scalding-libjars', os.path.join(default, 'libjars'))
+        default = os.environ.get("SCALDING_HOME", "/usr/share/scalding")
+        self.scalding_home = conf.get("scalding", "scalding-home", default)
+        self.provided_dir = conf.get("scalding", "scalding-provided", os.path.join(default, "provided"))
+        self.libjars_dir = conf.get("scalding", "scalding-libjars", os.path.join(default, "libjars"))
 
         self.tmp_dir = LocalTarget(is_tmp=True)
 
     def _get_jars(self, path):
-        return [os.path.join(path, j) for j in os.listdir(path)
-                if j.endswith('.jar')]
+        return [os.path.join(path, j) for j in os.listdir(path) if j.endswith(".jar")]
 
     def get_scala_jars(self, include_compiler=False):
-        lib_dir = os.path.join(self.scala_home, 'lib')
-        jars = [os.path.join(lib_dir, 'scala-library.jar')]
+        lib_dir = os.path.join(self.scala_home, "lib")
+        jars = [os.path.join(lib_dir, "scala-library.jar")]
 
         # additional jar for scala 2.10 only
-        reflect = os.path.join(lib_dir, 'scala-reflect.jar')
+        reflect = os.path.join(lib_dir, "scala-reflect.jar")
         if os.path.exists(reflect):
             jars.append(reflect)
 
         if include_compiler:
-            jars.append(os.path.join(lib_dir, 'scala-compiler.jar'))
+            jars.append(os.path.join(lib_dir, "scala-compiler.jar"))
 
         return jars
 
     def get_scalding_jars(self):
-        lib_dir = os.path.join(self.scalding_home, 'lib')
+        lib_dir = os.path.join(self.scalding_home, "lib")
         return self._get_jars(lib_dir)
 
     def get_scalding_core(self):
-        lib_dir = os.path.join(self.scalding_home, 'lib')
+        lib_dir = os.path.join(self.scalding_home, "lib")
         for j in os.listdir(lib_dir):
-            if j.startswith('scalding-core-'):
+            if j.startswith("scalding-core-"):
                 p = os.path.join(lib_dir, j)
-                logger.debug('Found scalding-core: %s', p)
+                logger.debug("Found scalding-core: %s", p)
                 return p
-        raise luigi.contrib.hadoop.HadoopJobError('Could not find scalding-core.')
+        raise luigi.contrib.hadoop.HadoopJobError("Could not find scalding-core.")
 
     def get_provided_jars(self):
         return self._get_jars(self.provided_dir)
@@ -117,10 +114,10 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
 
     def get_tmp_job_jar(self, source):
         job_name = os.path.basename(os.path.splitext(source)[0])
-        return os.path.join(self.tmp_dir.path, job_name + '.jar')
+        return os.path.join(self.tmp_dir.path, job_name + ".jar")
 
     def get_build_dir(self, source):
-        build_dir = os.path.join(self.tmp_dir.path, 'build')
+        build_dir = os.path.join(self.tmp_dir.path, "build")
         return build_dir
 
     def get_job_class(self, source):
@@ -130,21 +127,21 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         package = None
         job_class = None
         for line in open(source).readlines():
-            p = re.search(r'package\s+([^\s\(]+)', line)
+            p = re.search(r"package\s+([^\s\(]+)", line)
             if p:
                 package = p.groups()[0]
-            p = re.search(r'class\s+([^\s\(]+).*extends\s+.*Job', line)
+            p = re.search(r"class\s+([^\s\(]+).*extends\s+.*Job", line)
             if p:
                 job_class = p.groups()[0]
                 if job_class == job_name:
                     break
         if job_class:
             if package:
-                job_class = package + '.' + job_class
-            logger.debug('Found scalding job class: %s', job_class)
+                job_class = package + "." + job_class
+            logger.debug("Found scalding job class: %s", job_class)
             return job_class
         else:
-            raise luigi.contrib.hadoop.HadoopJobError('Coudl not find scalding job class.')
+            raise luigi.contrib.hadoop.HadoopJobError("Coudl not find scalding job class.")
 
     def build_job_jar(self, job):
         job_jar = job.jar()
@@ -172,53 +169,45 @@ class ScaldingJobRunner(luigi.contrib.hadoop.JobRunner):
         if not os.path.exists(build_dir):
             os.makedirs(build_dir)
 
-        classpath = ':'.join(filter(None,
-                                    self.get_scalding_jars() +
-                                    self.get_provided_jars() +
-                                    self.get_libjars() +
-                                    job.extra_jars()))
-        scala_cp = ':'.join(self.get_scala_jars(include_compiler=True))
+        classpath = ":".join(filter(None, self.get_scalding_jars() + self.get_provided_jars() + self.get_libjars() + job.extra_jars()))
+        scala_cp = ":".join(self.get_scala_jars(include_compiler=True))
 
         # compile scala source
-        arglist = ['java', '-cp', scala_cp, 'scala.tools.nsc.Main',
-                   '-classpath', classpath,
-                   '-d', build_dir, job_src]
-        logger.info('Compiling scala source: %s', subprocess.list2cmdline(arglist))
+        arglist = ["java", "-cp", scala_cp, "scala.tools.nsc.Main", "-classpath", classpath, "-d", build_dir, job_src]
+        logger.info("Compiling scala source: %s", subprocess.list2cmdline(arglist))
         subprocess.check_call(arglist)
 
         # build job jar file
-        arglist = ['jar', 'cf', job_jar, '-C', build_dir, '.']
-        logger.info('Building job jar: %s', subprocess.list2cmdline(arglist))
+        arglist = ["jar", "cf", job_jar, "-C", build_dir, "."]
+        logger.info("Building job jar: %s", subprocess.list2cmdline(arglist))
         subprocess.check_call(arglist)
         return job_jar
 
     def run_job(self, job, tracking_url_callback=None):
         if tracking_url_callback is not None:
-            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is "
-                          "used instead.", DeprecationWarning)
+            warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is used instead.", DeprecationWarning)
 
         job_jar = self.build_job_jar(job)
         jars = [job_jar] + self.get_libjars() + job.extra_jars()
         scalding_core = self.get_scalding_core()
-        libjars = ','.join(filter(None, jars))
-        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ['jar', scalding_core, '-libjars', libjars]
-        arglist += ['-D%s' % c for c in job.jobconfs()]
+        libjars = ",".join(filter(None, jars))
+        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ["jar", scalding_core, "-libjars", libjars]
+        arglist += ["-D%s" % c for c in job.jobconfs()]
 
         job_class = job.job_class() or self.get_job_class(job.source())
-        arglist += [job_class, '--hdfs']
+        arglist += [job_class, "--hdfs"]
 
         # scalding does not parse argument with '=' properly
-        arglist += ['--name', job.task_id.replace('=', ':')]
+        arglist += ["--name", job.task_id.replace("=", ":")]
 
         (tmp_files, job_args) = luigi.contrib.hadoop_jar.fix_paths(job)
         arglist += job_args
 
         env = os.environ.copy()
         jars.append(scalding_core)
-        hadoop_cp = ':'.join(filter(None, jars))
-        env['HADOOP_CLASSPATH'] = hadoop_cp
-        logger.info("Submitting Hadoop job: HADOOP_CLASSPATH=%s %s",
-                    hadoop_cp, subprocess.list2cmdline(arglist))
+        hadoop_cp = ":".join(filter(None, jars))
+        env["HADOOP_CLASSPATH"] = hadoop_cp
+        logger.info("Submitting Hadoop job: HADOOP_CLASSPATH=%s %s", hadoop_cp, subprocess.list2cmdline(arglist))
         luigi.contrib.hadoop.run_and_track_hadoop_job(arglist, job.set_tracking_url, env=env)
 
         for a, b in tmp_files:
@@ -301,8 +290,8 @@ class ScaldingJobTask(luigi.contrib.hadoop.BaseHadoopJobTask):
         """
         arglist = []
         for k, v in self.requires_hadoop().items():
-            arglist.append('--' + k)
+            arglist.append("--" + k)
             arglist.extend([t.output().path for t in flatten(v)])
-        arglist.extend(['--output', self.output()])
+        arglist.extend(["--output", self.output()])
         arglist.extend(self.job_args())
         return arglist

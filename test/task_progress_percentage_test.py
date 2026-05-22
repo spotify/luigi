@@ -23,10 +23,10 @@ import luigi.worker
 
 
 class TaskProgressPercentageTest(LuigiTestCase):
-
     def test_run(self):
         sch = luigi.scheduler.Scheduler()
         with luigi.worker.Worker(scheduler=sch) as w:
+
             class MyTask(luigi.Task):
                 def run(self):
                     self.set_progress_percentage(30)

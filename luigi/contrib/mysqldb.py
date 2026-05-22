@@ -18,17 +18,18 @@
 import logging
 
 import luigi
-
 from luigi.contrib import rdbms
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import mysql.connector
-    from mysql.connector import errorcode, Error
+    from mysql.connector import Error, errorcode
 except ImportError:
-    logger.warning("Loading MySQL module without the python package mysql-connector-python. \
-       This will crash at runtime if MySQL functionality is used.")
+    logger.warning(
+        "Loading MySQL module without the python package mysql-connector-python. \
+       This will crash at runtime if MySQL functionality is used."
+    )
 
 
 class MySqlTarget(luigi.Target):
@@ -36,7 +37,7 @@ class MySqlTarget(luigi.Target):
     Target for a resource in MySql.
     """
 
-    marker_table = luigi.configuration.get_config().get('mysql', 'marker-table', 'table_updates')
+    marker_table = luigi.configuration.get_config().get("mysql", "marker-table", "table_updates")
 
     def __init__(self, host, database, user, password, table, update_id, **cnx_kwargs):
         """
@@ -55,8 +56,8 @@ class MySqlTarget(luigi.Target):
         :param cnx_kwargs: optional params for mysql connector constructor.
             See https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html.
         """
-        if ':' in host:
-            self.host, self.port = host.split(':')
+        if ":" in host:
+            self.host, self.port = host.split(":")
             self.port = int(self.port)
         else:
             self.host = host
@@ -91,7 +92,7 @@ class MySqlTarget(luigi.Target):
                ON DUPLICATE KEY UPDATE
                update_id = VALUES(update_id)
             """.format(marker_table=self.marker_table),
-            (self.update_id, self.table)
+            (self.update_id, self.table),
         )
         # make sure update is properly marked
         assert self.exists(connection)
@@ -102,11 +103,12 @@ class MySqlTarget(luigi.Target):
             connection.autocommit = True
         cursor = connection.cursor()
         try:
-            cursor.execute("""SELECT 1 FROM {marker_table}
+            cursor.execute(
+                """SELECT 1 FROM {marker_table}
                 WHERE update_id = %s
                 LIMIT 1""".format(marker_table=self.marker_table),
-                           (self.update_id,)
-                           )
+                (self.update_id,),
+            )
             row = cursor.fetchone()
         except mysql.connector.Error as e:
             if e.errno == errorcode.ER_NO_SUCH_TABLE:
@@ -116,13 +118,9 @@ class MySqlTarget(luigi.Target):
         return row is not None
 
     def connect(self, autocommit=False):
-        connection = mysql.connector.connect(user=self.user,
-                                             password=self.password,
-                                             host=self.host,
-                                             port=self.port,
-                                             database=self.database,
-                                             autocommit=autocommit,
-                                             **self.cnx_kwargs)
+        connection = mysql.connector.connect(
+            user=self.user, password=self.password, host=self.host, port=self.port, database=self.database, autocommit=autocommit, **self.cnx_kwargs
+        )
         return connection
 
     def create_marker_table(self):
@@ -143,8 +141,7 @@ class MySqlTarget(luigi.Target):
                         PRIMARY KEY (update_id),
                         KEY id (id)
                     )
-                """
-                .format(marker_table=self.marker_table)
+                """.format(marker_table=self.marker_table)
             )
         except mysql.connector.Error as e:
             if e.errno == errorcode.ER_TABLE_EXISTS_ERROR:
@@ -170,11 +167,11 @@ class CopyToTable(rdbms.CopyToTable):
         """
         Return/yield tuples or lists corresponding to each row to be inserted.
         """
-        with self.input().open('r') as fobj:
+        with self.input().open("r") as fobj:
             for line in fobj:
-                yield line.strip('\n').split('\t')
+                yield line.strip("\n").split("\t")
 
-# everything below will rarely have to be overridden
+    # everything below will rarely have to be overridden
 
     def output(self):
         """
@@ -182,20 +179,12 @@ class CopyToTable(rdbms.CopyToTable):
 
         Normally you don't override this.
         """
-        return MySqlTarget(
-            host=self.host,
-            database=self.database,
-            user=self.user,
-            password=self.password,
-            table=self.table,
-            update_id=self.update_id
-
-        )
+        return MySqlTarget(host=self.host, database=self.database, user=self.user, password=self.password, table=self.table, update_id=self.update_id)
 
     def copy(self, cursor, file=None):
-        values = '({})'.format(','.join(['%s' for i in range(len(self.columns))]))
-        columns = '({})'.format(','.join([c[0] for c in self.columns]))
-        query = 'INSERT INTO {} {} VALUES {}'.format(self.table, columns, values)
+        values = "({})".format(",".join(["%s" for i in range(len(self.columns))]))
+        columns = "({})".format(",".join([c[0] for c in self.columns]))
+        query = "INSERT INTO {} {} VALUES {}".format(self.table, columns, values)
         rows = []
 
         for idx, row in enumerate(self.rows()):

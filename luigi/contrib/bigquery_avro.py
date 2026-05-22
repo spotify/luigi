@@ -1,19 +1,18 @@
-"""Specialized tasks for handling Avro data in BigQuery from GCS.
-"""
+"""Specialized tasks for handling Avro data in BigQuery from GCS."""
+
 import logging
 
 from luigi.contrib.bigquery import BigQueryLoadTask, SourceFormat
 from luigi.contrib.gcs import GCSClient
 from luigi.task import flatten
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import avro
     import avro.datafile
 except ImportError:
-    logger.warning('bigquery_avro module imported, but avro is not installed. Any '
-                   'BigQueryLoadAvro task will fail to propagate schema documentation')
+    logger.warning("bigquery_avro module imported, but avro is not installed. Any BigQueryLoadAvro task will fail to propagate schema documentation")
 
 
 class BigQueryLoadAvro(BigQueryLoadTask):
@@ -28,28 +27,29 @@ class BigQueryLoadAvro(BigQueryLoadTask):
 
     Override output() to return a BigQueryTarget representing the destination table.
     """
+
     source_format = SourceFormat.AVRO
 
     def _avro_uri(self, target):
-        path_or_uri = target.uri if hasattr(target, 'uri') else target.path
-        return path_or_uri if path_or_uri.endswith('.avro') else path_or_uri.rstrip('/') + '/*.avro'
+        path_or_uri = target.uri if hasattr(target, "uri") else target.path
+        return path_or_uri if path_or_uri.endswith(".avro") else path_or_uri.rstrip("/") + "/*.avro"
 
     def source_uris(self):
         return [self._avro_uri(x) for x in flatten(self.input())]
 
     def _get_input_schema(self):
         """Arbitrarily picks an object in input and reads the Avro schema from it."""
-        assert avro, 'avro module required'
+        assert avro, "avro module required"
 
         input_target = flatten(self.input())[0]
-        input_fs = input_target.fs if hasattr(input_target, 'fs') else GCSClient()
+        input_fs = input_target.fs if hasattr(input_target, "fs") else GCSClient()
         input_uri = self.source_uris()[0]
-        if '*' in input_uri:
+        if "*" in input_uri:
             file_uris = list(input_fs.list_wildcard(input_uri))
             if file_uris:
                 input_uri = file_uris[0]
             else:
-                raise RuntimeError('No match for ' + input_uri)
+                raise RuntimeError("No match for " + input_uri)
 
         schema = []
         exception_reading_schema = []
@@ -91,13 +91,10 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         table = self.output().table
 
         patch = {
-            'description': avro_schema.doc,
+            "description": avro_schema.doc,
         }
 
-        bq_client.tables().patch(projectId=table.project_id,
-                                 datasetId=table.dataset_id,
-                                 tableId=table.table_id,
-                                 body=patch).execute()
+        bq_client.tables().patch(projectId=table.project_id, datasetId=table.dataset_id, tableId=table.table_id, body=patch).execute()
 
     def run(self):
         super(BigQueryLoadAvro, self).run()
@@ -107,4 +104,4 @@ class BigQueryLoadAvro(BigQueryLoadTask):
         try:
             self._set_output_doc(self._get_input_schema())
         except Exception as e:
-            logger.warning('Could not propagate Avro doc to BigQuery table description: %r', e)
+            logger.warning("Could not propagate Avro doc to BigQuery table description: %r", e)

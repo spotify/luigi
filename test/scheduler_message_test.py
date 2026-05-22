@@ -16,8 +16,8 @@
 #
 
 import os
-import time
 import tempfile
+import time
 
 from helpers import LuigiTestCase, RunOnceTask
 
@@ -33,7 +33,6 @@ def fast_worker(scheduler, **kwargs):
 
 
 class WriteMessageToFile(luigi.Task):
-
     path = luigi.Parameter()
 
     accepts_messages = True
@@ -53,7 +52,6 @@ class WriteMessageToFile(luigi.Task):
 
 
 class SchedulerMessageTest(LuigiTestCase):
-
     def test_scheduler_methods(self):
         sch = luigi.scheduler.Scheduler(send_messages=True)
         sch.add_task(task_id="foo-task", worker="foo-worker")
@@ -88,6 +86,7 @@ class SchedulerMessageTest(LuigiTestCase):
     def test_receive_messages_disabled(self):
         sch = luigi.scheduler.Scheduler(send_messages=True)
         with fast_worker(sch, force_multiprocessing=False) as w:
+
             class MyTask(RunOnceTask):
                 def run(self):
                     self.had_queue = self.scheduler_messages is not None

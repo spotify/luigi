@@ -55,24 +55,24 @@ import luigi
 
 class PerTaskRetryPolicy(luigi.Task):
     """
-        Wrapper class for some error and success tasks. Worker won't be shutdown unless there is
-        pending tasks or failed tasks which will be retried. While keep-alive is active, workers
-        are not shutdown while there is/are some pending task(s).
+    Wrapper class for some error and success tasks. Worker won't be shutdown unless there is
+    pending tasks or failed tasks which will be retried. While keep-alive is active, workers
+    are not shutdown while there is/are some pending task(s).
 
     """
 
-    task_namespace = 'examples'
+    task_namespace = "examples"
 
     def requires(self):
         return [ErrorTask1(), ErrorTask2(), SuccessTask1(), DynamicErrorTaskSubmitter()]
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)
 
 
 class ErrorTask1(luigi.Task):
     """
-        This error class raises error to retry the task. retry-count for this task is 5. It can be seen on
+    This error class raises error to retry the task. retry-count for this task is 5. It can be seen on
     """
 
     retry = 0
@@ -81,15 +81,15 @@ class ErrorTask1(luigi.Task):
 
     def run(self):
         self.retry += 1
-        raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
+        raise Exception("Test Exception. Retry Index %s for %s" % (self.retry, self.task_family))
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)
 
 
 class ErrorTask2(luigi.Task):
     """
-        This error class raises error to retry the task. retry-count for this task is 2
+    This error class raises error to retry the task. retry-count for this task is 2
     """
 
     retry = 0
@@ -98,10 +98,10 @@ class ErrorTask2(luigi.Task):
 
     def run(self):
         self.retry += 1
-        raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
+        raise Exception("Test Exception. Retry Index %s for %s" % (self.retry, self.task_family))
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)
 
 
 class DynamicErrorTaskSubmitter(luigi.Task):
@@ -111,16 +111,16 @@ class DynamicErrorTaskSubmitter(luigi.Task):
         target = yield DynamicErrorTask1()
 
         if target.exists():
-            with self.output().open('w') as output:
-                output.write('SUCCESS DynamicErrorTaskSubmitter\n')
+            with self.output().open("w") as output:
+                output.write("SUCCESS DynamicErrorTaskSubmitter\n")
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)
 
 
 class DynamicErrorTask1(luigi.Task):
     """
-        This dynamic error task raises error to retry the task. retry-count for this task is 3
+    This dynamic error task raises error to retry the task. retry-count for this task is 3
     """
 
     retry = 0
@@ -129,10 +129,10 @@ class DynamicErrorTask1(luigi.Task):
 
     def run(self):
         self.retry += 1
-        raise Exception('Test Exception. Retry Index %s for %s' % (self.retry, self.task_family))
+        raise Exception("Test Exception. Retry Index %s for %s" % (self.retry, self.task_family))
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)
 
 
 class SuccessTask1(luigi.Task):
@@ -140,21 +140,21 @@ class SuccessTask1(luigi.Task):
         return [SuccessSubTask1()]
 
     def run(self):
-        with self.output().open('w') as output:
-            output.write('SUCCESS Test Task 4\n')
+        with self.output().open("w") as output:
+            output.write("SUCCESS Test Task 4\n")
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)
 
 
 class SuccessSubTask1(luigi.Task):
     """
-        This success task sleeps for a while and then it is completed successfully.
+    This success task sleeps for a while and then it is completed successfully.
     """
 
     def run(self):
-        with self.output().open('w') as output:
-            output.write('SUCCESS Test Task 4.1\n')
+        with self.output().open("w") as output:
+            output.write("SUCCESS Test Task 4.1\n")
 
     def output(self):
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.task_id)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.task_id)

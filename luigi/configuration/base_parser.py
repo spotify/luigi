@@ -23,11 +23,11 @@ import logging
 class BaseParser:
     @classmethod
     def instance(cls, *args, **kwargs):
-        """ Singleton getter """
+        """Singleton getter"""
         if cls._instance is None:
             cls._instance = cls(*args, **kwargs)
             loaded = cls._instance.reload()
-            logging.getLogger('luigi-interface').info('Loaded %r', loaded)
+            logging.getLogger("luigi-interface").info("Loaded %r", loaded)
 
         return cls._instance
 

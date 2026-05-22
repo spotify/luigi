@@ -32,6 +32,7 @@ class ExternalStreams(luigi.ExternalTask):
     To depend on external targets (typically at the top of your dependency graph), you can define
     an ExternalTask like this.
     """
+
     date = luigi.DateParameter()
 
     def output(self):
@@ -42,25 +43,23 @@ class ExternalStreams(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y-%m-%d.tsv'))
+        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime("data/streams_%Y-%m-%d.tsv"))
 
 
 class Streams(luigi.Task):
     """
     Faked version right now, just generates bogus data.
     """
+
     date = luigi.DateParameter()
 
     def run(self):
         """
         Generates bogus data and writes it into the :py:meth:`~.Streams.output` target.
         """
-        with self.output().open('w') as output:
+        with self.output().open("w") as output:
             for _ in range(1000):
-                output.write('{} {} {}\n'.format(
-                    random.randint(0, 999),
-                    random.randint(0, 999),
-                    random.randint(0, 999)))
+                output.write("{} {} {}\n".format(random.randint(0, 999), random.randint(0, 999), random.randint(0, 999)))
 
     def output(self):
         """
@@ -70,7 +69,7 @@ class Streams(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
+        return luigi.LocalTarget(self.date.strftime("data/streams_%Y_%m_%d_faked.tsv"))
 
 
 class StreamsHdfs(Streams):
@@ -89,7 +88,7 @@ class StreamsHdfs(Streams):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime('data/streams_%Y_%m_%d_faked.tsv'))
+        return luigi.contrib.hdfs.HdfsTarget(self.date.strftime("data/streams_%Y_%m_%d_faked.tsv"))
 
 
 class AggregateArtists(luigi.Task):
@@ -124,14 +123,14 @@ class AggregateArtists(luigi.Task):
         artist_count = defaultdict(int)
 
         for t in self.input():
-            with t.open('r') as in_file:
+            with t.open("r") as in_file:
                 for line in in_file:
                     _, artist, track = line.strip().split()
                     artist_count[artist] += 1
 
-        with self.output().open('w') as out_file:
+        with self.output().open("w") as out_file:
             for artist, count in artist_count.items():
-                out_file.write('{}\t{}\n'.format(artist, count))
+                out_file.write("{}\t{}\n".format(artist, count))
 
 
 class AggregateArtistsSpark(luigi.contrib.spark.SparkSubmitTask):
@@ -148,13 +147,13 @@ class AggregateArtistsSpark(luigi.contrib.spark.SparkSubmitTask):
 
     For Spark applications written in Java or Scala, the name of a jar file should be supplied instead.
     """
-    app = 'top_artists_spark.py'
+    app = "top_artists_spark.py"
 
     """
     Address of the Spark cluster master. In this case, we are not using a cluster, but running
     Spark in local mode.
     """
-    master = 'local[*]'
+    master = "local[*]"
 
     def output(self):
         """
@@ -179,8 +178,7 @@ class AggregateArtistsSpark(luigi.contrib.spark.SparkSubmitTask):
     def app_options(self):
         # :func:`~luigi.task.Task.input` returns the targets produced by the tasks in
         # `~luigi.task.Task.requires`.
-        return [','.join([p.path for p in self.input()]),
-                self.output().path]
+        return [",".join([p.path for p in self.input()]), self.output().path]
 
 
 class Top10Artists(luigi.Task):
@@ -219,18 +217,13 @@ class Top10Artists(luigi.Task):
 
     def run(self):
         top_10 = nlargest(10, self._input_iterator())
-        with self.output().open('w') as out_file:
+        with self.output().open("w") as out_file:
             for streams, artist in top_10:
-                out_line = '\t'.join([
-                    str(self.date_interval.date_a),
-                    str(self.date_interval.date_b),
-                    artist,
-                    str(streams)
-                ])
-                out_file.write((out_line + '\n'))
+                out_line = "\t".join([str(self.date_interval.date_a), str(self.date_interval.date_b), artist, str(streams)])
+                out_file.write((out_line + "\n"))
 
     def _input_iterator(self):
-        with self.input().open('r') as in_file:
+        with self.input().open("r") as in_file:
             for line in in_file:
                 artist, streams = line.strip().split()
                 yield int(streams), artist
@@ -256,10 +249,7 @@ class ArtistToplistToDatabase(luigi.contrib.postgres.CopyToTable):
     password = "abc123"  # ;)
     table = "top10"
 
-    columns = [("date_from", "DATE"),
-               ("date_to", "DATE"),
-               ("artist", "TEXT"),
-               ("streams", "INT")]
+    columns = [("date_from", "DATE"), ("date_to", "DATE"), ("artist", "TEXT"), ("streams", "INT")]
 
     def requires(self):
         """

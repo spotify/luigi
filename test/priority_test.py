@@ -40,11 +40,10 @@ class PrioTask(luigi.Task):
         PrioTask.run_counter += 1
 
     def complete(self):
-        return hasattr(self, 't')
+        return hasattr(self, "t")
 
 
 class PriorityTest(unittest.TestCase):
-
     def test_priority(self):
         p, q, r = PrioTask(1), PrioTask(2), PrioTask(3)
         luigi.build([p, q, r], local_scheduler=True)

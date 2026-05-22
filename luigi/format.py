@@ -15,12 +15,12 @@
 # limitations under the License.
 #
 
-import signal
-import subprocess
 import io
+import locale
 import os
 import re
-import locale
+import signal
+import subprocess
 import tempfile
 import warnings
 
@@ -52,7 +52,6 @@ class FileWrapper:
 
 
 class InputPipeProcessWrapper:
-
     def __init__(self, command, input_pipe=None):
         """
         Initializes a InputPipeProcessWrapper instance.
@@ -72,7 +71,7 @@ class InputPipeProcessWrapper:
             except (AttributeError, io.UnsupportedOperation):
                 # subprocess require a fileno to work, if not present we copy to disk first
                 self._original_input = False
-                f = tempfile.NamedTemporaryFile('wb', prefix='luigi-process_tmp', delete=False)
+                f = tempfile.NamedTemporaryFile("wb", prefix="luigi-process_tmp", delete=False)
                 self._tmp_file = f.name
                 while True:
                     chunk = input_pipe.read(io.DEFAULT_BUFFER_SIZE)
@@ -81,7 +80,7 @@ class InputPipeProcessWrapper:
                     f.write(chunk)
                 input_pipe.close()
                 f.close()
-                self._input_pipe = FileWrapper(io.BufferedReader(io.FileIO(self._tmp_file, 'r')))
+                self._input_pipe = FileWrapper(io.BufferedReader(io.FileIO(self._tmp_file, "r")))
 
         self._process = command if isinstance(command, subprocess.Popen) else self.create_subprocess(command)
         # we want to keep a circular reference to avoid garbage collection
@@ -98,11 +97,7 @@ class InputPipeProcessWrapper:
             # non-Python subprocesses expect.
             signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
-        return subprocess.Popen(command,
-                                stdin=self._input_pipe,
-                                stdout=subprocess.PIPE,
-                                preexec_fn=subprocess_setup,
-                                close_fds=True)
+        return subprocess.Popen(command, stdin=self._input_pipe, stdout=subprocess.PIPE, preexec_fn=subprocess_setup, close_fds=True)
 
     def _finish(self):
         # Need to close this before input_pipe to get all SIGPIPE messages correctly
@@ -117,7 +112,7 @@ class InputPipeProcessWrapper:
         if self._process.returncode not in (0, 141, 128 - 141):
             # 141 == 128 + 13 == 128 + SIGPIPE - normally processes exit with 128 + {reiceived SIG}
             # 128 - 141 == -13 == -SIGPIPE, sometimes python receives -13 for some subprocesses
-            raise RuntimeError('Error reading from pipe. Subcommand exited with non-zero exit status %s.' % self._process.returncode)
+            raise RuntimeError("Error reading from pipe. Subcommand exited with non-zero exit status %s." % self._process.returncode)
 
     def close(self):
         self._finish()
@@ -146,7 +141,7 @@ class InputPipeProcessWrapper:
             self._finish()
 
     def __getattr__(self, name):
-        if name in ['_process', '_input_pipe']:
+        if name in ["_process", "_input_pipe"]:
             raise AttributeError(name)
         try:
             return getattr(self._process.stdout, name)
@@ -175,10 +170,7 @@ class OutputPipeProcessWrapper:
         self.closed = False
         self._command = command
         self._output_pipe = output_pipe
-        self._process = subprocess.Popen(command,
-                                         stdin=subprocess.PIPE,
-                                         stdout=output_pipe,
-                                         close_fds=True)
+        self._process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=output_pipe, close_fds=True)
         self._flushcount = 0
 
     def write(self, *args, **kwargs):
@@ -189,8 +181,8 @@ class OutputPipeProcessWrapper:
             self._flushcount = 0
 
     def writeLine(self, line):
-        assert '\n' not in line
-        self.write(line + '\n')
+        assert "\n" not in line
+        self.write(line + "\n")
 
     def _finish(self):
         """
@@ -221,13 +213,13 @@ class OutputPipeProcessWrapper:
             if self._output_pipe is not None:
                 self._output_pipe.close()
         else:
-            raise RuntimeError('Error when executing command %s' % self._command)
+            raise RuntimeError("Error when executing command %s" % self._command)
 
     def abort(self):
         self._finish()
 
     def __getattr__(self, name):
-        if name in ['_process', '_output_pipe']:
+        if name in ["_process", "_output_pipe"]:
             raise AttributeError(name)
         try:
             return getattr(self._process.stdin, name)
@@ -245,7 +237,6 @@ class OutputPipeProcessWrapper:
 
 
 class BaseWrapper:
-
     def __init__(self, stream, *args, **kwargs):
         self._stream = stream
         try:
@@ -254,7 +245,7 @@ class BaseWrapper:
             pass
 
     def __getattr__(self, name):
-        if name == '_stream':
+        if name == "_stream":
             raise AttributeError(name)
         return getattr(self._stream, name)
 
@@ -274,50 +265,46 @@ class BaseWrapper:
 
 
 class NewlineWrapper(BaseWrapper):
-
     def __init__(self, stream, newline=None):
         if newline is None:
             self.newline = newline
         else:
-            self.newline = newline.encode('ascii')
+            self.newline = newline.encode("ascii")
 
-        if self.newline not in (b'', b'\r\n', b'\n', b'\r', None):
+        if self.newline not in (b"", b"\r\n", b"\n", b"\r", None):
             raise ValueError("newline need to be one of {b'', b'\r\n', b'\n', b'\r', None}")
         super(NewlineWrapper, self).__init__(stream)
 
     def read(self, n=-1):
         b = self._stream.read(n)
 
-        if self.newline == b'':
+        if self.newline == b"":
             return b
 
         if self.newline is None:
-            newline = b'\n'
+            newline = b"\n"
 
-        return re.sub(b'(\n|\r\n|\r)', newline, b)
+        return re.sub(b"(\n|\r\n|\r)", newline, b)
 
     def writelines(self, lines):
-        if self.newline is None or self.newline == '':
-            newline = os.linesep.encode('ascii')
+        if self.newline is None or self.newline == "":
+            newline = os.linesep.encode("ascii")
         else:
             newline = self.newline
 
-        self._stream.writelines(
-            (re.sub(b'(\n|\r\n|\r)', newline, line) for line in lines)
-        )
+        self._stream.writelines((re.sub(b"(\n|\r\n|\r)", newline, line) for line in lines))
 
     def write(self, b):
-        if self.newline is None or self.newline == '':
-            newline = os.linesep.encode('ascii')
+        if self.newline is None or self.newline == "":
+            newline = os.linesep.encode("ascii")
         else:
             newline = self.newline
 
-        self._stream.write(re.sub(b'(\n|\r\n|\r)', newline, b))
+        self._stream.write(re.sub(b"(\n|\r\n|\r)", newline, b))
 
 
 class MixedUnicodeBytesWrapper(BaseWrapper):
-    """
-    """
+    """ """
 
     def __init__(self, stream, encoding=None):
         if encoding is None:
@@ -334,7 +321,7 @@ class MixedUnicodeBytesWrapper(BaseWrapper):
     def _convert(self, b):
         if isinstance(b, str):
             b = b.encode(self.encoding)
-            warnings.warn('Writing unicode to byte stream', stacklevel=2)
+            warnings.warn("Writing unicode to byte stream", stacklevel=2)
         return b
 
 
@@ -356,7 +343,6 @@ class Format:
 
 
 class ChainFormat(Format):
-
     def __init__(self, *args, **kwargs):
         self.args = args
         try:
@@ -367,14 +353,15 @@ class ChainFormat(Format):
             self.output = args[-1].output
         except AttributeError:
             pass
-        if not kwargs.get('check_consistency', True):
+        if not kwargs.get("check_consistency", True):
             return
         for x in range(len(args) - 1):
             try:
                 if args[x].output != args[x + 1].input:
                     raise TypeError(
-                        'The format chaining is not valid, %s expect %s'
-                        ' but %s provide %s' % (
+                        "The format chaining is not valid, %s expect %s"
+                        " but %s provide %s"
+                        % (
                             args[x + 1].__class__.__name__,
                             args[x + 1].input,
                             args[x].__class__.__name__,
@@ -396,7 +383,6 @@ class ChainFormat(Format):
 
 
 class TextWrapper(io.TextIOWrapper):
-
     def __exit__(self, *args):
         # io.TextIOWrapper close the file on __exit__, let the underlying file decide
         if not self.closed and self.writable():
@@ -422,7 +408,7 @@ class TextWrapper(io.TextIOWrapper):
             pass
 
     def __getattr__(self, name):
-        if name == '_stream':
+        if name == "_stream":
             raise AttributeError(name)
         return getattr(self._stream, name)
 
@@ -440,7 +426,6 @@ class NopFormat(Format):
 
 
 class WrappedFormat(Format):
-
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
@@ -453,57 +438,52 @@ class WrappedFormat(Format):
 
 
 class TextFormat(WrappedFormat):
-
-    input = 'unicode'
-    output = 'bytes'
+    input = "unicode"
+    output = "bytes"
     wrapper_cls = TextWrapper
 
 
 class MixedUnicodeBytesFormat(WrappedFormat):
-
-    output = 'bytes'
+    output = "bytes"
     wrapper_cls = MixedUnicodeBytesWrapper
 
 
 class NewlineFormat(WrappedFormat):
-
-    input = 'bytes'
-    output = 'bytes'
+    input = "bytes"
+    output = "bytes"
     wrapper_cls = NewlineWrapper
 
 
 class GzipFormat(Format):
-
-    input = 'bytes'
-    output = 'bytes'
+    input = "bytes"
+    output = "bytes"
 
     def __init__(self, compression_level=None):
         self.compression_level = compression_level
 
     def pipe_reader(self, input_pipe):
-        return InputPipeProcessWrapper(['gunzip'], input_pipe)
+        return InputPipeProcessWrapper(["gunzip"], input_pipe)
 
     def pipe_writer(self, output_pipe):
-        args = ['gzip']
+        args = ["gzip"]
         if self.compression_level is not None:
-            args.append('-' + str(int(self.compression_level)))
+            args.append("-" + str(int(self.compression_level)))
         return OutputPipeProcessWrapper(args, output_pipe)
 
 
 class Bzip2Format(Format):
-
-    input = 'bytes'
-    output = 'bytes'
+    input = "bytes"
+    output = "bytes"
 
     def pipe_reader(self, input_pipe):
-        return InputPipeProcessWrapper(['bzcat'], input_pipe)
+        return InputPipeProcessWrapper(["bzcat"], input_pipe)
 
     def pipe_writer(self, output_pipe):
-        return OutputPipeProcessWrapper(['bzip2'], output_pipe)
+        return OutputPipeProcessWrapper(["bzip2"], output_pipe)
 
 
 Text = TextFormat()
-UTF8 = TextFormat(encoding='utf8')
+UTF8 = TextFormat(encoding="utf8")
 Nop = NopFormat()
 SysNewLine = NewlineFormat()
 Gzip = GzipFormat()

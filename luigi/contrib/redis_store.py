@@ -18,28 +18,24 @@
 import datetime
 import logging
 
-from luigi.target import Target
 from luigi.parameter import Parameter
+from luigi.target import Target
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 try:
     import redis
 
 except ImportError:
-    logger.warning("Loading redis_store module without redis installed. "
-                   "Will crash at runtime if redis_store functionality is used.")
+    logger.warning("Loading redis_store module without redis installed. Will crash at runtime if redis_store functionality is used.")
 
 
 class RedisTarget(Target):
+    """Target for a resource in Redis."""
 
-    """ Target for a resource in Redis."""
+    marker_prefix = Parameter(default="luigi", config_path=dict(section="redis", name="marker-prefix"))
 
-    marker_prefix = Parameter(default='luigi',
-                              config_path=dict(section='redis', name='marker-prefix'))
-
-    def __init__(self, host, port, db, update_id, password=None,
-                 socket_timeout=None, expire=None):
+    def __init__(self, host, port, db, update_id, password=None, socket_timeout=None, expire=None):
         """
         :param host: Redis server host
         :type host: str
@@ -80,7 +76,7 @@ class RedisTarget(Target):
         """
         Generate a key for the indicator hash.
         """
-        return '%s:%s' % (self.marker_prefix, self.update_id)
+        return "%s:%s" % (self.marker_prefix, self.update_id)
 
     def touch(self):
         """
@@ -89,8 +85,8 @@ class RedisTarget(Target):
         We index the parameters `update_id` and `date`.
         """
         marker_key = self.marker_key()
-        self.redis_client.hset(marker_key, 'update_id', self.update_id)
-        self.redis_client.hset(marker_key, 'date', datetime.datetime.now().isoformat())
+        self.redis_client.hset(marker_key, "update_id", self.update_id)
+        self.redis_client.hset(marker_key, "date", datetime.datetime.now().isoformat())
 
         if self.expire is not None:
             self.redis_client.expire(marker_key, self.expire)

@@ -17,6 +17,7 @@
 
 import datetime
 import pickle
+
 from helpers import unittest
 
 import luigi
@@ -29,7 +30,7 @@ luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
-    task_namespace = 'decorator'  # to prevent task name conflict between tests
+    task_namespace = "decorator"  # to prevent task name conflict between tests
     param1 = luigi.Parameter("class A-specific default")
 
 
@@ -65,7 +66,6 @@ class E_stacked(luigi.Task):
 
 
 class InheritTest(unittest.TestCase):
-
     def setUp(self):
         self.a = A()
         self.a_changed = A(param1=34)
@@ -109,6 +109,7 @@ class InheritTest(unittest.TestCase):
 
     def test_empty_inheritance(self):
         with self.assertRaises(TypeError):
+
             @inherits()
             class shouldfail(luigi.Task):
                 pass
@@ -117,7 +118,7 @@ class InheritTest(unittest.TestCase):
         self.assertFalse("param1" in dict(self.d_null.get_params()).keys())
 
     def test_wrapper_preserve_attributes(self):
-        self.assertEqual(B.__name__, 'B')
+        self.assertEqual(B.__name__, "B")
 
 
 class F(luigi.Task):
@@ -151,7 +152,6 @@ class H_null(luigi.Task):
 
 @inherits(G)
 class I_task(luigi.Task):
-
     def requires(self):
         return F(**common_params(self, F))
 
@@ -193,7 +193,6 @@ class K_wrongparamsorder(luigi.Task):
 
 
 class RequiresTest(unittest.TestCase):
-
     def setUp(self):
         self.f = F()
         self.g = G()
@@ -236,7 +235,7 @@ class RequiresTest(unittest.TestCase):
         self.assertRaises(MissingParameterException, K_shouldnotinstantiate)
 
     def test_resuscitation(self):
-        k = K_shouldnotinstantiate(param1='hello')
+        k = K_shouldnotinstantiate(param1="hello")
         k.requires()
 
     def test_wrong_common_params_order(self):
@@ -249,7 +248,6 @@ class V(luigi.Task):
 
 @inherits(V)
 class W(luigi.Task):
-
     def requires(self):
         return self.clone_parent()
 
@@ -274,7 +272,6 @@ class Y(luigi.Task):
 
 
 class CloneParentTest(unittest.TestCase):
-
     def test_clone_parent(self):
         w = W()
         v = V()
@@ -303,6 +300,7 @@ class CloneParentTest(unittest.TestCase):
 
     def test_empty_requires(self):
         with self.assertRaises(TypeError):
+
             @requires()
             class shouldfail(luigi.Task):
                 pass
@@ -310,39 +308,36 @@ class CloneParentTest(unittest.TestCase):
     def test_names(self):
         # Just make sure the decorators retain the original class names
         v = V()
-        self.assertEqual(str(v), 'V(n=42)')
-        self.assertEqual(v.__class__.__name__, 'V')
+        self.assertEqual(str(v), "V(n=42)")
+        self.assertEqual(v.__class__.__name__, "V")
 
 
 class P(luigi.Task):
     date = luigi.DateParameter()
 
     def output(self):
-        return MockTarget(self.date.strftime('/tmp/data-%Y-%m-%d.txt'))
+        return MockTarget(self.date.strftime("/tmp/data-%Y-%m-%d.txt"))
 
     def run(self):
-        f = self.output().open('w')
-        print('hello, world', file=f)
+        f = self.output().open("w")
+        print("hello, world", file=f)
         f.close()
 
 
 @copies(P)
 class PCopy(luigi.Task):
-
     def output(self):
-        return MockTarget(self.date.strftime('/tmp/copy-data-%Y-%m-%d.txt'))
+        return MockTarget(self.date.strftime("/tmp/copy-data-%Y-%m-%d.txt"))
 
 
 class CopyTest(unittest.TestCase):
-
     def test_copy(self):
         luigi.build([PCopy(date=datetime.date(2012, 1, 1))], local_scheduler=True)
-        self.assertEqual(MockTarget.fs.get_data('/tmp/data-2012-01-01.txt'), b'hello, world\n')
-        self.assertEqual(MockTarget.fs.get_data('/tmp/copy-data-2012-01-01.txt'), b'hello, world\n')
+        self.assertEqual(MockTarget.fs.get_data("/tmp/data-2012-01-01.txt"), b"hello, world\n")
+        self.assertEqual(MockTarget.fs.get_data("/tmp/copy-data-2012-01-01.txt"), b"hello, world\n")
 
 
 class PickleTest(unittest.TestCase):
-
     def test_pickle(self):
         # similar to CopyTest.test_copy
         p = PCopy(date=datetime.date(2013, 1, 1))
@@ -350,20 +345,19 @@ class PickleTest(unittest.TestCase):
         p = pickle.loads(p_pickled)
 
         luigi.build([p], local_scheduler=True)
-        self.assertEqual(MockTarget.fs.get_data('/tmp/data-2013-01-01.txt'), b'hello, world\n')
-        self.assertEqual(MockTarget.fs.get_data('/tmp/copy-data-2013-01-01.txt'), b'hello, world\n')
+        self.assertEqual(MockTarget.fs.get_data("/tmp/data-2013-01-01.txt"), b"hello, world\n")
+        self.assertEqual(MockTarget.fs.get_data("/tmp/copy-data-2013-01-01.txt"), b"hello, world\n")
 
 
 class Subtask(luigi.Task):
     k = luigi.IntParameter()
 
     def f(self, x):
-        return x ** self.k
+        return x**self.k
 
 
 @delegates
 class SubtaskDelegator(luigi.Task):
-
     def subtasks(self):
         return [Subtask(1), Subtask(2)]
 
@@ -374,7 +368,6 @@ class SubtaskDelegator(luigi.Task):
 
 
 class SubtaskTest(unittest.TestCase):
-
     def test_subtasks(self):
         sd = SubtaskDelegator()
         luigi.build([sd], local_scheduler=True)
@@ -392,4 +385,5 @@ class SubtaskTest(unittest.TestCase):
         # Exposes issue where wrapped tasks are registered twice under
         # the same name
         from luigi.task import Register
-        self.assertEqual(Register.get_task_cls('SubtaskDelegator'), SubtaskDelegator)
+
+        self.assertEqual(Register.get_task_cls("SubtaskDelegator"), SubtaskDelegator)

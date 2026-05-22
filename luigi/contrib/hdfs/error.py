@@ -21,15 +21,9 @@ The implementations of the hdfs clients.
 
 
 class HDFSCliError(Exception):
-
     def __init__(self, command, returncode, stdout, stderr):
         self.returncode = returncode
         self.stdout = stdout
         self.stderr = stderr
-        msg = ("Command %r failed [exit code %d]\n"
-               "---stdout---\n"
-               "%s\n"
-               "---stderr---\n"
-               "%s"
-               "------------") % (command, returncode, stdout, stderr)
+        msg = ("Command %r failed [exit code %d]\n---stdout---\n%s\n---stderr---\n%s------------") % (command, returncode, stdout, stderr)
         super(HDFSCliError, self).__init__(msg)

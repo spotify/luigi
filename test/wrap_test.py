@@ -16,6 +16,7 @@
 #
 
 import datetime
+
 from helpers import unittest
 
 import luigi
@@ -27,14 +28,14 @@ luigi.notifications.DEBUG = True
 
 
 class A(luigi.Task):
-    task_namespace = 'wrap'  # to prevent task name conflict between tests
+    task_namespace = "wrap"  # to prevent task name conflict between tests
 
     def output(self):
-        return MockTarget('/tmp/a.txt')
+        return MockTarget("/tmp/a.txt")
 
     def run(self):
-        f = self.output().open('w')
-        print('hello, world', file=f)
+        f = self.output().open("w")
+        print("hello, world", file=f)
         f.close()
 
 
@@ -42,49 +43,46 @@ class B(luigi.Task):
     date = luigi.DateParameter()
 
     def output(self):
-        return MockTarget(self.date.strftime('/tmp/b-%Y-%m-%d.txt'))
+        return MockTarget(self.date.strftime("/tmp/b-%Y-%m-%d.txt"))
 
     def run(self):
-        f = self.output().open('w')
-        print('goodbye, space', file=f)
+        f = self.output().open("w")
+        print("goodbye, space", file=f)
         f.close()
 
 
 def XMLWrapper(cls):
     @inherits(cls)
     class XMLWrapperCls(luigi.Task):
-
         def requires(self):
             return self.clone_parent()
 
         def run(self):
-            f = self.input().open('r')
-            g = self.output().open('w')
+            f = self.input().open("r")
+            g = self.output().open("w")
             print('<?xml version="1.0" ?>', file=g)
             for line in f:
-                print('<dummy-xml>' + line.strip() + '</dummy-xml>', file=g)
+                print("<dummy-xml>" + line.strip() + "</dummy-xml>", file=g)
             g.close()
 
     return XMLWrapperCls
 
 
 class AXML(XMLWrapper(A)):
-
     def output(self):
-        return MockTarget('/tmp/a.xml')
+        return MockTarget("/tmp/a.xml")
 
 
 class BXML(XMLWrapper(B)):
-
     def output(self):
-        return MockTarget(self.date.strftime('/tmp/b-%Y-%m-%d.xml'))
+        return MockTarget(self.date.strftime("/tmp/b-%Y-%m-%d.xml"))
 
 
 class WrapperTest(unittest.TestCase):
+    """This test illustrates how a task class can wrap another task class by modifying its behavior.
 
-    ''' This test illustrates how a task class can wrap another task class by modifying its behavior.
+    See instance_wrap_test.py for an example of how instances can wrap each other."""
 
-    See instance_wrap_test.py for an example of how instances can wrap each other. '''
     workers = 1
 
     def setUp(self):
@@ -92,11 +90,11 @@ class WrapperTest(unittest.TestCase):
 
     def test_a(self):
         luigi.build([AXML()], local_scheduler=True, no_lock=True, workers=self.workers)
-        self.assertEqual(MockTarget.fs.get_data('/tmp/a.xml'), b'<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
+        self.assertEqual(MockTarget.fs.get_data("/tmp/a.xml"), b'<?xml version="1.0" ?>\n<dummy-xml>hello, world</dummy-xml>\n')
 
     def test_b(self):
         luigi.build([BXML(datetime.date(2012, 1, 1))], local_scheduler=True, no_lock=True, workers=self.workers)
-        self.assertEqual(MockTarget.fs.get_data('/tmp/b-2012-01-01.xml'), b'<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
+        self.assertEqual(MockTarget.fs.get_data("/tmp/b-2012-01-01.xml"), b'<?xml version="1.0" ?>\n<dummy-xml>goodbye, space</dummy-xml>\n')
 
 
 class WrapperWithMultipleWorkersTest(WrapperTest):

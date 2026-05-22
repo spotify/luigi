@@ -41,11 +41,10 @@ class FakeDocuments(luigi.Task):
 
         """
         today = datetime.date.today()
-        with self.output().open('w') as output:
+        with self.output().open("w") as output:
             for i in range(5):
-                output.write(json.dumps({'_id': i, 'text': 'Hi %s' % i,
-                                         'date': str(today)}))
-                output.write('\n')
+                output.write(json.dumps({"_id": i, "text": "Hi %s" % i, "date": str(today)}))
+                output.write("\n")
 
     def output(self):
         """
@@ -55,7 +54,7 @@ class FakeDocuments(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`luigi.target.Target`)
         """
-        return luigi.LocalTarget(path='/tmp/_docs-%s.ldj' % self.date)
+        return luigi.LocalTarget(path="/tmp/_docs-%s.ldj" % self.date)
 
 
 class IndexDocuments(CopyToIndex):
@@ -88,15 +87,16 @@ class IndexDocuments(CopyToIndex):
         $ curl -XDELETE "localhost:9200/update_log/_query?q=target_index:example_index"
 
     """
+
     #: date task parameter (default = today)
     date = luigi.DateParameter(default=datetime.date.today())
 
     #: the name of the index in ElasticSearch to be updated.
-    index = 'example_index'
+    index = "example_index"
     #: the name of the document type.
-    doc_type = 'greetings'
+    doc_type = "greetings"
     #: the host running the ElasticSearch service.
-    host = 'localhost'
+    host = "localhost"
     #: the port used by the ElasticSearch service.
     port = 9200
 
@@ -112,4 +112,4 @@ class IndexDocuments(CopyToIndex):
 
 
 if __name__ == "__main__":
-    luigi.run(['IndexDocuments', '--local-scheduler'])
+    luigi.run(["IndexDocuments", "--local-scheduler"])

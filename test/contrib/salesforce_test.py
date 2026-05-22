@@ -20,14 +20,14 @@
 Unit test for the Salesforce contrib package
 """
 
-from luigi.contrib.salesforce import SalesforceAPI, QuerySalesforce
-
-from helpers import unittest
-import mock
-from luigi.mock import MockTarget
 import re
 
+import mock
 import pytest
+from helpers import unittest
+
+from luigi.contrib.salesforce import QuerySalesforce, SalesforceAPI
+from luigi.mock import MockTarget
 
 
 def mocked_requests_get(*args, **kwargs):
@@ -44,9 +44,7 @@ def mocked_requests_get(*args, **kwargs):
             return None
 
     result_list = (
-        '<result-list xmlns="http://www.force.com/2009/06/asyncapi/dataload">'
-        '<result>1234</result><result>1235</result><result>1236</result>'
-        '</result-list>'
+        '<result-list xmlns="http://www.force.com/2009/06/asyncapi/dataload"><result>1234</result><result>1235</result><result>1236</result></result-list>'
     )
     return MockResponse(result_list, 200)
 
@@ -65,27 +63,27 @@ def mocked_open(*args, **kwargs):
 @pytest.mark.contrib
 class TestSalesforceAPI(unittest.TestCase):
     # We patch 'requests.get' with our own method. The mock object is passed in to our test case method.
-    @mock.patch('requests.get', side_effect=mocked_requests_get)
+    @mock.patch("requests.get", side_effect=mocked_requests_get)
     def test_deprecated_results_warning(self, mock_get):
-        sf = SalesforceAPI('xx', 'xx', 'xx')
-        with self.assertWarnsRegex(UserWarning, r'get_batch_results is deprecated'):
-            result_id = sf.get_batch_results('job_id', 'batch_id')
-            self.assertEqual('1234', result_id)
+        sf = SalesforceAPI("xx", "xx", "xx")
+        with self.assertWarnsRegex(UserWarning, r"get_batch_results is deprecated"):
+            result_id = sf.get_batch_results("job_id", "batch_id")
+            self.assertEqual("1234", result_id)
 
-    @mock.patch('requests.get', side_effect=mocked_requests_get)
+    @mock.patch("requests.get", side_effect=mocked_requests_get)
     def test_result_ids(self, mock_get):
-        sf = SalesforceAPI('xx', 'xx', 'xx')
-        result_ids = sf.get_batch_result_ids('job_id', 'batch_id')
-        self.assertEqual(['1234', '1235', '1236'], result_ids)
+        sf = SalesforceAPI("xx", "xx", "xx")
+        result_ids = sf.get_batch_result_ids("job_id", "batch_id")
+        self.assertEqual(["1234", "1235", "1236"], result_ids)
 
 
 class TestQuerySalesforce(QuerySalesforce):
     def output(self):
-        return MockTarget('job_data.csv')
+        return MockTarget("job_data.csv")
 
     @property
     def object_name(self):
-        return 'dual'
+        return "dual"
 
     @property
     def soql(self):
@@ -94,26 +92,25 @@ class TestQuerySalesforce(QuerySalesforce):
 
 @pytest.mark.contrib
 class TestSalesforceQuery(unittest.TestCase):
-
-    @mock.patch('builtins.open', side_effect=mocked_open)
+    @mock.patch("builtins.open", side_effect=mocked_open)
     def setUp(self, mock_open):
         MockTarget.fs.clear()
-        self.result_ids = ['a', 'b', 'c']
+        self.result_ids = ["a", "b", "c"]
 
         counter = 1
         self.all_lines = "Lines\n"
         self.header = "Lines"
         for i, id in enumerate(self.result_ids):
-            filename = "%s.%d" % ('job_data.csv', i)
-            with MockTarget(filename).open('w') as f:
-                line = "%d line\n%d line" % ((counter), (counter+1))
+            filename = "%s.%d" % ("job_data.csv", i)
+            with MockTarget(filename).open("w") as f:
+                line = "%d line\n%d line" % ((counter), (counter + 1))
                 f.write(self.header + "\n" + line + "\n")
-                self.all_lines += line+"\n"
+                self.all_lines += line + "\n"
                 counter += 2
 
-    @mock.patch('builtins.open', side_effect=mocked_open)
+    @mock.patch("builtins.open", side_effect=mocked_open)
     def test_multi_csv_download(self, mock_open):
         qsf = TestQuerySalesforce()
 
         qsf.merge_batch_results(self.result_ids)
-        self.assertEqual(MockTarget(qsf.output().path).open('r').read(), self.all_lines)
+        self.assertEqual(MockTarget(qsf.output().path).open("r").read(), self.all_lines)

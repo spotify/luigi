@@ -56,6 +56,7 @@ class SparkContextEntryPoint(_SparkEntryPoint):
 
     def __enter__(self):
         from pyspark import SparkContext
+
         self.sc = SparkContext(conf=self.conf)
         return self.sc, self.sc
 
@@ -68,23 +69,21 @@ class SparkSessionEntryPoint(_SparkEntryPoint):
 
     def _check_major_spark_version(self):
         from pyspark import __version__ as spark_version
-        major_version = int(spark_version.split('.')[0])
+
+        major_version = int(spark_version.split(".")[0])
         if major_version < 2:
             raise RuntimeError(
-                '''
+                """
                 Apache Spark {} does not support SparkSession entrypoint.
                 Try to set 'pyspark_runner.use_spark_session' to 'False' and switch to old-style syntax
-                '''.format(spark_version)
+                """.format(spark_version)
             )
 
     def __enter__(self):
         self._check_major_spark_version()
         from pyspark.sql import SparkSession
-        self.spark = SparkSession \
-            .builder \
-            .config(conf=self.conf) \
-            .enableHiveSupport() \
-            .getOrCreate()
+
+        self.spark = SparkSession.builder.config(conf=self.conf).enableHiveSupport().getOrCreate()
 
         return self.spark, self.spark.sparkContext
 
@@ -105,6 +104,7 @@ class AbstractPySparkRunner(object):
 
     def run(self):
         from pyspark import SparkConf
+
         conf = SparkConf()
         self.job.setup(conf)
         with self._entry_point_class(conf=conf) as (entry_point, sc):
@@ -113,15 +113,15 @@ class AbstractPySparkRunner(object):
 
 
 def _pyspark_runner_with(name, entry_point_class):
-    return type(name, (AbstractPySparkRunner,), {'_entry_point_class': entry_point_class})
+    return type(name, (AbstractPySparkRunner,), {"_entry_point_class": entry_point_class})
 
 
-PySparkRunner = _pyspark_runner_with('PySparkRunner', SparkContextEntryPoint)
-PySparkSessionRunner = _pyspark_runner_with('PySparkSessionRunner', SparkSessionEntryPoint)
+PySparkRunner = _pyspark_runner_with("PySparkRunner", SparkContextEntryPoint)
+PySparkSessionRunner = _pyspark_runner_with("PySparkSessionRunner", SparkSessionEntryPoint)
 
 
 def _use_spark_session():
-    return bool(configuration.get_config().get('pyspark_runner', "use_spark_session", False))
+    return bool(configuration.get_config().get("pyspark_runner", "use_spark_session", False))
 
 
 def _get_runner_class():
@@ -130,6 +130,6 @@ def _get_runner_class():
     return PySparkRunner
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     logging.basicConfig(level=logging.WARN)
     _get_runner_class()(*sys.argv[1:]).run()

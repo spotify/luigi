@@ -16,12 +16,12 @@
 #
 
 from helpers import unittest
+from mock import patch
 
 import luigi
 from luigi import Event, Task, build
-from luigi.mock import MockTarget, MockFileSystem
+from luigi.mock import MockFileSystem, MockTarget
 from luigi.task import flatten
-from mock import patch
 
 
 class DummyException(Exception):
@@ -38,7 +38,6 @@ class EmptyTask(Task):
 
 
 class TaskWithBrokenDependency(Task):
-
     def requires(self):
         raise DummyException()
 
@@ -47,14 +46,12 @@ class TaskWithBrokenDependency(Task):
 
 
 class TaskWithCallback(Task):
-
     def run(self):
         print("Triggering event")
         self.trigger_event("foo event")
 
 
 class TestEventCallbacks(unittest.TestCase):
-
     def test_start_handler(self):
         saved_tasks = []
 
@@ -145,7 +142,7 @@ class TestEventCallbacks(unittest.TestCase):
 
         times = [43.0, 1.0]
         t = EmptyTask(fail)
-        with patch('luigi.worker.time') as mock:
+        with patch("luigi.worker.time") as mock:
             mock.time = times.pop
             build([t], local_scheduler=True)
 
@@ -186,31 +183,31 @@ class TestEventCallbacks(unittest.TestCase):
 #     |  \  |  \
 #    D(1)  D(2)  D(3)
 
+
 def eval_contents(f):
-    with f.open('r') as i:
+    with f.open("r") as i:
         return eval(i.read())
 
 
 class ConsistentMockOutput:
-
-    '''
+    """
     Computes output location and contents from the task and its parameters. Rids us of writing ad-hoc boilerplate output() et al.
-    '''
+    """
+
     param = luigi.IntParameter(default=1)
 
     def output(self):
-        return MockTarget('/%s/%u' % (self.__class__.__name__, self.param))
+        return MockTarget("/%s/%u" % (self.__class__.__name__, self.param))
 
     def produce_output(self):
-        with self.output().open('w') as o:
+        with self.output().open("w") as o:
             o.write(repr([self.task_id] + sorted([eval_contents(i) for i in flatten(self.input())])))
 
 
 class HappyTestFriend(ConsistentMockOutput, luigi.Task):
-
-    '''
+    """
     Does trivial "work", outputting the list of inputs. Results in a convenient lispy comparable.
-    '''
+    """
 
     def run(self):
         self.produce_output()
@@ -221,28 +218,25 @@ class D(ConsistentMockOutput, luigi.ExternalTask):
 
 
 class C(HappyTestFriend):
-
     def requires(self):
         return [D(self.param), D(self.param + 1)]
 
 
 class B(HappyTestFriend):
-
     def requires(self):
         return C(self.param)
 
 
 class A(HappyTestFriend):
-    task_namespace = 'event_callbacks'  # to prevent task name coflict between tests
+    task_namespace = "event_callbacks"  # to prevent task name coflict between tests
 
     def requires(self):
         return [B(1), B(2)]
 
 
 class TestDependencyEvents(unittest.TestCase):
-
     def tearDown(self):
-        MockFileSystem().remove('')
+        MockFileSystem().remove("")
 
     def _run_test(self, task, expected_events):
         actual_events = {}
@@ -268,54 +262,58 @@ class TestDependencyEvents(unittest.TestCase):
     def test_incomplete_dag(self):
         for param in range(1, 3):
             D(param).produce_output()
-        self._run_test(A(), {
-            'event.core.dependency.discovered': {
-                (A(param=1).task_id, B(param=1).task_id),
-                (A(param=1).task_id, B(param=2).task_id),
-                (B(param=1).task_id, C(param=1).task_id),
-                (B(param=2).task_id, C(param=2).task_id),
-                (C(param=1).task_id, D(param=1).task_id),
-                (C(param=1).task_id, D(param=2).task_id),
-                (C(param=2).task_id, D(param=2).task_id),
-                (C(param=2).task_id, D(param=3).task_id),
+        self._run_test(
+            A(),
+            {
+                "event.core.dependency.discovered": {
+                    (A(param=1).task_id, B(param=1).task_id),
+                    (A(param=1).task_id, B(param=2).task_id),
+                    (B(param=1).task_id, C(param=1).task_id),
+                    (B(param=2).task_id, C(param=2).task_id),
+                    (C(param=1).task_id, D(param=1).task_id),
+                    (C(param=1).task_id, D(param=2).task_id),
+                    (C(param=2).task_id, D(param=2).task_id),
+                    (C(param=2).task_id, D(param=3).task_id),
+                },
+                "event.core.dependency.missing": {
+                    (D(param=3).task_id,),
+                },
+                "event.core.dependency.present": {
+                    (D(param=1).task_id,),
+                    (D(param=2).task_id,),
+                },
             },
-            'event.core.dependency.missing': {
-                (D(param=3).task_id,),
-            },
-            'event.core.dependency.present': {
-                (D(param=1).task_id,),
-                (D(param=2).task_id,),
-            },
-        })
+        )
         self.assertFalse(A().output().exists())
 
     def test_complete_dag(self):
         for param in range(1, 4):
             D(param).produce_output()
-        self._run_test(A(), {
-            'event.core.dependency.discovered': {
-                (A(param=1).task_id, B(param=1).task_id),
-                (A(param=1).task_id, B(param=2).task_id),
-                (B(param=1).task_id, C(param=1).task_id),
-                (B(param=2).task_id, C(param=2).task_id),
-                (C(param=1).task_id, D(param=1).task_id),
-                (C(param=1).task_id, D(param=2).task_id),
-                (C(param=2).task_id, D(param=2).task_id),
-                (C(param=2).task_id, D(param=3).task_id),
+        self._run_test(
+            A(),
+            {
+                "event.core.dependency.discovered": {
+                    (A(param=1).task_id, B(param=1).task_id),
+                    (A(param=1).task_id, B(param=2).task_id),
+                    (B(param=1).task_id, C(param=1).task_id),
+                    (B(param=2).task_id, C(param=2).task_id),
+                    (C(param=1).task_id, D(param=1).task_id),
+                    (C(param=1).task_id, D(param=2).task_id),
+                    (C(param=2).task_id, D(param=2).task_id),
+                    (C(param=2).task_id, D(param=3).task_id),
+                },
+                "event.core.dependency.present": {
+                    (D(param=1).task_id,),
+                    (D(param=2).task_id,),
+                    (D(param=3).task_id,),
+                },
             },
-            'event.core.dependency.present': {
-                (D(param=1).task_id,),
-                (D(param=2).task_id,),
-                (D(param=3).task_id,),
-            },
-        })
-        self.assertEqual(eval_contents(A().output()),
-                         [A(param=1).task_id,
-                             [B(param=1).task_id,
-                                 [C(param=1).task_id,
-                                     [D(param=1).task_id],
-                                     [D(param=2).task_id]]],
-                             [B(param=2).task_id,
-                                 [C(param=2).task_id,
-                                     [D(param=2).task_id],
-                                     [D(param=3).task_id]]]])
+        )
+        self.assertEqual(
+            eval_contents(A().output()),
+            [
+                A(param=1).task_id,
+                [B(param=1).task_id, [C(param=1).task_id, [D(param=1).task_id], [D(param=2).task_id]]],
+                [B(param=2).task_id, [C(param=2).task_id, [D(param=2).task_id], [D(param=3).task_id]]],
+            ],
+        )

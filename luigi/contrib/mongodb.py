@@ -19,8 +19,7 @@ from luigi.target import Target
 
 
 class MongoTarget(Target):
-
-    """ Target for a resource in MongoDB """
+    """Target for a resource in MongoDB"""
 
     def __init__(self, mongo_client, index, collection):
         """
@@ -36,7 +35,7 @@ class MongoTarget(Target):
         self._collection = collection
 
     def __str__(self):
-        return f'{self._index}/{self._collection}'
+        return f"{self._index}/{self._collection}"
 
     def get_collection(self):
         """
@@ -53,8 +52,7 @@ class MongoTarget(Target):
 
 
 class MongoCellTarget(MongoTarget):
-
-    """ Target for a ressource in a specific field from a MongoDB document """
+    """Target for a ressource in a specific field from a MongoDB document"""
 
     def __init__(self, mongo_client, index, collection, document_id, path):
         """
@@ -80,31 +78,23 @@ class MongoCellTarget(MongoTarget):
         Read the target value
         Use $project aggregate operator in order to support nested objects
         """
-        result = self.get_collection().aggregate([
-            {'$match': {'_id': self._document_id}},
-            {'$project': {'_value': '$' + self._path, '_id': False}}
-        ])
+        result = self.get_collection().aggregate([{"$match": {"_id": self._document_id}}, {"$project": {"_value": "$" + self._path, "_id": False}}])
 
         for doc in result:
-            if '_value' not in doc:
+            if "_value" not in doc:
                 break
 
-            return doc['_value']
+            return doc["_value"]
 
     def write(self, value):
         """
         Write value to the target
         """
-        self.get_collection().update_one(
-            {'_id': self._document_id},
-            {'$set': {self._path: value}},
-            upsert=True
-        )
+        self.get_collection().update_one({"_id": self._document_id}, {"$set": {self._path: value}}, upsert=True)
 
 
 class MongoRangeTarget(MongoTarget):
-
-    """ Target for a level 0 field in a range of documents """
+    """Target for a level 0 field in a range of documents"""
 
     def __init__(self, mongo_client, index, collection, document_ids, field):
         """
@@ -129,15 +119,9 @@ class MongoRangeTarget(MongoTarget):
         """
         Read the targets value
         """
-        cursor = self.get_collection().find(
-            {
-                '_id': {'$in': self._document_ids},
-                self._field: {'$exists': True}
-            },
-            {self._field: True}
-        )
+        cursor = self.get_collection().find({"_id": {"$in": self._document_ids}, self._field: {"$exists": True}}, {self._field: True})
 
-        return {doc['_id']: doc[self._field] for doc in cursor}
+        return {doc["_id"]: doc[self._field] for doc in cursor}
 
     def write(self, values):
         """
@@ -152,8 +136,7 @@ class MongoRangeTarget(MongoTarget):
 
         bulk = self.get_collection().initialize_ordered_bulk_op()
         for _id, value in filtered.items():
-            bulk.find({'_id': _id}).upsert() \
-                    .update_one({'$set': {self._field: value}})
+            bulk.find({"_id": _id}).upsert().update_one({"$set": {self._field: value}})
 
         bulk.execute()
 
@@ -161,20 +144,13 @@ class MongoRangeTarget(MongoTarget):
         """
         Get documents id with missing targeted field
         """
-        cursor = self.get_collection().find(
-            {
-                '_id': {'$in': self._document_ids},
-                self._field: {'$exists': True}
-            },
-            {'_id': True}
-        )
+        cursor = self.get_collection().find({"_id": {"$in": self._document_ids}, self._field: {"$exists": True}}, {"_id": True})
 
-        return set(self._document_ids) - {doc['_id'] for doc in cursor}
+        return set(self._document_ids) - {doc["_id"] for doc in cursor}
 
 
 class MongoCollectionTarget(MongoTarget):
-
-    """ Target for existing collection """
+    """Target for existing collection"""
 
     def __init__(self, mongo_client, index, collection):
         super(MongoCollectionTarget, self).__init__(mongo_client, index, collection)
@@ -194,8 +170,7 @@ class MongoCollectionTarget(MongoTarget):
 
 
 class MongoCountTarget(MongoTarget):
-
-    """ Target for documents count """
+    """Target for documents count"""
 
     def __init__(self, mongo_client, index, collection, target_count):
         """
@@ -218,6 +193,6 @@ class MongoCountTarget(MongoTarget):
         Using the aggregate method to avoid inaccurate count if using a sharded cluster
         https://docs.mongodb.com/manual/reference/method/db.collection.count/#behavior
         """
-        for res in self.get_collection().aggregate([{'$group': {'_id': None, 'count': {'$sum': 1}}}]):
-            return res.get('count', None)
+        for res in self.get_collection().aggregate([{"$group": {"_id": None, "count": {"$sum": 1}}}]):
+            return res.get("count", None)
         return None

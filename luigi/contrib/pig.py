@@ -22,7 +22,7 @@ Example configuration section in luigi.cfg::
     # pig home directory
     home: /usr/share/pig
 """
-from contextlib import contextmanager
+
 import logging
 import os
 import select
@@ -30,17 +30,17 @@ import signal
 import subprocess
 import sys
 import tempfile
+from contextlib import contextmanager
 
 import luigi
 from luigi import configuration
 
-logger = logging.getLogger('luigi-interface')
+logger = logging.getLogger("luigi-interface")
 
 
 class PigJobTask(luigi.Task):
-
     def pig_home(self):
-        return configuration.get_config().get('pig', 'home', '/usr/share/pig')
+        return configuration.get_config().get("pig", "home", "/usr/share/pig")
 
     def pig_command_path(self):
         return os.path.join(self.pig_home(), "bin/pig")
@@ -98,21 +98,21 @@ class PigJobTask(luigi.Task):
         opts = self.pig_options()
 
         def line(k, v):
-            return ('%s=%s%s' % (k, v, os.linesep)).encode('utf-8')
+            return ("%s=%s%s" % (k, v, os.linesep)).encode("utf-8")
 
         with tempfile.NamedTemporaryFile() as param_file, tempfile.NamedTemporaryFile() as prop_file:
             if self.pig_parameters():
                 items = self.pig_parameters().items()
                 param_file.writelines(line(k, v) for (k, v) in items)
                 param_file.flush()
-                opts.append('-param_file')
+                opts.append("-param_file")
                 opts.append(param_file.name)
 
             if self.pig_properties():
                 items = self.pig_properties().items()
                 prop_file.writelines(line(k, v) for k, v in items)
                 prop_file.flush()
-                opts.append('-propertyFile')
+                opts.append("-propertyFile")
                 opts.append(prop_file.name)
 
             cmd = [self.pig_command_path()] + opts + ["-f", self.pig_script_path()]
@@ -125,9 +125,9 @@ class PigJobTask(luigi.Task):
             self.track_and_progress(cmd)
 
     def track_and_progress(self, cmd):
-        temp_stdout = tempfile.TemporaryFile('wb')
+        temp_stdout = tempfile.TemporaryFile("wb")
         env = os.environ.copy()
-        env['PIG_HOME'] = self.pig_home()
+        env["PIG_HOME"] = self.pig_home()
         for k, v in self.pig_env_vars().items():
             env[k] = v
 
@@ -140,23 +140,23 @@ class PigJobTask(luigi.Task):
                 ret = select.select(reads, [], [])
                 for fd in ret[0]:
                     if fd == proc.stderr.fileno():
-                        line = proc.stderr.readline().decode('utf8')
+                        line = proc.stderr.readline().decode("utf8")
                         err_lines.append(line)
                     if fd == proc.stdout.fileno():
                         line_bytes = proc.stdout.readline()
                         temp_stdout.write(line_bytes)
-                        line = line_bytes.decode('utf8')
+                        line = line_bytes.decode("utf8")
 
                 err_line = line.lower()
-                if err_line.find('More information at:') != -1:
-                    logger.info(err_line.split('more information at: ')[-1].strip())
-                if err_line.find(' - '):
-                    t = err_line.split(' - ')[-1].strip()
+                if err_line.find("More information at:") != -1:
+                    logger.info(err_line.split("more information at: ")[-1].strip())
+                if err_line.find(" - "):
+                    t = err_line.split(" - ")[-1].strip()
                     if t != "":
                         logger.info(t)
 
         # Read the rest + stdout
-        err = ''.join(err_lines + [an_err_line.decode('utf8') for an_err_line in proc.stderr])
+        err = "".join(err_lines + [an_err_line.decode("utf8") for an_err_line in proc.stderr])
         if proc.returncode == 0:
             logger.info("Job completed successfully!")
         else:
@@ -176,8 +176,8 @@ class PigRunContext:
 
     def kill_job(self, captured_signal=None, stack_frame=None):
         if self.job_id:
-            logger.info('Job interrupted, killing job %s', self.job_id)
-            subprocess.call(['pig', '-e', '"kill %s"' % self.job_id])
+            logger.info("Job interrupted, killing job %s", self.job_id)
+            subprocess.call(["pig", "-e", '"kill %s"' % self.job_id])
         if captured_signal is not None:
             # adding 128 gives the exit code corresponding to a signal
             sys.exit(128 + captured_signal)

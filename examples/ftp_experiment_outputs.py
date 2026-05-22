@@ -39,13 +39,13 @@ class ExperimentTask(luigi.ExternalTask):
         :return: the target output for this task.
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
-        return RemoteTarget('/experiment/output1.txt', HOST, username=USER, password=PWD)
+        return RemoteTarget("/experiment/output1.txt", HOST, username=USER, password=PWD)
 
     def run(self):
         """
         The execution of this task will write 4 lines of data on this task's target output.
         """
-        with self.output().open('w') as outfile:
+        with self.output().open("w") as outfile:
             print("data 0 200 10 50 60", file=outfile)
             print("data 1 190 9 52 60", file=outfile)
             print("data 2 200 10 52 60", file=outfile)
@@ -76,7 +76,7 @@ class ProcessingTask(luigi.Task):
         :return: the target output for this task.
         :rtype: object (:py:class:`~luigi.target.Target`)
         """
-        return luigi.LocalTarget('/tmp/processeddata.txt')
+        return luigi.LocalTarget("/tmp/processeddata.txt")
 
     def run(self):
         avg = 0.0
@@ -85,7 +85,7 @@ class ProcessingTask(luigi.Task):
 
         # Target objects are a file system/format abstraction and this will return a file stream object
         # NOTE: self.input() actually returns the ExperimentTask.output() target
-        for line in self.input().open('r'):
+        for line in self.input().open("r"):
             values = line.split(" ")
             avg += float(values[2])
             sumval += float(values[3])
@@ -95,9 +95,9 @@ class ProcessingTask(luigi.Task):
         avg = avg / elements
 
         # save calculated values
-        with self.output().open('w') as outfile:
+        with self.output().open("w") as outfile:
             print(avg, sumval, file=outfile)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     luigi.run()

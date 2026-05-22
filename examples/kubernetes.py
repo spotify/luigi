@@ -43,16 +43,9 @@ from luigi.contrib.kubernetes import KubernetesJobTask
 
 
 class PerlPi(KubernetesJobTask):
-
     name = "pi"
     max_retrials = 3
-    spec_schema = {
-        "containers": [{
-            "name": "pi",
-            "image": "perl",
-            "command": ["perl",  "-Mbignum=bpi", "-wle", "print bpi(2000)"]
-        }]
-    }
+    spec_schema = {"containers": [{"name": "pi", "image": "perl", "command": ["perl", "-Mbignum=bpi", "-wle", "print bpi(2000)"]}]}
 
     # defining the two functions below allows for dependency checking,
     # but isn't a requirement

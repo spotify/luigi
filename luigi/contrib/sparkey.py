@@ -33,7 +33,7 @@ class SparkeyExportTask(luigi.Task):
     """
 
     # the separator used to split input lines
-    separator = '\t'
+    separator = "\t"
 
     def __init__(self, *args, **kwargs):
         super(SparkeyExportTask, self).__init__(*args, **kwargs)
@@ -52,7 +52,7 @@ class SparkeyExportTask(luigi.Task):
         # write job output to temporary sparkey file
         temp_output = luigi.LocalTarget(is_tmp=True)
         w = sparkey.LogWriter(temp_output.path)
-        for line in infile.open('r'):
+        for line in infile.open("r"):
             k, v = line.strip().split(self.separator, 1)
             w[k] = v
         w.close()

@@ -41,13 +41,13 @@ def check_pid(pidfile):
 def write_pid(pidfile):
     server_logger.info("Writing pid file")
     piddir = os.path.dirname(pidfile)
-    if piddir != '':
+    if piddir != "":
         try:
             os.makedirs(piddir)
         except OSError:
             pass
 
-    with open(pidfile, 'w') as fobj:
+    with open(pidfile, "w") as fobj:
         fobj.write(str(os.getpid()))
 
 
@@ -58,9 +58,9 @@ def get_log_format():
 def get_spool_handler(filename):
     handler = logging.handlers.TimedRotatingFileHandler(
         filename=filename,
-        when='d',
-        encoding='utf8',
-        backupCount=7  # keep one week of historical logs
+        when="d",
+        encoding="utf8",
+        backupCount=7,  # keep one week of historical logs
     )
     formatter = logging.Formatter(get_log_format())
     handler.setFormatter(formatter)
@@ -85,22 +85,16 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_
 
     # redirect stdout/stderr
     today = datetime.date.today()
-    stdout_path = os.path.join(
-        logdir,
-        "luigi-server-{0:%Y-%m-%d}.out".format(today)
-    )
-    stderr_path = os.path.join(
-        logdir,
-        "luigi-server-{0:%Y-%m-%d}.err".format(today)
-    )
-    stdout_proxy = open(stdout_path, 'a+')
-    stderr_proxy = open(stderr_path, 'a+')
+    stdout_path = os.path.join(logdir, "luigi-server-{0:%Y-%m-%d}.out".format(today))
+    stderr_path = os.path.join(logdir, "luigi-server-{0:%Y-%m-%d}.err".format(today))
+    stdout_proxy = open(stdout_path, "a+")
+    stderr_proxy = open(stderr_path, "a+")
 
     try:
         ctx = daemon.DaemonContext(
             stdout=stdout_proxy,
             stderr=stderr_proxy,
-            working_directory='.',
+            working_directory=".",
             initgroups=False,
         )
     except TypeError:
@@ -108,7 +102,7 @@ def daemonize(cmd, pidfile=None, logdir=None, api_port=8082, address=None, unix_
         ctx = daemon.DaemonContext(
             stdout=stdout_proxy,
             stderr=stderr_proxy,
-            working_directory='.',
+            working_directory=".",
         )
 
     with ctx:
