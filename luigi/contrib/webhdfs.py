@@ -34,16 +34,18 @@ logger = logging.getLogger("luigi-interface")
 
 
 class WebHdfsTarget(FileSystemTarget):
-    fs: FileSystem
-
     def __init__(self, path: str, client: Optional[FileSystem] = None, format: Optional[Format] = None):
         super(WebHdfsTarget, self).__init__(path)
         path = self.path
-        self.fs = client or WebHdfsClient()
+        self._fs = client or WebHdfsClient()
         if format is None:
             format = get_default_format()
 
         self.format = format
+
+    @property
+    def fs(self) -> FileSystem:
+        return self._fs
 
     def open(self, mode="r"):
         if mode not in ("r", "w"):

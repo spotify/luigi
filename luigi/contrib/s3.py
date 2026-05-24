@@ -619,8 +619,6 @@ class S3Target(FileSystemTarget):
     :param kwargs: Keyword arguments are passed to the boto function `initiate_multipart_upload`
     """
 
-    fs: FileSystem
-
     def __init__(self, path: str, format: Optional[Format] = None, client: Optional[S3Client] = None, **kwargs):
         super(S3Target, self).__init__(path)
         if format is None:
@@ -628,8 +626,12 @@ class S3Target(FileSystemTarget):
 
         self.path = path
         self.format = format
-        self.fs = client or S3Client()
+        self._fs = client or S3Client()
         self.s3_options = kwargs
+
+    @property
+    def fs(self) -> FileSystem:
+        return self._fs
 
     def open(self, mode="r"):
         if mode not in ("r", "w"):
@@ -665,8 +667,6 @@ class S3FlagTarget(S3Target):
 
     If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
     """
-
-    fs: FileSystem
 
     def __init__(self, path: str, format: Optional[Format] = None, client: Optional[S3Client] = None, flag="_SUCCESS"):
         """
