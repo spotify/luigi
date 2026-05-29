@@ -24,20 +24,19 @@ You will need a ``tox --version`` of at least 4.22.
 
     # These commands are pretty fast and will tell if you've
     # broken something major:
-    tox run -e flake8
-    tox run -e py38-core
+    tox run -e py310-core
 
     # You can also test particular files for even faster iterations
-    tox run -e py38-core -- test/rpc_test.py
+    tox run -e py310-core -- test/rpc_test.py
 
     # The visualiser tests require phantomjs to be installed on your path
     tox run -e visualiser
 
     # And some of the others involve downloading and running Hadoop:
-    tox run -e py38-cdh
-    tox run -e py39-hdp
+    tox run -e py310-cdh
+    tox run -e py310-hdp
 
-Where ``flake8`` is the lint checking, ``py38`` is obviously Python 3.8.
+Where ``py310`` is obviously Python 3.10.
 ``core`` are tests that do not require external components and ``cdh`` and
 ``hdp`` are two different hadoop distributions. For most local development it's
 usually enough to run the lint checking and a python version for ``core``

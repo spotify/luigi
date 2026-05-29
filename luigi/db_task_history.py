@@ -43,8 +43,8 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
-from sqlalchemy.engine import reflection
 from sqlalchemy import text
+from sqlalchemy.engine import reflection
 
 from luigi import configuration, task_history
 from luigi.task_status import DONE, FAILED, PENDING, RUNNING
