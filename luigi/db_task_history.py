@@ -53,6 +53,7 @@ Base = sqlalchemy.ext.declarative.declarative_base()
 
 logger = logging.getLogger("luigi-interface")
 
+
 class DbTaskHistory(task_history.TaskHistory):
     """
     Task History that writes to a database using sqlalchemy.
