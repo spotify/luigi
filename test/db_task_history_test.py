@@ -19,7 +19,9 @@ from helpers import unittest, with_config
 
 import luigi
 import luigi.scheduler
+import sqlalchemy as sqla
 from luigi.db_task_history import DbTaskHistory
+from luigi.db_task_history import _upgrade_schema
 from luigi.parameter import ParameterVisibility
 from luigi.task_status import DONE, PENDING, RUNNING
 
@@ -38,6 +40,37 @@ class DbTaskHistoryTest(unittest.TestCase):
     @with_config(dict(task_history=dict(db_connection="sqlite:///:memory:")))
     def setUp(self):
         self.history = DbTaskHistory()
+
+    def test_upgrade_schema(self):
+        """Test that the task_id column and index are added if they don't exist."""
+        # Create a temporary SQLite database
+        engine = sqla.create_engine("sqlite:///:memory:")
+
+        # Create the tasks table without the task_id column
+        with engine.connect() as conn:
+            conn.execute(sqla.text("CREATE TABLE tasks (id INTEGER PRIMARY KEY, name TEXT)"))
+            conn.execute(sqla.text("CREATE TABLE task_parameters (task_id INTEGER PRIMARY KEY, name TEXT, value TEXT)"))
+            conn.commit()
+
+        # Run the upgrade schema function
+        _upgrade_schema(engine)
+
+        # Verify that the task_id column and index were created
+        with engine.connect() as conn:
+            columns = conn.execute(sqla.text("PRAGMA table_info(tasks)")).fetchall()
+            column_names = [column.name for column in columns]
+            column_types = [column.type for column in columns]
+            column_name_idx = column_names.index("task_id")
+            assert "task_id" == column_names[column_name_idx]
+            assert "VARCHAR(200)" == column_types[column_name_idx]
+
+            indexes = conn.execute(sqla.text("PRAGMA index_list(tasks)")).fetchall()
+            index_names = [index.name for index in indexes]
+            assert "ix_task_id" in index_names
+
+            columns = conn.execute(sqla.text("PRAGMA table_info(task_parameters)")).fetchall()
+            column_names = [column.name for column in columns]
+            assert "value" in column_names
 
     def test_task_list(self):
         self.run_task(DummyTask())

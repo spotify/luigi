@@ -258,7 +258,7 @@ def _upgrade_schema(engine):
     with engine.connect() as conn:
         # Upgrade 1.  Add task_id column and index to tasks
         if "task_id" not in [x["name"] for x in inspector.get_columns("tasks")]:
-            logger.warning(text("Upgrading DbTaskHistory schema: Adding tasks.task_id"))
+            logger.warning("Upgrading DbTaskHistory schema: Adding tasks.task_id")
             conn.execute(text("ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)"))
             conn.execute(text("CREATE INDEX ix_task_id ON tasks (task_id)"))
 
@@ -278,6 +278,6 @@ def _upgrade_schema(engine):
             for row in conn.execute(text("PRAGMA table_info(task_parameters);")).fetchall():
                 row_as_dict = row._mapping
                 if row_as_dict["name"] == "value" and row_as_dict["type"] != "TEXT":
-                    logger.warning(text("SQLite can not change column types. Please use a new database to pickup column type changes."))
+                    logger.warning("SQLite can not change column types. Please use a new database to pickup column type changes.")
         else:
             logger.warning("SQLAlcheny dialect {} could not be migrated to the TEXT type".format(engine.dialect))
