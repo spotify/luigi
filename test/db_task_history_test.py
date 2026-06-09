@@ -15,13 +15,12 @@
 # limitations under the License.
 #
 
+import sqlalchemy as sqla
 from helpers import unittest, with_config
 
 import luigi
 import luigi.scheduler
-import sqlalchemy as sqla
-from luigi.db_task_history import DbTaskHistory
-from luigi.db_task_history import _upgrade_schema
+from luigi.db_task_history import DbTaskHistory, _upgrade_schema
 from luigi.parameter import ParameterVisibility
 from luigi.task_status import DONE, PENDING, RUNNING
 
