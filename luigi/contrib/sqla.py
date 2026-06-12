@@ -237,7 +237,7 @@ class SQLAlchemyTarget(luigi.Target):
             self.create_marker_table()
         with self.engine.begin() as conn:
             table = self.marker_table_bound
-            s = sqlalchemy.select([table]).where(sqlalchemy.and_(table.c.update_id == self.update_id, table.c.target_table == self.target_table)).limit(1)
+            s = sqlalchemy.select(table).where(sqlalchemy.and_(table.c.update_id == self.update_id, table.c.target_table == self.target_table)).limit(1)
             row = conn.execute(s).fetchone()
         return row is not None
 

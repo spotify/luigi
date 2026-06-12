@@ -43,6 +43,7 @@ import sqlalchemy
 import sqlalchemy.ext.declarative
 import sqlalchemy.orm
 import sqlalchemy.orm.collections
+from sqlalchemy import text
 from sqlalchemy.engine import reflection
 
 from luigi import configuration, task_history
@@ -239,7 +240,7 @@ class TaskRecord(Base):  # type: ignore
     name = sqlalchemy.Column(sqlalchemy.String(128), index=True)
     host = sqlalchemy.Column(sqlalchemy.String(128))
     parameters = sqlalchemy.orm.relationship(
-        "TaskParameter", collection_class=sqlalchemy.orm.collections.attribute_mapped_collection("name"), cascade="all, delete-orphan"
+        "TaskParameter", collection_class=sqlalchemy.orm.collections.attribute_keyed_dict("name"), cascade="all, delete-orphan"
     )
     events = sqlalchemy.orm.relationship("TaskEvent", order_by=(sqlalchemy.desc(TaskEvent.ts), sqlalchemy.desc(TaskEvent.id)), backref="task")
 
@@ -258,24 +259,25 @@ def _upgrade_schema(engine):
         # Upgrade 1.  Add task_id column and index to tasks
         if "task_id" not in [x["name"] for x in inspector.get_columns("tasks")]:
             logger.warning("Upgrading DbTaskHistory schema: Adding tasks.task_id")
-            conn.execute("ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)")
-            conn.execute("CREATE INDEX ix_task_id ON tasks (task_id)")
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN task_id VARCHAR(200)"))
+            conn.execute(text("CREATE INDEX ix_task_id ON tasks (task_id)"))
 
         # Upgrade 2. Alter value column to be TEXT, note that this is idempotent so no if-guard
         if "mysql" in engine.dialect.name:
-            conn.execute("ALTER TABLE task_parameters MODIFY COLUMN value TEXT")
+            conn.execute(text("ALTER TABLE task_parameters MODIFY COLUMN value TEXT"))
         elif "oracle" in engine.dialect.name:
-            conn.execute("ALTER TABLE task_parameters MODIFY value TEXT")
+            conn.execute(text("ALTER TABLE task_parameters MODIFY value TEXT"))
         elif "mssql" in engine.dialect.name:
-            conn.execute("ALTER TABLE task_parameters ALTER COLUMN value TEXT")
+            conn.execute(text("ALTER TABLE task_parameters ALTER COLUMN value TEXT"))
         elif "postgresql" in engine.dialect.name:
             if str([x for x in inspector.get_columns("task_parameters") if x["name"] == "value"][0]["type"]) != "TEXT":
-                conn.execute("ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT")
+                conn.execute(text("ALTER TABLE task_parameters ALTER COLUMN value TYPE TEXT"))
         elif "sqlite" in engine.dialect.name:
             # SQLite does not support changing column types. A database file will need
             # to be used to pickup this migration change.
-            for i in conn.execute("PRAGMA table_info(task_parameters);").fetchall():
-                if i["name"] == "value" and i["type"] != "TEXT":
+            for row in conn.execute(text("PRAGMA table_info(task_parameters);")).fetchall():
+                row_as_dict = row._mapping
+                if row_as_dict["name"] == "value" and row_as_dict["type"] != "TEXT":
                     logger.warning("SQLite can not change column types. Please use a new database to pickup column type changes.")
         else:
             logger.warning("SQLAlcheny dialect {} could not be migrated to the TEXT type".format(engine.dialect))
