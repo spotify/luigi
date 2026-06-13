@@ -54,8 +54,9 @@ class TestSQLA(unittest.TestCase):
     def _clear_tables(self):
         meta = sqlalchemy.MetaData()
         meta.reflect(bind=self.engine)
-        for table in reversed(meta.sorted_tables):
-            self.engine.execute(table.delete())
+        with self.engine.begin() as conn:
+            for table in reversed(meta.sorted_tables):
+                conn.execute(table.delete())
 
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()
@@ -133,10 +134,10 @@ class TestSQLA(unittest.TestCase):
             meta.reflect(bind=engine)
             self.assertEqual({"table_updates", "item_property"}, set(meta.tables.keys()))
             table = meta.tables[self.SQLATask.table]
-            s = sqlalchemy.select([sqlalchemy.func.count(table.c.item)])
+            s = sqlalchemy.select(sqlalchemy.func.count(table.c.item))
             result = conn.execute(s).fetchone()
             self.assertEqual(len(BaseTask.TASK_LIST), result[0])
-            s = sqlalchemy.select([table]).order_by(table.c.item)
+            s = sqlalchemy.select(table).order_by(table.c.item)
             result = conn.execute(s).fetchall()
             for i in range(len(BaseTask.TASK_LIST)):
                 given = BaseTask.TASK_LIST[i].strip("\n").split("\t")
