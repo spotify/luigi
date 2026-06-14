@@ -33,10 +33,10 @@ try:
     import dropbox.dropbox_client
     import dropbox.exceptions
     import dropbox.files
+
+    _dropbox_enabled = True
 except ImportError:
-    logger.warning(
-        "Loading Dropbox module without the python package dropbox (https://pypi.org/project/dropbox/). Will crash at runtime if Dropbox functionality is used."
-    )
+    _dropbox_enabled = False
 
 
 def accept_trailing_slash_in_existing_dirpaths(func):
@@ -74,6 +74,8 @@ class DropboxClient(FileSystem):
         :param str token: Dropbox Oauth2 Token. See :class:`DropboxTarget` for more information about generating a token
         :param str root_namespace_id: Root namespace ID for interacting with Team Spaces
         """
+        if not _dropbox_enabled:
+            raise ImportError("dropbox is required for Dropbox functionality. Install it with: pip install dropbox")
         if not token:
             raise ValueError("The token parameter must contain a valid Dropbox Oauth2 Token")
 
@@ -292,6 +294,8 @@ class DropboxTarget(FileSystemTarget):
 
 
         """
+        if not _dropbox_enabled:
+            raise ImportError("dropbox is required for Dropbox functionality. Install it with: pip install dropbox")
         super(DropboxTarget, self).__init__(path)
 
         if not token:

@@ -32,8 +32,10 @@ logger = logging.getLogger("luigi-interface")
 
 try:
     import requests
+
+    _requests_enabled = True
 except ImportError:
-    logger.warning("This module requires the python package 'requests'.")
+    _requests_enabled = False
 
 
 def get_soql_fields(soql):
@@ -235,6 +237,8 @@ class SalesforceAPI:
     API_NS = "{http://www.force.com/2009/06/asyncapi/dataload}"
 
     def __init__(self, username, password, security_token, sb_token=None, sandbox_name=None):
+        if not _requests_enabled:
+            raise ImportError("requests is required for Salesforce functionality. Install it with: pip install requests")
         self.username = username
         self.password = password
         self.security_token = security_token

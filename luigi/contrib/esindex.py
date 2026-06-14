@@ -100,8 +100,9 @@ try:
     from elasticsearch.connection import Urllib3HttpConnection
     from elasticsearch.helpers import bulk
 
+    _elasticsearch_enabled = True
 except ImportError:
-    logger.warning("Loading esindex module without elasticsearch installed. Will crash at runtime if esindex functionality is used.")
+    _elasticsearch_enabled = False
 
 
 class ElasticsearchTarget(luigi.Target):
@@ -129,6 +130,8 @@ class ElasticsearchTarget(luigi.Target):
         :param extra_elasticsearch_args: extra args for Elasticsearch
         :type Extra: dict
         """
+        if not _elasticsearch_enabled:
+            raise ImportError("elasticsearch is required for ElasticsearchTarget. Install it with: pip install elasticsearch")
         if extra_elasticsearch_args is None:
             extra_elasticsearch_args = {}
 

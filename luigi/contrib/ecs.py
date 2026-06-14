@@ -62,8 +62,9 @@ try:
     import boto3
 
     client = boto3.client("ecs")
+    _boto3_enabled = True
 except ImportError:
-    logger.warning("boto3 is not installed. ECSTasks require boto3")
+    _boto3_enabled = False
 
 POLL_TIME = 2
 
@@ -137,6 +138,11 @@ class ECSTask(luigi.Task):
     task_def_arn = luigi.OptionalParameter(default=None)
     task_def = luigi.OptionalParameter(default=None)
     cluster = luigi.Parameter(default="default")
+
+    def __init__(self, *args, **kwargs):
+        if not _boto3_enabled:
+            raise ImportError("boto3 is required for ECSTask. Install it with: pip install boto3")
+        super().__init__(*args, **kwargs)
 
     @property
     def ecs_task_ids(self):

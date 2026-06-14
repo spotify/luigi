@@ -40,11 +40,10 @@ RETRYABLE_ERRORS = None
 try:
     import httplib2
     from googleapiclient import discovery, errors, http
+
+    _gcs_enabled = True
 except ImportError:
-    logger.warning(
-        "Loading GCS module without the python packages googleapiclient & google-auth. \
-        This will crash at runtime if GCS functionality is used."
-    )
+    _gcs_enabled = False
 else:
     RETRYABLE_ERRORS = (httplib2.HttpLib2Error, IOError)
 
@@ -122,6 +121,8 @@ class GCSClient(luigi.target.FileSystem):
     """
 
     def __init__(self, oauth_credentials=None, descriptor="", http_=None, chunksize=CHUNKSIZE, **discovery_build_kwargs):
+        if not _gcs_enabled:
+            raise ImportError("googleapiclient is required for GCS functionality. Install it with: pip install google-api-python-client")
         self.chunksize = chunksize
         authenticate_kwargs = gcp.get_authenticate_kwargs(oauth_credentials, http_)
 
@@ -435,6 +436,8 @@ class GCSTarget(luigi.target.FileSystemTarget):
     fs = None
 
     def __init__(self, path, format=None, client=None):
+        if not _gcs_enabled:
+            raise ImportError("googleapiclient is required for GCS functionality. Install it with: pip install google-api-python-client")
         super(GCSTarget, self).__init__(path)
         if format is None:
             format = luigi.format.get_default_format()
@@ -484,6 +487,8 @@ class GCSFlagTarget(GCSTarget):
         :param flag:
         :type flag: str
         """
+        if not _gcs_enabled:
+            raise ImportError("googleapiclient is required for GCS functionality. Install it with: pip install google-api-python-client")
         if format is None:
             format = luigi.format.get_default_format()
 

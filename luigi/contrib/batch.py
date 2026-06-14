@@ -71,8 +71,10 @@ logger = logging.getLogger(__name__)
 
 try:
     import boto3
+
+    _boto3_enabled = True
 except ImportError:
-    logger.warning("boto3 is not installed. BatchTasks require boto3")
+    _boto3_enabled = False
 
 
 class BatchJobException(Exception):
@@ -88,6 +90,8 @@ def _random_id():
 
 class BatchClient:
     def __init__(self, poll_time=POLL_TIME):
+        if not _boto3_enabled:
+            raise ImportError("boto3 is required for Batch functionality. Install it with: pip install boto3")
         self.poll_time = poll_time
         self._client = boto3.client("batch")
         self._log_client = boto3.client("logs")
@@ -192,6 +196,11 @@ class BatchTask(luigi.Task):
     job_name = luigi.OptionalParameter(default=None)
     job_queue = luigi.OptionalParameter(default=None)
     poll_time = luigi.IntParameter(default=POLL_TIME)
+
+    def __init__(self, *args, **kwargs):
+        if not _boto3_enabled:
+            raise ImportError("boto3 is required for Batch functionality. Install it with: pip install boto3")
+        super().__init__(*args, **kwargs)
 
     def run(self):
         bc = BatchClient(self.poll_time)

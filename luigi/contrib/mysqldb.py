@@ -25,11 +25,10 @@ logger = logging.getLogger("luigi-interface")
 try:
     import mysql.connector
     from mysql.connector import Error, errorcode
+
+    _mysql_enabled = True
 except ImportError:
-    logger.warning(
-        "Loading MySQL module without the python package mysql-connector-python. \
-       This will crash at runtime if MySQL functionality is used."
-    )
+    _mysql_enabled = False
 
 
 class MySqlTarget(luigi.Target):
@@ -56,6 +55,8 @@ class MySqlTarget(luigi.Target):
         :param cnx_kwargs: optional params for mysql connector constructor.
             See https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html.
         """
+        if not _mysql_enabled:
+            raise ImportError("mysql-connector-python is required for MySQL functionality. Install it with: pip install mysql-connector-python")
         if ":" in host:
             self.host, self.port = host.split(":")
             self.port = int(self.port)

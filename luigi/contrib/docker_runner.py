@@ -48,9 +48,9 @@ try:
     import docker
     from docker.errors import APIError, ContainerError, ImageNotFound
 
+    _docker_enabled = True
 except ImportError:
-    logger.warning("docker is not installed. DockerTask requires docker.")
-    docker = None
+    _docker_enabled = False
 
 # TODO: may need to implement this logic for remote hosts
 # class dockerconfig(luigi.Config):
@@ -143,6 +143,8 @@ class DockerTask(luigi.Task):
         - create a tmp dir
         - add the temp dir to the volume binds specified in the task
         """
+        if not _docker_enabled:
+            raise ImportError("docker is required for DockerTask. Install it with: pip install docker")
         super(DockerTask, self).__init__(*args, **kwargs)
         self.__logger = logger
 

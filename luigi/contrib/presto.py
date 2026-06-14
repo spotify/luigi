@@ -15,8 +15,10 @@ logger = logging.getLogger("luigi-interface")
 try:
     from pyhive.exc import DatabaseError
     from pyhive.presto import Connection, Cursor
+
+    _pyhive_enabled = True
 except ImportError:
-    logger.warning("pyhive[presto] is not installed.")
+    _pyhive_enabled = False
 
 
 class presto(luigi.Config):  # NOQA
@@ -36,6 +38,8 @@ class PrestoClient:
     """
 
     def __init__(self, connection, sleep_time=1):
+        if not _pyhive_enabled:
+            raise ImportError("pyhive is required for Presto functionality. Install it with: pip install pyhive[presto]")
         self.sleep_time = sleep_time
         self._connection = connection
         self._status = {"state": "initial"}
