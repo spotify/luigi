@@ -1,8 +1,12 @@
+import multiprocessing
 from typing import List
 
 import pytest
 
 import luigi.task_register
+
+# Set the multiprocessing start method to "fork" for tests to avoid pickling issues
+multiprocessing.set_start_method("fork", force=True)
 
 
 @pytest.fixture(autouse=True)

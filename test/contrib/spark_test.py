@@ -29,7 +29,6 @@ from helpers import temporary_unloaded_module, with_config
 from mock import MagicMock, call, mock, patch
 
 import luigi
-import luigi.contrib.hdfs
 from luigi.contrib.external_program import ExternalProgramRunError
 from luigi.contrib.spark import PySparkTask, SparkSubmitTask
 from luigi.mock import MockTarget

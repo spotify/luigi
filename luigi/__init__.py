@@ -18,8 +18,6 @@
 Package containing core luigi functionality.
 """
 
-import multiprocessing
-
 from luigi import configuration, event, interface, local_target, parameter, rpc, target, task
 from luigi.__version__ import VERSION
 from luigi.event import Event
@@ -136,8 +134,6 @@ __all__ = [
     "LuigiStatusCode",
     "__version__",
 ]
-
-multiprocessing.set_start_method("fork", force=True)
 
 if not configuration.get_config().has_option("core", "autoload_range"):
     import warnings
