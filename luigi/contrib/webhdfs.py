@@ -24,25 +24,28 @@ contrib module. You can consider migrating to
 """
 
 import logging
+from typing import Optional
 
 import luigi.contrib.hdfs
-from luigi.format import get_default_format
-from luigi.target import AtomicLocalFile, FileSystemTarget
+from luigi.format import Format, get_default_format
+from luigi.target import AtomicLocalFile, FileSystem, FileSystemTarget
 
 logger = logging.getLogger("luigi-interface")
 
 
 class WebHdfsTarget(FileSystemTarget):
-    fs = None
-
-    def __init__(self, path, client=None, format=None):
+    def __init__(self, path: str, client: Optional[FileSystem] = None, format: Optional[Format] = None):
         super(WebHdfsTarget, self).__init__(path)
         path = self.path
-        self.fs = client or WebHdfsClient()
+        self._fs = client or WebHdfsClient()
         if format is None:
             format = get_default_format()
 
         self.format = format
+
+    @property
+    def fs(self) -> FileSystem:
+        return self._fs
 
     def open(self, mode="r"):
         if mode not in ("r", "w"):
