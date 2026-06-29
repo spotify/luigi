@@ -1,9 +1,11 @@
+import datetime
 import warnings
 
 import mock
 from helpers import LuigiTestCase, with_config
 
 import luigi
+from luigi import date_interval
 
 
 class OptionalParameterTest(LuigiTestCase):
@@ -97,6 +99,128 @@ class OptionalParameterTest(LuigiTestCase):
         choices = ["default value", "expected value"]
         self.actual_test(luigi.OptionalChoiceParameter, None, "expected value", "str", "bad data", choices=choices)
         self.actual_test(luigi.OptionalChoiceParameter, "default value", "expected value", "str", "bad data", choices=choices)
+
+    def _test_optional_date_like(self, cls, config_key, config_value, expected_value, default_value):
+        """Dedicated helper for date/datetime optional parameters.
+
+        Unlike actual_test, this skips the bad-data warning check because
+        date/datetime normalize() crashes on non-date types."""
+        param = cls()
+
+        # parse("") → None
+        self.assertIsNone(param.parse(""))
+
+        # parse(valid_string) → expected
+        self.assertEqual(param.parse(config_value), expected_value)
+
+        # serialize(None) → ""
+        self.assertEqual(param.serialize(None), "")
+
+        # serialize(value) → string
+        self.assertEqual(param.serialize(expected_value), config_value)
+
+        # next_in_enumeration → None
+        self.assertIsNone(param.next_in_enumeration(expected_value))
+        self.assertIsNone(param.next_in_enumeration(None))
+
+        # Setting None should not trigger a warning
+        with mock.patch("luigi.parameter.warnings") as mocked:
+
+            @with_config({"Cfg": {config_key: config_value, "empty": ""}})
+            def inner(self_inner):
+                class Cfg(luigi.Config):
+                    param = cls()
+                    empty = cls()
+
+                    def run(inner_self):
+                        self_inner.assertEqual(inner_self.param, expected_value)
+                        self_inner.assertIsNone(inner_self.empty)
+
+                Cfg(param=None)
+                mocked.warn.assert_not_called()
+                self_inner.assertTrue(luigi.build([Cfg()], local_scheduler=True))
+
+            inner(self)
+
+        # Should also work with an explicit default value
+        @with_config({"Cfg2": {config_key: config_value, "empty": ""}})
+        def inner2(self_inner):
+            class Cfg2(luigi.Config):
+                param = cls(default=default_value)
+                empty = cls(default=default_value)
+
+                def run(inner_self):
+                    self_inner.assertEqual(inner_self.param, expected_value)
+                    self_inner.assertIsNone(inner_self.empty)
+
+            self_inner.assertTrue(luigi.build([Cfg2()], local_scheduler=True))
+
+        inner2(self)
+
+    def test_optional_date_parameter(self):
+        self._test_optional_date_like(
+            luigi.OptionalDateParameter,
+            "param",
+            "2013-07-10",
+            datetime.date(2013, 7, 10),
+            datetime.date(2000, 1, 1),
+        )
+
+    def test_optional_month_parameter(self):
+        self._test_optional_date_like(
+            luigi.OptionalMonthParameter,
+            "param",
+            "2013-07",
+            datetime.date(2013, 7, 1),
+            datetime.date(2000, 1, 1),
+        )
+
+    def test_optional_year_parameter(self):
+        self._test_optional_date_like(
+            luigi.OptionalYearParameter,
+            "param",
+            "2013",
+            datetime.date(2013, 1, 1),
+            datetime.date(2000, 1, 1),
+        )
+
+    def test_optional_date_hour_parameter(self):
+        self._test_optional_date_like(
+            luigi.OptionalDateHourParameter,
+            "param",
+            "2013-07-10T19",
+            datetime.datetime(2013, 7, 10, 19),
+            datetime.datetime(2000, 1, 1, 0),
+        )
+
+    def test_optional_date_minute_parameter(self):
+        self._test_optional_date_like(
+            luigi.OptionalDateMinuteParameter,
+            "param",
+            "2013-07-10T1907",
+            datetime.datetime(2013, 7, 10, 19, 7),
+            datetime.datetime(2000, 1, 1, 0, 0),
+        )
+
+    def test_optional_date_second_parameter(self):
+        self._test_optional_date_like(
+            luigi.OptionalDateSecondParameter,
+            "param",
+            "2013-07-10T190738",
+            datetime.datetime(2013, 7, 10, 19, 7, 38),
+            datetime.datetime(2000, 1, 1, 0, 0, 0),
+        )
+
+    def test_optional_date_interval_parameter(self):
+        expected = date_interval.Date.parse("2015-11-04")
+        default_val = date_interval.Date.parse("2000-01-01")
+        self._test_optional_date_like(
+            luigi.OptionalDateIntervalParameter,
+            "param",
+            "2015-11-04",
+            expected,
+            default_val,
+        )
 
     @with_config({"TestConfig": {"param": "1", "empty_param": ""}})
     def test_optional_choice_parameter_int(self):
