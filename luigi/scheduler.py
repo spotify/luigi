@@ -32,8 +32,11 @@ import os
 import pickle
 import re
 import time
+import types
 import uuid
 from collections.abc import MutableSet
+from dataclasses import dataclass, field
+from typing import Optional
 
 from luigi import configuration, notifications, parameter
 from luigi import task_history as history
@@ -227,6 +230,22 @@ class OrderedSet(MutableSet):
 class Task:
     DEFAULT_PRIORITY = 0
 
+    _ATTR_MAP = {
+        '_identity': ('id', 'family', 'module', 'param_visibilities', 'params', 'public_params', 'hidden_params'),
+        '_state': ('status', 'time', 'updated', 'retry', 'remove', 'worker_running', 'time_running', 'scheduler_disable_time', 'runnable', 'priority'),
+        '_resources': ('deps', 'stakeholders', 'workers', 'resources'),
+        '_failures': ('retry_policy', 'failures', 'first_failure_time', 'expl'),
+        '_batch': ('batchable', 'batch_id'),
+        '_messaging': ('accepts_messages', 'scheduler_message_responses', 'tracking_url', 'status_message', 'progress_percentage'),
+    }
+    _GROUPS = tuple(_ATTR_MAP.keys())
+
+    _ATTR_TO_GROUP = {}
+    for _group, _attrs in _ATTR_MAP.items():
+        for _attr in _attrs:
+            _ATTR_TO_GROUP[_attr] = _group
+    del _group, _attrs, _attr  # cleanup namespace
+
     def __init__(
         self,
         task_id,
@@ -244,45 +263,65 @@ class Task:
         progress_percentage=None,
         retry_policy="notoptional",
     ):
-        self.id = task_id
-        self.stakeholders = set()  # workers ids that are somehow related to this task (i.e. don't prune while any of these workers are still active)
-        self.workers = OrderedSet()  # workers ids that can perform task - task is 'BROKEN' if none of these workers are active
-        if deps is None:
-            self.deps = set()
-        else:
-            self.deps = set(deps)
-        self.status = status  # PENDING, RUNNING, FAILED or DONE
-        self.time = time.time()  # Timestamp when task was first added
-        self.updated = self.time
-        self.retry = None
-        self.remove = None
-        self.worker_running = None  # the worker id that is currently running the task or None
-        self.time_running = None  # Timestamp when picked up by worker
-        self.expl = None
-        self.priority = priority
-        self.resources = _get_default(resources, {})
-        self.family = family
-        self.module = module
-        self.param_visibilities = _get_default(param_visibilities, {})
-        self.params = {}
-        self.public_params = {}
-        self.hidden_params = {}
+        deps = set(deps) if deps is not None else set()
+        resources = _get_default(resources, {})
+        param_visibilities = _get_default(param_visibilities, {})
+        now = time.time()
+
+        object.__setattr__(self, '_identity', types.SimpleNamespace(
+            id=task_id, family=family, module=module,
+            param_visibilities=param_visibilities,
+        ))
+        object.__setattr__(self, '_state', types.SimpleNamespace(
+            status=status, time=now, updated=now,
+            retry=None, remove=None, worker_running=None,
+            time_running=None, scheduler_disable_time=None,
+            runnable=False, priority=priority,
+        ))
+        object.__setattr__(self, '_resources', types.SimpleNamespace(
+            deps=deps, stakeholders=set(), workers=OrderedSet(),
+            resources=resources,
+        ))
+        object.__setattr__(self, '_failures', types.SimpleNamespace(
+            retry_policy=retry_policy,
+            failures=collections.deque(), first_failure_time=None,
+            expl=None,
+        ))
+        object.__setattr__(self, '_batch', types.SimpleNamespace(
+            batchable=False, batch_id=None,
+        ))
+        object.__setattr__(self, '_messaging', types.SimpleNamespace(
+            accepts_messages=accepts_messages,
+            scheduler_message_responses={},
+            tracking_url=tracking_url, status_message=status_message,
+            progress_percentage=progress_percentage,
+        ))
+
         self.set_params(params)
-        self.accepts_messages = accepts_messages
-        self.retry_policy = retry_policy
-        self.failures = collections.deque()
-        self.first_failure_time = None
-        self.tracking_url = tracking_url
-        self.status_message = status_message
-        self.progress_percentage = progress_percentage
-        self.scheduler_message_responses = {}
-        self.scheduler_disable_time = None
-        self.runnable = False
-        self.batchable = False
-        self.batch_id = None
+
+    def __getattr__(self, name):
+        group_name = self._ATTR_TO_GROUP.get(name)
+        if group_name is not None:
+            return getattr(object.__getattribute__(self, group_name), name)
+        raise AttributeError("'Task' object has no attribute '{}'".format(name))
+
+    def __setattr__(self, name, value):
+        if name.startswith('_') or name not in self._ATTR_TO_GROUP:
+            object.__setattr__(self, name, value)
+            return
+        group_name = self._ATTR_TO_GROUP[name]
+        try:
+            group = object.__getattribute__(self, group_name)
+        except AttributeError:
+            object.__setattr__(self, name, value)
+            return
+        setattr(group, name, value)
 
     def __repr__(self):
-        return "Task(%r)" % vars(self)
+        data = {}
+        for group in self._GROUPS:
+            data.update(vars(object.__getattribute__(self, group)))
+        return "Task(%r)" % data
 
     def set_params(self, params):
         self.params = _get_default(params, {})
@@ -353,16 +392,48 @@ class Worker:
     Structure for tracking worker activity and keeping their references.
     """
 
+    _ATTR_MAP = {
+        '_identity': ('id', 'reference', 'info'),
+        '_activity': ('last_active', 'last_get_work', 'started'),
+        '_tasks': ('tasks', 'disabled', 'rpc_messages'),
+    }
+    _GROUPS = tuple(_ATTR_MAP.keys())
+
+    _ATTR_TO_GROUP = {}
+    for _group, _attrs in _ATTR_MAP.items():
+        for _attr in _attrs:
+            _ATTR_TO_GROUP[_attr] = _group
+    del _group, _attrs, _attr
+
     def __init__(self, worker_id, last_active=None):
-        self.id = worker_id
-        self.reference = None  # reference to the worker in the real world. (Currently a dict containing just the host)
-        self.last_active = last_active or time.time()  # seconds since epoch
-        self.last_get_work = None
-        self.started = time.time()  # seconds since epoch
-        self.tasks = set()  # task objects
-        self.info = {}
-        self.disabled = False
-        self.rpc_messages = []
+        object.__setattr__(self, '_identity', types.SimpleNamespace(
+            id=worker_id, reference=None, info={},
+        ))
+        object.__setattr__(self, '_activity', types.SimpleNamespace(
+            last_active=last_active or time.time(),
+            last_get_work=None, started=time.time(),
+        ))
+        object.__setattr__(self, '_tasks', types.SimpleNamespace(
+            tasks=set(), disabled=False, rpc_messages=[],
+        ))
+
+    def __getattr__(self, name):
+        group_name = self._ATTR_TO_GROUP.get(name)
+        if group_name is not None:
+            return getattr(object.__getattribute__(self, group_name), name)
+        raise AttributeError("'Worker' object has no attribute '{}'".format(name))
+
+    def __setattr__(self, name, value):
+        if name.startswith('_') or name not in self._ATTR_TO_GROUP:
+            object.__setattr__(self, name, value)
+            return
+        group_name = self._ATTR_TO_GROUP[name]
+        try:
+            group = object.__getattribute__(self, group_name)
+        except AttributeError:
+            object.__setattr__(self, name, value)
+            return
+        setattr(group, name, value)
 
     def add_info(self, info):
         self.info.update(info)
@@ -414,7 +485,6 @@ class Worker:
             return WORKER_STATE_DISABLED
 
     def add_rpc_message(self, name, **kwargs):
-        # the message has the format {'name': <function_name>, 'kwargs': <function_kwargs>}
         self.rpc_messages.append({"name": name, "kwargs": kwargs})
 
     def fetch_rpc_messages(self):
@@ -672,6 +742,13 @@ class SimpleTaskState:
             self._metrics_collector.handle_task_failed(task)
 
 
+@dataclass
+class _SchedulerRuntime:
+    worker_requests: dict = field(default_factory=dict)
+    paused: bool = False
+    email_batcher: Optional[BatchNotifier] = None
+
+
 class Scheduler:
     """
     Async scheduler that can handle multiple workers, etc.
@@ -699,11 +776,9 @@ class Scheduler:
             self._task_history = history.NopHistory()
         self._resources = resources or configuration.get_config().getintdict("resources")  # TODO: Can we make this a Parameter?
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
-        self._worker_requests = {}
-        self._paused = False
-
-        if self._config.batch_emails:
-            self._email_batcher = BatchNotifier()
+        self._runtime = _SchedulerRuntime(
+            email_batcher=BatchNotifier() if self._config.batch_emails else None,
+        )
 
         self._state._metrics_collector = MetricsCollectors.get(self._config.metrics_collector, self._config.metrics_custom_import)
 
@@ -713,7 +788,7 @@ class Scheduler:
     def dump(self):
         self._state.dump()
         if self._config.batch_emails:
-            self._email_batcher.send_email()
+            self._runtime.email_batcher.send_email()
 
     @rpc_method()
     def prune(self):
@@ -747,7 +822,7 @@ class Scheduler:
 
     def _prune_emails(self):
         if self._config.batch_emails:
-            self._email_batcher.update()
+            self._runtime.email_batcher.update()
 
     def _update_worker(self, worker_id, worker_reference=None, get_work=False):
         # Keep track of whenever the worker was last active.
@@ -844,6 +919,39 @@ class Scheduler:
 
         retry_policy = self._generate_retry_policy(retry_policy_dict)
 
+        self._get_worker(
+            worker, worker_id, task_id, status, runnable, deps, new_deps, expl,
+            resources, priority, family, module, params, param_visibilities,
+            accepts_messages, assistant, tracking_url, batchable, batch_id, retry_policy, owners,
+        )
+
+    def _get_worker(
+        self, worker, worker_id, task_id, status, runnable, deps, new_deps, expl,
+        resources, priority, family, module, params, param_visibilities,
+        accepts_messages, assistant, tracking_url, batchable, batch_id, retry_policy, owners,
+    ):
+        task = self._get_or_create_task(worker, task_id, deps, resources, priority, family, module, params, param_visibilities)
+
+        if task is None or (task.status != RUNNING and not worker.enabled):
+            return
+
+        if status == PENDING and task.status == DONE and (time.time() - task.updated) < self._config.stable_done_cooldown_secs:
+            return
+
+        self._update_task_metadata(task, family, module, param_visibilities, params, batch_id, status, worker_id, batchable, tracking_url, expl, accepts_messages)
+        self._update_task_status(task, status, worker_id, family, worker, expl, owners, new_deps)
+        self._update_task_dependencies(task, deps, new_deps, resources, worker, worker_id, assistant, priority)
+
+        self._update_priority(task, priority, worker_id)
+
+        task.retry_policy = retry_policy
+
+        if runnable and status != FAILED and worker.enabled:
+            task.workers.add(worker_id)
+            self._state.get_worker(worker_id).tasks.add(task)
+            task.runnable = runnable
+
+    def _get_or_create_task(self, worker, task_id, deps, resources, priority, family, module, params, param_visibilities):
         if worker.enabled:
             _default_task = self._make_task(
                 task_id=task_id,
@@ -859,16 +967,9 @@ class Scheduler:
         else:
             _default_task = None
 
-        task = self._state.get_task(task_id, setdefault=_default_task)
+        return self._state.get_task(task_id, setdefault=_default_task)
 
-        if task is None or (task.status != RUNNING and not worker.enabled):
-            return
-
-        # Ignore claims that the task is PENDING if it very recently was marked as DONE.
-        if status == PENDING and task.status == DONE and (time.time() - task.updated) < self._config.stable_done_cooldown_secs:
-            return
-
-        # for setting priority, we'll sometimes create tasks with unset family and params
+    def _update_task_metadata(self, task, family, module, param_visibilities, params, batch_id, status, worker_id, batchable, tracking_url, expl, accepts_messages):
         if not task.family:
             task.family = family
         if not getattr(task, "module", None):
@@ -883,7 +984,6 @@ class Scheduler:
         if status == RUNNING and not task.worker_running:
             task.worker_running = worker_id
             if batch_id:
-                # copy resources_running of the first batch task
                 batch_tasks = self._state.get_batch_running_tasks(batch_id)
                 task.resources_running = batch_tasks[0].resources_running.copy()
             task.time_running = time.time()
@@ -901,7 +1001,7 @@ class Scheduler:
             task.batchable = batchable
 
         if task.remove is not None:
-            task.remove = None  # unmark task for removal so it isn't removed after being added
+            task.remove = None
 
         if expl is not None:
             task.expl = expl
@@ -909,61 +1009,45 @@ class Scheduler:
                 for batch_task in self._state.get_batch_running_tasks(task.batch_id):
                     batch_task.expl = expl
 
+    def _update_task_status(self, task, status, worker_id, family, worker, expl, owners, new_deps):
         task_is_not_running = task.status not in (RUNNING, BATCH_RUNNING)
         task_started_a_run = status in (DONE, FAILED, RUNNING)
         running_on_this_worker = task.worker_running == worker_id
         if task_is_not_running or (task_started_a_run and running_on_this_worker) or new_deps:
-            # don't allow re-scheduling of task while it is running, it must either fail or succeed on the worker actually running it
             if status != task.status or status == PENDING:
-                # Update the DB only if there was a acctual change, to prevent noise.
-                # We also check for status == PENDING b/c that's the default value
-                # (so checking for status != task.status woule lie)
                 self._update_task_history(task, status)
             self._state.set_status(task, PENDING if status == SUSPENDED else status, self._config)
 
-        if status == FAILED and self._config.batch_emails:
-            batched_params, _ = self._state.get_batcher(worker_id, family)
-            if batched_params:
-                unbatched_params = {param: value for param, value in task.params.items() if param not in batched_params}
-            else:
-                unbatched_params = task.params
-            try:
-                expl_raw = json.loads(expl)
-            except ValueError:
-                expl_raw = expl
+        self._notify_task_failure(task, status, worker_id, family, expl, owners)
 
-            self._email_batcher.add_failure(task.pretty_id, task.family, unbatched_params, expl_raw, owners)
-            if task.status == DISABLED:
-                self._email_batcher.add_disable(task.pretty_id, task.family, unbatched_params, owners)
+    def _notify_task_failure(self, task, status, worker_id, family, expl, owners):
+        if not (status == FAILED and self._config.batch_emails):
+            return
+        batched_params, _ = self._state.get_batcher(worker_id, family)
+        if batched_params:
+            unbatched_params = {param: value for param, value in task.params.items() if param not in batched_params}
+        else:
+            unbatched_params = task.params
+        try:
+            expl_raw = json.loads(expl)
+        except ValueError:
+            expl_raw = expl
+        self._runtime.email_batcher.add_failure(task.pretty_id, task.family, unbatched_params, expl_raw, owners)
+        if task.status == DISABLED:
+            self._runtime.email_batcher.add_disable(task.pretty_id, task.family, unbatched_params, owners)
 
+    def _update_task_dependencies(self, task, deps, new_deps, resources, worker, worker_id, assistant, priority):
         if deps is not None:
             task.deps = set(deps)
-
         if new_deps is not None:
             task.deps.update(new_deps)
-
         if resources is not None:
             task.resources = resources
-
         if worker.enabled and not assistant:
             task.stakeholders.add(worker_id)
-
-            # Task dependencies might not exist yet. Let's create dummy tasks for them for now.
-            # Otherwise the task dependencies might end up being pruned if scheduling takes a long time
             for dep in task.deps or []:
                 t = self._state.get_task(dep, setdefault=self._make_task(task_id=dep, status=UNKNOWN, deps=None, priority=priority))
                 t.stakeholders.add(worker_id)
-
-        self._update_priority(task, priority, worker_id)
-
-        # Because some tasks (non-dynamic dependencies) are `_make_task`ed
-        # before we know their retry_policy, we always set it here
-        task.retry_policy = retry_policy
-
-        if runnable and status != FAILED and worker.enabled:
-            task.workers.add(worker_id)
-            self._state.get_worker(worker_id).tasks.add(task)
-            task.runnable = runnable
 
     @rpc_method()
     def announce_scheduling_failure(self, task_name, family, params, expl, owners, **kwargs):
@@ -975,7 +1059,7 @@ class Scheduler:
             unbatched_params = {param: value for param, value in params.items() if param not in batched_params}
         else:
             unbatched_params = params
-        self._email_batcher.add_scheduling_fail(task_name, family, unbatched_params, expl, owners)
+        self._runtime.email_batcher.add_scheduling_fail(task_name, family, unbatched_params, expl, owners)
 
     @rpc_method()
     def add_worker(self, worker, info, **kwargs):
@@ -1023,17 +1107,17 @@ class Scheduler:
 
     @rpc_method()
     def is_paused(self):
-        return {"paused": self._paused}
+        return {"paused": self._runtime.paused}
 
     @rpc_method()
     def pause(self):
         if self._config.pause_enabled:
-            self._paused = True
+            self._runtime.paused = True
 
     @rpc_method()
     def unpause(self):
         if self._config.pause_enabled:
-            self._paused = False
+            self._runtime.paused = False
 
     @rpc_method()
     def update_resources(self, **resources):
@@ -1184,7 +1268,7 @@ class Scheduler:
         greedy_resources = collections.defaultdict(int)
 
         worker = self._state.get_worker(worker_id)
-        if self._paused:
+        if self._runtime.paused:
             relevant_tasks = []
         elif worker.is_trivial_worker(self._state):
             relevant_tasks = worker.get_tasks(self._state, PENDING, RUNNING)

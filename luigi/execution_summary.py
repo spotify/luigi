@@ -96,7 +96,7 @@ def _partition_tasks(worker):
     Takes a worker and sorts out tasks based on their status.
     Still_pending_not_ext is only used to get upstream_failure, upstream_missing_dependency and run_by_other_worker
     """
-    task_history = worker._add_task_history
+    task_history = worker._execution_summary.task_history
     pending_tasks = {task for (task, status, ext) in task_history if status == "PENDING"}
     set_tasks = {}
     set_tasks["completed"] = {task for (task, status, ext) in task_history if status == "DONE" and task in pending_tasks}
@@ -129,7 +129,7 @@ def _root_task(worker):
     """
     Return the first task scheduled by the worker, corresponding to the root task
     """
-    return worker._add_task_history[0][0]
+    return worker._execution_summary.task_history[0][0]
 
 
 def _populate_unknown_statuses(set_tasks):
@@ -373,7 +373,7 @@ def _get_external_workers(worker):
     This returns a dict with a set of tasks for all of the other workers
     """
     worker_that_blocked_task = collections.defaultdict(set)
-    get_work_response_history = worker._get_work_response_history
+    get_work_response_history = worker._execution_summary.work_response_history
     for get_work_response in get_work_response_history:
         if get_work_response["task_id"] is None:
             for running_task in get_work_response["running_tasks"]:
