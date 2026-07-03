@@ -174,3 +174,5 @@ Temporary Items
 .apdisk
 
 .python-version
+config.bat
+node_modules
