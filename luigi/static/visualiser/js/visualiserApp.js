@@ -328,8 +328,50 @@ function visualiserApp(luigi) {
         if (data.taskParams) {
           data.taskParams = Object.entries(data.taskParams).map(([k,v]) => `--${k.replace(/_/g, '-')} ${JSON.stringify(v)}`).join(" ");
         }
-        $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
-        $("#errorModal").modal({});
+        var $errorModal = $("#errorModal");
+        $errorModal.addClass("error-modal-expanded");
+        $errorModal.empty().append(renderTemplate("errorTemplate", data));
+
+        $errorModal.on("click", "#toggleErrorModalSize", function () {
+            var expanded = $errorModal.toggleClass("error-modal-expanded").hasClass("error-modal-expanded");
+            $(this).text(expanded ? "Shrink" : "Expand");
+        });
+
+        $errorModal.on("shown.bs.modal", function () {
+            $errorModal.find("#toggleErrorModalSize").text("Shrink");
+            $errorModal.find(".js-select-on-open").first().focus();
+        });
+
+        // Keep Ctrl/Cmd+A scoped to the focused traceback block.
+        $errorModal.on("keydown", ".js-select-on-open", function (event) {
+            if ((event.ctrlKey || event.metaKey) && (event.key === "a" || event.key === "A")) {
+                var selection = window.getSelection();
+                var range = document.createRange();
+                range.selectNodeContents(this);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                event.preventDefault();
+            }
+        });
+
+        // If focus is elsewhere in the modal, Ctrl/Cmd+A should still target traceback text.
+        $errorModal.on("keydown", function (event) {
+            if ((event.ctrlKey || event.metaKey) && (event.key === "a" || event.key === "A")) {
+                if (!$(event.target).closest(".js-select-on-open").length) {
+                    var tracebackElement = $errorModal.find(".traceback-content").get(0);
+                    if (tracebackElement) {
+                        var selection = window.getSelection();
+                        var range = document.createRange();
+                        range.selectNodeContents(tracebackElement);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                        event.preventDefault();
+                    }
+                }
+            }
+        });
+
+        $errorModal.modal({});
     }
 
     function showStatusMessage(data) {
