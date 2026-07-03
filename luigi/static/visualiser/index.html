@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <title>Luigi Task Visualiser</title>
-        <link href="css/luigi.css" rel="stylesheet">
+        <link href="css/luigi.css?v=traceback-ui-2" rel="stylesheet">
         <script src="lib/jquery-1.10.0.min.js"></script>
         <link href="lib/bootstrap3/css/bootstrap.min.css" rel="stylesheet">
         <link href="lib/bootstrap3/css/bootstrap-theme.min.css" rel="stylesheet">
@@ -19,7 +19,7 @@
         <script src="js/util.js"></script>
         <script src="js/luigi.js"></script>
         <script src="js/graph.js"></script>
-        <script src="js/visualiserApp.js"></script>
+        <script src="js/visualiserApp.js?v=traceback-ui-2"></script>
         <script src="js/tipsy.js"></script>
         <script src="lib/jquery.slimscroll.min.js"></script>
         <script src="lib/AdminLTE/js/app.min.js"></script>
@@ -47,16 +47,20 @@
             </div>
         </script>
         <script type="text/template" name="errorTemplate">
-          <div class="modal-dialog">
+          <div class="modal-dialog modal-lg modal-error-traceback">
             <div class="modal-content">
               <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
                 <h4 class="modal-title" id="myModalLabel">Traceback for {{displayName}}</h4>
               </div>
               <div class="modal-body">
-                <pre class="pre-scrollable">{{error}}</pre>
-                Command to re-run:
-                <pre class="pre-scrollable">luigi --module {{taskModule}} {{taskFamily}} {{taskParams}}</pre>
+                <div class="traceback-modal-actions">
+                  <button type="button" class="btn btn-default btn-sm" id="toggleErrorModalSize">Expand</button>
+                </div>
+                <div class="traceback-section-label">Runtime error:</div>
+                <pre class="pre-scrollable traceback-content js-select-on-open" tabindex="0">{{error}}</pre>
+                <div class="traceback-section-label">Command to re-run:</div>
+                <pre class="pre-scrollable rerun-command js-select-on-open" tabindex="0">luigi --module {{taskModule}} {{taskFamily}} {{taskParams}}</pre>
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
