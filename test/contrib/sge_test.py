@@ -18,6 +18,7 @@
 import logging
 import os
 import os.path
+import shlex
 import subprocess
 import unittest
 from glob import glob
@@ -26,7 +27,7 @@ import pytest
 from mock import patch
 
 import luigi
-from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
+from luigi.contrib.sge import SGEJobTask, _build_qsub_command, _parse_qstat_state
 
 DEFAULT_HOME = "/home"
 
@@ -58,6 +59,21 @@ class TestSGEWrappers(unittest.TestCase):
         self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT, 3), "t")
         self.assertEqual(_parse_qstat_state("", 1), "u")
         self.assertEqual(_parse_qstat_state("", 4), "u")
+
+    def test_build_qsub_command_quotes_untrusted_fields(self):
+        """job_name, outfile, errfile and pe are shell-quoted so they can't
+        be used to inject extra shell commands into the qsub call."""
+        malicious = "job; touch /tmp/pwned"
+        cmd = _build_qsub_command("python runner.py", malicious, "/tmp/out", "/tmp/err", malicious, 2)
+
+        # everything after the pipe is what actually gets parsed by the shell
+        # when it invokes qsub; shlex.split will only see `malicious` as a
+        # single token if it was properly quoted, instead of splitting on the
+        # embedded `;`.
+        qsub_part = cmd.split("|", 1)[1]
+        tokens = shlex.split(qsub_part)
+        self.assertIn(malicious, tokens)
+        self.assertNotIn("touch", tokens)
 
 
 class TestJobTask(SGEJobTask):
