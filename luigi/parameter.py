@@ -1766,7 +1766,7 @@ class ChoiceListParameter(ChoiceParameter[ChoiceType]):
         return tuple(values)
 
     def serialize(self, x):
-        return self._sep.join(x)
+        return self._sep.join(str(v) for v in x)
 
 
 class OptionalChoiceParameter(OptionalParameterMixin[ChoiceType], ChoiceParameter[ChoiceType]):  # type: ignore[misc]

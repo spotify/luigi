@@ -358,6 +358,23 @@ class ParameterTest(LuigiTestCase):
     def test_choice_list_param_missing(self):
         self.assertRaises(ParameterException, lambda: luigi.parameter.ChoiceListParameter())
 
+    def test_choice_list_param_typed_serialize_parse(self):
+        # ChoiceListParameter with a non-str var_type must serialize its typed
+        # values. Previously serialize() joined them directly, which raised
+        # TypeError for int/float and made an int/float ChoiceListParameter
+        # unusable (task_id computation serializes every parameter).
+        p = luigi.ChoiceListParameter(var_type=int, choices=[1, 2, 3])
+        self.assertEqual("1,3", p.serialize((1, 3)))
+        self.assertEqual((1, 3), p.parse(p.serialize((1, 3))))
+
+        pf = luigi.ChoiceListParameter(var_type=float, choices=[1.5, 2.5])
+        self.assertEqual("1.5,2.5", pf.serialize((1.5, 2.5)))
+        self.assertEqual((1.5, 2.5), pf.parse(pf.serialize((1.5, 2.5))))
+
+        # str var_type (the existing case) is unchanged.
+        ps = luigi.ChoiceListParameter(var_type=str, choices=["1", "2", "3"])
+        self.assertEqual("1,3", ps.serialize(("1", "3")))
+
     def test_tuple_serialize_parse(self):
         a = luigi.TupleParameter()
         b_tuple = ((1, 2), (3, 4))
