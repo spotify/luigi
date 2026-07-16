@@ -196,6 +196,7 @@ class GCSClient(luigi.target.FileSystem):
 
         return self.isdir(path)
 
+    @gcs_retry
     def isdir(self, path):
         bucket, obj = self._path_to_bucket_and_key(path)
         if self._is_root(obj):
