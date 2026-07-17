@@ -26,8 +26,9 @@ from helpers import unittest
 try:
     import google.auth
     import googleapiclient.errors
+    import httplib2  # provided by the google-auth package
 except ImportError:
-    raise unittest.SkipTest("Unable to load googleapiclient module")
+    raise unittest.SkipTest("Unable to load googleapiclient module (requires google-auth)")
 import os
 import tempfile
 import unittest
@@ -220,8 +221,6 @@ class RetryTest(unittest.TestCase):
             mock_func()
 
     def test_isdir_no_retry_on_success(self):
-        import httplib2
-
         resp_404 = httplib2.Response({"status": "404"})
         err_404 = googleapiclient.errors.HttpError(resp=resp_404, content=b"not found")
 
@@ -236,8 +235,6 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(1, mock_client.objects().list().execute.call_count)
 
     def test_isdir_returns_false_when_no_items(self):
-        import httplib2
-
         resp_404 = httplib2.Response({"status": "404"})
         err_404 = googleapiclient.errors.HttpError(resp=resp_404, content=b"not found")
 
@@ -252,8 +249,6 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(1, mock_client.objects().list().execute.call_count)
 
     def test_isdir_retries_on_5xx(self):
-        import httplib2
-
         resp_503 = httplib2.Response({"status": "503"})
         err_503 = googleapiclient.errors.HttpError(resp=resp_503, content=b"internal error")
 
@@ -277,8 +272,6 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(3, mock_client.objects().list().execute.call_count)
 
     def test_isdir_fails_after_retry_limit(self):
-        import httplib2
-
         resp_503 = httplib2.Response({"status": "503"})
         err_503 = googleapiclient.errors.HttpError(resp=resp_503, content=b"internal error")
 
