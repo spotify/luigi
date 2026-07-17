@@ -215,27 +215,35 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_fail_with_retry_limit_exceed(self):
-        m = mock.MagicMock(side_effect=[IOError, IOError, IOError, IOError, IOError])
-
         @gcs.gcs_retry
         def mock_func():
             return m()
+
+        # arrange exactly as many failures as gcs_retry allows attempts, so the
+        # last one is what trips assertRaises below
+        max_attempts = mock_func.retry.stop.max_attempt_number
+        m = mock.MagicMock(side_effect=[IOError] * max_attempts)
 
         with self.assertRaises(IOError):
             mock_func()
 
     def test_isdir_no_retry_on_success(self):
+        prefix = "foo"
+        path = f"gs://bucket/{prefix}"
+
         mock_client = mock.MagicMock()
         mock_client.objects().get().execute.side_effect = HTTP_ERROR_404  # no object exists, so check for directory
-        mock_client.objects().list().execute.return_value = {"items": [{"name": "foo/bar"}]}  # directory exists
+        mock_client.objects().list().execute.return_value = {"items": [{"name": f"{prefix}/bar"}]}  # directory exists
 
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
         gcs_client.client = mock_client
 
-        self.assertTrue(gcs_client.isdir("gs://bucket/foo"))
+        self.assertTrue(gcs_client.isdir(path))
         self.assertEqual(1, mock_client.objects().list().execute.call_count)
 
     def test_isdir_returns_false_when_no_items(self):
+        path = "gs://bucket/foo"
+
         mock_client = mock.MagicMock()
         mock_client.objects().get().execute.side_effect = HTTP_ERROR_404  # no object exists, so check for directory
         mock_client.objects().list().execute.return_value = {"items": []}  # no items, means directory does not exist
@@ -243,34 +251,39 @@ class RetryTest(unittest.TestCase):
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
         gcs_client.client = mock_client
 
-        self.assertFalse(gcs_client.isdir("gs://bucket/foo"))
+        self.assertFalse(gcs_client.isdir(path))
         self.assertEqual(1, mock_client.objects().list().execute.call_count)
 
     def test_isdir_retries_on_5xx(self):
+        prefix = "foo"
+        path = f"gs://bucket/{prefix}"
+
         mock_client = mock.MagicMock()
         # _obj_exists("bucket/foo/") -> 404 (no retry, resolved as False)
         mock_client.objects().get().execute.side_effect = HTTP_ERROR_404
         # objects().list().execute(): 503 twice, then success
-        mock_client.objects().list().execute.side_effect = [
-            HTTP_ERROR_503,
-            HTTP_ERROR_503,
-            {"items": [{"name": "foo/bar"}]},
-        ]
+        list_side_effect = [HTTP_ERROR_503, HTTP_ERROR_503, {"items": [{"name": f"{prefix}/bar"}]}]
+        mock_client.objects().list().execute.side_effect = list_side_effect
 
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
         gcs_client.client = mock_client
 
-        self.assertTrue(gcs_client.isdir("gs://bucket/foo"))
-        self.assertEqual(3, mock_client.objects().list().execute.call_count)
+        self.assertTrue(gcs_client.isdir(path))
+        self.assertEqual(len(list_side_effect), mock_client.objects().list().execute.call_count)
 
     def test_isdir_fails_after_retry_limit(self):
+        path = "gs://bucket/foo"
+        # arrange exactly as many 503s as gcs_retry allows attempts, so the
+        # last one is what trips assertRaises below
+        max_attempts = gcs.GCSClient.isdir.retry.stop.max_attempt_number
+
         mock_client = mock.MagicMock()
         mock_client.objects().get().execute.side_effect = HTTP_ERROR_404
-        mock_client.objects().list().execute.side_effect = [HTTP_ERROR_503] * 5
+        mock_client.objects().list().execute.side_effect = [HTTP_ERROR_503] * max_attempts
 
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
         gcs_client.client = mock_client
 
         with self.assertRaises(googleapiclient.errors.HttpError):
-            gcs_client.isdir("gs://bucket/foo")
-        self.assertEqual(5, mock_client.objects().list().execute.call_count)
+            gcs_client.isdir(path)
+        self.assertEqual(max_attempts, mock_client.objects().list().execute.call_count)
