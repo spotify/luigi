@@ -271,7 +271,7 @@ class GCSClientIsDirRetryTest(unittest.TestCase):
         path = "gs://bucket/foo"
         # arrange exactly as many 503s as gcs_retry allows attempts, so the
         # last one is what trips assertRaises below
-        max_attempts = gcs.GCSClient.isdir.retry.stop.max_attempt_number
+        max_attempts = gcs.GCSClient._list_prefix.retry.stop.max_attempt_number
         self.mock_client.objects().list().execute.side_effect = [HTTP_ERROR_503] * max_attempts
 
         with self.assertRaises(googleapiclient.errors.HttpError):

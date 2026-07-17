@@ -197,22 +197,35 @@ class GCSClient(luigi.target.FileSystem):
         return self.isdir(path)
 
     @gcs_retry
+    def _bucket_exists(self, bucket):
+        try:
+            self.client.buckets().get(bucket=bucket).execute()
+        except errors.HttpError as ex:
+            if ex.resp["status"] == "404":
+                return False
+            raise
+        return True
+
+    @gcs_retry
+    def _list_prefix(self, bucket, prefix, max_results):
+        return self.client.objects().list(bucket=bucket, prefix=prefix, maxResults=max_results).execute()
+
     def isdir(self, path):
+        # NOTE: retry lives on the individual API helpers (_bucket_exists,
+        # _obj_exists, _list_prefix) rather than on isdir itself. Wrapping
+        # isdir directly would nest with _obj_exists's own @gcs_retry and
+        # produce a multiplicative 5*5 retry budget on a persistent 5xx.
         bucket, obj = self._path_to_bucket_and_key(path)
         if self._is_root(obj):
-            try:
-                self.client.buckets().get(bucket=bucket).execute()
-            except errors.HttpError as ex:
-                if ex.resp["status"] == "404":
-                    return False
-                raise
+            if not self._bucket_exists(bucket):
+                return False
 
         obj = self._add_path_delimiter(obj)
         if self._obj_exists(bucket, obj):
             return True
 
         # Any objects with this prefix
-        resp = self.client.objects().list(bucket=bucket, prefix=obj, maxResults=20).execute()
+        resp = self._list_prefix(bucket, obj, max_results=20)
         lst = next(iter(resp.get("items", [])), None)
         return bool(lst)
 
