@@ -196,6 +196,7 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
         assert src.closed
 
 
+@pytest.mark.gcloud
 class RetryTest(unittest.TestCase):
     def test_success_with_retryable_error(self):
         m = mock.MagicMock(side_effect=[IOError, IOError, "test_func_output"])
