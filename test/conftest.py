@@ -1,8 +1,17 @@
+import multiprocessing
+import sys
 from typing import List
 
 import pytest
 
 import luigi.task_register
+
+if sys.version_info >= (3, 14):
+    # Set the multiprocessing start method to "fork" for tests to avoid pickling issues.
+    # Before 3.14, the default start method was "fork" on Unix-like systems, but it
+    # changed to "forkserver" in 3.14, which can cause issues with certain tests that
+    # have objects that cannot be pickled.
+    multiprocessing.set_start_method("fork", force=True)
 
 
 @pytest.fixture(autouse=True)
