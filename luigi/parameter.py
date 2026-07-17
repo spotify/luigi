@@ -643,12 +643,6 @@ class MonthParameter(DateParameter):
         return self._add_months(self.start, months_since_start)
 
 
-class OptionalMonthParameter(OptionalParameterMixin[datetime.date], MonthParameter):  # type: ignore[misc]
-    """Class to parse optional month parameters."""
-
-    expected_type = datetime.date
-
-
 class YearParameter(DateParameter):
     """
     Parameter whose value is a :py:class:`~datetime.date`, specified to the year
@@ -672,12 +666,6 @@ class YearParameter(DateParameter):
 
         delta = (x.year - self.start.year) % self.interval
         return datetime.date(year=x.year - delta, month=1, day=1)
-
-
-class OptionalYearParameter(OptionalParameterMixin[datetime.date], YearParameter):  # type: ignore[misc]
-    """Class to parse optional year parameters."""
-
-    expected_type = datetime.date
 
 
 class _DatetimeParameterBase(Parameter[datetime.datetime]):
@@ -764,12 +752,6 @@ class DateHourParameter(_DatetimeParameterBase):
     _timedelta = datetime.timedelta(hours=1)
 
 
-class OptionalDateHourParameter(OptionalParameterMixin[datetime.datetime], DateHourParameter):  # type: ignore[misc]
-    """Class to parse optional date hour parameters."""
-
-    expected_type = datetime.datetime
-
-
 class DateMinuteParameter(_DatetimeParameterBase):
     """
     Parameter whose value is a :py:class:`~datetime.datetime` specified to the minute.
@@ -794,12 +776,6 @@ class DateMinuteParameter(_DatetimeParameterBase):
             return super().parse(x)
 
 
-class OptionalDateMinuteParameter(OptionalParameterMixin[datetime.datetime], DateMinuteParameter):  # type: ignore[misc]
-    """Class to parse optional date minute parameters."""
-
-    expected_type = datetime.datetime
-
-
 class DateSecondParameter(_DatetimeParameterBase):
     """
     Parameter whose value is a :py:class:`~datetime.datetime` specified to the second.
@@ -813,12 +789,6 @@ class DateSecondParameter(_DatetimeParameterBase):
 
     date_format = "%Y-%m-%dT%H%M%S"
     _timedelta = datetime.timedelta(seconds=1)
-
-
-class OptionalDateSecondParameter(OptionalParameterMixin[datetime.datetime], DateSecondParameter):  # type: ignore[misc]
-    """Class to parse optional date second parameters."""
-
-    expected_type = datetime.datetime
 
 
 class StrParameter(Parameter[str]):
@@ -977,12 +947,6 @@ class DateIntervalParameter(Parameter[date_interval.DateInterval]):
                 return i
 
         raise ValueError("Invalid date interval - could not be parsed")
-
-
-class OptionalDateIntervalParameter(OptionalParameterMixin[date_interval.DateInterval], DateIntervalParameter):  # type: ignore[misc]
-    """Class to parse optional date interval parameters."""
-
-    expected_type = date_interval.DateInterval
 
 
 class TimeDeltaParameter(Parameter[datetime.timedelta]):
