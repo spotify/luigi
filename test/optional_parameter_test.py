@@ -8,7 +8,7 @@ import luigi
 
 
 class OptionalParameterTest(LuigiTestCase):
-    def actual_test(self, cls, default, expected_value, expected_type, bad_data, **kwargs):
+    def actual_test(self, cls, default, expected_value, expected_type, bad_data=None, **kwargs):
 
         class TestConfig(luigi.Config):
             param = cls(default=default, **kwargs)
@@ -35,6 +35,9 @@ class OptionalParameterTest(LuigiTestCase):
                 TestConfig(param=None)
                 warnings.warn.assert_not_called()
 
+        # bad_data is None for parameters whose normalize() raises on wrong
+        # types before the type warning is emitted (e.g. date parameters).
+        if cls != luigi.OptionalChoiceParameter and bad_data is not None:
             with mock.patch("luigi.parameter.warnings") as warnings:
                 TestConfig(param=bad_data)
                 if cls == luigi.OptionalBoolParameter:
@@ -99,62 +102,10 @@ class OptionalParameterTest(LuigiTestCase):
         self.actual_test(luigi.OptionalChoiceParameter, None, "expected value", "str", "bad data", choices=choices)
         self.actual_test(luigi.OptionalChoiceParameter, "default value", "expected value", "str", "bad data", choices=choices)
 
+    @with_config({"TestConfig": {"param": "2013-07-10", "empty_param": ""}})
     def test_optional_date_parameter(self):
-        """Unlike actual_test, this skips the bad-data warning check because
-        DateParameter.normalize() crashes on non-date types."""
-        expected_value = datetime.date(2013, 7, 10)
-        config_value = "2013-07-10"
-        param = luigi.OptionalDateParameter()
-
-        # parse("") → None
-        self.assertIsNone(param.parse(""))
-
-        # parse(valid_string) → expected
-        self.assertEqual(param.parse(config_value), expected_value)
-
-        # serialize(None) → ""
-        self.assertEqual(param.serialize(None), "")
-
-        # serialize(value) → string
-        self.assertEqual(param.serialize(expected_value), config_value)
-
-        # next_in_enumeration → None
-        self.assertIsNone(param.next_in_enumeration(expected_value))
-        self.assertIsNone(param.next_in_enumeration(None))
-
-        # Setting None should not trigger a warning
-        with mock.patch("luigi.parameter.warnings") as mocked:
-
-            @with_config({"Cfg": {"param": config_value, "empty": ""}})
-            def inner(self_inner):
-                class Cfg(luigi.Config):
-                    param = luigi.OptionalDateParameter()
-                    empty = luigi.OptionalDateParameter()
-
-                    def run(inner_self):
-                        self_inner.assertEqual(inner_self.param, expected_value)
-                        self_inner.assertIsNone(inner_self.empty)
-
-                Cfg(param=None)
-                mocked.warn.assert_not_called()
-                self_inner.assertTrue(luigi.build([Cfg()], local_scheduler=True))
-
-            inner(self)
-
-        # Should also work with an explicit default value
-        @with_config({"Cfg2": {"param": config_value, "empty": ""}})
-        def inner2(self_inner):
-            class Cfg2(luigi.Config):
-                param = luigi.OptionalDateParameter(default=datetime.date(2000, 1, 1))
-                empty = luigi.OptionalDateParameter(default=datetime.date(2000, 1, 1))
-
-                def run(inner_self):
-                    self_inner.assertEqual(inner_self.param, expected_value)
-                    self_inner.assertIsNone(inner_self.empty)
-
-            self_inner.assertTrue(luigi.build([Cfg2()], local_scheduler=True))
-
-        inner2(self)
+        self.actual_test(luigi.OptionalDateParameter, None, datetime.date(2013, 7, 10), "date")
+        self.actual_test(luigi.OptionalDateParameter, datetime.date(2000, 1, 1), datetime.date(2013, 7, 10), "date")
 
     @with_config({"TestConfig": {"param": "1", "empty_param": ""}})
     def test_optional_choice_parameter_int(self):
