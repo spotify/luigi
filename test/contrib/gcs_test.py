@@ -48,6 +48,10 @@ TEST_FOLDER = os.environ.get("TRAVIS_BUILD_ID", "gcs_test_folder")
 CREDENTIALS, _ = google.auth.default()
 ATTEMPTED_BUCKET_CREATE = False
 
+# Canned HTTP errors reused by RetryTest to simulate GCS API responses.
+HTTP_ERROR_404 = googleapiclient.errors.HttpError(resp=httplib2.Response({"status": "404"}), content=b"not found")
+HTTP_ERROR_503 = googleapiclient.errors.HttpError(resp=httplib2.Response({"status": "503"}), content=b"internal error")
+
 
 def bucket_url(suffix):
     """
@@ -221,11 +225,8 @@ class RetryTest(unittest.TestCase):
             mock_func()
 
     def test_isdir_no_retry_on_success(self):
-        resp_404 = httplib2.Response({"status": "404"})
-        err_404 = googleapiclient.errors.HttpError(resp=resp_404, content=b"not found")
-
         mock_client = mock.MagicMock()
-        mock_client.objects().get().execute.side_effect = err_404  # no object exists, so check for directory
+        mock_client.objects().get().execute.side_effect = HTTP_ERROR_404  # no object exists, so check for directory
         mock_client.objects().list().execute.return_value = {"items": [{"name": "foo/bar"}]}  # directory exists
 
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
@@ -235,11 +236,8 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(1, mock_client.objects().list().execute.call_count)
 
     def test_isdir_returns_false_when_no_items(self):
-        resp_404 = httplib2.Response({"status": "404"})
-        err_404 = googleapiclient.errors.HttpError(resp=resp_404, content=b"not found")
-
         mock_client = mock.MagicMock()
-        mock_client.objects().get().execute.side_effect = err_404  # no object exists, so check for directory
+        mock_client.objects().get().execute.side_effect = HTTP_ERROR_404  # no object exists, so check for directory
         mock_client.objects().list().execute.return_value = {"items": []}  # no items, means directory does not exist
 
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
@@ -249,19 +247,13 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(1, mock_client.objects().list().execute.call_count)
 
     def test_isdir_retries_on_5xx(self):
-        resp_503 = httplib2.Response({"status": "503"})
-        err_503 = googleapiclient.errors.HttpError(resp=resp_503, content=b"internal error")
-
-        resp_404 = httplib2.Response({"status": "404"})
-        err_404 = googleapiclient.errors.HttpError(resp=resp_404, content=b"not found")
-
         mock_client = mock.MagicMock()
         # _obj_exists("bucket/foo/") -> 404 (no retry, resolved as False)
-        mock_client.objects().get().execute.side_effect = err_404
+        mock_client.objects().get().execute.side_effect = HTTP_ERROR_404
         # objects().list().execute(): 503 twice, then success
         mock_client.objects().list().execute.side_effect = [
-            err_503,
-            err_503,
+            HTTP_ERROR_503,
+            HTTP_ERROR_503,
             {"items": [{"name": "foo/bar"}]},
         ]
 
@@ -272,15 +264,9 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(3, mock_client.objects().list().execute.call_count)
 
     def test_isdir_fails_after_retry_limit(self):
-        resp_503 = httplib2.Response({"status": "503"})
-        err_503 = googleapiclient.errors.HttpError(resp=resp_503, content=b"internal error")
-
-        resp_404 = httplib2.Response({"status": "404"})
-        err_404 = googleapiclient.errors.HttpError(resp=resp_404, content=b"not found")
-
         mock_client = mock.MagicMock()
-        mock_client.objects().get().execute.side_effect = err_404
-        mock_client.objects().list().execute.side_effect = [err_503] * 5
+        mock_client.objects().get().execute.side_effect = HTTP_ERROR_404
+        mock_client.objects().list().execute.side_effect = [HTTP_ERROR_503] * 5
 
         gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
         gcs_client.client = mock_client
