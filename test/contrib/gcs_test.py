@@ -26,8 +26,9 @@ from helpers import unittest
 try:
     import google.auth
     import googleapiclient.errors
+    import httplib2  # provided by the google-auth package
 except ImportError:
-    raise unittest.SkipTest("Unable to load googleapiclient module")
+    raise unittest.SkipTest("Unable to load googleapiclient module (requires google-auth)")
 import os
 import tempfile
 import unittest
@@ -46,6 +47,10 @@ TEST_FOLDER = os.environ.get("TRAVIS_BUILD_ID", "gcs_test_folder")
 
 CREDENTIALS, _ = google.auth.default()
 ATTEMPTED_BUCKET_CREATE = False
+
+# Canned HTTP errors reused by RetryTest to simulate GCS API responses.
+HTTP_ERROR_404 = googleapiclient.errors.HttpError(resp=httplib2.Response({"status": "404"}), content=b"not found")
+HTTP_ERROR_503 = googleapiclient.errors.HttpError(resp=httplib2.Response({"status": "503"}), content=b"internal error")
 
 
 def bucket_url(suffix):
@@ -196,6 +201,7 @@ class GCSTargetTest(_GCSBaseTestCase, FileSystemTargetTestMixin):
         assert src.closed
 
 
+@pytest.mark.gcloud
 class RetryTest(unittest.TestCase):
     def test_success_with_retryable_error(self):
         m = mock.MagicMock(side_effect=[IOError, IOError, "test_func_output"])
@@ -209,11 +215,65 @@ class RetryTest(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_fail_with_retry_limit_exceed(self):
-        m = mock.MagicMock(side_effect=[IOError, IOError, IOError, IOError, IOError])
-
         @gcs.gcs_retry
         def mock_func():
             return m()
 
+        # arrange exactly as many failures as gcs_retry allows attempts, so the
+        # last one is what trips assertRaises below
+        max_attempts = mock_func.retry.stop.max_attempt_number
+        m = mock.MagicMock(side_effect=[IOError] * max_attempts)
+
         with self.assertRaises(IOError):
             mock_func()
+
+
+# NOTE: these tests belong on GCSClientTest, but that class does live-GCS
+# integration setup via _GCSBaseTestCase and needs to be refactored to
+# plain local unit tests before this can move there.
+@pytest.mark.gcloud
+class GCSClientIsDirRetryTest(unittest.TestCase):
+    def setUp(self):
+        self.mock_client = mock.MagicMock()
+        self.mock_client.objects().get().execute.side_effect = HTTP_ERROR_404  # no object exists, so check for directory
+        self.gcs_client = gcs.GCSClient.__new__(gcs.GCSClient)
+        self.gcs_client.client = self.mock_client
+
+    def test_isdir_no_retry_on_success(self):
+        prefix = "foo"
+        path = f"gs://bucket/{prefix}"
+
+        self.mock_client.objects().list().execute.return_value = {"items": [{"name": f"{prefix}/bar"}]}  # directory exists
+
+        self.assertTrue(self.gcs_client.isdir(path))
+        self.assertEqual(1, self.mock_client.objects().list().execute.call_count)
+
+    def test_isdir_returns_false_when_no_items(self):
+        path = "gs://bucket/foo"
+
+        self.mock_client.objects().list().execute.return_value = {"items": []}  # no items, means directory does not exist
+
+        self.assertFalse(self.gcs_client.isdir(path))
+        self.assertEqual(1, self.mock_client.objects().list().execute.call_count)
+
+    def test_isdir_retries_on_5xx(self):
+        prefix = "foo"
+        path = f"gs://bucket/{prefix}"
+
+        # objects().list().execute(): 503 twice, then success
+        list_side_effect = [HTTP_ERROR_503, HTTP_ERROR_503, {"items": [{"name": f"{prefix}/bar"}]}]
+        self.mock_client.objects().list().execute.side_effect = list_side_effect
+
+        self.assertTrue(self.gcs_client.isdir(path))
+        self.assertEqual(len(list_side_effect), self.mock_client.objects().list().execute.call_count)
+
+    def test_isdir_fails_after_retry_limit(self):
+        path = "gs://bucket/foo"
+        # arrange exactly as many 503s as gcs_retry allows attempts, so the
+        # last one is what trips assertRaises below
+        max_attempts = gcs.GCSClient._list_prefix.retry.stop.max_attempt_number
+        self.mock_client.objects().list().execute.side_effect = [HTTP_ERROR_503] * max_attempts
+
+        with self.assertRaises(googleapiclient.errors.HttpError):
+            self.gcs_client.isdir(path)
+        self.assertEqual(max_attempts, self.mock_client.objects().list().execute.call_count)
