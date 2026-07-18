@@ -211,10 +211,6 @@ class GCSClient(luigi.target.FileSystem):
         return self.client.objects().list(bucket=bucket, prefix=prefix, maxResults=max_results).execute()
 
     def isdir(self, path):
-        # NOTE: retry lives on the individual API helpers (_bucket_exists,
-        # _obj_exists, _list_prefix) rather than on isdir itself. Wrapping
-        # isdir directly would nest with _obj_exists's own @gcs_retry and
-        # produce a multiplicative 5*5 retry budget on a persistent 5xx.
         bucket, obj = self._path_to_bucket_and_key(path)
         if self._is_root(obj):
             if not self._bucket_exists(bucket):
