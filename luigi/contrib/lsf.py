@@ -208,11 +208,11 @@ class LSFJobTask(luigi.Task):
         if self.__module__ == "__main__":
             dump_inst = pickle.dumps(self)
             module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
-            dump_inst = dump_inst.replace("(c__main__", "(c" + module_name)
-            open(self.job_file, "w").write(dump_inst)
+            dump_inst = dump_inst.replace(b"(c__main__", b"(c" + module_name.encode())
+            open(self.job_file, "wb").write(dump_inst)
 
         else:
-            pickle.dump(self, open(self.job_file, "w"))
+            pickle.dump(self, open(self.job_file, "wb"))
 
     def _run_job(self):
         """

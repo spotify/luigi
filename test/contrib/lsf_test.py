@@ -26,7 +26,10 @@ wrappers
 import logging
 import os
 import os.path
+import shutil
 import subprocess
+import sys
+import tempfile
 import unittest
 from glob import glob
 
@@ -34,6 +37,7 @@ import pytest
 from mock import patch
 
 import luigi
+from luigi.contrib import lsf_runner
 from luigi.contrib.lsf import LSFJobTask
 
 DEFAULT_HOME = ""
@@ -97,6 +101,36 @@ class TestSGEJob(unittest.TestCase):
                 os.remove(fpath)
             except OSError:
                 pass
+
+
+@pytest.mark.contrib
+class LSFRunnerTest(unittest.TestCase):
+    """Test that a dumped job instance can be loaded and run by lsf_runner"""
+
+    def setUp(self):
+        self.cwd = os.getcwd()
+        self.work_dir = tempfile.mkdtemp()
+
+    def test_dump_and_run_job(self):
+        task = TestJobTask(i="1", n_cpu_flag=1)
+        task._dump(self.work_dir)
+
+        lsf_runner.do_work_on_compute_node(self.work_dir)
+
+        self.assertTrue(os.path.exists(os.path.join(self.work_dir, task.output().path)))
+
+    def test_dump_from_main_module(self):
+        task = TestJobTask(i="2", n_cpu_flag=1)
+        with patch.object(TestJobTask, "__module__", "__main__"):
+            with patch.object(sys.modules["__main__"], "TestJobTask", TestJobTask, create=True):
+                task._dump(self.work_dir)
+
+        job_file = os.path.join(self.work_dir, "job-instance.pickle")
+        self.assertTrue(os.path.getsize(job_file) > 0)
+
+    def tearDown(self):
+        os.chdir(self.cwd)
+        shutil.rmtree(self.work_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":
