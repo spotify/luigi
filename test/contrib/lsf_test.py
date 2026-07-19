@@ -28,6 +28,7 @@ import os
 import os.path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from glob import glob
@@ -117,6 +118,15 @@ class LSFRunnerTest(unittest.TestCase):
         lsf_runner.do_work_on_compute_node(self.work_dir)
 
         self.assertTrue(os.path.exists(os.path.join(self.work_dir, task.output().path)))
+
+    def test_dump_from_main_module(self):
+        task = TestJobTask(i="2", n_cpu_flag=1)
+        with patch.object(TestJobTask, "__module__", "__main__"):
+            with patch.object(sys.modules["__main__"], "TestJobTask", TestJobTask, create=True):
+                task._dump(self.work_dir)
+
+        job_file = os.path.join(self.work_dir, "job-instance.pickle")
+        self.assertTrue(os.path.getsize(job_file) > 0)
 
     def tearDown(self):
         os.chdir(self.cwd)

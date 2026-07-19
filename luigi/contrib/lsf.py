@@ -120,7 +120,7 @@ class LSFJobTask(luigi.Task):
         """
         error_file = os.path.join(self.tmp_dir, "job.err")
         if os.path.isfile(error_file):
-            with open(error_file, "rb") as f_err:
+            with open(error_file, "r") as f_err:
                 errors = f_err.readlines()
         else:
             errors = ""
@@ -132,7 +132,7 @@ class LSFJobTask(luigi.Task):
         """
         # Read in the output file
         if os.path.isfile(os.path.join(self.tmp_dir, "job.out")):
-            with open(os.path.join(self.tmp_dir, "job.out"), "rb") as f_out:
+            with open(os.path.join(self.tmp_dir, "job.out"), "r") as f_out:
                 outputs = f_out.readlines()
         else:
             outputs = ""
