@@ -120,7 +120,7 @@ class LSFJobTask(luigi.Task):
         """
         error_file = os.path.join(self.tmp_dir, "job.err")
         if os.path.isfile(error_file):
-            with open(error_file, "r") as f_err:
+            with open(error_file, "rb") as f_err:
                 errors = f_err.readlines()
         else:
             errors = ""
@@ -132,7 +132,7 @@ class LSFJobTask(luigi.Task):
         """
         # Read in the output file
         if os.path.isfile(os.path.join(self.tmp_dir, "job.out")):
-            with open(os.path.join(self.tmp_dir, "job.out"), "r") as f_out:
+            with open(os.path.join(self.tmp_dir, "job.out"), "rb") as f_out:
                 outputs = f_out.readlines()
         else:
             outputs = ""
@@ -208,11 +208,11 @@ class LSFJobTask(luigi.Task):
         if self.__module__ == "__main__":
             dump_inst = pickle.dumps(self)
             module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
-            dump_inst = dump_inst.replace("(c__main__", "(c" + module_name)
-            open(self.job_file, "w").write(dump_inst)
+            dump_inst = dump_inst.replace(b"(c__main__", b"(c" + module_name.encode())
+            open(self.job_file, "wb").write(dump_inst)
 
         else:
-            pickle.dump(self, open(self.job_file, "w"))
+            pickle.dump(self, open(self.job_file, "wb"))
 
     def _run_job(self):
         """
