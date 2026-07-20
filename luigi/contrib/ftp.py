@@ -37,34 +37,36 @@ import luigi
 import luigi.format
 import luigi.local_target
 import luigi.target
+from collections import namedtuple
 from luigi.format import FileWrapper
 
 logger = logging.getLogger("luigi-interface")
 
 
+_RemoteFileSystemConfig = namedtuple('_RemoteFileSystemConfig', [
+    'host', 'username', 'password', 'port', 'tls', 'timeout', 'sftp', 'pysftp_conn_kwargs'
+])
+
+_ConnectionConfig = namedtuple('_ConnectionConfig', [
+    'tls', 'timeout', 'sftp'
+])
+
+
 class RemoteFileSystem(luigi.target.FileSystem):
     def __init__(self, host, username=None, password=None, port=None, tls=False, timeout=60, sftp=False, pysftp_conn_kwargs=None):
-        self.host = host
-        self.username = username
-        self.password = password
-        self.tls = tls
-        self.timeout = timeout
-        self.sftp = sftp
-        self.pysftp_conn_kwargs = pysftp_conn_kwargs or {}
-
         if port is None:
-            if self.sftp:
-                self.port = 22
-            else:
-                self.port = 21
-        else:
-            self.port = port
+            port = 22 if sftp else 21
+        self._config = _RemoteFileSystemConfig(
+            host=host, username=username, password=password, port=port,
+            tls=tls, timeout=timeout, sftp=sftp,
+            pysftp_conn_kwargs=pysftp_conn_kwargs or {}
+        )
 
     def _connect(self):
         """
         Log in to ftp.
         """
-        if self.sftp:
+        if self._config.sftp:
             self._sftp_connect()
         else:
             self._ftp_connect()
@@ -75,23 +77,23 @@ class RemoteFileSystem(luigi.target.FileSystem):
         except ImportError:
             logger.warning("Please install pysftp to use SFTP.")
 
-        self.conn = pysftp.Connection(self.host, username=self.username, password=self.password, port=self.port, **self.pysftp_conn_kwargs)
+        self.conn = pysftp.Connection(self._config.host, username=self._config.username, password=self._config.password, port=self._config.port, **self._config.pysftp_conn_kwargs)
 
     def _ftp_connect(self):
-        if self.tls:
+        if self._config.tls:
             self.conn = ftplib.FTP_TLS()
         else:
             self.conn = ftplib.FTP()
-        self.conn.connect(self.host, self.port, timeout=self.timeout)
-        self.conn.login(self.username, self.password)
-        if self.tls:
+        self.conn.connect(self._config.host, self._config.port, timeout=self._config.timeout)
+        self.conn.login(self._config.username, self._config.password)
+        if self._config.tls:
             self.conn.prot_p()
 
     def _close(self):
         """
         Close ftp connection.
         """
-        if self.sftp:
+        if self._config.sftp:
             self._sftp_close()
         else:
             self._ftp_close()
@@ -112,7 +114,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         """
         self._connect()
 
-        if self.sftp:
+        if self._config.sftp:
             exists = self._sftp_exists(path, mtime)
         else:
             exists = self._ftp_exists(path, mtime)
@@ -156,7 +158,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         """
         self._connect()
 
-        if self.sftp:
+        if self._config.sftp:
             self._sftp_remove(path, recursive)
         else:
             self._ftp_remove(path, recursive)
@@ -237,7 +239,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         """
         self._connect()
 
-        if self.sftp:
+        if self._config.sftp:
             self._sftp_put(local_path, path, atomic)
         else:
             self._ftp_put(local_path, path, atomic)
@@ -298,7 +300,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         # download file
         self._connect()
 
-        if self.sftp:
+        if self._config.sftp:
             self._sftp_get(path, tmp_local_path)
         else:
             self._ftp_get(path, tmp_local_path)
@@ -319,7 +321,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
         """
         self._connect()
 
-        if self.sftp:
+        if self._config.sftp:
             contents = self._sftp_listdir(path)
         else:
             contents = self._ftp_listdir(path)
@@ -377,10 +379,8 @@ class RemoteTarget(luigi.target.FileSystemTarget):
         self.path = path
         self.mtime = mtime
         self.format = format
-        self.tls = tls
-        self.timeout = timeout
-        self.sftp = sftp
-        self._fs = RemoteFileSystem(host, username, password, port, tls, timeout, sftp, pysftp_conn_kwargs)
+        self._conn_config = _ConnectionConfig(tls, timeout, sftp)
+        self._fs = RemoteFileSystem(host, username, password, port, self._conn_config.tls, self._conn_config.timeout, self._conn_config.sftp, pysftp_conn_kwargs)
 
     @property
     def fs(self):

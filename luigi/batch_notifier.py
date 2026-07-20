@@ -54,6 +54,14 @@ def _plural_format(template, number, plural="s"):
     return template.format(number, "" if number == 1 else plural)
 
 
+class _EmailConfig:
+    __slots__ = ("format", "default_owner")
+
+    def __init__(self, fmt, default_owner):
+        self.format = fmt
+        self.default_owner = default_owner
+
+
 class BatchNotifier:
     def __init__(self, **kwargs):
         self._config = batch_email(**kwargs)
@@ -63,11 +71,11 @@ class BatchNotifier:
         self._fail_expls = collections.defaultdict(_fail_queue(self._config.error_messages))
         self._update_next_send()
 
-        self._email_format = email().format
-        if email().receiver:
-            self._default_owner = set(filter(None, email().receiver.split(",")))
-        else:
-            self._default_owner = set()
+        _email = email()
+        self._email_config = _EmailConfig(
+            fmt=_email.format,
+            default_owner=set(filter(None, _email.receiver.split(","))) if _email.receiver else set(),
+        )
 
     def _update_next_send(self):
         self._next_send = time.time() + 60 * self._config.email_interval
@@ -85,14 +93,14 @@ class BatchNotifier:
 
     def _format_expl(self, expl):
         lines = expl.rstrip().split("\n")[-self._config.error_lines :]
-        if self._email_format == "html":
+        if self._email_config.format == "html":
             return "<pre>{}</pre>".format("\n".join(lines))
         else:
             return "\n{}".format("\n".join(map("      {}".format, lines)))
 
     def _expl_body(self, expls):
         lines = [self._format_expl(expl) for expl in expls]
-        if lines and self._email_format != "html":
+        if lines and self._email_config.format != "html":
             lines.append("")
         return "\n".join(lines)
 
@@ -108,13 +116,13 @@ class BatchNotifier:
 
     def _format_tasks(self, tasks):
         lines = map(self._format_task, sorted(tasks, key=self._expl_key))
-        if self._email_format == "html":
+        if self._email_config.format == "html":
             return "<li>{}".format("\n<br>".join(lines))
         else:
             return "- {}".format("\n  ".join(lines))
 
     def _owners(self, owners):
-        return self._default_owner | set(owners)
+        return self._email_config.default_owner | set(owners)
 
     def add_failure(self, task_name, family, unbatched_args, expl, owners):
         key = self._key(task_name, family, unbatched_args)
@@ -164,7 +172,7 @@ class BatchNotifier:
             body_lines.append(self._format_tasks(tasks))
             body_lines.append(msg)
         body = "\n".join(filter(None, body_lines)).rstrip()
-        if self._email_format == "html":
+        if self._email_config.format == "html":
             return "<ul>\n{}\n</ul>".format(body)
         else:
             return body
@@ -180,7 +188,7 @@ class BatchNotifier:
         ]
         subject_base = ", ".join(filter(None, subject_parts))
         if subject_base:
-            prefix = "" if owner in self._default_owner else "Your tasks have "
+            prefix = "" if owner in self._email_config.default_owner else "Your tasks have "
             subject = "Luigi: {}{} in the last {} minutes".format(prefix, subject_base, self._config.email_interval)
             email_body = self._email_body(fail_counts, disable_counts, scheduling_counts, fail_expls)
             send_email(subject, email_body, email().sender, (owner,))

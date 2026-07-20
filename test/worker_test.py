@@ -1625,7 +1625,7 @@ class MultipleWorkersTest(LuigiTestCase):
             w.add(hung_task)
 
             w._run_task(hung_task.task_id)
-            pids = [p.pid for p in w._running_tasks.values()]
+            pids = [p.pid for p in w._run_state.tasks.values()]
             self.assertEqual(1, len(pids))
             pid = pids[0]
 
@@ -1672,11 +1672,11 @@ class MultipleWorkersTest(LuigiTestCase):
 
         mock_time.time.return_value = 5
         w._handle_next_task()
-        self.assertEqual(1, len(w._running_tasks))
+        self.assertEqual(1, len(w._run_state.tasks))
 
         mock_time.time.return_value = 6
         w._handle_next_task()
-        self.assertEqual(0, len(w._running_tasks))
+        self.assertEqual(0, len(w._run_state.tasks))
 
     @skipOnTravisAndGithubActions("https://travis-ci.org/spotify/luigi/jobs/76645264")
     @mock.patch("luigi.worker.time")
@@ -1689,11 +1689,11 @@ class MultipleWorkersTest(LuigiTestCase):
 
         mock_time.time.return_value = 10
         w._handle_next_task()
-        self.assertEqual(1, len(w._running_tasks))
+        self.assertEqual(1, len(w._run_state.tasks))
 
         mock_time.time.return_value = 11
         w._handle_next_task()
-        self.assertEqual(0, len(w._running_tasks))
+        self.assertEqual(0, len(w._run_state.tasks))
 
 
 class Dummy2Task(Task):

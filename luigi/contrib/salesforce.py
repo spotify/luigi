@@ -224,6 +224,16 @@ class QuerySalesforce(Task):
         outfile.close()
 
 
+class _SalesforceSession:
+    def __init__(self):
+        self.session_id = None
+        self.server_url = None
+        self.hostname = None
+
+    def has_active_session(self):
+        return self.session_id and self.server_url
+
+
 class SalesforceAPI:
     """
     Class used to interact with the SalesforceAPI.  Currently provides only the
@@ -244,9 +254,31 @@ class SalesforceAPI:
         if self.sandbox_name:
             self.username += ".%s" % self.sandbox_name
 
-        self.session_id = None
-        self.server_url = None
-        self.hostname = None
+        self._session = _SalesforceSession()
+
+    @property
+    def session_id(self):
+        return self._session.session_id
+
+    @session_id.setter
+    def session_id(self, value):
+        self._session.session_id = value
+
+    @property
+    def server_url(self):
+        return self._session.server_url
+
+    @server_url.setter
+    def server_url(self, value):
+        self._session.server_url = value
+
+    @property
+    def hostname(self):
+        return self._session.hostname
+
+    @hostname.setter
+    def hostname(self, value):
+        self._session.hostname = value
 
     def start_session(self):
         """
@@ -274,7 +306,7 @@ class SalesforceAPI:
         self.hostname = urlsplit(self.server_url).hostname
 
     def has_active_session(self):
-        return self.session_id and self.server_url
+        return self._session.has_active_session()
 
     def query(self, query, **kwargs):
         """
