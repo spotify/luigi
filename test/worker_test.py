@@ -491,9 +491,9 @@ class WorkerTest(LuigiTestCase):
             w.run()
             # the complete methods of a's yielded first in b's run method were called equally often
             self.assertEqual(b0.complete_count, 1)
-            self.assertEqual(a0.complete_count, 2)
-            self.assertEqual(a1.complete_count, 2)
-            self.assertEqual(a2.complete_count, 2)
+            self.assertEqual(a0.complete_count, 3)
+            self.assertEqual(a1.complete_count, 3)
+            self.assertEqual(a2.complete_count, 3)
 
         # test with disabled cache_task_completion
         with Worker(scheduler=self.sch, worker_id="2", cache_task_completion=False) as w:
