@@ -93,6 +93,7 @@ import logging
 import os
 import pickle
 import random
+import shlex
 import subprocess
 import sys
 import time
@@ -141,8 +142,17 @@ def _parse_qsub_job_id(qsub_out):
 
 def _build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
     """Submit shell command to SGE queue via `qsub`"""
-    qsub_template = """echo {cmd} | qsub -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}"""
-    return qsub_template.format(cmd=cmd, job_name=job_name, outfile=outfile, errfile=errfile, pe=pe, n_cpu=n_cpu)
+    # job_name, outfile, errfile and pe can all be influenced by task parameters,
+    # so they need to be shell-quoted to avoid command injection through qsub.
+    qsub_template = """echo {cmd} | qsub -o {outfile} -e {errfile} -V -r y -pe {pe} {n_cpu} -N {job_name}"""
+    return qsub_template.format(
+        cmd=cmd,
+        job_name=shlex.quote(job_name),
+        outfile=shlex.quote(":" + outfile),
+        errfile=shlex.quote(":" + errfile),
+        pe=shlex.quote(pe),
+        n_cpu=n_cpu,
+    )
 
 
 class SGEJobTask(luigi.Task):
