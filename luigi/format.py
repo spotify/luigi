@@ -454,32 +454,41 @@ class NewlineFormat(WrappedFormat):
     wrapper_cls = NewlineWrapper
 
 
-class GzipFormat(Format):
+class CompressionFormat(Format):
     input = "bytes"
     output = "bytes"
 
-    def __init__(self, compression_level=None):
+    def __init__(self, decompress_cmd, compress_cmd, compression_level=None):
+        self.decompress_cmd = decompress_cmd
+        self.compress_cmd = compress_cmd
         self.compression_level = compression_level
 
     def pipe_reader(self, input_pipe):
-        return InputPipeProcessWrapper(["gunzip"], input_pipe)
+        return InputPipeProcessWrapper(self.decompress_cmd, input_pipe)
 
     def pipe_writer(self, output_pipe):
-        args = ["gzip"]
+        args = list(self.compress_cmd)
         if self.compression_level is not None:
             args.append("-" + str(int(self.compression_level)))
         return OutputPipeProcessWrapper(args, output_pipe)
 
 
-class Bzip2Format(Format):
-    input = "bytes"
-    output = "bytes"
+class GzipFormat(CompressionFormat):
+    def __init__(self, compression_level=None):
+        super().__init__(
+            decompress_cmd=["gunzip"],
+            compress_cmd=["gzip"],
+            compression_level=compression_level,
+        )
 
-    def pipe_reader(self, input_pipe):
-        return InputPipeProcessWrapper(["bzcat"], input_pipe)
 
-    def pipe_writer(self, output_pipe):
-        return OutputPipeProcessWrapper(["bzip2"], output_pipe)
+class Bzip2Format(CompressionFormat):
+    def __init__(self, compression_level=None):
+        super().__init__(
+            decompress_cmd=["bzcat"],
+            compress_cmd=["bzip2"],
+            compression_level=compression_level,
+        )
 
 
 Text = TextFormat()
