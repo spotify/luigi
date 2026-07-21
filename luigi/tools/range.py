@@ -238,7 +238,7 @@ class RangeBase(luigi.WrapperTask):
         self._emit_metrics(missing_datetimes, finite_start, finite_stop)
 
         if self.reverse:
-            required_datetimes = missing_datetimes[-self.task_limit :]
+            required_datetimes = missing_datetimes[-self.task_limit :] if self.task_limit else []
         else:
             required_datetimes = missing_datetimes[: self.task_limit]
         if required_datetimes:
