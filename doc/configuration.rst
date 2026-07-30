@@ -747,10 +747,15 @@ endpoint_url
   S3-compatible object store, for example Amazon S3, Backblaze B2, Cloudflare R2,
   or MinIO. Defaults to the ``boto3`` default, Amazon S3.
 
+region_name
+  Region used to sign requests. Set it to the region of your endpoint, since
+  ``botocore`` otherwise defaults to ``us-east-1`` and signs for the wrong region.
+
 .. code:: ini
 
   [s3]
   endpoint_url=https://your-s3-endpoint.example.com
+  region_name=your-region
 
 [scalding]
 ----------
