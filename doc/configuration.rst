@@ -737,6 +737,21 @@ If you customize return codes, prefer to set them in range 128 to 255 to avoid
 conflicts. Return codes in range 0 to 127 are reserved for possible future use
 by Luigi contributors.
 
+[s3]
+----
+
+Keys in this section are passed to the underlying ``boto3`` S3 client.
+
+endpoint_url
+  Custom S3 API endpoint, so :py:class:`~luigi.contrib.s3.S3Target` can use any
+  S3-compatible object store, for example Amazon S3, Backblaze B2, Cloudflare R2,
+  or MinIO. Defaults to the ``boto3`` default, Amazon S3.
+
+.. code:: ini
+
+  [s3]
+  endpoint_url=https://your-s3-endpoint.example.com
+
 [scalding]
 ----------
 
