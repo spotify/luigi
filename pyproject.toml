@@ -43,9 +43,11 @@ luigid = "luigi.cmdline:luigid"
 luigi-grep = "luigi.tools.luigi_grep:main"
 luigi-deps = "luigi.tools.deps:main"
 luigi-deps-tree = "luigi.tools.deps_tree:main"
+luigi-periodic = "luigi.tools.periodic:main"
 
 [project.optional-dependencies]
 jsonschema = ["jsonschema"]
+periodic = ["croniter>=1.0"]
 prometheus = ["prometheus-client>=0.5,<0.25"]
 toml = ["toml<2.0.0"]
 

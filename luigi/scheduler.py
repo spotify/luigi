@@ -701,6 +701,7 @@ class Scheduler:
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
         self._paused = False
+        self._periodic_daemons = {}
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
@@ -1533,6 +1534,32 @@ class Scheduler:
                 resource["num_consumer"] = len(tasks)
                 resource["running"] = tasks
         return resources
+
+    @rpc_method()
+    def update_periodic_status(self, daemon_id, entries, stopping=False):
+        """
+        Receive schedule state pushed by a luigi-periodic trigger daemon.
+        """
+        self._periodic_daemons[daemon_id] = dict(
+            daemon_id=daemon_id,
+            entries=entries,
+            stopping=stopping,
+            last_update=time.time(),
+        )
+
+    @rpc_method()
+    def periodic_status(self):
+        """
+        Schedule state of every luigi-periodic trigger daemon that has reported in.
+        """
+        now = time.time()
+        daemons = []
+        for status in self._periodic_daemons.values():
+            status = dict(status)
+            status["seconds_since_update"] = int(now - status["last_update"])
+            daemons.append(status)
+        daemons.sort(key=lambda status: status["daemon_id"])
+        return daemons
 
     def resources(self):
         """get total resources and available ones"""

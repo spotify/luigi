@@ -257,6 +257,68 @@
             {{/workerList}}
         </script>
 
+        <script type="text/template" name="periodicTemplate">
+            {{^daemonList}}
+            <div class="box">
+                <div class="box-body">
+                    No <code>luigi-periodic</code> trigger daemon has reported in.
+                    Start one with the <code>luigi-periodic</code> command; its schedules will show up here.
+                </div>
+            </div>
+            {{/daemonList}}
+            {{#daemonList}}
+            <div class="box">
+                <div class="box-header with-border">
+                    <h3 class="box-title">{{daemon_id}}</h3>
+                    <div class="box-tools pull-right">
+                        {{#stopping}}<span class="label label-default">stopped</span>{{/stopping}}
+                        {{^stopping}}
+                        {{#is_stale}}<span class="label label-warning">stale - last update {{seconds_since_update}}s ago</span>{{/is_stale}}
+                        {{^is_stale}}<span class="label label-success">updated {{seconds_since_update}}s ago</span>{{/is_stale}}
+                        {{/stopping}}
+                    </div>
+                </div>
+                <div class="box-body">
+                    <table class="table table-striped worker-table">
+                      <thead>
+                        <th>Name</th>
+                        <th>Schedule</th>
+                        <th>Next fire</th>
+                        <th>State</th>
+                        <th>Last result</th>
+                        <th>Overlap</th>
+                        <th>Command</th>
+                      </thead>
+                      <tbody>
+                      {{#entries}}
+                      <tr>
+                        <td>{{name}}</td>
+                        <td>{{schedule}}</td>
+                        <td>{{next_fire}}</td>
+                        <td>
+                          {{#running}}<span class="label label-info">running</span>{{/running}}
+                          {{#queued}}<span class="label label-warning">queued</span>{{/queued}}
+                          {{#is_idle}}<span class="label label-default">idle</span>{{/is_idle}}
+                        </td>
+                        <td>
+                          {{#has_last}}
+                          {{#last_ok}}<span class="label label-success">done</span>{{/last_ok}}
+                          {{#last_failed}}<span class="label label-danger">failed ({{last_returncode}})</span>{{/last_failed}}
+                          {{last_finished}}
+                          {{/has_last}}
+                          {{^has_last}}-{{/has_last}}
+                        </td>
+                        <td>{{overlap_policy}}</td>
+                        <td><code>{{command}}</code></td>
+                      </tr>
+                      {{/entries}}
+                      </tbody>
+                    </table>
+                </div>
+            </div>
+            {{/daemonList}}
+        </script>
+
         <script type="text/template" name="resourceTemplate">
         <div class="modal fade" id="setResourcesModal" tabindex="-1" role="dialog" aria-labelledby="setResourcesLabel">
           <div class="modal-dialog" role="document">
@@ -414,6 +476,7 @@
                                 <li><a class="js-nav-link" href="#tab=graph" data-tab="dependencyGraph">Dependency Graph</a></li>
                                 <li><a class="js-nav-link" href="#tab=workers" data-tab="workerList">Workers</a></li>
                                 <li><a class="js-nav-link" href="#tab=resource" data-tab="resourceList">Resources</a></li>
+                                <li><a class="js-nav-link" href="#tab=periodic" data-tab="periodicList">Periodic</a></li>
                             </ul>
                             <form class="navbar-form navbar-right" id="pause-form">
                             </form>
@@ -577,6 +640,8 @@
             <section id="workerList" class="container-fluid tab-pane active">
             </section>
             <section id="resourceList" class="tab-pane">
+            </section>
+            <section id="periodicList" class="container-fluid tab-pane">
             </section>
         </div> <!-- /.tab-content -->
         </div> <!-- /.content -->
