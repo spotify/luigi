@@ -66,6 +66,11 @@ STATUS_TO_UPSTREAM_MAP = {
     DISABLED: UPSTREAM_DISABLED,
 }
 
+# How long reported luigi-periodic daemon state is retained without a fresh
+# push; daemons that announced a clean stop are dropped sooner.
+PERIODIC_DAEMON_TTL = 24 * 60 * 60
+PERIODIC_STOPPED_DAEMON_TTL = 10 * 60
+
 WORKER_STATE_DISABLED = "disabled"
 WORKER_STATE_ACTIVE = "active"
 
@@ -701,6 +706,7 @@ class Scheduler:
         self._make_task = functools.partial(Task, retry_policy=self._config._get_retry_policy())
         self._worker_requests = {}
         self._paused = False
+        self._periodic_daemons = {}
 
         if self._config.batch_emails:
             self._email_batcher = BatchNotifier()
@@ -721,6 +727,7 @@ class Scheduler:
         self._prune_workers()
         self._prune_tasks()
         self._prune_emails()
+        self._prune_periodic_daemons()
         logger.debug("Done pruning task graph")
 
     def _prune_workers(self):
@@ -1533,6 +1540,41 @@ class Scheduler:
                 resource["num_consumer"] = len(tasks)
                 resource["running"] = tasks
         return resources
+
+    @rpc_method()
+    def update_periodic_status(self, daemon_id, entries, stopping=False):
+        """
+        Receive schedule state pushed by a luigi-periodic trigger daemon.
+        """
+        self._periodic_daemons[daemon_id] = dict(
+            daemon_id=daemon_id,
+            entries=entries,
+            stopping=stopping,
+            last_update=time.time(),
+        )
+
+    def _prune_periodic_daemons(self):
+        now = time.time()
+        for daemon_id, status in list(self._periodic_daemons.items()):
+            ttl = PERIODIC_STOPPED_DAEMON_TTL if status.get("stopping") else PERIODIC_DAEMON_TTL
+            if now - status["last_update"] > ttl:
+                logger.debug("Forgetting periodic daemon %s (no update for >%ss)", daemon_id, ttl)
+                del self._periodic_daemons[daemon_id]
+
+    @rpc_method()
+    def periodic_status(self):
+        """
+        Schedule state of every luigi-periodic trigger daemon that has reported in.
+        """
+        self._prune_periodic_daemons()
+        now = time.time()
+        daemons = []
+        for status in self._periodic_daemons.values():
+            status = dict(status)
+            status["seconds_since_update"] = int(now - status["last_update"])
+            daemons.append(status)
+        daemons.sort(key=lambda status: status["daemon_id"])
+        return daemons
 
     def resources(self):
         """get total resources and available ones"""
