@@ -64,6 +64,7 @@ can be tuned in a daemon-level ``[periodic]`` section::
 """
 
 import argparse
+import configparser
 import logging
 import os
 import random
@@ -169,6 +170,8 @@ class PeriodicEntry:
             jitter_seconds = float(options.get("jitter_seconds", 0))
         except ValueError:
             raise PeriodicConfigError("section [{}{}]: jitter_seconds must be a number, got {!r}".format(SECTION_PREFIX, name, options.get("jitter_seconds")))
+        if jitter_seconds < 0:
+            raise PeriodicConfigError("section [{}{}]: jitter_seconds must be >= 0, got {!r}".format(SECTION_PREFIX, name, options.get("jitter_seconds")))
 
         return cls(
             name=name,
@@ -191,16 +194,21 @@ class PeriodicEntry:
 
 def _config_section_items(config):
     """
-    Yield ``(section_name, options_dict)`` for every config section,
-    supporting both the cfg and toml parser flavors.
+    Yield ``(section_name, options_dict)`` for every ``[periodic ...]``
+    section, supporting both the cfg and toml parser flavors.
     """
     data = getattr(config, "data", None)
-    if data is not None:
-        for section, options in data.items():
-            yield section, dict(options)
-    else:
-        for section in config.sections():
-            yield section, dict(config.items(section))
+    sections = list(data) if data is not None else config.sections()
+    for section in sections:
+        if not section.startswith(SECTION_PREFIX):
+            continue
+        if data is not None:
+            yield section, dict(data[section])
+        else:
+            try:
+                yield section, dict(config.items(section))
+            except (configparser.Error, ValueError) as e:
+                raise PeriodicConfigError("could not read section [{}]: {} (escape a literal '%' as '%%' in cfg files)".format(section, e))
 
 
 def load_entries(config=None):
@@ -211,8 +219,6 @@ def load_entries(config=None):
         config = configuration.get_config()
     entries = []
     for section, options in _config_section_items(config):
-        if not section.startswith(SECTION_PREFIX):
-            continue
         name = section[len(SECTION_PREFIX) :].strip()
         if not name:
             raise PeriodicConfigError("periodic section is missing a name: [{}]".format(section))
@@ -301,7 +307,10 @@ class PeriodicDaemon:
 
     def _fire(self, entry):
         logger.info("Launching periodic entry %r: %s", entry.name, " ".join(entry.command()))
-        self._running[entry.name] = self._launch(entry)
+        try:
+            self._running[entry.name] = self._launch(entry)
+        except OSError as e:
+            logger.error("Could not launch periodic entry %r: %s", entry.name, e)
         self._status_dirty = True
 
     def status_snapshot(self):
@@ -373,14 +382,19 @@ class PeriodicDaemon:
             if self._reload_requested:
                 self._reload_requested = False
                 logger.info("Reloading periodic configuration")
-                configuration.get_config().reload()
                 try:
+                    configuration.get_config().reload()
                     self._set_entries(load_entries())
-                except PeriodicConfigError as e:
+                except Exception as e:
                     logger.error("Configuration reload failed, keeping previous entries: %s", e)
             seconds_to_next = self.run_once()
             self._maybe_push_status()
-            self._sleep(min(seconds_to_next, self.poll_interval))
+            sleep_for = seconds_to_next
+            if self._running:
+                sleep_for = min(sleep_for, self.poll_interval)
+            if self._status_pusher is not None:
+                sleep_for = min(sleep_for, self._push_interval)
+            self._sleep(max(sleep_for, 0.05))
         self._shutdown()
 
     def _shutdown(self):
@@ -412,8 +426,9 @@ def build_status_pusher(config=None):
         return None
     from luigi import rpc
 
-    remote = rpc.RemoteScheduler(_scheduler_url(config))
-    # A single quick attempt per push; a slow retry loop here would stall firing.
+    # A single quick attempt per push with a short timeout; a slow retry
+    # loop here would stall firing while the scheduler is unreachable.
+    remote = rpc.RemoteScheduler(_scheduler_url(config), connect_timeout=2)
     remote._rpc_retry_attempts = 1
     remote._rpc_log_retries = False
 

@@ -14,9 +14,12 @@
 # License for the specific language governing permissions and limitations under
 # the License.
 
+import os
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timedelta
+from unittest import mock
 
 from helpers import LuigiTestCase, with_config
 
@@ -116,6 +119,11 @@ class ConfigParsingTest(LuigiTestCase):
 
     @with_config({"periodic my_reports": {"task": "SomeTask", "every": "60", "overlap_policy": "kill"}})
     def test_bad_overlap_policy_raises(self):
+        with self.assertRaises(PeriodicConfigError):
+            load_entries()
+
+    @with_config({"periodic my_reports": {"task": "SomeTask", "every": "60", "jitter_seconds": "-30"}})
+    def test_negative_jitter_raises(self):
         with self.assertRaises(PeriodicConfigError):
             load_entries()
 
@@ -234,6 +242,64 @@ class DaemonTest(unittest.TestCase):
         daemon.run()
         self.assertEqual(launcher.launched[0][1].returncode, 0)
 
+    def test_launch_failure_is_logged_not_fatal(self):
+        def broken_launch(entry):
+            raise OSError("fork failed")
+
+        clock = FakeClock(datetime(2026, 1, 1, 0, 0, 0))
+        daemon = PeriodicDaemon([make_entry(every=60)], now_fn=clock, sleep_fn=clock.advance, launch_fn=broken_launch)
+        clock.advance(60)
+        with self.assertLogs("luigi-interface", level="ERROR") as logs:
+            daemon.run_once()
+        self.assertTrue(any("Could not launch" in line for line in logs.output))
+        clock.advance(60)
+        with self.assertLogs("luigi-interface", level="ERROR"):
+            daemon.run_once()  # entry was rescheduled and the daemon carries on
+
+    def test_reload_failure_keeps_previous_entries(self):
+        clock = FakeClock(datetime(2026, 1, 1, 0, 0, 0))
+
+        def sleep_then_stop(seconds):
+            clock.advance(seconds)
+            daemon.request_stop()
+
+        daemon = PeriodicDaemon([make_entry(every=60)], now_fn=clock, sleep_fn=sleep_then_stop, launch_fn=FakeLauncher())
+        daemon.request_reload()
+        with mock.patch.object(periodic.configuration, "get_config", side_effect=RuntimeError("malformed config")):
+            with self.assertLogs("luigi-interface", level="ERROR") as logs:
+                daemon.run()
+        self.assertTrue(any("reload failed" in line.lower() for line in logs.output))
+        self.assertEqual(list(daemon._entries), ["job"])
+
+
+class InterpolationTest(unittest.TestCase):
+    def _parser_from(self, text):
+        from luigi.configuration.cfg_parser import LuigiConfigParser
+
+        fd, path = tempfile.mkstemp(suffix=".cfg")
+        self.addCleanup(os.remove, path)
+        with os.fdopen(fd, "w") as f:
+            f.write(text)
+        parser = LuigiConfigParser()
+        parser.read([path])
+        return parser
+
+    def test_percent_in_args_raises_helpful_error(self):
+        parser = self._parser_from("[periodic report]\ntask = SomeTask\nevery = 60\nargs = --date-format %Y-%m-%d\n")
+        with self.assertRaises(PeriodicConfigError) as cm:
+            load_entries(parser)
+        self.assertIn("%%", str(cm.exception))
+
+    def test_escaped_percent_in_args_parses(self):
+        parser = self._parser_from("[periodic report]\ntask = SomeTask\nevery = 60\nargs = --date-format %%Y-%%m-%%d\n")
+        entries = load_entries(parser)
+        self.assertEqual(entries[0].args, "--date-format %Y-%m-%d")
+
+    def test_percent_in_unrelated_section_is_ignored(self):
+        parser = self._parser_from("[other]\nfmt = %Y\n\n[periodic ok]\ntask = SomeTask\nevery = 60\n")
+        entries = load_entries(parser)
+        self.assertEqual([entry.name for entry in entries], ["ok"])
+
 
 class FakePusher:
     def __init__(self):
@@ -333,6 +399,23 @@ class SchedulerStatusTest(unittest.TestCase):
 
         self.assertTrue(hasattr(RemoteScheduler, "update_periodic_status"))
         self.assertTrue(hasattr(RemoteScheduler, "periodic_status"))
+
+    def test_stale_daemons_are_pruned(self):
+        import luigi.scheduler
+
+        scheduler = luigi.scheduler.Scheduler()
+        scheduler.update_periodic_status(daemon_id="old:1", entries=[])
+        scheduler._periodic_daemons["old:1"]["last_update"] -= luigi.scheduler.PERIODIC_DAEMON_TTL + 1
+        scheduler.update_periodic_status(daemon_id="fresh:2", entries=[])
+        self.assertEqual([status["daemon_id"] for status in scheduler.periodic_status()], ["fresh:2"])
+
+    def test_stopped_daemons_are_pruned_sooner(self):
+        import luigi.scheduler
+
+        scheduler = luigi.scheduler.Scheduler()
+        scheduler.update_periodic_status(daemon_id="stopped:1", entries=[], stopping=True)
+        scheduler._periodic_daemons["stopped:1"]["last_update"] -= luigi.scheduler.PERIODIC_STOPPED_DAEMON_TTL + 1
+        self.assertEqual(scheduler.periodic_status(), [])
 
 
 class BuildStatusPusherTest(LuigiTestCase):

@@ -50,6 +50,9 @@ Each ``[periodic <name>]`` section supports:
 
 ``args``
     Extra command line arguments, e.g. ``--workers 4`` or parameters.
+    Values live in Luigi's configuration, which interpolates ``%``, so
+    escape a literal percent sign as ``%%`` in cfg files (e.g.
+    ``--date-format %%Y-%%m-%%d``).
 
 ``schedule``
     A standard 5-field cron expression. Requires the optional
@@ -76,6 +79,21 @@ Each ``[periodic <name>]`` section supports:
 The daemon reloads its configuration on ``SIGHUP``. On ``SIGTERM`` or
 ``SIGINT`` it stops launching new runs, waits for running children, and
 exits.
+
+Timing notes
+~~~~~~~~~~~~
+
+Schedules are evaluated in the daemon's local time, mirroring crontab:
+across a DST spring-forward a ``0 2 * * *`` entry fires late (when the
+wall clock reaches 03:00), and across a fall-back it fires once, not
+twice. ``every`` intervals are measured from when each fire is
+processed, so they drift slightly rather than staying aligned to the
+wall clock - use a cron ``schedule`` when alignment matters.
+
+A ``SIGHUP`` reload recomputes every entry's next fire time from "now".
+Cron entries are unaffected (their fire times are absolute), but an
+``every`` interval restarts, so very frequent reloads can postpone
+long-interval entries.
 
 Dashboard
 ~~~~~~~~~

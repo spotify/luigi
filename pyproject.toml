@@ -64,6 +64,7 @@ common = [
   "boto3>=1.11.0",
   "codecov>=1.4.0",
   "coverage>=5.0,<6",
+  "croniter>=1.0",
   "datadog==0.22.0",
   "docker>=2.1.0",
   "elasticsearch>=1.0.0,<2.0.0",

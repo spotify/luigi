@@ -66,6 +66,11 @@ STATUS_TO_UPSTREAM_MAP = {
     DISABLED: UPSTREAM_DISABLED,
 }
 
+# How long reported luigi-periodic daemon state is retained without a fresh
+# push; daemons that announced a clean stop are dropped sooner.
+PERIODIC_DAEMON_TTL = 24 * 60 * 60
+PERIODIC_STOPPED_DAEMON_TTL = 10 * 60
+
 WORKER_STATE_DISABLED = "disabled"
 WORKER_STATE_ACTIVE = "active"
 
@@ -722,6 +727,7 @@ class Scheduler:
         self._prune_workers()
         self._prune_tasks()
         self._prune_emails()
+        self._prune_periodic_daemons()
         logger.debug("Done pruning task graph")
 
     def _prune_workers(self):
@@ -1547,11 +1553,20 @@ class Scheduler:
             last_update=time.time(),
         )
 
+    def _prune_periodic_daemons(self):
+        now = time.time()
+        for daemon_id, status in list(self._periodic_daemons.items()):
+            ttl = PERIODIC_STOPPED_DAEMON_TTL if status.get("stopping") else PERIODIC_DAEMON_TTL
+            if now - status["last_update"] > ttl:
+                logger.debug("Forgetting periodic daemon %s (no update for >%ss)", daemon_id, ttl)
+                del self._periodic_daemons[daemon_id]
+
     @rpc_method()
     def periodic_status(self):
         """
         Schedule state of every luigi-periodic trigger daemon that has reported in.
         """
+        self._prune_periodic_daemons()
         now = time.time()
         daemons = []
         for status in self._periodic_daemons.values():
