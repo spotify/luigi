@@ -402,6 +402,8 @@ class TextWrapper(io.TextIOWrapper):
 
     def __init__(self, stream, *args, **kwargs):
         self._stream = stream
+        if 'newline' not in kwargs:
+            kwargs['newline'] = '\n'
         try:
             super(TextWrapper, self).__init__(stream, *args, **kwargs)
         except TypeError:
