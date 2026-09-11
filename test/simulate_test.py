@@ -16,9 +16,12 @@
 #
 
 import os
+import shutil
 import tempfile
-from multiprocessing import Process
+import time
+from multiprocessing import Process, Value
 
+import mock
 from helpers import unittest
 
 import luigi
@@ -92,6 +95,25 @@ def reset():
         t.unique.value = 0
 
 
+class _TaskStub:
+    task_id = "DummyRunAnyway"
+
+
+def _isolated_target(directory):
+    class IsolatedRunAnywayTarget(RunAnywayTarget):
+        temp_dir = directory
+        unique = Value("i", 0)
+
+    return IsolatedRunAnywayTarget
+
+
+def _stale_pid_dir(directory):
+    stale = os.path.join(directory, "12345")
+    os.mkdir(stale)
+    os.utime(stale, (time.time() - RunAnywayTarget.temp_time - 10,) * 2)
+    return stale
+
+
 class RunAnywayTargetTest(unittest.TestCase):
     @is_writable()
     def test_output(self):
@@ -116,3 +138,43 @@ class RunAnywayTargetTest(unittest.TestCase):
         p = Process(target=self.test_output)
         p.start()
         p.join()
+
+    def test_cleanup_removes_stale_pid_directory(self):
+        isolated = tempfile.mkdtemp(prefix="luigi-simulate-")
+        self.addCleanup(shutil.rmtree, isolated, True)
+        stale = _stale_pid_dir(isolated)
+
+        _isolated_target(isolated)(_TaskStub())
+        self.assertFalse(os.path.exists(stale))
+
+    def test_cleanup_ignores_concurrent_rmtree(self):
+        isolated = tempfile.mkdtemp(prefix="luigi-simulate-")
+        self.addCleanup(shutil.rmtree, isolated, True)
+        _stale_pid_dir(isolated)
+
+        real_rmtree = shutil.rmtree
+
+        def racing_rmtree(path, *args, **kwargs):
+            # Another process already deleted this directory
+            if os.path.isdir(path):
+                real_rmtree(path)
+            return real_rmtree(path, *args, **kwargs)
+
+        with mock.patch("shutil.rmtree", racing_rmtree):
+            _isolated_target(isolated)(_TaskStub())
+
+    def test_cleanup_ignores_concurrent_stat(self):
+        isolated = tempfile.mkdtemp(prefix="luigi-simulate-")
+        self.addCleanup(shutil.rmtree, isolated, True)
+        stale = _stale_pid_dir(isolated)
+
+        real_isdir = os.path.isdir
+
+        def isdir_then_delete(path):
+            result = real_isdir(path)
+            if result and path == stale:
+                shutil.rmtree(path)
+            return result
+
+        with mock.patch("os.path.isdir", isdir_then_delete):
+            _isolated_target(isolated)(_TaskStub())

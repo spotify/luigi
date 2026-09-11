@@ -76,9 +76,12 @@ class RunAnywayTarget(luigi.Target):
             limit = time.time() - self.temp_time
             for fn in os.listdir(self.temp_dir):
                 path = os.path.join(self.temp_dir, fn)
-                if os.path.isdir(path) and os.stat(path).st_mtime < limit:
-                    shutil.rmtree(path)
-                    logger.debug("Deleted temporary directory %s", path)
+                try:
+                    if os.path.isdir(path) and os.stat(path).st_mtime < limit:
+                        shutil.rmtree(path, ignore_errors=True)
+                        logger.debug("Deleted temporary directory %s", path)
+                except OSError:
+                    pass
 
     def __str__(self):
         return self.task_id
