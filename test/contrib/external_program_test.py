@@ -20,7 +20,7 @@ import subprocess
 import tempfile
 from functools import partial
 from io import BytesIO
-from multiprocessing import Value
+from multiprocessing import Process, Value
 from subprocess import Popen
 
 import mock
@@ -197,6 +197,24 @@ class ExternalProgramTaskTest(unittest.TestCase):
         with mock.patch.object(task, "set_tracking_url", new=partial(fake_set_tracking_url, test_val)):
             task.run()
             self.assertEqual(test_val.value, 1)
+
+    def test_tracking_process_exits_cleanly_when_capture_output_disabled(self):
+        # When output is not captured, there is no file to tee into. EOF used to call
+        # flush() on that None handle and crash the tracker (issue #3131).
+        procs = []
+
+        class RecordingProcess(Process):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                procs.append(self)
+
+        task = TestEchoTask(capture_output=False, stream_for_searching_tracking_url="stdout", tracking_url_pattern=r"Hello, (.*)!")
+        with mock.patch("luigi.contrib.external_program.Process", RecordingProcess):
+            with mock.patch.object(task, "set_tracking_url"):
+                task.run()
+
+        self.assertEqual(len(procs), 1)
+        self.assertEqual(procs[0].exitcode, 0)
 
     def test_tracking_url_pattern_works_with_capture_output_enabled(self):
         test_val = Value("i", 0)

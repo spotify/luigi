@@ -38,7 +38,6 @@ import sys
 import tempfile
 from contextlib import contextmanager
 from multiprocessing import Process
-from time import sleep
 
 import luigi
 from luigi.parameter import ParameterVisibility
@@ -189,16 +188,15 @@ class ExternalProgramTask(luigi.Task):
             If tmp_stdout is passed, also appends lines to this file.
             """
             pattern = re.compile(self.tracking_url_pattern)
-            for new_line in iter(pipe_to_read.readline, ""):
-                if new_line:
-                    if file_to_write:
-                        file_to_write.write(new_line)
-                    match = re.search(pattern, new_line.decode("utf-8"))
-                    if match:
-                        self.set_tracking_url(self.build_tracking_url(match.group(1)))
-                else:
-                    file_to_write.flush()
-                    sleep(time_to_sleep)
+            # PIPE is binary, so EOF is b""; the old "" sentinel never stopped the iterator.
+            for new_line in iter(pipe_to_read.readline, b""):
+                if file_to_write:
+                    file_to_write.write(new_line)
+                match = re.search(pattern, new_line.decode("utf-8"))
+                if match:
+                    self.set_tracking_url(self.build_tracking_url(match.group(1)))
+            if file_to_write:
+                file_to_write.flush()
 
         track_proc = Process(target=_track_url_by_pattern)
         try:
