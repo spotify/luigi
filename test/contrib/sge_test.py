@@ -140,6 +140,28 @@ class TestQsubCommandInjection(unittest.TestCase):
             with open(stdin_file) as f:
                 self.assertEqual(f.read().strip(), "real-job-command")
 
+    def test_build_qsub_command_isolates_injection_per_argument(self):
+        """Same proof as test_build_qsub_command_blocks_shell_injection, but with
+        the payload in exactly one argument at a time, so a regression in any
+        single argument's escaping is diagnosed on its own rather than being
+        masked by the others still being escaped correctly.
+        """
+        for field in ("cmd", "job_name", "outfile", "errfile", "pe"):
+            with tempfile.TemporaryDirectory() as bin_dir:
+                _make_stub_qsub(bin_dir)
+                marker = os.path.join(bin_dir, "PWNED")
+                payload = "; touch {}".format(marker)
+
+                args = {"cmd": "real-job-command", "job_name": "benign-job", "outfile": "/tmp/o", "errfile": "/tmp/e", "pe": "orte"}
+                args[field] = payload
+                submit_cmd = _build_qsub_command(args["cmd"], args["job_name"], args["outfile"], args["errfile"], args["pe"], 1)
+
+                env = dict(os.environ)
+                env["PATH"] = bin_dir + os.pathsep + env["PATH"]
+                subprocess.run(submit_cmd, shell=True, env=env, capture_output=True, text=True)
+
+                self.assertFalse(os.path.exists(marker), "payload in {!r} ran as a separate shell command".format(field))
+
     def test_build_job_str_blocks_shell_injection_via_tmp_dir(self):
         with tempfile.TemporaryDirectory() as bin_dir:
             argv_file, stdin_file = _make_stub_qsub(bin_dir)
