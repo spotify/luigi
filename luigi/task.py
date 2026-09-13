@@ -539,6 +539,35 @@ class Task(metaclass=Register):
 
         return params_str
 
+    def to_cmdline_params(self):
+        """
+        Convert all parameters to a hash of param name -> command line value.
+
+        Unlike :py:meth:`to_str_params`, the values follow the rules of command
+        line parsing: a :py:class:`~luigi.parameter.BoolParameter` with implicit
+        parsing maps to ``True`` (meaning a bare ``--param`` flag) or is omitted
+        when ``False``, while with explicit parsing it maps to ``"true"`` or
+        ``"false"``. Parameters of :py:class:`~luigi.parameter.OptionalParameterMixin`
+        subclasses are omitted when their value is ``None``.
+        """
+        params = dict(self.get_params())
+        cmdline_params = {}
+        for param_name, param_value in self.param_kwargs.items():
+            param = params[param_name]
+            if param.visibility == ParameterVisibility.PRIVATE:
+                continue
+            if param_value is None and isinstance(param, parameter.OptionalParameterMixin):
+                continue
+            if isinstance(param, parameter.BoolParameter):
+                if param.parsing == parameter.BoolParameter.EXPLICIT_PARSING:
+                    cmdline_params[param_name] = "true" if param_value else "false"
+                elif param_value:
+                    cmdline_params[param_name] = True
+            else:
+                cmdline_params[param_name] = param.serialize(param_value)
+
+        return cmdline_params
+
     def _get_param_visibilities(self):
         param_visibilities = {}
         params = dict(self.get_params())

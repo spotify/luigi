@@ -238,6 +238,7 @@ class Task:
         module=None,
         params=None,
         param_visibilities=None,
+        cmdline_params=None,
         accepts_messages=False,
         tracking_url=None,
         status_message=None,
@@ -264,6 +265,7 @@ class Task:
         self.family = family
         self.module = module
         self.param_visibilities = _get_default(param_visibilities, {})
+        self.cmdline_params = cmdline_params
         self.params = {}
         self.public_params = {}
         self.hidden_params = {}
@@ -816,6 +818,7 @@ class Scheduler:
         module=None,
         params=None,
         param_visibilities=None,
+        cmdline_params=None,
         accepts_messages=False,
         assistant=False,
         tracking_url=None,
@@ -855,6 +858,7 @@ class Scheduler:
                 module=module,
                 params=params,
                 param_visibilities=param_visibilities,
+                cmdline_params=cmdline_params,
             )
         else:
             _default_task = None
@@ -875,6 +879,8 @@ class Scheduler:
             task.module = module
         if not getattr(task, "param_visibilities", None):
             task.param_visibilities = _get_default(param_visibilities, {})
+        if getattr(task, "cmdline_params", None) is None:
+            task.cmdline_params = cmdline_params
         if not task.params:
             task.set_params(params)
 
@@ -1575,6 +1581,7 @@ class Scheduler:
     def fetch_error(self, task_id, **kwargs):
         if self._state.has_task(task_id):
             task = self._state.get_task(task_id)
+            cmdline_params = getattr(task, "cmdline_params", None)
             return {
                 "taskId": task_id,
                 "error": task.expl,
@@ -1582,6 +1589,7 @@ class Scheduler:
                 "taskParams": task.params,
                 "taskModule": task.module,
                 "taskFamily": task.family,
+                "taskCmdline": task.params if cmdline_params is None else cmdline_params,
             }
         else:
             return {"taskId": task_id, "error": ""}

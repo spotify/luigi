@@ -85,6 +85,19 @@ class FailingTask(luigi.Task):
         raise Exception("Error Message")
 
 
+class FailingParamsTask(luigi.Task):
+    task_namespace = __name__
+    implicit_bool = luigi.BoolParameter()
+    explicit_bool = luigi.BoolParameter(default=True, parsing=luigi.BoolParameter.EXPLICIT_PARSING)
+    optional_param = luigi.OptionalParameter()
+
+    def complete(self):
+        return False
+
+    def run(self):
+        raise Exception("Error Message")
+
+
 class OddFibTask(luigi.Task):
     n = luigi.IntParameter()
     done = luigi.BoolParameter(default=True, significant=False)
@@ -475,6 +488,13 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertTrue("Error Message" in error["error"])
         self.assertTrue("Runtime error" in error["error"])
         self.assertTrue("Traceback" in error["error"])
+
+    def test_fetch_error_cmdline_params(self):
+        task = FailingParamsTask(implicit_bool=True, explicit_bool=False, optional_param=None)
+        self._build([task])
+        remote = self._remote()
+        error = remote.fetch_error(task.task_id)
+        self.assertEqual(error["taskCmdline"], {"implicit_bool": True, "explicit_bool": "false"})
 
     def test_inverse_deps(self):
         class X(RunOnceTask):

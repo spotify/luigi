@@ -3,6 +3,7 @@ import json
 from helpers import unittest
 
 import luigi
+from luigi.cmdline_parser import CmdlineParser
 from luigi.parameter import ParameterVisibility
 
 
@@ -30,6 +31,15 @@ class TestTask4(luigi.Task):
     param_three = luigi.Parameter(default="3", visibility=ParameterVisibility.PUBLIC, significant=True)
 
 
+class TestTask5(luigi.Task):
+    param_one = luigi.Parameter(default="1")
+    implicit_bool = luigi.BoolParameter()
+    explicit_bool = luigi.BoolParameter(default=True, parsing=luigi.BoolParameter.EXPLICIT_PARSING)
+    optional_param = luigi.OptionalParameter()
+    optional_bool = luigi.OptionalBoolParameter()
+    private_param = luigi.Parameter(default="x", visibility=ParameterVisibility.PRIVATE)
+
+
 class Test(unittest.TestCase):
     def test_to_str_params(self):
         task = TestTask1()
@@ -43,6 +53,29 @@ class Test(unittest.TestCase):
         task = TestTask3()
 
         self.assertEqual(task.to_str_params(), {"param_one": "1", "param_two": "2", "param_three": "3"})
+
+    def test_to_cmdline_params(self):
+        task = TestTask5(param_one="hello", implicit_bool=True, explicit_bool=False, optional_param=None)
+
+        self.assertEqual(task.to_cmdline_params(), {"param_one": "hello", "implicit_bool": True, "explicit_bool": "false"})
+
+        task = TestTask5(implicit_bool=False, explicit_bool=True, optional_param="x", optional_bool=True)
+
+        self.assertEqual(
+            task.to_cmdline_params(),
+            {"param_one": "1", "explicit_bool": "true", "optional_param": "x", "optional_bool": True},
+        )
+
+    def test_to_cmdline_params_roundtrip(self):
+        task = TestTask5(param_one="hello", implicit_bool=True, explicit_bool=False)
+
+        cmdline_args = ["TestTask5"]
+        for param_name, param_value in task.to_cmdline_params().items():
+            flag = "--" + param_name.replace("_", "-")
+            cmdline_args += [flag] if param_value is True else [flag, param_value]
+
+        with CmdlineParser.global_instance(cmdline_args) as parser:
+            self.assertEqual(parser.get_task_obj(), task)
 
     def test_all_public_equals_all_hidden(self):
         hidden = TestTask3()
