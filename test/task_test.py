@@ -65,6 +65,21 @@ class TaskTest(unittest.TestCase):
         other = DummyTask.from_str_params(original.to_str_params())
         self.assertEqual(original, other)
 
+    def test_task_to_str_to_task_none_param(self):
+        class TaskWithNoneParam(luigi.Task):
+            _visible_in_registry = False
+            none_param = luigi.Parameter(default=None)
+            required = luigi.Parameter()
+
+        original = TaskWithNoneParam(required="foo")
+        other = TaskWithNoneParam.from_str_params(original.to_str_params())
+        self.assertIsNone(other.none_param)
+        self.assertEqual(original, other)
+
+        # a None value and the string "None" must not collapse into the same task
+        string_task = TaskWithNoneParam(none_param="None", required="foo")
+        self.assertNotEqual(original.task_id, string_task.task_id)
+
     def test_task_from_str_insignificant(self):
         params = {"necessary_param": "needed"}
         original = DefaultInsignificantParamTask(**params)

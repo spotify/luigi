@@ -136,7 +136,7 @@ def task_id_str(task_family, params):
     param_str = json.dumps(params, separators=(",", ":"), sort_keys=True)
     param_hash = hashlib.new("md5", param_str.encode("utf-8"), usedforsecurity=False).hexdigest()
 
-    param_summary = "_".join(p[:TASK_ID_TRUNCATE_PARAMS] for p in (params[p] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS]))
+    param_summary = "_".join(str(params[p])[:TASK_ID_TRUNCATE_PARAMS] for p in sorted(params)[:TASK_ID_INCLUDE_PARAMS])
     param_summary = TASK_ID_INVALID_CHAR_REGEX.sub("_", param_summary)
 
     return "{}_{}_{}".format(task_family, param_summary, param_hash[:TASK_ID_TRUNCATE_HASH])
@@ -510,7 +510,7 @@ class Task(metaclass=Register):
         """
         Creates an instance from a str->str hash.
 
-        :param params_str: dict of param name -> value as string.
+        :param params_str: dict of param name -> value as string (or ``None``).
         """
         kwargs = {}
         for param_name, param in cls.get_params():
@@ -518,6 +518,8 @@ class Task(metaclass=Register):
                 param_str = params_str[param_name]
                 if isinstance(param_str, list):
                     kwargs[param_name] = param._parse_list(param_str)
+                elif param_str is None:
+                    kwargs[param_name] = None
                 else:
                     kwargs[param_name] = param.parse(param_str)
 
@@ -525,7 +527,8 @@ class Task(metaclass=Register):
 
     def to_str_params(self, only_significant=False, only_public=False):
         """
-        Convert all parameters to a str->str hash.
+        Convert all parameters to a str->str hash. Parameters with a ``None`` value
+        are serialized as ``None``, which is preserved across :py:meth:`from_str_params`.
         """
         params_str = {}
         params = dict(self.get_params())
@@ -535,7 +538,7 @@ class Task(metaclass=Register):
                 and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
                 and params[param_name].visibility != ParameterVisibility.PRIVATE
             ):
-                params_str[param_name] = params[param_name].serialize(param_value)
+                params_str[param_name] = params[param_name].serialize(param_value) if param_value is not None else None
 
         return params_str
 
