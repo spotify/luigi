@@ -18,7 +18,10 @@
 import logging
 import os
 import os.path
+import shlex
+import stat
 import subprocess
+import tempfile
 import unittest
 from glob import glob
 
@@ -26,7 +29,7 @@ import pytest
 from mock import patch
 
 import luigi
-from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
+from luigi.contrib.sge import SGEJobTask, _build_job_str, _build_qsub_command, _parse_qstat_state
 
 DEFAULT_HOME = "/home"
 
@@ -58,6 +61,105 @@ class TestSGEWrappers(unittest.TestCase):
         self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT, 3), "t")
         self.assertEqual(_parse_qstat_state("", 1), "u")
         self.assertEqual(_parse_qstat_state("", 4), "u")
+
+
+def _make_stub_qsub(bin_dir):
+    """Write a fake `qsub` into `bin_dir` that records its argv and the piped-in
+    job script, then *runs* that script -- mirroring what a real SGE `qsub`
+    does with the job it's handed on stdin. Used to prove end-to-end that a
+    malicious Parameter value reaches qsub as a literal argument/script
+    instead of being executed as a separate shell command.
+    """
+    argv_file = os.path.join(bin_dir, "qsub_argv.txt")
+    stdin_file = os.path.join(bin_dir, "qsub_stdin.txt")
+    qsub_path = os.path.join(bin_dir, "qsub")
+    with open(qsub_path, "w") as f:
+        f.write(
+            "#!/bin/sh\n"
+            'printf "%s\\n" "$@" > {argv_file}\n'
+            "cat > {stdin_file}\n"
+            'sh -c "$(cat {stdin_file})"\n'
+            "echo 'Your job 1 (\"job\") has been submitted'\n".format(argv_file=shlex.quote(argv_file), stdin_file=shlex.quote(stdin_file))
+        )
+    os.chmod(qsub_path, os.stat(qsub_path).st_mode | stat.S_IEXEC)
+    return argv_file, stdin_file
+
+
+@pytest.mark.contrib
+class TestQsubCommandInjection(unittest.TestCase):
+    """`_build_job_str()` and `_build_qsub_command()` interpolate Parameter
+    values (`shared_tmp_dir`, `parallel_env`, `job_name`/`job_name_format`)
+    into a string executed with `subprocess.check_output(cmd, shell=True)`.
+    Every value must be shell-quoted as a single token; these tests both
+    check the generated strings directly and prove -- by actually running
+    them through a shell -- that a malicious value can't break out.
+    """
+
+    def test_build_job_str_round_trips_benign_values(self):
+        job_str = _build_job_str("/opt/luigi/sge_runner.py", "/home/user/tmp123", "/home/user", False)
+        self.assertEqual(
+            shlex.split(job_str),
+            ["python", "/opt/luigi/sge_runner.py", "/home/user/tmp123", "/home/user"],
+        )
+
+    def test_build_job_str_appends_no_tarball_flag(self):
+        job_str = _build_job_str("/opt/luigi/sge_runner.py", "/home/user/tmp123", "/home/user", True)
+        self.assertEqual(
+            shlex.split(job_str),
+            ["python", "/opt/luigi/sge_runner.py", "/home/user/tmp123", "/home/user", "--no-tarball"],
+        )
+
+    def test_build_qsub_command_round_trips_benign_values(self):
+        cmd = _build_qsub_command("python runner.py", "MyTask", "/tmp/job.out", "/tmp/job.err", "orte", 4)
+        self.assertEqual(
+            shlex.split(cmd.split(" | ", 1)[1]),
+            ["qsub", "-o", ":/tmp/job.out", "-e", ":/tmp/job.err", "-V", "-r", "y", "-pe", "orte", "4", "-N", "MyTask"],
+        )
+
+    def test_build_qsub_command_blocks_shell_injection(self):
+        with tempfile.TemporaryDirectory() as bin_dir:
+            argv_file, stdin_file = _make_stub_qsub(bin_dir)
+            marker = os.path.join(bin_dir, "PWNED")
+            payload = "; touch {}".format(marker)
+
+            # Each Parameter-derived value gets the same malicious payload in turn
+            # (job_name, parallel_env, and -- via outfile/errfile -- shared_tmp_dir).
+            submit_cmd = _build_qsub_command("real-job-command", payload, payload, payload, payload, 1)
+
+            env = dict(os.environ)
+            env["PATH"] = bin_dir + os.pathsep + env["PATH"]
+            result = subprocess.run(submit_cmd, shell=True, env=env, capture_output=True, text=True)
+
+            self.assertFalse(os.path.exists(marker), "injected `; touch` ran as a separate shell command")
+            self.assertEqual(result.returncode, 0)
+            with open(argv_file) as f:
+                received_args = f.read().splitlines()
+            # qsub must receive the payload as one literal argument value per flag,
+            # not have it interpreted -- e.g. "-N" followed by the payload string.
+            self.assertIn(payload, received_args)
+            with open(stdin_file) as f:
+                self.assertEqual(f.read().strip(), "real-job-command")
+
+    def test_build_job_str_blocks_shell_injection_via_tmp_dir(self):
+        with tempfile.TemporaryDirectory() as bin_dir:
+            argv_file, stdin_file = _make_stub_qsub(bin_dir)
+            marker = os.path.join(bin_dir, "PWNED")
+            malicious_tmp_dir = "$(touch {})".format(marker)
+
+            job_str = _build_job_str("/opt/luigi/sge_runner.py", malicious_tmp_dir, "/home/user", False)
+            submit_cmd = _build_qsub_command(job_str, "job", "/tmp/o", "/tmp/e", "orte", 1)
+
+            env = dict(os.environ)
+            env["PATH"] = bin_dir + os.pathsep + env["PATH"]
+            result = subprocess.run(submit_cmd, shell=True, env=env, capture_output=True, text=True)
+
+            self.assertFalse(os.path.exists(marker), "command substitution in tmp_dir executed")
+            self.assertEqual(result.returncode, 0)
+            # The stub's "sh -c" step is what would run the job on a real
+            # cluster; it must see tmp_dir as one literal argument, not have
+            # `$(...)` expanded again.
+            with open(stdin_file) as f:
+                self.assertEqual(shlex.split(f.read()), ["python", "/opt/luigi/sge_runner.py", malicious_tmp_dir, "/home/user"])
 
 
 class TestJobTask(SGEJobTask):

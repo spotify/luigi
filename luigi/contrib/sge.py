@@ -93,6 +93,7 @@ import logging
 import os
 import pickle
 import random
+import shlex
 import subprocess
 import sys
 import time
@@ -139,10 +140,39 @@ def _parse_qsub_job_id(qsub_out):
     return int(qsub_out.split()[2])
 
 
+def _build_job_str(runner_path, tmp_dir, cwd, no_tarball):
+    """Build the shell command line that runs `sge_runner.py` for this job.
+
+    The result is passed as `cmd` to `_build_qsub_command()` below, which embeds
+    it, unescaped, into a larger shell command -- so every value here must be
+    safe as a *literal* string there too, not just here. shlex.quote() protects
+    `tmp_dir` (derived from the user-supplied `shared_tmp_dir` Parameter) against
+    a value containing `"`, `$(...)` or backticks.
+    """
+    job_str = "python {0} {1} {2}".format(shlex.quote(runner_path), shlex.quote(tmp_dir), shlex.quote(cwd))
+    if no_tarball:
+        job_str += " --no-tarball"
+    return job_str
+
+
 def _build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
     """Submit shell command to SGE queue via `qsub`"""
-    qsub_template = """echo {cmd} | qsub -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}"""
-    return qsub_template.format(cmd=cmd, job_name=job_name, outfile=outfile, errfile=errfile, pe=pe, n_cpu=n_cpu)
+    # `job_name`, `pe`, `outfile` and `errfile` (and `cmd` itself) can carry
+    # values derived from user-supplied Parameters (e.g. `job_name`,
+    # `job_name_format`, `parallel_env`, `shared_tmp_dir`). This whole string
+    # is run with `subprocess.check_output(submit_cmd, shell=True)`, so every
+    # value must be quoted as a single shell token -- shlex.quote() is used
+    # instead of the previous manual `"..."` wrapping, which didn't protect
+    # against a value containing `"`, `$(...)` or backticks.
+    qsub_template = "echo {cmd} | qsub -o {outfile} -e {errfile} -V -r y -pe {pe} {n_cpu} -N {job_name}"
+    return qsub_template.format(
+        cmd=shlex.quote(cmd),
+        job_name=shlex.quote(job_name),
+        outfile=shlex.quote(":" + outfile),
+        errfile=shlex.quote(":" + errfile),
+        pe=shlex.quote(pe),
+        n_cpu=n_cpu,
+    )
 
 
 class SGEJobTask(luigi.Task):
@@ -273,9 +303,7 @@ class SGEJobTask(luigi.Task):
         runner_path = sge_runner.__file__
         if runner_path.endswith("pyc"):
             runner_path = runner_path[:-3] + "py"
-        job_str = 'python {0} "{1}" "{2}"'.format(runner_path, self.tmp_dir, os.getcwd())  # enclose tmp_dir in quotes to protect from special escape chars
-        if self.no_tarball:
-            job_str += ' "--no-tarball"'
+        job_str = _build_job_str(runner_path, self.tmp_dir, os.getcwd(), self.no_tarball)
 
         # Build qsub submit command
         self.outfile = os.path.join(self.tmp_dir, "job.out")
