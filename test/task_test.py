@@ -80,6 +80,18 @@ class TaskTest(unittest.TestCase):
         string_task = TaskWithNoneParam(none_param="None", required="foo")
         self.assertNotEqual(original.task_id, string_task.task_id)
 
+    def test_optional_parameter_none_keeps_empty_string_encoding(self):
+        class TaskWithOptionalParam(luigi.Task):
+            _visible_in_registry = False
+            opt = luigi.OptionalParameter()
+
+        original = TaskWithOptionalParam()
+        params = original.to_str_params()
+        self.assertEqual("", params["opt"])
+        other = TaskWithOptionalParam.from_str_params(params)
+        self.assertIsNone(other.opt)
+        self.assertEqual(original.task_id, other.task_id)
+
     def test_task_from_str_insignificant(self):
         params = {"necessary_param": "needed"}
         original = DefaultInsignificantParamTask(**params)

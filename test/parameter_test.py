@@ -561,13 +561,18 @@ class TestParametersHashability(LuigiTestCase):
         self.assertTrue(self.run_locally(["DynamicTaskCallsDefaultNoneParameter"]))
 
     def test_param_with_default_none_in_dynamic_req_task(self):
-        class TaskWithDefaultNoneParameter(RunOnceTask):
+        class TaskWithDefaultNoneParameter(luigi.Task):
             param = luigi.Parameter(default=None)
             saved_value = "unset"
+            finished = False
+
+            def complete(self):
+                # Class-level: instance-local complete() livelocks when None and "None" miss the instance cache.
+                return TaskWithDefaultNoneParameter.finished
 
             def run(self):
                 TaskWithDefaultNoneParameter.saved_value = self.param
-                super(TaskWithDefaultNoneParameter, self).run()
+                TaskWithDefaultNoneParameter.finished = True
 
         class DynamicTaskCallsDefaultNoneParam(RunOnceTask):
             def run(self):

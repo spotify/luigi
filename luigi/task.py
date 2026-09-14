@@ -527,8 +527,11 @@ class Task(metaclass=Register):
 
     def to_str_params(self, only_significant=False, only_public=False):
         """
-        Convert all parameters to a str->str hash. Parameters with a ``None`` value
-        are serialized as ``None``, which is preserved across :py:meth:`from_str_params`.
+        Convert all parameters to a str->str hash.
+
+        A generic :class:`~luigi.parameter.Parameter` whose value is ``None`` is stored as
+        ``None`` rather than the string ``"None"``, so :py:meth:`from_str_params` can restore
+        it. Other parameter types keep their own ``serialize`` encoding.
         """
         params_str = {}
         params = dict(self.get_params())
@@ -538,7 +541,12 @@ class Task(metaclass=Register):
                 and ((not only_public) or params[param_name].visibility == ParameterVisibility.PUBLIC)
                 and params[param_name].visibility != ParameterVisibility.PRIVATE
             ):
-                params_str[param_name] = params[param_name].serialize(param_value) if param_value is not None else None
+                # Generic Parameter stringifies None as "None", which does not round-trip.
+                # OptionalParameter/ListParameter/DateParameter already have stable encodings.
+                if param_value is None and params[param_name].__class__ is Parameter:
+                    params_str[param_name] = None
+                else:
+                    params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
 
