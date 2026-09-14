@@ -52,7 +52,7 @@ try:
     # See benchmark at https://gist.github.com/mvj3/02dca2bcc8b0ef1bbfb5
     import ujson as json
 except ImportError:
-    import json
+    import json  # type: ignore[no-redef]
 
 logger = logging.getLogger("luigi-interface")
 
@@ -666,7 +666,7 @@ class BaseHadoopJobTask(luigi.Task):
     mr_priority = NotImplemented
     package_binary = None
 
-    _counter_dict = {}
+    _counter_dict: dict[tuple[str, ...], int] = {}
     task_id = None
 
     def _get_pool(self):

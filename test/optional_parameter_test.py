@@ -1,3 +1,4 @@
+import datetime
 import warnings
 
 import mock
@@ -7,7 +8,7 @@ import luigi
 
 
 class OptionalParameterTest(LuigiTestCase):
-    def actual_test(self, cls, default, expected_value, expected_type, bad_data, **kwargs):
+    def actual_test(self, cls, default, expected_value, expected_type, bad_data=None, **kwargs):
 
         class TestConfig(luigi.Config):
             param = cls(default=default, **kwargs)
@@ -34,6 +35,9 @@ class OptionalParameterTest(LuigiTestCase):
                 TestConfig(param=None)
                 warnings.warn.assert_not_called()
 
+        # bad_data is None for parameters whose normalize() raises on wrong
+        # types before the type warning is emitted (e.g. date parameters).
+        if cls != luigi.OptionalChoiceParameter and bad_data is not None:
             with mock.patch("luigi.parameter.warnings") as warnings:
                 TestConfig(param=bad_data)
                 if cls == luigi.OptionalBoolParameter:
@@ -97,6 +101,11 @@ class OptionalParameterTest(LuigiTestCase):
         choices = ["default value", "expected value"]
         self.actual_test(luigi.OptionalChoiceParameter, None, "expected value", "str", "bad data", choices=choices)
         self.actual_test(luigi.OptionalChoiceParameter, "default value", "expected value", "str", "bad data", choices=choices)
+
+    @with_config({"TestConfig": {"param": "2013-07-10", "empty_param": ""}})
+    def test_optional_date_parameter(self):
+        self.actual_test(luigi.OptionalDateParameter, None, datetime.date(2013, 7, 10), "date")
+        self.actual_test(luigi.OptionalDateParameter, datetime.date(2000, 1, 1), datetime.date(2013, 7, 10), "date")
 
     @with_config({"TestConfig": {"param": "1", "empty_param": ""}})
     def test_optional_choice_parameter_int(self):

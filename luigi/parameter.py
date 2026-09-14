@@ -597,6 +597,12 @@ class DateParameter(_DateParameterBase):
         return x - datetime.timedelta(days=delta)
 
 
+class OptionalDateParameter(OptionalParameterMixin[datetime.date], DateParameter):  # type: ignore[misc]
+    """Class to parse optional date parameters."""
+
+    expected_type = datetime.date
+
+
 class MonthParameter(DateParameter):
     """
     Parameter whose value is a :py:class:`~datetime.date`, specified to the month

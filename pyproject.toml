@@ -9,7 +9,7 @@ authors = [
   {name = "The Luigi Authors"}
 ]
 license = {file = "LICENSE"}
-requires-python = ">=3.10, <3.14"
+requires-python = ">=3.10, <3.15"
 dependencies = [
   "python-dateutil>=2.7.5,<3",
   "tenacity>=9",
@@ -29,6 +29,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: System :: Monitoring",
 ]
 dynamic = ["version", "readme"]
@@ -65,9 +66,9 @@ common = [
   "docker>=2.1.0",
   "elasticsearch>=1.0.0,<2.0.0",
   "google-compute-engine",
-  "HTTPretty==0.8.10",
+  "HTTPretty>1.0.0",
   "hypothesis>=6.7.0,<7.0.0",
-  "jsonschema",
+  "jsonschema>=4.26.0",
   "mock<2.0",
   "moto>=1.3.10,<5.0",
   "mypy",
@@ -89,6 +90,7 @@ common = [
   "types-python-dateutil",
   "types-requests",
   "types-toml",
+  "types-ujson>=5.10.0.20250822",
 ]
 
 docs = [
@@ -182,8 +184,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
-    "luigi.contrib.gcs",
-    "luigi.contrib.hadoop",
     "luigi.contrib.hdfs.config",
     "luigi.contrib.postgres",
     "luigi.contrib.redis_store",

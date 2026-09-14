@@ -24,18 +24,19 @@ import os
 import tempfile
 import time
 from io import BytesIO
+from typing import IO, Any, Optional
 from urllib.parse import urlsplit
 
 from tenacity import after_log, retry, retry_if_exception, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 import luigi.target
 from luigi.contrib import gcp
-from luigi.format import FileWrapper
+from luigi.format import FileWrapper, Format
 
 logger = logging.getLogger("luigi-interface")
 
 # Retry when following errors happened
-RETRYABLE_ERRORS = None
+RETRYABLE_ERRORS: tuple[type[BaseException], ...] = ()
 
 try:
     import httplib2
@@ -74,7 +75,7 @@ gcs_retry = retry(
     wait=wait_exponential(multiplier=1, min=1, max=10),
     stop=stop_after_attempt(5),
     reraise=True,
-    after=after_log(logger, logging.WARNING),
+    after=after_log(logger, logging.WARNING),  # type: ignore[arg-type]
 )
 
 
@@ -195,22 +196,32 @@ class GCSClient(luigi.target.FileSystem):
 
         return self.isdir(path)
 
+    @gcs_retry
+    def _bucket_exists(self, bucket):
+        try:
+            self.client.buckets().get(bucket=bucket).execute()
+        except errors.HttpError as ex:
+            if ex.resp["status"] == "404":
+                return False
+            raise
+        return True
+
+    @gcs_retry
+    def _list_prefix(self, bucket, prefix, max_results):
+        return self.client.objects().list(bucket=bucket, prefix=prefix, maxResults=max_results).execute()
+
     def isdir(self, path):
         bucket, obj = self._path_to_bucket_and_key(path)
         if self._is_root(obj):
-            try:
-                self.client.buckets().get(bucket=bucket).execute()
-            except errors.HttpError as ex:
-                if ex.resp["status"] == "404":
-                    return False
-                raise
+            if not self._bucket_exists(bucket):
+                return False
 
         obj = self._add_path_delimiter(obj)
         if self._obj_exists(bucket, obj):
             return True
 
         # Any objects with this prefix
-        resp = self.client.objects().list(bucket=bucket, prefix=obj, maxResults=20).execute()
+        resp = self._list_prefix(bucket, obj, max_results=20)
         lst = next(iter(resp.get("items", [])), None)
         return bool(lst)
 
@@ -432,9 +443,9 @@ class AtomicGCSFile(luigi.target.AtomicLocalFile):
 
 
 class GCSTarget(luigi.target.FileSystemTarget):
-    fs = None
+    fs: GCSClient
 
-    def __init__(self, path, format=None, client=None):
+    def __init__(self, path: str, format: Optional[Format] = None, client: Optional[GCSClient] = None):
         super(GCSTarget, self).__init__(path)
         if format is None:
             format = luigi.format.get_default_format()
@@ -442,7 +453,7 @@ class GCSTarget(luigi.target.FileSystemTarget):
         self.format = format
         self.fs = client or GCSClient()
 
-    def open(self, mode="r"):
+    def open(self, mode: str = "r") -> IO[Any]:
         if mode == "r":
             return self.format.pipe_reader(FileWrapper(io.BufferedReader(self.fs.download(self.path))))
         elif mode == "w":
@@ -471,9 +482,9 @@ class GCSFlagTarget(GCSTarget):
     If we have 1,000,000 output files, then we have to rename 1,000,000 objects.
     """
 
-    fs = None
+    fs: GCSClient
 
-    def __init__(self, path, format=None, client=None, flag="_SUCCESS"):
+    def __init__(self, path: str, format: Optional[Format] = None, client: Optional[GCSClient] = None, flag: str = "_SUCCESS"):
         """
         Initializes a GCSFlagTarget.
 
