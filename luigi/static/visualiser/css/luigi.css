@@ -238,3 +238,42 @@ span.status-icon {
 .popover{
     max-width: 100% !important; 
 }
+
+#errorModal .modal-error-traceback {
+  width: 90vw;
+  max-width: 90vw;
+}
+
+#errorModal.error-modal-expanded .modal-error-traceback {
+  width: 98vw;
+  max-width: 98vw;
+  margin: 1vh auto;
+}
+
+#errorModal.error-modal-expanded .modal-content {
+  min-height: 96vh;
+}
+
+#errorModal .traceback-modal-actions {
+  margin-bottom: 8px;
+}
+
+#errorModal .traceback-section-label {
+  font-weight: 600;
+  margin: 8px 0 4px;
+}
+
+#errorModal .traceback-content,
+#errorModal .rerun-command {
+  max-height: 35vh;
+  user-select: text;
+  -webkit-user-select: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: auto;
+}
+
+#errorModal.error-modal-expanded .traceback-content,
+#errorModal.error-modal-expanded .rerun-command {
+  max-height: 42vh;
+}
