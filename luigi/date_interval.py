@@ -181,14 +181,8 @@ class Week(DateInterval):
     """
 
     def __init__(self, y, w):
-        """Python datetime does not have a method to convert from ISO weeks, so the constructor uses some stupid brute force"""
-        for d in range(-10, 370):
-            date = datetime.date(y, 1, 1) + datetime.timedelta(d)
-            if date.isocalendar() == (y, w, 1):
-                date_a = date
-                break
-        else:
-            raise ValueError("Invalid week")
+        """Construct the half-open interval for an ISO year and week."""
+        date_a = datetime.date.fromisocalendar(y, w, 1)
         date_b = date_a + datetime.timedelta(7)
         super(Week, self).__init__(date_a, date_b)
 
