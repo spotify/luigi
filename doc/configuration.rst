@@ -814,6 +814,10 @@ max_graph_nodes
   dependencies of nodes that were sent. These nodes are given TRUNCATED
   status.
 
+prune_on_get_work
+  If true, the scheduler runs pruning before handling each work request
+  from a worker. Defaults to false.
+
 record_task_history
   If true, stores task history in a database. Defaults to false.
 
