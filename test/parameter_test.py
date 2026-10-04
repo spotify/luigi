@@ -18,6 +18,7 @@
 import datetime
 import enum
 from datetime import timedelta
+from decimal import Inexact, Rounded, localcontext
 
 import mock
 import pytest
@@ -1161,6 +1162,83 @@ class TestSerializeTimeDeltaParameters(LuigiTestCase):
         self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), "5 w 4 d 3 h 2 m 1 s")
         tdelta = timedelta(seconds=0)
         self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), "0 w 0 d 0 h 0 m 0 s")
+
+    def test_fractional_tasks_are_distinct(self):
+        completed = []
+
+        class FractionalDurationTask(luigi.Task):
+            duration = luigi.TimeDeltaParameter()
+
+            def complete(self):
+                return self.duration in completed
+
+            def run(self):
+                completed.append(self.duration)
+
+        durations = [timedelta(seconds=0.25), timedelta(seconds=0.75)]
+        tasks = [FractionalDurationTask(duration=duration) for duration in durations]
+        self.assertTrue(luigi.build(tasks, local_scheduler=True, workers=1))
+        self.assertEqual(sorted(completed), durations)
+        self.assertNotEqual(tasks[0].task_id, tasks[1].task_id)
+
+    def test_fractional_task_deserialization(self):
+        class FractionalDurationTask(luigi.Task):
+            duration = luigi.TimeDeltaParameter()
+
+        task = FractionalDurationTask(duration=timedelta(days=100000, microseconds=1))
+        restored = FractionalDurationTask.from_str_params(task.to_str_params())
+        self.assertEqual(restored.duration, task.duration)
+        self.assertEqual(restored.task_id, task.task_id)
+
+
+class TestFractionalTimeDeltaParameters:
+    @pytest.mark.parametrize(
+        "duration, serialized",
+        [
+            (timedelta(microseconds=1), "0.000001"),
+            (timedelta(seconds=0.25), "0.250000"),
+            (timedelta(seconds=0.75), "0.750000"),
+            (timedelta(seconds=1, microseconds=234567), "1.234567"),
+            (timedelta(microseconds=-1), "-0.000001"),
+            (timedelta(seconds=-0.25), "-0.250000"),
+            (timedelta(seconds=-1, microseconds=-234567), "-1.234567"),
+            (timedelta(days=100000, microseconds=1), "8640000000.000001"),
+            (timedelta(days=-100000, microseconds=-1), "-8640000000.000001"),
+            (timedelta.max, "86399999999999.999999"),
+            (timedelta.min + timedelta(microseconds=1), "-86399999913599.999999"),
+        ],
+    )
+    def test_fractional_round_trip(self, duration, serialized):
+        parameter = luigi.TimeDeltaParameter()
+        assert parameter.serialize(duration) == serialized
+        assert parameter.parse(serialized) == duration
+
+    @pytest.mark.parametrize("seconds", ["8640000000.000001", "8640000000000001e-6"])
+    def test_exact_seconds_independent_of_decimal_context(self, seconds):
+        with localcontext() as context:
+            context.prec = 2
+            context.traps[Inexact] = True
+            context.traps[Rounded] = True
+            assert luigi.TimeDeltaParameter().parse(seconds) == timedelta(days=100000, microseconds=1)
+
+    @pytest.mark.parametrize(
+        "seconds, microseconds",
+        [("0.0000005", 0), ("0.0000015", 2), ("0.0000025", 2), ("-0.0000015", -2), ("1e-20", 0)],
+    )
+    def test_round_seconds_to_microseconds(self, seconds, microseconds):
+        assert luigi.TimeDeltaParameter().parse(seconds) == timedelta(microseconds=microseconds)
+
+    def test_seconds_outside_timedelta_range(self):
+        with pytest.raises(OverflowError):
+            luigi.TimeDeltaParameter().parse("1e20")
+
+    def test_fraction_syntax_is_not_accepted(self):
+        with pytest.raises(luigi.parameter.ParameterException):
+            luigi.TimeDeltaParameter().parse("1/2")
+
+    @pytest.mark.parametrize("seconds", [0.25, 2.5e-6, 12.34])
+    def test_numeric_input_compatibility(self, seconds):
+        assert luigi.TimeDeltaParameter().parse(seconds) == timedelta(seconds=seconds)
 
 
 class TestTaskParameter(LuigiTestCase):
