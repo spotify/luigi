@@ -778,7 +778,7 @@ function visualiserApp(luigi) {
                 }
             }
             var styleTooltip = function(name, description) {
-                return "<p class='name'>" + name + "</p><p class='description'>" + description + "</p>";
+                return "<p class='name'>" + escapeHtml(name) + "</p><p class='description'>" + escapeHtml(String(description)) + "</p>";
             };
             inner.call(render, g);
             if(paint){
