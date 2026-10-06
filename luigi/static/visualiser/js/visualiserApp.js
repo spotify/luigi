@@ -343,7 +343,7 @@ function visualiserApp(luigi) {
                         if (data.statusMessage === null)
                             $("#statusMessageModal pre").hide();
                         else {
-                            $("#statusMessageModal pre").html(data.statusMessage).show();
+                            $("#statusMessageModal pre").text(data.statusMessage).show();
                         }
                     });
                     luigi.getTaskProgressPercentage(data.taskId, function(data) {
@@ -396,7 +396,7 @@ function visualiserApp(luigi) {
                                 if (response != null) {
                                     clearInterval(interval);
                                     $responseSpinner.hide();
-                                    $responseContent.html(response);
+                                    $responseContent.text(response);
                                 }
                             });
                         }, 1000);
