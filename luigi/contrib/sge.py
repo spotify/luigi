@@ -144,12 +144,18 @@ def _build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
     """Submit shell command to SGE queue via `qsub`"""
     submit_cmd = [
         "qsub",
-        "-o", ":{outfile}".format(outfile=outfile),
-        "-e", ":{errfile}".format(errfile=errfile),
+        "-o",
+        ":{outfile}".format(outfile=outfile),
+        "-e",
+        ":{errfile}".format(errfile=errfile),
         "-V",
-        "-r", "y",
-        "-pe", str(pe), str(n_cpu),
-        "-N", str(job_name)
+        "-r",
+        "y",
+        "-pe",
+        str(pe),
+        str(n_cpu),
+        "-N",
+        str(job_name),
     ]
     return submit_cmd
 
@@ -269,7 +275,7 @@ class SGEJobTask(luigi.Task):
             if self.__module__ == "__main__":
                 d = pickle.dumps(self)
                 module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
-                d = d.replace(b"(c__main__", b"(c" + module_name.encode('utf-8'))
+                d = d.replace(b"(c__main__", b"(c" + module_name.encode("utf-8"))
                 with open(self.job_file, "wb") as f:
                     f.write(d)
             else:
@@ -293,9 +299,9 @@ class SGEJobTask(luigi.Task):
         logger.debug("qsub command: \n" + " ".join(submit_cmd))
 
         # Submit the job and grab job ID
-        output = subprocess.check_output(submit_cmd, input=job_str.encode('utf-8'))
+        output = subprocess.check_output(submit_cmd, input=job_str.encode("utf-8"))
         if isinstance(output, bytes):
-            output = output.decode('utf-8')
+            output = output.decode("utf-8")
         self.job_id = _parse_qsub_job_id(output)
         logger.debug("Submitted job to qsub with response:\n" + output)
 
