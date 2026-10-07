@@ -96,7 +96,6 @@ import random
 import subprocess
 import sys
 import time
-from typing import Optional
 
 import luigi
 from luigi.contrib import sge_runner
@@ -190,17 +189,17 @@ class SGEJobTask(luigi.Task):
 
     """
 
-    n_cpu: int = luigi.IntParameter(default=2, significant=False)
-    shared_tmp_dir: str = luigi.Parameter(default="/home", significant=False)
-    parallel_env: str = luigi.Parameter(default="orte", significant=False)
-    job_name_format: Optional[str] = luigi.Parameter(
+    n_cpu = luigi.IntParameter(default=2, significant=False)
+    shared_tmp_dir = luigi.Parameter(default="/home", significant=False)
+    parallel_env = luigi.Parameter(default="orte", significant=False)
+    job_name_format = luigi.Parameter(
         significant=False, default=None, description="A string that can be formatted with class variables to name the job with qsub."
     )
-    job_name: Optional[str] = luigi.Parameter(significant=False, default=None, description="Explicit job name given via qsub.")
-    run_locally: bool = luigi.BoolParameter(significant=False, description="run locally instead of on the cluster")
-    poll_time: int = luigi.IntParameter(significant=False, default=POLL_TIME, description="specify the wait time to poll qstat for the job status")
-    dont_remove_tmp_dir: bool = luigi.BoolParameter(significant=False, description="don't delete the temporary directory used (for debugging)")
-    no_tarball: bool = luigi.BoolParameter(significant=False, description="don't tarball (and extract) the luigi project files")
+    job_name = luigi.Parameter(significant=False, default=None, description="Explicit job name given via qsub.")
+    run_locally = luigi.BoolParameter(significant=False, description="run locally instead of on the cluster")
+    poll_time = luigi.IntParameter(significant=False, default=POLL_TIME, description="specify the wait time to poll qstat for the job status")
+    dont_remove_tmp_dir = luigi.BoolParameter(significant=False, description="don't delete the temporary directory used (for debugging)")
+    no_tarball = luigi.BoolParameter(significant=False, description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
         super(SGEJobTask, self).__init__(*args, **kwargs)
