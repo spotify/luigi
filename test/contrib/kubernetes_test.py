@@ -64,6 +64,42 @@ class FailJob(KubernetesJobTask):
         return {"dummy_label": "dummy_value"}
 
 
+@pytest.mark.parametrize(
+    "reason, condition",
+    [("ContainerCreating", "ContainersNotReady"), ("PodInitializing", "ContainersNotReady"), ("PodInitializing", "ContainersNotInitialized")],
+)
+def test_job_waits_for_container_start(reason, condition):
+    task = KubernetesJobTask()
+    pod = mock.Mock()
+    pod.obj = {
+        "status": {
+            "containerStatuses": [{"state": {"waiting": {"reason": reason}}}],
+            "conditions": [{"status": "False", "reason": condition, "message": "containers are not ready"}],
+        }
+    }
+    with mock.patch.object(task, "_KubernetesJobTask__get_job"), mock.patch.object(task, "_KubernetesJobTask__get_pods", return_value=[pod]):
+        assert task._KubernetesJobTask__verify_job_has_started() is False
+        pod.obj["status"] = {"containerStatuses": [{"state": {"running": {}}}]}
+        assert task._KubernetesJobTask__verify_job_has_started() is True
+
+
+@pytest.mark.parametrize(
+    "state, message",
+    [
+        ({"waiting": {"reason": "ImagePullBackOff"}}, "ImagePullBackOff"),
+        ({"waiting": {"reason": "CrashLoopBackOff"}}, "CrashLoopBackOff"),
+        ({"terminated": {"reason": "Error", "exitCode": 1}}, "exit code 1"),
+    ],
+)
+def test_job_container_start_failure(state, message):
+    task = KubernetesJobTask()
+    pod = mock.Mock()
+    pod.obj = {"status": {"containerStatuses": [{"state": state}]}}
+    with mock.patch.object(task, "_KubernetesJobTask__get_job"), mock.patch.object(task, "_KubernetesJobTask__get_pods", return_value=[pod]):
+        with pytest.raises(AssertionError, match=message):
+            task._KubernetesJobTask__verify_job_has_started()
+
+
 @pytest.mark.contrib
 class TestK8STask(unittest.TestCase):
     def test_success_job(self):
