@@ -96,6 +96,7 @@ import random
 import subprocess
 import sys
 import time
+from typing import Optional
 
 import luigi
 from luigi.contrib import sge_runner
@@ -141,8 +142,16 @@ def _parse_qsub_job_id(qsub_out):
 
 def _build_qsub_command(cmd, job_name, outfile, errfile, pe, n_cpu):
     """Submit shell command to SGE queue via `qsub`"""
-    qsub_template = """echo {cmd} | qsub -o ":{outfile}" -e ":{errfile}" -V -r y -pe {pe} {n_cpu} -N {job_name}"""
-    return qsub_template.format(cmd=cmd, job_name=job_name, outfile=outfile, errfile=errfile, pe=pe, n_cpu=n_cpu)
+    submit_cmd = [
+        "qsub",
+        "-o", ":{outfile}".format(outfile=outfile),
+        "-e", ":{errfile}".format(errfile=errfile),
+        "-V",
+        "-r", "y",
+        "-pe", str(pe), str(n_cpu),
+        "-N", str(job_name)
+    ]
+    return submit_cmd
 
 
 class SGEJobTask(luigi.Task):
@@ -175,17 +184,17 @@ class SGEJobTask(luigi.Task):
 
     """
 
-    n_cpu = luigi.IntParameter(default=2, significant=False)
-    shared_tmp_dir = luigi.Parameter(default="/home", significant=False)
-    parallel_env = luigi.Parameter(default="orte", significant=False)
-    job_name_format = luigi.Parameter(
+    n_cpu: int = luigi.IntParameter(default=2, significant=False)
+    shared_tmp_dir: str = luigi.Parameter(default="/home", significant=False)
+    parallel_env: str = luigi.Parameter(default="orte", significant=False)
+    job_name_format: Optional[str] = luigi.Parameter(
         significant=False, default=None, description="A string that can be formatted with class variables to name the job with qsub."
     )
-    job_name = luigi.Parameter(significant=False, default=None, description="Explicit job name given via qsub.")
-    run_locally = luigi.BoolParameter(significant=False, description="run locally instead of on the cluster")
-    poll_time = luigi.IntParameter(significant=False, default=POLL_TIME, description="specify the wait time to poll qstat for the job status")
-    dont_remove_tmp_dir = luigi.BoolParameter(significant=False, description="don't delete the temporary directory used (for debugging)")
-    no_tarball = luigi.BoolParameter(significant=False, description="don't tarball (and extract) the luigi project files")
+    job_name: Optional[str] = luigi.Parameter(significant=False, default=None, description="Explicit job name given via qsub.")
+    run_locally: bool = luigi.BoolParameter(significant=False, description="run locally instead of on the cluster")
+    poll_time: int = luigi.IntParameter(significant=False, default=POLL_TIME, description="specify the wait time to poll qstat for the job status")
+    dont_remove_tmp_dir: bool = luigi.BoolParameter(significant=False, description="don't delete the temporary directory used (for debugging)")
+    no_tarball: bool = luigi.BoolParameter(significant=False, description="don't tarball (and extract) the luigi project files")
 
     def __init__(self, *args, **kwargs):
         super(SGEJobTask, self).__init__(*args, **kwargs)
@@ -260,8 +269,8 @@ class SGEJobTask(luigi.Task):
             if self.__module__ == "__main__":
                 d = pickle.dumps(self)
                 module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
-                d = d.replace("(c__main__", "(c" + module_name)
-                with open(self.job_file, "w") as f:
+                d = d.replace(b"(c__main__", b"(c" + module_name.encode('utf-8'))
+                with open(self.job_file, "wb") as f:
                     f.write(d)
             else:
                 with open(self.job_file, "wb") as f:
@@ -281,10 +290,12 @@ class SGEJobTask(luigi.Task):
         self.outfile = os.path.join(self.tmp_dir, "job.out")
         self.errfile = os.path.join(self.tmp_dir, "job.err")
         submit_cmd = _build_qsub_command(job_str, self.task_family, self.outfile, self.errfile, self.parallel_env, self.n_cpu)
-        logger.debug("qsub command: \n" + submit_cmd)
+        logger.debug("qsub command: \n" + " ".join(submit_cmd))
 
         # Submit the job and grab job ID
-        output = subprocess.check_output(submit_cmd, shell=True)
+        output = subprocess.check_output(submit_cmd, input=job_str.encode('utf-8'))
+        if isinstance(output, bytes):
+            output = output.decode('utf-8')
         self.job_id = _parse_qsub_job_id(output)
         logger.debug("Submitted job to qsub with response:\n" + output)
 
