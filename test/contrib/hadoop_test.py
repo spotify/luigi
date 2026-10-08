@@ -18,6 +18,7 @@
 import os
 import sys
 import json
+import tempfile
 import unittest
 
 import luigi
@@ -498,3 +499,24 @@ class JobRunnerTest(unittest.TestCase):
         ]
         subprocess = self._run_and_track_with_interrupt(err_lines)
         subprocess.call.assert_called_once_with(['yarn', 'application', '-kill', application_id])
+
+
+class JobTaskDumpTest(unittest.TestCase):
+    def test_dump_from_main_module(self):
+        """`dump` must not raise TypeError for a __main__ job (issue #3284)."""
+        directory = tempfile.mkdtemp()
+        job = MyStreamingJob(param='x')
+        main_module = sys.modules['__main__']
+        original_module = MyStreamingJob.__module__
+        original_argv0 = sys.argv[0]
+        MyStreamingJob.__module__ = '__main__'
+        setattr(main_module, 'MyStreamingJob', MyStreamingJob)
+        sys.argv[0] = 'my_job_script.py'
+        try:
+            job.dump(directory)
+        finally:
+            MyStreamingJob.__module__ = original_module
+            delattr(main_module, 'MyStreamingJob')
+            sys.argv[0] = original_argv0
+
+        self.assertTrue(os.path.exists(os.path.join(directory, 'job-instance.pickle')))
