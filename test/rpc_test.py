@@ -49,8 +49,26 @@ class RemoteSchedulerTest(unittest.TestCase):
                     s._fetch(suffix, "{}")
                     fetcher.fetch.assert_called_once_with("http://zorg.com/subpath/api/123", "{}", 42)
 
-    def get_work(self, fetcher_side_effect):
-        scheduler = luigi.rpc.RemoteScheduler("http://zorg.com", 42)
+    def testUrlWithPasswordIsSentUnchanged(self):
+        s = luigi.rpc.RemoteScheduler("http://user:pass@zorg.com", 42)
+        with mock.patch.object(s, "_fetcher") as fetcher:
+            s._fetch("api/123", "{}")
+            fetcher.fetch.assert_called_once_with("http://user:pass@zorg.com/api/123", "{}", 42)
+
+    def test_redact_url(self):
+        cases = [
+            ("http://zorg.com", "http://zorg.com"),
+            ("http://user@zorg.com:8082", "http://user@zorg.com:8082"),
+            ("http://user:pass@zorg.com:8082/sub", "http://user:***@zorg.com:8082/sub"),
+            ("http://user:p@ss@zorg.com", "http://user:***@zorg.com"),
+            ("http://user:@zorg.com", "http://user:***@zorg.com"),
+            ("http+unix://%2Fvar%2Frun%2Fluigi.sock", "http+unix://%2Fvar%2Frun%2Fluigi.sock"),
+        ]
+        for url, expected in cases:
+            self.assertEqual(expected, luigi.rpc._redact_url(url))
+
+    def get_work(self, fetcher_side_effect, url="http://zorg.com"):
+        scheduler = luigi.rpc.RemoteScheduler(url, 42)
         scheduler._rpc_retry_wait = 1  # shorten wait time to speed up tests
 
         with mock.patch.object(scheduler, "_fetcher") as fetcher:
@@ -108,6 +126,26 @@ class RemoteSchedulerTest(unittest.TestCase):
         except luigi.rpc.RPCError as e:
             self.assertTrue(isinstance(e.sub_exception, socket.gaierror))
         self.assertEqual([], mock_logger.mock_calls)
+
+    @mock.patch("luigi.rpc.logger")
+    def test_password_not_logged_or_raised(self, mock_logger):
+        """
+        Tests that the password in the scheduler URL is masked in retry logs and errors
+        """
+
+        fetch_results = [socket.timeout, socket.timeout, socket.timeout]
+        with self.assertRaises(luigi.rpc.RPCError) as cm:
+            self.get_work(fetch_results, url="http://user:secret@zorg.com")
+        self.assertNotIn("secret", str(cm.exception))
+        self.assertIn("http://user:***@zorg.com", str(cm.exception))
+        self.assertNotIn("secret", str(mock_logger.mock_calls))
+        mock_logger.warning.assert_called_with("Failed connecting to remote scheduler %r", "http://user:***@zorg.com", exc_info=True)
+
+    def test_password_not_in_null_response_error(self):
+        fetch_results = ['{"response": null}'] * 3
+        with self.assertRaises(luigi.rpc.RPCError) as cm:
+            self.get_work(fetch_results, url="http://user:secret@zorg.com")
+        self.assertNotIn("secret", str(cm.exception))
 
     def test_get_work_retries_on_null(self):
         """
