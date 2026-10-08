@@ -26,6 +26,7 @@ import json
 import operator
 import warnings
 from ast import literal_eval
+from decimal import ROUND_HALF_EVEN, Context, Decimal, InvalidOperation, localcontext
 from enum import Enum, IntEnum
 from json import JSONEncoder
 from pathlib import Path
@@ -953,7 +954,7 @@ class TimeDeltaParameter(Parameter[datetime.timedelta]):
     """
     Class that maps to timedelta using strings in any of the following forms:
 
-     * A bare number is interpreted as duration in seconds.
+     * A bare number is interpreted as duration in seconds, including fractional seconds.
      * ``n {w[eek[s]]|d[ay[s]]|h[our[s]]|m[inute[s]|s[second[s]]}`` (e.g. "1 week 2 days" or "1 h")
         Note: multiple arguments must be supplied in longest to shortest unit order
      * ISO 8601 duration ``PnDTnHnMnS`` (each field optional, years and months not supported)
@@ -1002,8 +1003,17 @@ class TimeDeltaParameter(Parameter[datetime.timedelta]):
         See :py:class:`TimeDeltaParameter` for details on supported formats.
         """
         try:
+            if isinstance(x, str):
+                # Avoid losing microseconds to float precision for long durations.
+                # The full timedelta range needs at most 20 digits of microseconds.
+                with localcontext(Context(prec=20, rounding=ROUND_HALF_EVEN)):
+                    seconds = Decimal(x)
+                    if seconds.copy_abs() >= Decimal("86400000000000"):
+                        raise OverflowError("timedelta duration is too large")
+                    microseconds = int(seconds.quantize(Decimal("0.000001")) * 1000000)
+                return datetime.timedelta(microseconds=microseconds)
             return datetime.timedelta(seconds=float(x))
-        except ValueError:
+        except (ValueError, InvalidOperation):
             pass
         result = self._parseIso8601(x)
         if not result:
@@ -1015,10 +1025,20 @@ class TimeDeltaParameter(Parameter[datetime.timedelta]):
 
     def serialize(self, x):
         """
-        Converts datetime.timedelta to a string
+        Converts datetime.timedelta to a string, preserving microseconds.
+
+        Durations with fractional seconds use a bare number of seconds. Whole-second
+        durations retain the weeks/days/hours/minutes/seconds format.
 
         :param x: the value to serialize.
         """
+        if getattr(x, "microseconds", 0):
+            # Keep fractional seconds exact, including normalized negative timedeltas.
+            microseconds = (x.days * 86400 + x.seconds) * 1000000 + x.microseconds
+            sign = "-" if microseconds < 0 else ""
+            seconds, fraction = divmod(abs(microseconds), 1000000)
+            return "{}{}.{:06d}".format(sign, seconds, fraction)
+
         weeks = x.days // 7
         days = x.days % 7
         hours = x.seconds // 3600
