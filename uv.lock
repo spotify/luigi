@@ -721,7 +721,8 @@ wheels = [
 name = "luigi"
 source = { editable = "." }
 dependencies = [
-    { name = "python-daemon" },
+    { name = "python-daemon", version = "2.1.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'win32'" },
+    { name = "python-daemon", version = "3.1.2", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'win32'" },
     { name = "python-dateutil" },
     { name = "tenacity" },
     { name = "tornado" },
@@ -1096,7 +1097,7 @@ visualizer = [
 requires-dist = [
     { name = "jsonschema", marker = "extra == 'jsonschema'" },
     { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.5,<0.25" },
-    { name = "python-daemon", marker = "sys_platform != 'win32'" },
+    { name = "python-daemon", marker = "sys_platform != 'win32'", specifier = ">=2.2.4" },
     { name = "python-daemon", marker = "sys_platform == 'win32'", specifier = "<2.2.0" },
     { name = "python-dateutil", specifier = ">=2.7.5,<3" },
     { name = "tenacity", specifier = ">=9" },
@@ -1821,14 +1822,34 @@ wheels = [
 name = "python-daemon"
 version = "2.1.2"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform == 'win32'",
+    "python_full_version < '3.12' and sys_platform == 'win32'",
+]
 dependencies = [
-    { name = "docutils" },
-    { name = "lockfile" },
-    { name = "setuptools" },
+    { name = "docutils", marker = "sys_platform == 'win32'" },
+    { name = "lockfile", marker = "sys_platform == 'win32'" },
+    { name = "setuptools", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b2/fb/a280d65f81e9d69989c8d6c4e0bb18d7280cdcd6d406a2cc3f4eb47d4402/python-daemon-2.1.2.tar.gz", hash = "sha256:261c859be5c12ae7d4286dc6951e87e9e1a70a882a8b41fd926efc1ec4214f73", size = 76176, upload-time = "2016-10-26T10:16:01.909Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/59/816004688f8e8602526553cd96226f34657ce4a86daa2240c3eebb0568a3/python_daemon-2.1.2-py2.py3-none-any.whl", hash = "sha256:53da55aec3bb67b576e13a8091a2181f99b395c2eec32a5a0d91d347a5c420a7", size = 19425, upload-time = "2016-10-26T10:16:05.441Z" },
+]
+
+[[package]]
+name = "python-daemon"
+version = "3.1.2"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.12' and sys_platform != 'win32'",
+    "python_full_version < '3.12' and sys_platform != 'win32'",
+]
+dependencies = [
+    { name = "lockfile", marker = "sys_platform != 'win32'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3d/37/4f10e37bdabc058a32989da2daf29e57dc59dbc5395497f3d36d5f5e2694/python_daemon-3.1.2.tar.gz", hash = "sha256:f7b04335adc473de877f5117e26d5f1142f4c9f7cd765408f0877757be5afbf4", size = 71576, upload-time = "2024-12-03T08:41:07.843Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/45/3c/b88167e2d6785c0e781ee5d498b07472aeb9b6765da3b19e7cc9e0813841/python_daemon-3.1.2-py3-none-any.whl", hash = "sha256:b906833cef63502994ad48e2eab213259ed9bb18d54fa8774dcba2ff7864cec6", size = 30872, upload-time = "2024-12-03T08:41:03.322Z" },
 ]
 
 [[package]]
