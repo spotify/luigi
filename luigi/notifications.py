@@ -28,6 +28,7 @@ In particular using the config `receiver` should set up Luigi so that it will se
 """
 
 import logging
+import os
 import socket
 import sys
 import textwrap
@@ -137,7 +138,7 @@ def generate_email(sender, subject, message, recipients, images_png=None):
     for image_png in _iter_images(images_png):
         with open(image_png, "rb") as fp:
             msg_image = MIMEImage(fp.read(), "png")
-            filename = image_png.split("/")[-1]
+            filename = os.path.basename(image_png)
             msg_image.add_header("Content-Disposition", "attachment; filename={}".format(filename))
         msg_root.attach(msg_image)
 
@@ -242,7 +243,7 @@ def send_email_sendgrid(sender, subject, message, recipients, images_png=None):
 
     for image_png in _iter_images(images_png):
         with open(image_png, "rb") as fp:
-            to_send.add_attachment(fp.read(), filename=image_png.split("/")[-1])
+            to_send.add_attachment(fp.read(), filename=os.path.basename(image_png))
 
     client.send(to_send)
 
