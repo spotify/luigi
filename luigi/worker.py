@@ -619,6 +619,7 @@ class Worker:
 
         if task and kwargs.get("params"):
             kwargs["param_visibilities"] = task._get_param_visibilities()
+            kwargs["cmdline_params"] = task._get_cmdline_params()
 
         self._scheduler.add_task(*args, **kwargs)
 
