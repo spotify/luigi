@@ -28,6 +28,7 @@ import hashlib
 import json
 import logging
 import re
+import shlex
 import traceback
 import warnings
 from collections import OrderedDict, deque
@@ -538,6 +539,31 @@ class Task(metaclass=Register):
                 params_str[param_name] = params[param_name].serialize(param_value)
 
         return params_str
+
+    def _get_cmdline_params(self):
+        """Format rerun parameters for a POSIX shell, or None if omission cannot reproduce a value."""
+        args = []
+        serialized = self.to_str_params()
+        for name, param in self.get_params():
+            if name not in serialized:
+                continue
+            value = self.param_kwargs[name]
+            flag = "--" + name.replace("_", "-")
+            implicit_bool = isinstance(param, parameter.BoolParameter) and param.parsing == param.IMPLICIT_PARSING
+            if (isinstance(param, parameter.OptionalParameterMixin) and value is None) or (implicit_bool and not value):
+                try:
+                    if param.task_value(self.task_family, name) is not value:
+                        return None
+                except Exception:
+                    # A valid explicit value may override an unusable configured default.
+                    return None
+                continue
+            if implicit_bool:
+                args.append(flag)
+            else:
+                serialized_value = str(value).lower() if isinstance(param, parameter.BoolParameter) else serialized[name]
+                args.append(flag + "=" + serialized_value)
+        return shlex.join(args)
 
     def _get_param_visibilities(self):
         param_visibilities = {}
