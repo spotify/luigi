@@ -293,6 +293,18 @@ toml = [
 ]
 
 [[package]]
+name = "croniter"
+version = "6.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "python-dateutil" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/57/2e2a65aee2a70483cb28e2b7e15a072d00a523207593b44400d4717bb100/croniter-6.2.4.tar.gz", hash = "sha256:fc124f751b1b04805c2a04b061898b436b45ab2320b045e1e052ea895de65189", size = 166267, upload-time = "2026-07-10T09:52:59.955Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/ba/d678e5bd329646ca51d3c92addbc77804e86d21f4b6b6a027218e6abb010/croniter-6.2.4-py3-none-any.whl", hash = "sha256:8ef3d544107a5c05a150a2d78f8bf5a8eb9c5c4d93405a736b824109574e3f4d", size = 46677, upload-time = "2026-07-10T09:52:58.425Z" },
+]
+
+[[package]]
 name = "cryptography"
 version = "44.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -732,6 +744,9 @@ dependencies = [
 jsonschema = [
     { name = "jsonschema" },
 ]
+periodic = [
+    { name = "croniter" },
+]
 prometheus = [
     { name = "prometheus-client" },
 ]
@@ -750,6 +765,7 @@ common = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "elasticsearch" },
@@ -787,6 +803,7 @@ dev = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "dropbox" },
@@ -860,6 +877,7 @@ test-cdh = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "elasticsearch" },
@@ -898,6 +916,7 @@ test-dropbox = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "dropbox" },
@@ -936,6 +955,7 @@ test-gcloud = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "elasticsearch" },
@@ -976,6 +996,7 @@ test-hdp = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "elasticsearch" },
@@ -1014,6 +1035,7 @@ test-postgres = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "elasticsearch" },
@@ -1053,6 +1075,7 @@ test-unixsocket = [
     { name = "boto3" },
     { name = "codecov" },
     { name = "coverage" },
+    { name = "croniter" },
     { name = "datadog" },
     { name = "docker" },
     { name = "elasticsearch" },
@@ -1094,6 +1117,7 @@ visualizer = [
 
 [package.metadata]
 requires-dist = [
+    { name = "croniter", marker = "extra == 'periodic'", specifier = ">=1.0" },
     { name = "jsonschema", marker = "extra == 'jsonschema'" },
     { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.5,<0.25" },
     { name = "python-daemon", marker = "sys_platform != 'win32'" },
@@ -1104,7 +1128,7 @@ requires-dist = [
     { name = "tornado", specifier = ">=5.0,<7" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
-provides-extras = ["jsonschema", "prometheus", "toml"]
+provides-extras = ["jsonschema", "periodic", "prometheus", "toml"]
 
 [package.metadata.requires-dev]
 cdh = [{ name = "hdfs", specifier = ">=2.0.4,<3.0.0" }]
@@ -1115,6 +1139,7 @@ common = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
@@ -1152,6 +1177,7 @@ dev = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "dropbox", specifier = ">=11.0.0" },
@@ -1219,6 +1245,7 @@ test-cdh = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
@@ -1257,6 +1284,7 @@ test-dropbox = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "dropbox", specifier = ">=11.0.0" },
@@ -1295,6 +1323,7 @@ test-gcloud = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
@@ -1335,6 +1364,7 @@ test-hdp = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
@@ -1373,6 +1403,7 @@ test-postgres = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
@@ -1412,6 +1443,7 @@ test-unixsocket = [
     { name = "boto3", specifier = ">=1.11.0" },
     { name = "codecov", specifier = ">=1.4.0" },
     { name = "coverage", specifier = ">=5.0,<6" },
+    { name = "croniter", specifier = ">=1.0" },
     { name = "datadog", specifier = "==0.22.0" },
     { name = "docker", specifier = ">=2.1.0" },
     { name = "elasticsearch", specifier = ">=1.0.0,<2.0.0" },
@@ -2392,23 +2424,23 @@ name = "sphinx"
 version = "9.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "alabaster", marker = "python_full_version >= '3.12'" },
-    { name = "babel", marker = "python_full_version >= '3.12'" },
-    { name = "colorama", marker = "python_full_version >= '3.12' and sys_platform == 'win32'" },
-    { name = "docutils", marker = "python_full_version >= '3.12'" },
-    { name = "imagesize", marker = "python_full_version >= '3.12'" },
-    { name = "jinja2", marker = "python_full_version >= '3.12'" },
-    { name = "packaging", marker = "python_full_version >= '3.12'" },
-    { name = "pygments", marker = "python_full_version >= '3.12'" },
-    { name = "requests", marker = "python_full_version >= '3.12'" },
-    { name = "roman-numerals", marker = "python_full_version >= '3.12'" },
-    { name = "snowballstemmer", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-applehelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-devhelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-htmlhelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-jsmath", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-qthelp", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-serializinghtml", marker = "python_full_version >= '3.12'" },
+    { name = "alabaster" },
+    { name = "babel" },
+    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "docutils" },
+    { name = "imagesize" },
+    { name = "jinja2" },
+    { name = "packaging" },
+    { name = "pygments" },
+    { name = "requests" },
+    { name = "roman-numerals" },
+    { name = "snowballstemmer" },
+    { name = "sphinxcontrib-applehelp" },
+    { name = "sphinxcontrib-devhelp" },
+    { name = "sphinxcontrib-htmlhelp" },
+    { name = "sphinxcontrib-jsmath" },
+    { name = "sphinxcontrib-qthelp" },
+    { name = "sphinxcontrib-serializinghtml" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/bd/f08eb0f4eed5c83f1ba2a3bd18f7745a2b1525fad70660a1c00224ec468a/sphinx-9.1.0.tar.gz", hash = "sha256:7741722357dd75f8190766926071fed3bdc211c74dd2d7d4df5404da95930ddb", size = 8718324, upload-time = "2025-12-31T15:09:27.646Z" }
 wheels = [
@@ -2420,9 +2452,9 @@ name = "sphinx-rtd-theme"
 version = "3.1.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "docutils", marker = "python_full_version >= '3.12'" },
-    { name = "sphinx", marker = "python_full_version >= '3.12'" },
-    { name = "sphinxcontrib-jquery", marker = "python_full_version >= '3.12'" },
+    { name = "docutils" },
+    { name = "sphinx" },
+    { name = "sphinxcontrib-jquery" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/84/68/a1bfbf38c0f7bccc9b10bbf76b94606f64acb1552ae394f0b8285bfaea25/sphinx_rtd_theme-3.1.0.tar.gz", hash = "sha256:b44276f2c276e909239a4f6c955aa667aaafeb78597923b1c60babc76db78e4c", size = 7620915, upload-time = "2026-01-12T16:03:31.17Z" }
 wheels = [
@@ -2461,7 +2493,7 @@ name = "sphinxcontrib-jquery"
 version = "4.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "sphinx", marker = "python_full_version >= '3.12'" },
+    { name = "sphinx" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/de/f3/aa67467e051df70a6330fe7770894b3e4f09436dea6881ae0b4f3d87cad8/sphinxcontrib-jquery-4.1.tar.gz", hash = "sha256:1620739f04e36a2c779f1a131a2dfd49b2fd07351bf1968ced074365933abc7a", size = 122331, upload-time = "2023-03-14T15:01:01.944Z" }
 wheels = [

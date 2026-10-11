@@ -36,7 +36,8 @@ It wouldn't be fair not to mention some limitations with the current design:
    because the worker nodes get overloaded.
    There are some ways to mitigate this (trigger from many nodes, use resources),
    but none of them are ideal.
--  Luigi does not come with built-in triggering, and you still need to rely on something like
-   crontab to trigger workflows periodically.
+-  Luigi's core does not trigger anything by itself; you need to rely on something like
+   crontab, or the optional ``luigi-periodic`` daemon (see :doc:`periodic_tasks`),
+   to trigger workflows periodically.
 
 Also, it should be mentioned that Luigi is named after the world's second most famous plumber.

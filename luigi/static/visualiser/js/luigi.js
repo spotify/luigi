@@ -153,6 +153,12 @@ var LuigiAPI = (function() {
         });
     };
 
+    LuigiAPI.prototype.getPeriodicStatus = function(callback) {
+        jsonRPC(this.urlRoot + "/periodic_status", {}, function(response) {
+            callback(response.response);
+        });
+    };
+
     LuigiAPI.prototype.disableWorker = function(workerId) {
         jsonRPC(this.urlRoot + "/disable_worker", {'worker': workerId});
     };

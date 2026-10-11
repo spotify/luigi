@@ -314,6 +314,28 @@ function visualiserApp(luigi) {
         });
     }
 
+    function processPeriodicDaemon(daemon) {
+        daemon.is_stale = daemon.seconds_since_update > 120;
+        daemon.entries = (daemon.entries || []).map(function(entry) {
+            entry.is_idle = !entry.running && !entry.queued;
+            entry.has_last = entry.last_returncode !== null && entry.last_returncode !== undefined;
+            entry.last_ok = entry.has_last && entry.last_returncode === 0;
+            entry.last_failed = entry.has_last && entry.last_returncode !== 0;
+            return entry;
+        });
+        return daemon;
+    }
+
+    function renderPeriodic(daemons) {
+        return renderTemplate("periodicTemplate", {"daemonList": daemons.map(processPeriodicDaemon)});
+    }
+
+    function refreshPeriodicList() {
+        luigi.getPeriodicStatus(function(daemons) {
+            $("#periodicList").empty().append(renderPeriodic(daemons || []));
+        });
+    }
+
     function switchTab(tabId) {
         $(".tabButton").parent().removeClass("active");
         $(".tab-pane").removeClass("active");
@@ -520,6 +542,9 @@ function visualiserApp(luigi) {
         } else if (fragmentQuery.tab == "resources") {
             expandResources(fragmentQuery.resources);
             switchTab("resourceList");
+        } else if (fragmentQuery.tab == "periodic") {
+            refreshPeriodicList();
+            switchTab("periodicList");
         } else if (fragmentQuery.tab == "graph") {
             var taskId = fragmentQuery.taskId;
             var hideDone = fragmentQuery.hideDone === '1' ? true : false;
@@ -1555,6 +1580,8 @@ function visualiserApp(luigi) {
             } else if (tabId == 'resourceList') {
                 state.resources = JSON.stringify(expandedResources());
                 state.tab = 'resources';
+            } else if (tabId == 'periodicList') {
+                state.tab = 'periodic';
             }
 
             location.hash = '#' + URI.buildQuery(state);
