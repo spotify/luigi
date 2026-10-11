@@ -354,6 +354,22 @@ class RangeDailyBaseTest(unittest.TestCase):
             },
         )
 
+    def test_reverse_with_zero_task_limit_requires_no_tasks(self):
+        class RangeDailyDerived(RangeDailyBase):
+            def missing_datetimes(self, finite_datetimes):
+                return finite_datetimes
+
+        task = RangeDailyDerived(
+            of=CommonDateTask,
+            now=datetime_to_epoch(datetime.datetime(2016, 1, 4)),
+            start=datetime.date(2016, 1, 1),
+            stop=datetime.date(2016, 1, 4),
+            task_limit=0,
+            reverse=True,
+        )
+
+        self.assertEqual(task.requires(), [])
+
 
 class RangeHourlyBaseTest(unittest.TestCase):
     maxDiff = None
