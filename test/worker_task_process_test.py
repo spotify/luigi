@@ -28,7 +28,7 @@ class ContextManagedTaskProcessTest(LuigiTestCase):
         CONTEXT_MANAGER_MODULE = b"""
 class MyContextManager:
     def __init__(self, task_process):
-        self.task = task_process.task
+        self.task = task_process.config.task
     def __enter__(self):
         assert not self.task.run_event.is_set(), "the task should not have run yet"
         self.task.enter_event.set()

@@ -198,23 +198,28 @@ class AzureBlobClient(FileSystem):
         return container, blob
 
 
-class ReadableAzureBlobFile:
+class _ReadableAzureBlobConfig:
     def __init__(self, container, blob, client, download_when_reading, **kwargs):
         self.container = container
         self.blob = blob
         self.client = client
-        self.closed = False
         self.download_when_reading = download_when_reading
         self.azure_blob_options = kwargs
+
+
+class ReadableAzureBlobFile:
+    def __init__(self, container, blob, client, download_when_reading, **kwargs):
+        self._config = _ReadableAzureBlobConfig(container, blob, client, download_when_reading, **kwargs)
+        self.closed = False
         self.download_file_location = os.path.join(tempfile.mkdtemp(prefix=str(datetime.datetime.utcnow())), blob)
         self.fid = None
 
     def read(self, n=None):
-        return self.client.download_as_bytes(self.container, self.blob, n)
+        return self._config.client.download_as_bytes(self._config.container, self._config.blob, n)
 
     def __enter__(self):
-        if self.download_when_reading:
-            self.client.download_as_file(self.container, self.blob, self.download_file_location)
+        if self._config.download_when_reading:
+            self._config.client.download_as_file(self._config.container, self._config.blob, self.download_file_location)
             self.fid = open(self.download_file_location)
             return self.fid
         else:
@@ -229,7 +234,7 @@ class ReadableAzureBlobFile:
             os.remove(self.download_file_location)
 
     def close(self):
-        if self.download_when_reading:
+        if self._config.download_when_reading:
             if self.fid is not None and not self.fid.closed:
                 self.fid.close()
                 self.fid = None

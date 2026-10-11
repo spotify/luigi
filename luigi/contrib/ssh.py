@@ -38,11 +38,13 @@ protocol or circumvent firewalls (as long as they are open for ssh traffic).
 """
 
 import contextlib
+from dataclasses import dataclass
 import logging
 import os
 import posixpath
 import random
 import subprocess
+from typing import Optional
 
 import luigi
 import luigi.format
@@ -60,19 +62,24 @@ class RemoteCalledProcessError(subprocess.CalledProcessError):
         return "Command '%s' on host %s returned non-zero exit status %d" % (self.cmd, self.host, self.returncode)
 
 
+@dataclass
+class SSHConfig:
+    username: Optional[str] = None
+    key_file: Optional[str] = None
+    connect_timeout: Optional[int] = None
+    port: Optional[str] = None
+    no_host_key_check: bool = False
+    sshpass: bool = False
+    tty: bool = False
+
+
 class RemoteContext:
     def __init__(self, host, **kwargs):
         self.host = host
-        self.username = kwargs.get("username", None)
-        self.key_file = kwargs.get("key_file", None)
-        self.connect_timeout = kwargs.get("connect_timeout", None)
-        self.port = kwargs.get("port", None)
-        self.no_host_key_check = kwargs.get("no_host_key_check", False)
-        self.sshpass = kwargs.get("sshpass", False)
-        self.tty = kwargs.get("tty", False)
+        self.ssh_config = SSHConfig(**kwargs)
 
     def __repr__(self):
-        return "%s(%r, %r, %r, %r, %r)" % (type(self).__name__, self.host, self.username, self.key_file, self.connect_timeout, self.port)
+        return "%s(%r, %r)" % (type(self).__name__, self.host, self.ssh_config)
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -81,30 +88,30 @@ class RemoteContext:
         return hash(repr(self))
 
     def _host_ref(self):
-        if self.username:
-            return "{0}@{1}".format(self.username, self.host)
+        if self.ssh_config.username:
+            return "{0}@{1}".format(self.ssh_config.username, self.host)
         else:
             return self.host
 
     def _prepare_cmd(self, cmd):
         connection_cmd = ["ssh", self._host_ref(), "-o", "ControlMaster=no"]
-        if self.sshpass:
+        if self.ssh_config.sshpass:
             connection_cmd = ["sshpass", "-e"] + connection_cmd
         else:
             connection_cmd += ["-o", "BatchMode=yes"]  # no password prompts etc
-        if self.port:
-            connection_cmd.extend(["-p", self.port])
+        if self.ssh_config.port:
+            connection_cmd.extend(["-p", self.ssh_config.port])
 
-        if self.connect_timeout is not None:
-            connection_cmd += ["-o", "ConnectTimeout=%d" % self.connect_timeout]
+        if self.ssh_config.connect_timeout is not None:
+            connection_cmd += ["-o", "ConnectTimeout=%d" % self.ssh_config.connect_timeout]
 
-        if self.no_host_key_check:
+        if self.ssh_config.no_host_key_check:
             connection_cmd += ["-o", "UserKnownHostsFile=/dev/null", "-o", "StrictHostKeyChecking=no"]
 
-        if self.key_file:
-            connection_cmd.extend(["-i", self.key_file])
+        if self.ssh_config.key_file:
+            connection_cmd.extend(["-i", self.ssh_config.key_file])
 
-        if self.tty:
+        if self.ssh_config.tty:
             connection_cmd.append("-t")
         return connection_cmd + cmd
 
@@ -222,16 +229,16 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
     def _scp(self, src, dest):
         cmd = ["scp", "-q", "-C", "-o", "ControlMaster=no"]
-        if self.remote_context.sshpass:
+        if self.remote_context.ssh_config.sshpass:
             cmd = ["sshpass", "-e"] + cmd
         else:
             cmd.append("-B")
-        if self.remote_context.no_host_key_check:
+        if self.remote_context.ssh_config.no_host_key_check:
             cmd.extend(["-o", "UserKnownHostsFile=/dev/null", "-o", "StrictHostKeyChecking=no"])
-        if self.remote_context.key_file:
-            cmd.extend(["-i", self.remote_context.key_file])
-        if self.remote_context.port:
-            cmd.extend(["-P", self.remote_context.port])
+        if self.remote_context.ssh_config.key_file:
+            cmd.extend(["-i", self.remote_context.ssh_config.key_file])
+        if self.remote_context.ssh_config.port:
+            cmd.extend(["-P", self.remote_context.ssh_config.port])
         if os.path.isdir(src):
             cmd.extend(["-r"])
         cmd.extend([src, dest])

@@ -15,6 +15,7 @@
 # limitations under the License.
 #
 
+import dataclasses
 import datetime
 import logging
 
@@ -28,6 +29,15 @@ try:
 
 except ImportError:
     logger.warning("Loading redis_store module without redis installed. Will crash at runtime if redis_store functionality is used.")
+
+
+@dataclasses.dataclass
+class RedisConnectionConfig:
+    host: str
+    port: int
+    db: int
+    password: str = None
+    socket_timeout: int = None
 
 
 class RedisTarget(Target):
@@ -53,20 +63,19 @@ class RedisTarget(Target):
         :type expire: int
 
         """
-        self.host = host
-        self.port = port
-        self.db = db
-        self.password = password
-        self.socket_timeout = socket_timeout
+        self.config = RedisConnectionConfig(
+            host=host, port=port, db=db,
+            password=password, socket_timeout=socket_timeout,
+        )
         self.update_id = update_id
         self.expire = expire
 
         self.redis_client = redis.StrictRedis(
-            host=self.host,
-            port=self.port,
-            password=self.password,
-            db=self.db,
-            socket_timeout=self.socket_timeout,
+            host=self.config.host,
+            port=self.config.port,
+            password=self.config.password,
+            db=self.config.db,
+            socket_timeout=self.config.socket_timeout,
         )
 
     def __str__(self):
