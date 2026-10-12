@@ -15,7 +15,7 @@ dependencies = [
   "tenacity>=9",
   "tornado>=5.0,<7",
   "python-daemon<2.2.0; sys_platform == 'win32'",
-  "python-daemon; sys_platform != 'win32'",
+  "python-daemon>=2.2.4; sys_platform != 'win32'",
   "typing-extensions>=4.12.2",
 ]
 classifiers = [
