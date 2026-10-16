@@ -283,11 +283,13 @@ class NewlineWrapper(BaseWrapper):
 
         if self.newline is None:
             newline = b"\n"
+        else:
+            newline = self.newline
 
         return re.sub(b"(\n|\r\n|\r)", newline, b)
 
     def writelines(self, lines):
-        if self.newline is None or self.newline == "":
+        if self.newline is None or self.newline == b"":
             newline = os.linesep.encode("ascii")
         else:
             newline = self.newline
@@ -295,7 +297,7 @@ class NewlineWrapper(BaseWrapper):
         self._stream.writelines((re.sub(b"(\n|\r\n|\r)", newline, line) for line in lines))
 
     def write(self, b):
-        if self.newline is None or self.newline == "":
+        if self.newline is None or self.newline == b"":
             newline = os.linesep.encode("ascii")
         else:
             newline = self.newline

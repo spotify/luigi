@@ -211,6 +211,34 @@ class LocalTargetTest(unittest.TestCase, FileSystemTargetTestMixin):
         self.assertEqual(b"a\nb\nc\nd", b)
         self.assertEqual(b"a\r\nb\r\nc\r\nd", c)
 
+    def test_format_newline_explicit(self):
+        t = LocalTarget(self.path, luigi.format.NewlineFormat(newline="\r\n"))
+
+        with t.open("w") as f:
+            f.write(b"a\rb\nc\r\nd")
+
+        with t.open("r") as f:
+            b = f.read()
+
+        with open(self.path, "rb") as f:
+            c = f.read()
+
+        self.assertEqual(b"a\r\nb\r\nc\r\nd", b)
+        self.assertEqual(b"a\r\nb\r\nc\r\nd", c)
+
+    @mock.patch("os.linesep", "\r\n")
+    def test_format_newline_empty(self):
+        t = LocalTarget(self.path, luigi.format.NewlineFormat(newline=""))
+
+        with t.open("w") as f:
+            f.write(b"a\rb\nc\r\nd")
+            f.writelines([b"e\n", b"f\r"])
+
+        with t.open("r") as f:
+            b = f.read()
+
+        self.assertEqual(b"a\r\nb\r\nc\r\nde\r\nf\r\n", b)
+
     def theoretical_io_modes(self, rwax="rwax", bt=["", "b", "t"], plus=["", "+"]):
         p = itertools.product(rwax, plus, bt)
         return {"".join(c) for c in list(itertools.chain.from_iterable([itertools.permutations(m) for m in p]))}
