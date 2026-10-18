@@ -1019,6 +1019,10 @@ class TimeDeltaParameter(Parameter[datetime.timedelta]):
 
         :param x: the value to serialize.
         """
+        if x.days < 0 or getattr(x, "microseconds", 0):
+            # The "w d h m s" form below cannot express negative or sub second
+            # durations, so fall back to a bare number of seconds, which parse() accepts.
+            return str(x.total_seconds())
         weeks = x.days // 7
         days = x.days % 7
         hours = x.seconds // 3600
