@@ -94,6 +94,7 @@ class TestSGEJob(unittest.TestCase):
 
     def test_dump_main_module(self):
         import tempfile
+
         task = TestJobTask(i="2", n_cpu=1)
         original_module = task.__module__
         try:
