@@ -1173,12 +1173,14 @@ class EnumListParameter(Parameter[Tuple[EnumParameterType, ...]]):
 
 class _DictParamEncoder(JSONEncoder):
     """
-    JSON encoder for :py:class:`~DictParameter`, which makes :py:class:`~FrozenOrderedDict` JSON serializable.
+    JSON encoder for :py:class:`~DictParameter` and :py:class:`~ListParameter`, which makes :py:class:`~FrozenOrderedDict` and :py:class:`~Task` JSON serializable.
     """
 
     def default(self, obj):
         if isinstance(obj, FrozenOrderedDict):
             return obj.get_wrapped()
+        if hasattr(obj, "task_id"):
+            return str(obj.task_id)
         return json.JSONEncoder.default(self, obj)
 
 
