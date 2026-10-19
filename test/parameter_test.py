@@ -17,6 +17,7 @@
 
 import datetime
 import enum
+import json
 from datetime import timedelta
 
 import mock
@@ -573,6 +574,39 @@ class TestParametersHashability(LuigiTestCase):
 
         p = luigi.parameter.ListParameter()
         self.assertEqual(hash(Foo(args=[["foo", "bar"], ["doge", "wow"]]).args), hash(p.normalize(p.parse('[["foo", "bar"], ["doge", "wow"]]'))))
+
+    def test_list_task_instances(self):
+        class SubTask(luigi.Task):
+            param = luigi.Parameter()
+
+        class MainTask(luigi.Task):
+            subtasks = luigi.parameter.ListParameter()
+
+            def requires(self):
+                return self.subtasks
+
+        subA = SubTask(param="A")
+        subB = SubTask(param="B")
+        main = MainTask(subtasks=[subA, subB])
+        self.assertEqual(
+            main.to_str_params()["subtasks"],
+            json.dumps([subA.task_id, subB.task_id]),
+        )
+        self.assertEqual(main.requires(), (subA, subB))
+
+    def test_dict_task_instances(self):
+        class SubTask(luigi.Task):
+            param = luigi.Parameter()
+
+        class MainTask(luigi.Task):
+            subtasks = luigi.parameter.DictParameter()
+
+        subA = SubTask(param="A")
+        main = MainTask(subtasks={"a": subA})
+        self.assertEqual(
+            main.to_str_params()["subtasks"],
+            json.dumps({"a": subA.task_id}),
+        )
 
     def test_tuple(self):
         class Foo(luigi.Task):
