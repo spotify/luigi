@@ -45,6 +45,27 @@ class TaskWithBrokenDependency(Task):
         pass
 
 
+class TaskWithBrokenComplete(Task):
+    def complete(self):
+        raise DummyException()
+
+    def run(self):
+        pass
+
+
+class TaskWithBrokenOutput(Task):
+    def output(self):
+        raise DummyException()
+
+    def run(self):
+        pass
+
+
+class ExternalTaskWithMissingOutput(luigi.ExternalTask):
+    def output(self):
+        return MockTarget("external_task_with_missing_output")
+
+
 class TaskWithCallback(Task):
     def run(self):
         print("Triggering event")
@@ -121,6 +142,55 @@ class TestEventCallbacks(unittest.TestCase):
         self.assertEqual(failures, [t])
         self.assertEqual(len(exceptions), 1)
         self.assertTrue(isinstance(exceptions[0], DummyException))
+
+    def _run_broken_complete_test(self, task):
+        broken = []
+        missing = []
+        exceptions = []
+
+        @type(task).event_handler(Event.BROKEN_TASK)
+        def broken_handler(task_, exception):
+            broken.append(task_)
+            exceptions.append(exception)
+
+        @type(task).event_handler(Event.DEPENDENCY_MISSING)
+        def missing_handler(task_):
+            missing.append(task_)
+
+        build([task], local_scheduler=True)
+
+        # A task whose complete()/output() raises is broken, not a missing
+        # dependency (issue #3010). The original exception object cannot
+        # cross the (possibly separate) completion-check process, so the
+        # handler receives the wrapper carrying its traceback instead.
+        self.assertEqual(broken, [task])
+        self.assertEqual(missing, [])
+        self.assertEqual(len(exceptions), 1)
+        self.assertIn("DummyException", exceptions[0].trace)
+
+    def test_broken_complete(self):
+        self._run_broken_complete_test(TaskWithBrokenComplete())
+
+    def test_broken_output(self):
+        self._run_broken_complete_test(TaskWithBrokenOutput())
+
+    def test_external_missing_output_is_dependency_missing_not_broken(self):
+        broken = []
+        missing = []
+
+        @ExternalTaskWithMissingOutput.event_handler(Event.BROKEN_TASK)
+        def broken_handler(task, exception):
+            broken.append(task)
+
+        @ExternalTaskWithMissingOutput.event_handler(Event.DEPENDENCY_MISSING)
+        def missing_handler(task):
+            missing.append(task)
+
+        t = ExternalTaskWithMissingOutput()
+        build([t], local_scheduler=True)
+
+        self.assertEqual(missing, [t])
+        self.assertEqual(broken, [])
 
     def test_custom_handler(self):
         dummies = []
