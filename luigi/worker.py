@@ -838,19 +838,22 @@ class Worker:
 
         else:
             formatted_traceback = None
+            exception = None
             try:
                 self._check_complete_value(is_complete)
             except KeyboardInterrupt:
                 raise
             except AsyncCompletionException as ex:
                 formatted_traceback = ex.trace
-            except BaseException:
+                exception = ex
+            except BaseException as ex:
                 formatted_traceback = traceback.format_exc()
+                exception = ex
 
             if formatted_traceback is not None:
                 self.add_succeeded = False
                 self._log_complete_error(task, formatted_traceback)
-                task.trigger_event(Event.DEPENDENCY_MISSING, task)
+                task.trigger_event(Event.BROKEN_TASK, task, exception)
                 self._email_complete_error(task, formatted_traceback)
                 deps = None
                 status = UNKNOWN
