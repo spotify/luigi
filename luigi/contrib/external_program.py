@@ -36,6 +36,7 @@ import signal
 import subprocess
 import sys
 import tempfile
+import threading
 from contextlib import contextmanager
 from multiprocessing import Process
 from time import sleep
@@ -62,6 +63,11 @@ class ExternalProgramTask(luigi.Task):
     By default, the output (stdout and stderr) of the run external program
     is being captured and displayed after the execution has ended. This
     behaviour can be overridden by passing ``--capture-output False``
+
+    When running in the main thread, a temporary SIGTERM handler terminates the
+    external program if Luigi receives SIGTERM. In other threads, the existing
+    signal handler is left unchanged and the calling application is responsible
+    for terminating the external program on SIGTERM.
     """
 
     capture_output = luigi.BoolParameter(default=True, significant=False, positional=False)
@@ -218,14 +224,17 @@ class ExternalProgramRunContext:
         self.proc = proc
 
     def __enter__(self):
-        self.__old_signal = signal.getsignal(signal.SIGTERM)
-        signal.signal(signal.SIGTERM, self.kill_job)
+        self.__install_signal_handler = threading.current_thread() is threading.main_thread()
+        if self.__install_signal_handler:
+            self.__old_signal = signal.getsignal(signal.SIGTERM)
+            signal.signal(signal.SIGTERM, self.kill_job)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is KeyboardInterrupt:
             self.kill_job()
-        signal.signal(signal.SIGTERM, self.__old_signal)
+        if self.__install_signal_handler:
+            signal.signal(signal.SIGTERM, self.__old_signal)
 
     def kill_job(self, captured_signal=None, stack_frame=None):
         self.proc.kill()
