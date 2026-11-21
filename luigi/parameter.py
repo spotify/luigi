@@ -22,6 +22,7 @@ See :ref:`Parameter` for more info on how to define parameters.
 
 import abc
 import datetime
+from dataclasses import dataclass
 import json
 import operator
 import warnings
@@ -161,6 +162,17 @@ class _ParameterKwargs(TypedDict, total=False):
     visibility: ParameterVisibility
 
 
+@dataclass
+class _ParameterOptions:
+    significant: bool = True
+    positional: bool = True
+    visibility: ParameterVisibility = ParameterVisibility.PUBLIC
+    description: Optional[str] = None
+    always_in_help: bool = False
+    config_path: Optional[ConfigPath] = None
+    batch_method: Optional[Callable[[Iterable[Any]], Any]] = None
+
+
 class Parameter(Generic[T]):
     """
     Parameter whose value is a ``str``, and a base class for other parameter types.
@@ -246,23 +258,47 @@ class Parameter(Generic[T]):
 
         """
         self._default = default
-        self._batch_method = batch_method
         if is_global:
             warnings.warn("is_global support is removed. Assuming positional=False", DeprecationWarning, stacklevel=2)
             positional = False
-        self.significant = significant  # Whether different values for this parameter will differentiate otherwise equal tasks
-        self.positional = positional
-        self.visibility = visibility if ParameterVisibility.has_value(visibility) else ParameterVisibility.PUBLIC
-
-        self.description = description
-        self.always_in_help = always_in_help
-
         if config_path is not None and ("section" not in config_path or "name" not in config_path):
             raise ParameterException("config_path must be a hash containing entries for section and name")
-        self._config_path = config_path
+        self._options = _ParameterOptions(
+            significant=significant,
+            positional=positional,
+            visibility=visibility if ParameterVisibility.has_value(visibility) else ParameterVisibility.PUBLIC,
+            description=description,
+            always_in_help=always_in_help,
+            config_path=config_path,
+            batch_method=batch_method,
+        )
 
         self._counter = Parameter._counter  # We need to keep track of this to get the order right (see Task class)
         Parameter._counter += 1
+
+    @property
+    def significant(self):
+        return self._options.significant
+
+    @property
+    def positional(self):
+        return self._options.positional
+
+    @property
+    def visibility(self):
+        return self._options.visibility
+
+    @property
+    def always_in_help(self):
+        return self._options.always_in_help
+
+    @property
+    def description(self):
+        return self._options.description
+
+    @description.setter
+    def description(self, value):
+        self._options.description = value
 
     @overload
     def __get__(self, instance: None, owner: Any) -> "Parameter[T]": ...
@@ -315,11 +351,11 @@ class Parameter(Generic[T]):
             found = getattr(cp_parser.known_args, dest, None)
             yield (self._parse_or_no_value(found), None)
         yield (self._get_value_from_config(task_name, param_name), None)
-        if self._config_path:
+        if self._options.config_path:
             yield (
-                self._get_value_from_config(self._config_path["section"], self._config_path["name"]),
+                self._get_value_from_config(self._options.config_path["section"], self._options.config_path["name"]),
                 "The use of the configuration [{}] {} is deprecated. Please use [{}] {}".format(
-                    self._config_path["section"], self._config_path["name"], task_name, param_name
+                    self._options.config_path["section"], self._options.config_path["name"], task_name, param_name
                 ),
             )
         yield (self._default, None)
@@ -335,7 +371,7 @@ class Parameter(Generic[T]):
             return self.normalize(value)
 
     def _is_batchable(self):
-        return self._batch_method is not None
+        return self._options.batch_method is not None
 
     def parse(self, x):
         """
@@ -364,7 +400,7 @@ class Parameter(Generic[T]):
         elif not xs:
             raise ValueError("Empty parameter list passed to parse_list")
         else:
-            return self._batch_method(map(self.parse, xs))
+            return self._options.batch_method(map(self.parse, xs))
 
     def serialize(self, x):
         """

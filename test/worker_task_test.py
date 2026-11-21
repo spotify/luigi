@@ -28,7 +28,7 @@ import luigi.date_interval
 import luigi.notifications
 from luigi.mock import MockTarget
 from luigi.scheduler import DONE, FAILED
-from luigi.worker import TaskException, TaskProcess
+from luigi.worker import TaskException, TaskProcess, TaskProcessConfig
 
 luigi.notifications.DEBUG = True
 
@@ -64,7 +64,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = SuccessTask()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue, mock.Mock())
+        task_process = TaskProcess(TaskProcessConfig(task=task, worker_id=1, result_queue=result_queue, status_reporter=mock.Mock()))
 
         with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
@@ -82,7 +82,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = FailTask()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue, mock.Mock())
+        task_process = TaskProcess(TaskProcessConfig(task=task, worker_id=1, result_queue=result_queue, status_reporter=mock.Mock()))
 
         with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
@@ -95,7 +95,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = NeverCompleteTask()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue, mock.Mock(), check_complete_on_run=True)
+        task_process = TaskProcess(TaskProcessConfig(task=task, worker_id=1, result_queue=result_queue, status_reporter=mock.Mock(), check_complete_on_run=True))
 
         with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
@@ -124,7 +124,7 @@ class TaskProcessTest(LuigiTestCase):
 
         task = Main()
         result_queue = multiprocessing.Queue()
-        task_process = TaskProcess(task, 1, result_queue, mock.Mock())
+        task_process = TaskProcess(TaskProcessConfig(task=task, worker_id=1, result_queue=result_queue, status_reporter=mock.Mock()))
 
         with mock.patch.object(result_queue, "put") as mock_put:
             task_process.run()
@@ -153,7 +153,7 @@ class TaskProcessTest(LuigiTestCase):
         queue = mock.Mock()
         worker_id = 1
 
-        task_process = TaskProcess(task, worker_id, queue, mock.Mock())
+        task_process = TaskProcess(TaskProcessConfig(task=task, worker_id=worker_id, result_queue=queue, status_reporter=mock.Mock()))
         task_process.start()
 
         parent = Process(task_process.pid)
@@ -177,11 +177,11 @@ class TaskProcessTest(LuigiTestCase):
         class Task(luigi.Task):
             worker_timeout = 0
 
-        task_process = TaskProcess(
+        task_process = TaskProcess(TaskProcessConfig(
             task=Task(),
             worker_id=1,
             result_queue=mock.Mock(),
             status_reporter=mock.Mock(),
             worker_timeout=10,
-        )
-        self.assertEqual(task_process.worker_timeout, 0)
+        ))
+        self.assertIsNone(task_process.timeout_time)

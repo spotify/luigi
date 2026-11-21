@@ -37,6 +37,7 @@ import subprocess
 import sys
 import tempfile
 import warnings
+from dataclasses import dataclass
 from io import StringIO
 from itertools import groupby
 
@@ -380,6 +381,20 @@ class JobRunner:
     run_job = NotImplemented
 
 
+@dataclass
+class HadoopRunnerConfig:  # pylint: disable=too-many-instance-attributes
+    streaming_jar: str
+    modules: list = None
+    streaming_args: list = None
+    libjars: list = None
+    libjars_in_hdfs: list = None
+    archives: list = None
+    jobconfs: dict = None
+    input_format: str = None
+    output_format: str = None
+    end_job_with_atomic_move_dir: bool = True
+
+
 class HadoopJobRunner(JobRunner):
     """
     Takes care of uploading & executing a Hadoop job using Hadoop streaming.
@@ -403,23 +418,25 @@ class HadoopJobRunner(JobRunner):
         def get(x, default):
             return x is not None and x or default
 
-        self.streaming_jar = streaming_jar
-        self.modules = get(modules, [])
-        self.streaming_args = get(streaming_args, [])
-        self.libjars = get(libjars, [])
-        self.libjars_in_hdfs = get(libjars_in_hdfs, [])
-        self.archives = get(archives, [])
-        self.jobconfs = get(jobconfs, {})
-        self.input_format = input_format
-        self.output_format = output_format
-        self.end_job_with_atomic_move_dir = end_job_with_atomic_move_dir
+        self.config = HadoopRunnerConfig(
+            streaming_jar=streaming_jar,
+            modules=get(modules, []),
+            streaming_args=get(streaming_args, []),
+            libjars=get(libjars, []),
+            libjars_in_hdfs=get(libjars_in_hdfs, []),
+            archives=get(archives, []),
+            jobconfs=get(jobconfs, {}),
+            input_format=input_format,
+            output_format=output_format,
+            end_job_with_atomic_move_dir=end_job_with_atomic_move_dir,
+        )
         self.tmp_dir = False
 
     def run_job(self, job, tracking_url_callback=None):
         if tracking_url_callback is not None:
             warnings.warn("tracking_url_callback argument is deprecated, task.set_tracking_url is used instead.", DeprecationWarning)
 
-        packages = [luigi] + self.modules + job.extra_modules() + list(_attached_packages)
+        packages = [luigi] + self.config.modules + job.extra_modules() + list(_attached_packages)
 
         # find the module containing the job
         packages.append(__import__(job.__module__, None, None, "dummy"))
@@ -457,7 +474,7 @@ class HadoopJobRunner(JobRunner):
 
         output_final = job.output().path
         # atomic output: replace output with a temporary work directory
-        if self.end_job_with_atomic_move_dir:
+        if self.config.end_job_with_atomic_move_dir:
             illegal_targets = (luigi.contrib.s3.S3FlagTarget, luigi.contrib.gcs.GCSFlagTarget)
             if isinstance(job.output(), illegal_targets):
                 raise TypeError("end_job_with_atomic_move_dir is not supported for {}".format(illegal_targets))
@@ -465,12 +482,12 @@ class HadoopJobRunner(JobRunner):
         else:
             output_hadoop = output_final
 
-        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ["jar", self.streaming_jar]
+        arglist = luigi.contrib.hdfs.load_hadoop_cmd() + ["jar", self.config.streaming_jar]
 
         # 'libjars' is a generic option, so place it first
-        libjars = [libjar for libjar in self.libjars]
+        libjars = [libjar for libjar in self.config.libjars]
 
-        for libjar in self.libjars_in_hdfs:
+        for libjar in self.config.libjars_in_hdfs:
             run_cmd = luigi.contrib.hdfs.load_hadoop_cmd() + ["fs", "-get", libjar, self.tmp_dir]
             logger.debug(subprocess.list2cmdline(run_cmd))
             subprocess.call(run_cmd)
@@ -483,8 +500,8 @@ class HadoopJobRunner(JobRunner):
         archives = []
         extra_archives = job.extra_archives()
 
-        if self.archives:
-            archives = self.archives
+        if self.config.archives:
+            archives = self.config.archives
 
         if extra_archives:
             archives += extra_archives
@@ -507,13 +524,13 @@ class HadoopJobRunner(JobRunner):
 
         jobconfs = job.jobconfs()
 
-        for k, v in self.jobconfs.items():
+        for k, v in self.config.jobconfs.items():
             jobconfs.append("%s=%s" % (k, v))
 
         for conf in jobconfs:
             arglist += ["-D", conf]
 
-        arglist += self.streaming_args
+        arglist += self.config.streaming_args
 
         # Add additional non-generic  per-job streaming args
         extra_streaming_args = job.extra_streaming_arguments()
@@ -538,10 +555,10 @@ class HadoopJobRunner(JobRunner):
         for f in filter(None, files):
             arglist += ["-file", f]
 
-        if self.output_format:
-            arglist += ["-outputformat", self.output_format]
-        if self.input_format:
-            arglist += ["-inputformat", self.input_format]
+        if self.config.output_format:
+            arglist += ["-outputformat", self.config.output_format]
+        if self.config.input_format:
+            arglist += ["-inputformat", self.config.input_format]
 
         allowed_input_targets = (luigi.contrib.hdfs.HdfsTarget, luigi.contrib.s3.S3Target, luigi.contrib.gcs.GCSTarget)
         for target in luigi.task.flatten(job.input_hadoop()):
@@ -564,7 +581,7 @@ class HadoopJobRunner(JobRunner):
 
         run_and_track_hadoop_job(arglist, tracking_url_callback=job.set_tracking_url)
 
-        if self.end_job_with_atomic_move_dir:
+        if self.config.end_job_with_atomic_move_dir:
             luigi.contrib.hdfs.HdfsTarget(output_hadoop).move_dir(output_final)
         self.finish()
 

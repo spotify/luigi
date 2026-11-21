@@ -16,6 +16,7 @@
 #
 
 import logging
+from collections import namedtuple
 
 import luigi
 from luigi.contrib import rdbms
@@ -30,6 +31,9 @@ except ImportError:
         "Loading MySQL module without the python package mysql-connector-python. \
        This will crash at runtime if MySQL functionality is used."
     )
+
+
+_ConnectionConfig = namedtuple('_ConnectionConfig', ['host', 'port', 'database', 'user', 'password', 'cnx_kwargs'])
 
 
 class MySqlTarget(luigi.Target):
@@ -57,17 +61,14 @@ class MySqlTarget(luigi.Target):
             See https://dev.mysql.com/doc/connector-python/en/connector-python-connectargs.html.
         """
         if ":" in host:
-            self.host, self.port = host.split(":")
-            self.port = int(self.port)
+            host_part, port = host.split(":")
+            port = int(port)
         else:
-            self.host = host
-            self.port = 3306
-        self.database = database
-        self.user = user
-        self.password = password
+            host_part = host
+            port = 3306
+        self.connection = _ConnectionConfig(host_part, port, database, user, password, cnx_kwargs)
         self.table = table
         self.update_id = update_id
-        self.cnx_kwargs = cnx_kwargs
 
     def __str__(self):
         return self.table
@@ -119,7 +120,10 @@ class MySqlTarget(luigi.Target):
 
     def connect(self, autocommit=False):
         connection = mysql.connector.connect(
-            user=self.user, password=self.password, host=self.host, port=self.port, database=self.database, autocommit=autocommit, **self.cnx_kwargs
+            user=self.connection.user, password=self.connection.password,
+            host=self.connection.host, port=self.connection.port,
+            database=self.connection.database, autocommit=autocommit,
+            **self.connection.cnx_kwargs,
         )
         return connection
 

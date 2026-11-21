@@ -87,6 +87,7 @@ import hashlib
 import itertools
 import json
 import logging
+from collections import namedtuple
 
 import luigi
 
@@ -102,6 +103,8 @@ try:
 
 except ImportError:
     logger.warning("Loading esindex module without elasticsearch installed. Will crash at runtime if esindex functionality is used.")
+
+_ConnectionConfig = namedtuple('_ConnectionConfig', ['host', 'port', 'http_auth', 'timeout', 'extra_elasticsearch_args'])
 
 
 class ElasticsearchTarget(luigi.Target):
@@ -132,23 +135,19 @@ class ElasticsearchTarget(luigi.Target):
         if extra_elasticsearch_args is None:
             extra_elasticsearch_args = {}
 
-        self.host = host
-        self.port = port
-        self.http_auth = http_auth
+        self._connection_config = _ConnectionConfig(host, port, http_auth, timeout, extra_elasticsearch_args)
         self.index = index
         self.doc_type = doc_type
         self.update_id = update_id
         self.marker_index_hist_size = marker_index_hist_size
-        self.timeout = timeout
-        self.extra_elasticsearch_args = extra_elasticsearch_args
 
         self.es = elasticsearch.Elasticsearch(
             connection_class=Urllib3HttpConnection,
-            host=self.host,
-            port=self.port,
-            http_auth=self.http_auth,
-            timeout=self.timeout,
-            **self.extra_elasticsearch_args,
+            host=self._connection_config.host,
+            port=self._connection_config.port,
+            http_auth=self._connection_config.http_auth,
+            timeout=self._connection_config.timeout,
+            **self._connection_config.extra_elasticsearch_args,
         )
 
     def marker_index_document_id(self):

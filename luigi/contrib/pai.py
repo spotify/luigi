@@ -54,8 +54,24 @@ def slot_to_dict(o):
         if not key.startswith("__"):
             value = getattr(o, key, None)
             if value is not None:
-                o_dict[key] = value
+                if hasattr(value, "__slots__"):
+                    o_dict.update(slot_to_dict(value))
+                else:
+                    o_dict[key] = value
     return o_dict
+
+
+class PaiJobConfig:
+    __slots__ = ("authFile", "dataDir", "outputDir", "codeDir", "virtualCluster", "gpuType", "retryCount")
+
+    def __init__(self):
+        self.authFile = None
+        self.dataDir = None
+        self.outputDir = None
+        self.codeDir = None
+        self.virtualCluster = None
+        self.gpuType = None
+        self.retryCount = None
 
 
 class PaiJob:
@@ -98,7 +114,7 @@ class PaiJob:
 
     """
 
-    __slots__ = ("jobName", "image", "authFile", "dataDir", "outputDir", "codeDir", "virtualCluster", "taskRoles", "gpuType", "retryCount")
+    __slots__ = ("jobName", "image", "taskRoles", "config")
 
     def __init__(self, jobName, image, tasks):
         """
@@ -114,6 +130,7 @@ class PaiJob:
             self.taskRoles = tasks
         else:
             raise TypeError("you must specify one task at least.")
+        self.config = PaiJobConfig()
 
 
 class Port:
@@ -132,8 +149,18 @@ class Port:
         self.portNumber = port_number
 
 
+class TaskResource:
+    __slots__ = ("cpuNumber", "memoryMB", "shmMB", "gpuNumber")
+
+    def __init__(self, cpuNumber=1, memoryMB=2048, shmMB=64, gpuNumber=0):
+        self.cpuNumber = cpuNumber
+        self.memoryMB = memoryMB
+        self.shmMB = shmMB
+        self.gpuNumber = gpuNumber
+
+
 class TaskRole:
-    __slots__ = ("name", "taskNumber", "cpuNumber", "memoryMB", "shmMB", "gpuNumber", "portList", "command", "minFailedTaskCount", "minSucceededTaskCount")
+    __slots__ = ("name", "taskNumber", "resource", "portList", "command", "minFailedTaskCount", "minSucceededTaskCount")
 
     def __init__(self, name, command, taskNumber=1, cpuNumber=1, memoryMB=2048, shmMB=64, gpuNumber=0, portList=[]):
         """
@@ -151,10 +178,7 @@ class TaskRole:
         self.name = name
         self.command = command
         self.taskNumber = taskNumber
-        self.cpuNumber = cpuNumber
-        self.memoryMB = memoryMB
-        self.shmMB = shmMB
-        self.gpuNumber = gpuNumber
+        self.resource = TaskResource(cpuNumber, memoryMB, shmMB, gpuNumber)
         self.portList = portList
 
 
@@ -268,13 +292,13 @@ class PaiTask(luigi.Task):
 
     def run(self):
         job = PaiJob(self.name, self.image, self.tasks)
-        job.virtualCluster = self.virtual_cluster
-        job.authFile = self.auth_file_path
-        job.codeDir = self.code_dir
-        job.dataDir = self.data_dir
-        job.outputDir = self.output_dir
-        job.retryCount = self.retry_count
-        job.gpuType = self.gpu_type
+        job.config.virtualCluster = self.virtual_cluster
+        job.config.authFile = self.auth_file_path
+        job.config.codeDir = self.code_dir
+        job.config.dataDir = self.data_dir
+        job.config.outputDir = self.output_dir
+        job.config.retryCount = self.retry_count
+        job.config.gpuType = self.gpu_type
         request_json = json.dumps(job, default=slot_to_dict)
         logger.debug("Submit job request {0}".format(request_json))
         response = rs.post(
