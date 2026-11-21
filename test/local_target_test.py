@@ -26,6 +26,7 @@ import sys
 from errno import EEXIST, EXDEV
 
 import mock
+import pytest
 from helpers import unittest
 from target_test import FileSystemTargetTestMixin
 
@@ -293,6 +294,19 @@ class TmpFileTest(unittest.TestCase):
         path = t.path
         del t  # should remove the underlying file
         self.assertFalse(os.path.exists(path))
+
+
+@pytest.mark.parametrize("path", ["relative", "./relative", "parent/relative"])
+def test_mkdir_without_parents_accepts_relative_path(tmp_path, monkeypatch, path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "parent").mkdir()
+    fs = LocalFileSystem()
+    fs.mkdir(path, parents=False)
+    assert (tmp_path / path).is_dir()
+    with pytest.raises(FileAlreadyExists):
+        fs.mkdir(path, parents=False, raise_if_exists=True)
+    with pytest.raises(MissingParentDirectory):
+        fs.mkdir("missing/child", parents=False)
 
 
 class FileSystemTest(unittest.TestCase):
