@@ -19,6 +19,7 @@ import contextlib
 import gc
 import os
 import pickle
+import threading
 import time
 
 import mock
@@ -92,6 +93,19 @@ class UnpicklableExceptionTask(luigi.Task):
         raise UnpicklableException()
 
 
+class DyingCompleteTask(luigi.Task):
+    def complete(self):
+        os._exit(1)
+
+
+class DyingCompleteWrapper(luigi.Task):
+    def complete(self):
+        return False
+
+    def requires(self):
+        return [DyingCompleteTask(), SlowCompleteTask(0)]
+
+
 class ParallelSchedulingTest(unittest.TestCase):
     def setUp(self):
         self.sch = mock.Mock()
@@ -99,6 +113,16 @@ class ParallelSchedulingTest(unittest.TestCase):
 
     def added_tasks(self, status):
         return [kw["task_id"] for args, kw in self.sch.add_task.call_args_list if kw["status"] == status]
+
+    def add_without_hanging(self, task):
+        # A regression makes add() wait forever, so run it in a thread to fail the test instead of hanging it.
+        results = []
+        thread = threading.Thread(target=lambda: results.append(self.w.add(task, multiprocess=True)), daemon=True)
+        thread.start()
+        thread.join(timeout=60)
+        self.assertFalse(thread.is_alive(), "Worker.add hung on %s" % task)
+        self.assertEqual(1, len(results), "Worker.add raised an exception")
+        return results[0]
 
     def test_number_of_processes(self):
         import multiprocessing
@@ -191,3 +215,11 @@ class ParallelSchedulingTest(unittest.TestCase):
         send.check_called_once()
         self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
         self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_process_dies_in_complete(self, send):
+        self.assertFalse(self.add_without_hanging(DyingCompleteWrapper()))
+        self.assertEqual([DyingCompleteTask().task_id], self.added_tasks(UNKNOWN))
+        self.assertEqual([SlowCompleteTask(0).task_id], self.added_tasks("DONE"))
+        self.assertEqual([DyingCompleteWrapper().task_id], self.added_tasks("PENDING"))
+        self.assertIn("died", send.call_args[0][1])
