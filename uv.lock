@@ -1099,7 +1099,7 @@ requires-dist = [
     { name = "prometheus-client", marker = "extra == 'prometheus'", specifier = ">=0.5,<0.25" },
     { name = "python-daemon", marker = "sys_platform != 'win32'", specifier = ">=2.2.4" },
     { name = "python-daemon", marker = "sys_platform == 'win32'", specifier = "<2.2.0" },
-    { name = "python-dateutil", specifier = ">=2.7.5,<3" },
+    { name = "python-dateutil", specifier = ">=2.7.5,<5" },
     { name = "tenacity", specifier = ">=9" },
     { name = "toml", marker = "extra == 'toml'", specifier = "<2.0.0" },
     { name = "tornado", specifier = ">=5.0,<7" },

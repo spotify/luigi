@@ -93,6 +93,35 @@ class UnpicklableExceptionTask(luigi.Task):
         raise UnpicklableException()
 
 
+class UnpicklableTask(luigi.Task):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lock = threading.Lock()
+
+
+class UnunpicklableTask(luigi.Task):
+    def __setstate__(self, state):
+        raise RuntimeError("cannot unpickle")
+
+
+class UnpicklableCompleteResult:
+    def __init__(self):
+        self._lock = threading.Lock()
+
+    def __bool__(self):
+        return True
+
+
+class UnpicklableCompleteResultTask(luigi.Task):
+    def complete(self):
+        return UnpicklableCompleteResult()
+
+
+class UnpicklableRequiresTask(luigi.Task):
+    def requires(self):
+        return UnpicklableTask()
+
+
 class DyingCompleteTask(luigi.Task):
     def complete(self):
         os._exit(1)
@@ -106,6 +135,24 @@ class DyingCompleteWrapper(luigi.Task):
         return [DyingCompleteTask(), SlowCompleteTask(0)]
 
 
+class NonTaskRequiresTask(luigi.Task):
+    def complete(self):
+        # Gives the result to add() before it notices that the process checking DyingCompleteTask died.
+        time.sleep(0.3)
+        return False
+
+    def requires(self):
+        return "not a task"
+
+
+class DyingCompleteAndNonTaskRequiresWrapper(luigi.Task):
+    def complete(self):
+        return False
+
+    def requires(self):
+        return [DyingCompleteTask(), NonTaskRequiresTask()]
+
+
 class ParallelSchedulingTest(unittest.TestCase):
     def setUp(self):
         self.sch = mock.Mock()
@@ -115,14 +162,26 @@ class ParallelSchedulingTest(unittest.TestCase):
         return [kw["task_id"] for args, kw in self.sch.add_task.call_args_list if kw["status"] == status]
 
     def add_without_hanging(self, task):
+        results, errors = self._run_add_in_thread(task)
+        self.assertEqual([], errors, "Worker.add raised an exception")
+        return results[0]
+
+    def _run_add_in_thread(self, task):
         # A regression makes add() wait forever, so run it in a thread to fail the test instead of hanging it.
         results = []
-        thread = threading.Thread(target=lambda: results.append(self.w.add(task, multiprocess=True)), daemon=True)
+        errors = []
+
+        def add():
+            try:
+                results.append(self.w.add(task, multiprocess=True))
+            except Exception as e:
+                errors.append(e)
+
+        thread = threading.Thread(target=add, daemon=True)
         thread.start()
         thread.join(timeout=60)
         self.assertFalse(thread.is_alive(), "Worker.add hung on %s" % task)
-        self.assertEqual(1, len(results), "Worker.add raised an exception")
-        return results[0]
+        return results, errors
 
     def test_number_of_processes(self):
         import multiprocessing
@@ -217,9 +276,55 @@ class ParallelSchedulingTest(unittest.TestCase):
         self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
 
     @mock.patch("luigi.notifications.send_error_email")
+    def test_unpicklable_task(self, send):
+        self.assertRaises(Exception, pickle.dumps, UnpicklableTask())
+
+        self.assertFalse(self.add_without_hanging(UnpicklableTask()))
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
+        self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+        self.assertIn("could not be sent to a parallel scheduling process", send.call_args[0][1])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_ununpicklable_task(self, send):
+        self.assertFalse(self.add_without_hanging(UnunpicklableTask()))
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
+        self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+        self.assertIn("could not be sent to a parallel scheduling process", send.call_args[0][1])
+        self.assertIn("cannot unpickle", send.call_args[0][1])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_unpicklable_dependency(self, send):
+        self.assertFalse(self.add_without_hanging(UnpicklableRequiresTask()))
+        self.assertEqual(
+            [UnpicklableTask().task_id],
+            self.added_tasks(UNKNOWN),
+        )
+        self.assertEqual([UnpicklableRequiresTask().task_id], self.added_tasks("PENDING"))
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_unpicklable_complete_result(self, send):
+        self.assertFalse(self.add_without_hanging(UnpicklableCompleteResultTask()))
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
+        self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+
+    def test_schedules_own_task_objects(self):
+        # complete() runs on copies of the tasks in other processes, but the tasks that requires() returns are the ones to schedule.
+        task = OverlappingSelfDependenciesTask(5, 2)
+        self.w.add(task, multiprocess=True)
+        self.assertIs(task, self.w._scheduled_tasks[task.task_id])
+
+    @mock.patch("luigi.notifications.send_error_email")
     def test_process_dies_in_complete(self, send):
         self.assertFalse(self.add_without_hanging(DyingCompleteWrapper()))
         self.assertEqual([DyingCompleteTask().task_id], self.added_tasks(UNKNOWN))
         self.assertEqual([SlowCompleteTask(0).task_id], self.added_tasks("DONE"))
         self.assertEqual([DyingCompleteWrapper().task_id], self.added_tasks("PENDING"))
         self.assertIn("died", send.call_args[0][1])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_process_dies_and_add_raises(self, send):
+        # The pool must not wait for the job of the dead process when add() stops on an exception.
+        results, errors = self._run_add_in_thread(DyingCompleteAndNonTaskRequiresWrapper())
+        self.assertEqual([], results)
+        self.assertEqual(1, len(errors))
+        self.assertIn("requires() must return Task objects", str(errors[0]))
