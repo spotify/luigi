@@ -380,6 +380,9 @@ class SingleProcessPool:
     def close(self):
         pass
 
+    def terminate(self):
+        pass
+
     def join(self):
         pass
 
@@ -463,7 +466,10 @@ def _check_complete_by_id(task, out_queue, completion_cache=None):
         out_queue.put((task.task_id, TracebackWrapper(traceback.format_exc())))
 
 
-def _check_complete_pickled(task_id, pickled_task, out_queue, completion_cache=None):
+def _check_complete_pickled(task_id, pickled_task, out_queue, completion_cache, pids):
+    # Lets Worker.add find out that the process died while checking the task, since multiprocessing.Pool
+    # never finishes the job in that case.
+    pids[task_id] = os.getpid()
     try:
         task = pickle.loads(pickled_task)
     except Exception:
@@ -816,27 +822,34 @@ class Worker:
             self._first_task = task.task_id
         self.add_succeeded = True
         if multiprocess:
-            queue = multiprocessing.Manager().Queue()
+            manager = multiprocessing.Manager()
+            queue = manager.Queue()
+            pids = manager.dict()
             pool = multiprocessing.Pool(processes=processes if processes > 0 else None)
         else:
             queue = DequeQueue()
+            pids = None
             pool = SingleProcessPool()
         self._validate_task(task)
-        self._check_complete_async(pool, queue, task, multiprocess)
+        self._check_complete_async(pool, queue, task, pids)
 
-        # we track queue size ourselves because len(queue) won't work for multiprocessing
-        queue_size = 1
+        # we track the tasks waiting for a result ourselves because len(queue) won't work for multiprocessing
+        checking = {task.task_id}
+        lost = []
         try:
             seen = {task.task_id: task}
-            while queue_size:
-                task_id, is_complete = queue.get()
-                queue_size -= 1
+            while checking:
+                task_id, is_complete = queue.get() if not multiprocess else self._get_check_complete_result(queue, checking, pids, lost)
+                if task_id not in checking:
+                    # The process put the result just as it died, after the task was already reported as lost.
+                    continue
+                checking.remove(task_id)
                 for next in self._add(seen[task_id], is_complete):
                     if next.task_id not in seen:
                         self._validate_task(next)
                         seen[next.task_id] = next
-                        self._check_complete_async(pool, queue, next, multiprocess)
-                        queue_size += 1
+                        self._check_complete_async(pool, queue, next, pids)
+                        checking.add(next.task_id)
         except (KeyboardInterrupt, TaskException):
             raise
         except Exception as ex:
@@ -847,12 +860,16 @@ class Worker:
             self._email_unexpected_error(task, formatted_traceback)
             raise
         finally:
-            pool.close()
+            if lost or checking:
+                # Pool waits on close() for the jobs left when add() stops on an exception, and forever for the lost jobs.
+                pool.terminate()
+            else:
+                pool.close()
             pool.join()
         return self.add_succeeded
 
-    def _check_complete_async(self, pool, queue, task, multiprocess):
-        if not multiprocess:
+    def _check_complete_async(self, pool, queue, task, pids):
+        if pids is None:  # not multiprocess
             pool.apply_async(_check_complete_by_id, [task, queue, self._task_completion_cache])
             return
 
@@ -863,7 +880,28 @@ class Worker:
         except Exception:
             queue.put((task.task_id, _unsendable_task_traceback(task.task_id)))
             return
-        pool.apply_async(_check_complete_pickled, [task.task_id, pickled_task, queue, self._task_completion_cache])
+        pool.apply_async(_check_complete_pickled, [task.task_id, pickled_task, queue, self._task_completion_cache, pids])
+
+    def _get_check_complete_result(self, queue, checking, pids, lost):
+        while True:
+            try:
+                return queue.get(timeout=1)
+            except Queue.Empty:
+                pass
+            # Copy once since each lookup on the proxy is a round trip to the manager process.
+            # Copy before listing the alive processes, or a process that Pool starts in between to replace a dead one looks dead.
+            started = pids.copy()
+            alive = {p.pid for p in multiprocessing.active_children()}
+            dead = [task_id for task_id in checking if task_id in started and started[task_id] not in alive]
+            if not dead:
+                continue
+            # The result may have been put just before the process died, so take it if it is on the queue.
+            # A result that the manager handles even later is skipped in add().
+            try:
+                return queue.get_nowait()
+            except Queue.Empty:
+                lost.append(dead[0])
+                return dead[0], TracebackWrapper("The process checking if %s is complete died (e.g. it was killed or ran out of memory)" % dead[0])
 
     def _add_task_batcher(self, task):
         family = task.task_family
