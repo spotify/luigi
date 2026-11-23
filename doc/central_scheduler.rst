@@ -12,8 +12,9 @@ Note that the central scheduler does not execute anything for you or
 help you with job parallelization.
 For running tasks periodically,
 the easiest thing to do is to trigger a Python script from cron or
-from a continuously running process.
-There is no central process that automatically triggers jobs.
+from a continuously running process, such as the optional
+``luigi-periodic`` daemon (see :doc:`periodic_tasks`).
+The central scheduler itself never triggers jobs.
 This model may seem limited, but
 we believe that it makes things far more intuitive and easy to understand.
 

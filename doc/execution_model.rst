@@ -49,14 +49,14 @@ client and server interaction.
 Triggering tasks
 ~~~~~~~~~~~~~~~~
 
-Luigi does not include its own triggering, so you have to rely on an external scheduler
+Luigi's core does not include its own triggering, so you have to rely on an external scheduler
 such as crontab to actually trigger the workflows.
 
 In practice, it's not a big hurdle because Luigi avoids all the mess typically caused by it.
 Scheduling a complex workflow is fairly trivial using eg. crontab.
 
-In the future, Luigi might implement its own triggering.
-The dependency on crontab (or any external triggering mechanism) is a bit awkward and it would be nice to avoid.
+Luigi also ships an optional built-in trigger daemon, ``luigi-periodic``, which can replace
+crontab for this purpose - see :doc:`periodic_tasks`.
 
 Trigger example
 ^^^^^^^^^^^^^^^

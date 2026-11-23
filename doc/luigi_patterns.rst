@@ -63,7 +63,8 @@ Luigi actually comes with a reusable tool for achieving this, called
 	luigi --module all_reports RangeDailyBase --of AllReports --start 2015-01-01
 
 in your crontab will easily keep gaps from occurring from 2015-01-01
-onwards. NB - it will not always loop over everything from 2015-01-01
+onwards. (Instead of crontab, the same command line can be scheduled
+with the optional ``luigi-periodic`` daemon - see :doc:`periodic_tasks`.) NB - it will not always loop over everything from 2015-01-01
 till current time though, but rather a maximum of 3 months ago by
 default - see :class:`~luigi.tools.range.RangeDailyBase` documentation for this and more knobs
 for tweaking behavior. See also Monitoring below.
