@@ -19,6 +19,7 @@ import contextlib
 import gc
 import os
 import pickle
+import threading
 import time
 
 import mock
@@ -92,6 +93,35 @@ class UnpicklableExceptionTask(luigi.Task):
         raise UnpicklableException()
 
 
+class UnpicklableTask(luigi.Task):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._lock = threading.Lock()
+
+
+class UnunpicklableTask(luigi.Task):
+    def __setstate__(self, state):
+        raise RuntimeError("cannot unpickle")
+
+
+class UnpicklableCompleteResult:
+    def __init__(self):
+        self._lock = threading.Lock()
+
+    def __bool__(self):
+        return True
+
+
+class UnpicklableCompleteResultTask(luigi.Task):
+    def complete(self):
+        return UnpicklableCompleteResult()
+
+
+class UnpicklableRequiresTask(luigi.Task):
+    def requires(self):
+        return UnpicklableTask()
+
+
 class ParallelSchedulingTest(unittest.TestCase):
     def setUp(self):
         self.sch = mock.Mock()
@@ -99,6 +129,16 @@ class ParallelSchedulingTest(unittest.TestCase):
 
     def added_tasks(self, status):
         return [kw["task_id"] for args, kw in self.sch.add_task.call_args_list if kw["status"] == status]
+
+    def add_without_hanging(self, task):
+        # A regression makes add() wait forever, so run it in a thread to fail the test instead of hanging it.
+        results = []
+        thread = threading.Thread(target=lambda: results.append(self.w.add(task, multiprocess=True)), daemon=True)
+        thread.start()
+        thread.join(timeout=60)
+        self.assertFalse(thread.is_alive(), "Worker.add hung on %s" % task)
+        self.assertEqual(1, len(results), "Worker.add raised an exception")
+        return results[0]
 
     def test_number_of_processes(self):
         import multiprocessing
@@ -191,3 +231,41 @@ class ParallelSchedulingTest(unittest.TestCase):
         send.check_called_once()
         self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
         self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_unpicklable_task(self, send):
+        self.assertRaises(Exception, pickle.dumps, UnpicklableTask())
+
+        self.assertFalse(self.add_without_hanging(UnpicklableTask()))
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
+        self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+        self.assertIn("could not be sent to a parallel scheduling process", send.call_args[0][1])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_ununpicklable_task(self, send):
+        self.assertFalse(self.add_without_hanging(UnunpicklableTask()))
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
+        self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+        self.assertIn("could not be sent to a parallel scheduling process", send.call_args[0][1])
+        self.assertIn("cannot unpickle", send.call_args[0][1])
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_unpicklable_dependency(self, send):
+        self.assertFalse(self.add_without_hanging(UnpicklableRequiresTask()))
+        self.assertEqual(
+            [UnpicklableTask().task_id],
+            self.added_tasks(UNKNOWN),
+        )
+        self.assertEqual([UnpicklableRequiresTask().task_id], self.added_tasks("PENDING"))
+
+    @mock.patch("luigi.notifications.send_error_email")
+    def test_unpicklable_complete_result(self, send):
+        self.assertFalse(self.add_without_hanging(UnpicklableCompleteResultTask()))
+        self.assertEqual(UNKNOWN, self.sch.add_task.call_args[1]["status"])
+        self.assertFalse(self.sch.add_task.call_args[1]["runnable"])
+
+    def test_schedules_own_task_objects(self):
+        # complete() runs on copies of the tasks in other processes, but the tasks that requires() returns are the ones to schedule.
+        task = OverlappingSelfDependenciesTask(5, 2)
+        self.w.add(task, multiprocess=True)
+        self.assertIs(task, self.w._scheduled_tasks[task.task_id])

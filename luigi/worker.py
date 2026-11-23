@@ -39,6 +39,7 @@ import json
 import logging
 import multiprocessing
 import os
+import pickle
 import queue as Queue
 import random
 import signal
@@ -48,6 +49,7 @@ import sys
 import threading
 import time
 import traceback
+from multiprocessing.reduction import ForkingPickler
 
 from luigi import notifications
 from luigi.event import Event
@@ -431,16 +433,51 @@ def check_complete_cached(task, completion_cache=None):
     return is_complete
 
 
+def _check_complete_or_traceback(task, completion_cache=None):
+    logger.debug("Checking if %s is complete", task)
+    try:
+        return check_complete_cached(task, completion_cache)
+    except Exception:
+        return TracebackWrapper(traceback.format_exc())
+
+
 def check_complete(task, out_queue, completion_cache=None):
     """
     Checks if task is complete, puts the result to out_queue, optionally using the completion cache.
     """
-    logger.debug("Checking if %s is complete", task)
+    out_queue.put((task, _check_complete_or_traceback(task, completion_cache)))
+
+
+def _check_complete_by_id(task, out_queue, completion_cache=None):
+    """
+    Same as check_complete, but puts the task id instead of the task.
+
+    With parallel scheduling, complete() runs on a copy of the task in another process.
+    Worker.add looks the task up by its id so that it schedules its own task objects instead of the copies.
+    """
+    is_complete = _check_complete_or_traceback(task, completion_cache)
     try:
-        is_complete = check_complete_cached(task, completion_cache)
+        out_queue.put((task.task_id, is_complete))
     except Exception:
-        is_complete = TracebackWrapper(traceback.format_exc())
-    out_queue.put((task, is_complete))
+        # e.g. complete() returned a value that cannot be pickled. add() waits for a result of every task, so put one anyway.
+        out_queue.put((task.task_id, TracebackWrapper(traceback.format_exc())))
+
+
+def _check_complete_pickled(task_id, pickled_task, out_queue, completion_cache=None):
+    try:
+        task = pickle.loads(pickled_task)
+    except Exception:
+        out_queue.put((task_id, _unsendable_task_traceback(task_id)))
+        return
+    _check_complete_by_id(task, out_queue, completion_cache)
+
+
+def _unsendable_task_traceback(task_id):
+    """
+    Must be called in an except block.
+    """
+    message = "%s could not be sent to a parallel scheduling process to check complete() (e.g. it cannot be pickled):\n" % task_id
+    return TracebackWrapper(message + traceback.format_exc())
 
 
 class worker(Config):
@@ -785,21 +822,20 @@ class Worker:
             queue = DequeQueue()
             pool = SingleProcessPool()
         self._validate_task(task)
-        pool.apply_async(check_complete, [task, queue, self._task_completion_cache])
+        self._check_complete_async(pool, queue, task, multiprocess)
 
         # we track queue size ourselves because len(queue) won't work for multiprocessing
         queue_size = 1
         try:
-            seen = {task.task_id}
+            seen = {task.task_id: task}
             while queue_size:
-                current = queue.get()
+                task_id, is_complete = queue.get()
                 queue_size -= 1
-                item, is_complete = current
-                for next in self._add(item, is_complete):
+                for next in self._add(seen[task_id], is_complete):
                     if next.task_id not in seen:
                         self._validate_task(next)
-                        seen.add(next.task_id)
-                        pool.apply_async(check_complete, [next, queue, self._task_completion_cache])
+                        seen[next.task_id] = next
+                        self._check_complete_async(pool, queue, next, multiprocess)
                         queue_size += 1
         except (KeyboardInterrupt, TaskException):
             raise
@@ -814,6 +850,20 @@ class Worker:
             pool.close()
             pool.join()
         return self.add_succeeded
+
+    def _check_complete_async(self, pool, queue, task, multiprocess):
+        if not multiprocess:
+            pool.apply_async(_check_complete_by_id, [task, queue, self._task_completion_cache])
+            return
+
+        # Pickle the task here rather than leave it to multiprocessing.Pool. When Pool fails to pickle or unpickle
+        # the task, nothing is put to the queue and add() waits for it forever.
+        try:
+            pickled_task = bytes(ForkingPickler.dumps(task))
+        except Exception:
+            queue.put((task.task_id, _unsendable_task_traceback(task.task_id)))
+            return
+        pool.apply_async(_check_complete_pickled, [task.task_id, pickled_task, queue, self._task_completion_cache])
 
     def _add_task_batcher(self, task):
         family = task.task_family
