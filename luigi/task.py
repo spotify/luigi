@@ -394,8 +394,15 @@ class Task(metaclass=Register):
         return [name for name, p in cls.get_params() if p._is_batchable()]
 
     @classmethod
-    def get_param_names(cls, include_significant=False):
-        return [name for name, p in cls.get_params() if include_significant or p.significant]
+    def get_param_names(cls, include_insignificant=False, include_significant=None):
+        if include_significant is not None:
+            warnings.warn(
+                "The `include_significant` parameter in `Task.get_param_names` is deprecated, use `include_insignificant` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            include_insignificant = include_significant
+        return [name for name, p in cls.get_params() if include_insignificant or p.significant]
 
     @classmethod
     def get_param_values(cls, params, args, kwargs):

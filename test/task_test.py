@@ -75,6 +75,24 @@ class TaskTest(unittest.TestCase):
         with self.assertRaises(luigi.parameter.MissingParameterException):
             DefaultInsignificantParamTask.from_str_params({})
 
+    def test_get_param_names(self):
+        significant_names = DummyTask.get_param_names()
+        self.assertNotIn("insignificant_param", significant_names)
+        self.assertIn("param", significant_names)
+        self.assertIn("int_param", significant_names)
+
+        all_names = DummyTask.get_param_names(include_insignificant=True)
+        self.assertIn("insignificant_param", all_names)
+        self.assertIn("param", all_names)
+        self.assertEqual(len(all_names), len(significant_names) + 1)
+
+    def test_get_param_names_deprecated_include_significant(self):
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            all_names = DummyTask.get_param_names(include_significant=True)
+            self.assertIn("insignificant_param", all_names)
+            self.assertTrue(any(issubclass(warn.category, DeprecationWarning) for warn in w))
+
     def test_external_tasks_loadable(self):
         task = load_task("luigi", "ExternalTask", {})
         self.assertTrue(isinstance(task, luigi.ExternalTask))
