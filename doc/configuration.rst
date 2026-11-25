@@ -612,9 +612,9 @@ kubeconfig_path
 max_retrials
   Maximum number of retrials in case of job failure.
 
-.. _service-account: http://kubernetes.io/docs/user-guide/kubeconfig-file
-.. _kubeconfig: http://kubernetes.io/docs/user-guide/service-accounts
-.. _minikube: http://kubernetes.io/docs/getting-started-guides/minikube
+.. _service-account: https://kubernetes.io/docs/concepts/security/service-accounts/
+.. _kubeconfig: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/
+.. _minikube: https://minikube.sigs.k8s.io/docs/
 
 
 [mysql]

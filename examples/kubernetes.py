@@ -20,7 +20,7 @@ Example Kubernetes Job Task.
 Requires:
 
 - pykube: ``pip install pykube-ng``
-- A local minikube custer up and running: http://kubernetes.io/docs/getting-started-guides/minikube/
+- A local minikube custer up and running: https://minikube.sigs.k8s.io/docs/
 
 **WARNING**: For Python versions < 3.5 the kubeconfig file must point to a Kubernetes API
 hostname, and NOT to an IP address.

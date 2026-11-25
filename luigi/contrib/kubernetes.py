@@ -24,7 +24,7 @@ From the Kubernetes website:
     Kubernetes is an open-source system for automating deployment, scaling,
     and management of containerized applications.
 
-For more information about Kubernetes Jobs: http://kubernetes.io/docs/user-guide/jobs/
+For more information about Kubernetes Jobs: https://kubernetes.io/docs/concepts/workloads/controllers/job/
 
 Requires:
 
@@ -83,8 +83,8 @@ class KubernetesJobTask(luigi.Task):
 
         For more details, please refer to:
 
-        - kubeconfig: http://kubernetes.io/docs/user-guide/kubeconfig-file
-        - service-account: http://kubernetes.io/docs/user-guide/service-accounts
+        - kubeconfig: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/
+        - service-account: https://kubernetes.io/docs/concepts/security/service-accounts/
         """
         return self.kubernetes_config.auth_method
 
@@ -93,14 +93,14 @@ class KubernetesJobTask(luigi.Task):
         """
         Path to kubeconfig file used for cluster authentication.
         It defaults to "~/.kube/config", which is the default location
-        when using minikube (http://kubernetes.io/docs/getting-started-guides/minikube).
+        when using minikube (https://minikube.sigs.k8s.io/docs/).
         When auth_method is ``service-account`` this property is ignored.
 
         **WARNING**: For Python versions < 3.5 kubeconfig must point to a Kubernetes API
         hostname, and NOT to an IP address.
 
         For more details, please refer to:
-        http://kubernetes.io/docs/user-guide/kubeconfig-file
+        https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/
         """
         return self.kubernetes_config.kubeconfig_path
 
