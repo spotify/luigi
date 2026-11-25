@@ -265,7 +265,7 @@ class KubernetesJobTask(luigi.Task):
             self.__logger.info("`kubectl logs -f pod/%s -n %s`" % (pod.name, pod.namespace))
 
     def __verify_job_has_started(self):
-        """Asserts that the job has successfully started"""
+        """Check startup failures, returning False while containers initialize."""
         # Verify that the job started
         self.__get_job()
 
@@ -287,11 +287,11 @@ class KubernetesJobTask(luigi.Task):
 
                 if "waiting" in cont_stats["state"]:
                     wr = cont_stats["state"]["waiting"]["reason"]
-                    assert wr == "ContainerCreating", "Pod %s %s. Logs: `kubectl logs pod/%s`" % (pod.name, wr, pod.name)
+                    assert wr in ("ContainerCreating", "PodInitializing"), "Pod %s %s. Logs: `kubectl logs pod/%s`" % (pod.name, wr, pod.name)
 
             for cond in status.get("conditions", []):
                 if "message" in cond:
-                    if cond["reason"] == "ContainersNotReady":
+                    if cond["reason"] in ("ContainersNotReady", "ContainersNotInitialized"):
                         return False
                     assert cond["status"] != "False", "[ERROR] %s - %s" % (cond["reason"], cond["message"])
         return True
