@@ -509,6 +509,28 @@ class TestParametersHashability(LuigiTestCase):
         p = luigi.parameter.FloatParameter()
         self.assertEqual(hash(Foo(args=1.0).args), hash(p.parse("1")))
 
+    def test_float_serializes_int_as_float(self):
+        p = luigi.parameter.FloatParameter()
+        # Equal int/float values must serialize identically (equal task_id),
+        # without coercing the stored value's type (so the wrong-type warning
+        # still fires).
+        self.assertEqual(p.serialize(5), "5.0")
+        self.assertEqual(p.serialize(5), p.serialize(5.0))
+
+    def test_float_task_id_stable_for_int_and_float(self):
+        from luigi.task_register import Register
+
+        class Foo(luigi.Task):
+            args = luigi.parameter.FloatParameter()
+
+        # Clear the instance cache between instantiations so that 5 and 5.0
+        # (which are equal) don't dedupe to the same cached task instance.
+        Register.clear_instance_cache()
+        id_from_int = Foo(args=5).task_id
+        Register.clear_instance_cache()
+        id_from_float = Foo(args=5.0).task_id
+        self.assertEqual(id_from_int, id_from_float)
+
     def test_enum(self):
         class Foo(luigi.Task):
             args = luigi.parameter.EnumParameter(enum=MyEnum)

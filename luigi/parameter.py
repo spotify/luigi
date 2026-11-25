@@ -832,6 +832,23 @@ class FloatParameter(Parameter[float]):
         """
         return float(x)
 
+    def serialize(self, x):
+        """
+        Serializes a float, coercing an ``int`` value to ``float`` first.
+
+        An ``int`` value (e.g. ``5``) passed to a ``FloatParameter`` otherwise
+        serializes to ``"5"`` while ``5.0`` serializes to ``"5.0"``, so two equal
+        values (``5 == 5.0``) produce different ``task_id`` s, which breaks
+        scheduler/worker task lookups. Only ``int`` is coerced (``bool``
+        excluded); any other value is serialized as-is, so a wrong-type value is
+        still surfaced by the existing type warning rather than raising here. This
+        is done in ``serialize`` (not ``normalize``) so the stored value's type is
+        unchanged and that warning continues to fire.
+        """
+        if isinstance(x, int) and not isinstance(x, bool):
+            x = float(x)
+        return str(x)
+
 
 class OptionalFloatParameter(OptionalParameterMixin[float], FloatParameter):  # type: ignore[misc]
     """Class to parse optional float parameters."""
