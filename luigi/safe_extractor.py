@@ -74,8 +74,11 @@ class SafeExtractor:
         """
         abs_directory = os.path.abspath(directory)
         abs_target = os.path.abspath(target)
-        prefix = os.path.commonprefix([abs_directory, abs_target])
-        return prefix == abs_directory
+        try:
+            return os.path.commonpath([abs_directory, abs_target]) == abs_directory
+        except ValueError:
+            # e.g. paths on different drives on Windows
+            return False
 
     def safe_extract(self, tar_path, members=None, *, numeric_owner=False):
         """
