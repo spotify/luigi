@@ -149,10 +149,9 @@ class PrestoTarget(luigi.Target):
         pattern = re.compile(r"line (\d+):(\d+): Table {}.{}.{} does not exist".format(self.catalog, self.database, self.table))
         try:
             message = exception.message["message"]
-            if pattern.match(message):
-                return True
-        finally:
+        except (AttributeError, KeyError, TypeError):
             return False
+        return bool(pattern.match(message))
 
     def count(self):
         if not self._count:
@@ -175,6 +174,7 @@ class PrestoTarget(luigi.Target):
         except DatabaseError as exception:
             if self._table_doesnot_exist(exception):
                 return False
+            raise
         except Exception:
             raise
 

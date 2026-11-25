@@ -163,6 +163,25 @@ class PrestoTargetTest(unittest.TestCase):
         client.execute.assert_called_once_with("SELECT COUNT(*) AS cnt FROM hive.schm1.tbl1 WHERE 1 = %s LIMIT 1", [1], mode="fetch")
         assert not exists
 
+    def test_other_database_error_is_raised(self):
+        # arrange
+        e = DatabaseError()
+        setattr(e, "message", {"message": "Access denied"})
+
+        client = mock.MagicMock(spec=PrestoClient)
+        client.execute.side_effect = e
+
+        catalog = "hive"
+        database = "schm1"
+        table = "tbl1"
+
+        # act
+        target = PrestoTarget(client, catalog, database, table)
+
+        # assert
+        with self.assertRaises(DatabaseError):
+            target.exists()
+
 
 class PrestoTest(unittest.TestCase):
     @mock.patch("luigi.contrib.presto.sleep", return_value=None)

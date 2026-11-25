@@ -104,7 +104,14 @@ class MockTarget(target.FileSystemTarget):
     def __init__(self, fn, is_tmp=None, mirror_on_stderr=False, format=None):
         self._mirror_on_stderr = mirror_on_stderr
         self.path = fn
-        self.format = format or get_default_format()
+        f = format or get_default_format()
+        from luigi.format import TextFormat
+
+        if isinstance(f, TextFormat) and "newline" not in f.kwargs:
+            kwargs = dict(f.kwargs)
+            kwargs["newline"] = "\n"
+            f = TextFormat(*f.args, **kwargs)
+        self.format = f
 
     def exists(
         self,
