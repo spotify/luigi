@@ -68,6 +68,28 @@ class DateIntervalTest(LuigiTestCase):
         self.assertRaises(NotImplementedError, di.prev)
         self.assertEqual(di.to_string(), "2012-01-01-2012-02-01")
 
+    def test_week_at_minimum_year(self):
+        interval = luigi.date_interval.Week(1, 1)
+        self.assertEqual(interval.date_a, datetime.date.min)
+        self.assertEqual(interval.date_b, datetime.date(1, 1, 8))
+
+    def test_week_year_boundaries(self):
+        for year, week, monday in (
+            (2009, 1, datetime.date(2008, 12, 29)),
+            (2009, 53, datetime.date(2009, 12, 28)),
+            (2010, 1, datetime.date(2010, 1, 4)),
+            (9999, 51, datetime.date(9999, 12, 20)),
+        ):
+            with self.subTest(year=year, week=week):
+                interval = luigi.date_interval.Week(year, week)
+                self.assertEqual(interval.date_a, monday)
+                self.assertEqual(interval.date_b, monday + datetime.timedelta(days=7))
+
+    def test_invalid_iso_week(self):
+        for year, week in ((2010, 0), (2010, 53), (2009, 54)):
+            with self.subTest(year=year, week=week):
+                self.assertRaises(ValueError, luigi.date_interval.Week, year, week)
+
     def test_exception(self):
         self.assertRaises(ValueError, DI().parse, "xyz")
 
