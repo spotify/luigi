@@ -55,8 +55,13 @@
               </div>
               <div class="modal-body">
                 <pre class="pre-scrollable">{{error}}</pre>
+                {{#rerunUnavailable}}
+                A re-run command is unavailable for these boolean or optional parameter values.
+                {{/rerunUnavailable}}
+                {{^rerunUnavailable}}
                 Command to re-run:
                 <pre class="pre-scrollable">luigi --module {{taskModule}} {{taskFamily}} {{taskParams}}</pre>
+                {{/rerunUnavailable}}
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
