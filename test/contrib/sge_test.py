@@ -26,7 +26,7 @@ import pytest
 from mock import patch
 
 import luigi
-from luigi.contrib.sge import SGEJobTask, _parse_qstat_state
+from luigi.contrib.sge import SGEJobTask, _parse_qstat_state, _parse_qsub_job_id
 
 DEFAULT_HOME = "/home"
 
@@ -58,6 +58,17 @@ class TestSGEWrappers(unittest.TestCase):
         self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT, 3), "t")
         self.assertEqual(_parse_qstat_state("", 1), "u")
         self.assertEqual(_parse_qstat_state("", 4), "u")
+
+    def test_track_job_bytes(self):
+        """`track_job` handles bytes input from subprocess without TypeError"""
+        self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT.encode("utf-8"), 1), "r")
+        self.assertEqual(_parse_qstat_state(QSTAT_OUTPUT.encode("utf-8"), 2), "qw")
+        self.assertEqual(_parse_qstat_state(b"", 1), "u")
+
+    def test_parse_qsub_job_id(self):
+        output = 'Your job 12345 ("test_job") has been submitted'
+        self.assertEqual(_parse_qsub_job_id(output), 12345)
+        self.assertEqual(_parse_qsub_job_id(output.encode("utf-8")), 12345)
 
 
 class TestJobTask(SGEJobTask):

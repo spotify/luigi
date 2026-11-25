@@ -114,17 +114,21 @@ def _parse_qstat_state(qstat_out, job_id):
     `qstat` output is empty or job_id is not found.
 
     """
+    if isinstance(qstat_out, bytes):
+        qstat_out = qstat_out.decode("utf-8", errors="replace")
     if qstat_out.strip() == "":
         return "u"
     lines = qstat_out.split("\n")
     # skip past header
-    while not lines.pop(0).startswith("---"):
+    while lines and not lines.pop(0).startswith("---"):
         pass
     for line in lines:
         if line:
-            job, prior, name, user, state = line.strip().split()[0:5]
-            if int(job) == int(job_id):
-                return state
+            parts = line.strip().split()
+            if len(parts) >= 5:
+                job, prior, name, user, state = parts[0:5]
+                if int(job) == int(job_id):
+                    return state
     return "u"
 
 
@@ -136,6 +140,8 @@ def _parse_qsub_job_id(qsub_out):
         "Your job <job_id> ("<job_name>") has been submitted"
 
     """
+    if isinstance(qsub_out, bytes):
+        qsub_out = qsub_out.decode("utf-8", errors="replace")
     return int(qsub_out.split()[2])
 
 
@@ -284,7 +290,7 @@ class SGEJobTask(luigi.Task):
         logger.debug("qsub command: \n" + submit_cmd)
 
         # Submit the job and grab job ID
-        output = subprocess.check_output(submit_cmd, shell=True)
+        output = subprocess.check_output(submit_cmd, shell=True, text=True)
         self.job_id = _parse_qsub_job_id(output)
         logger.debug("Submitted job to qsub with response:\n" + output)
 
@@ -302,7 +308,7 @@ class SGEJobTask(luigi.Task):
 
             # See what the job's up to
             # ASSUMPTION
-            qstat_out = subprocess.check_output(["qstat"])
+            qstat_out = subprocess.check_output(["qstat"], text=True)
             sge_status = _parse_qstat_state(qstat_out, self.job_id)
             if sge_status == "r":
                 logger.info("Job is running...")
