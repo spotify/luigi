@@ -218,8 +218,11 @@ class SGEJobTask(luigi.Task):
         random_id = "%016x" % random.getrandbits(64)
         folder_name = self.task_id + "-" + random_id
         self.tmp_dir = os.path.join(base_tmp_dir, folder_name)
-        max_filename_length = os.fstatvfs(0).f_namemax
-        self.tmp_dir = self.tmp_dir[:max_filename_length]
+        try:
+            max_filename_length = os.fstatvfs(0).f_namemax
+            self.tmp_dir = self.tmp_dir[:max_filename_length]
+        except (AttributeError, OSError):
+            pass
         logger.info("Tmp dir: %s", self.tmp_dir)
         os.makedirs(self.tmp_dir)
 
@@ -258,10 +261,10 @@ class SGEJobTask(luigi.Task):
         with self.no_unpicklable_properties():
             self.job_file = os.path.join(out_dir, "job-instance.pickle")
             if self.__module__ == "__main__":
-                d = pickle.dumps(self)
-                module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0]
-                d = d.replace("(c__main__", "(c" + module_name)
-                with open(self.job_file, "w") as f:
+                d = pickle.dumps(self, protocol=0)
+                module_name = os.path.basename(sys.argv[0]).rsplit(".", 1)[0].encode("utf-8")
+                d = d.replace(b"(c__main__", b"(c" + module_name)
+                with open(self.job_file, "wb") as f:
                     f.write(d)
             else:
                 with open(self.job_file, "wb") as f:

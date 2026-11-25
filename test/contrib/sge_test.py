@@ -92,6 +92,22 @@ class TestSGEJob(unittest.TestCase):
         luigi.build([task], local_scheduler=True)
         self.assertEqual(mock_check_output.call_count, 2)
 
+    def test_dump_main_module(self):
+        import tempfile
+
+        task = TestJobTask(i="2", n_cpu=1)
+        original_module = task.__module__
+        try:
+            task.__module__ = "__main__"
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                task._dump(tmp_dir)
+                self.assertTrue(os.path.exists(task.job_file))
+                with open(task.job_file, "rb") as f:
+                    content = f.read()
+                self.assertGreater(len(content), 0)
+        finally:
+            task.__module__ = original_module
+
     def tearDown(self):
         for fpath in glob(os.path.join(DEFAULT_HOME, "test_file_*")):
             try:
