@@ -888,6 +888,17 @@ class TestParamWithDefaultFromConfig(LuigiTestCase):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
         self.assertEqual(timedelta(days=4, hours=12, minutes=30, seconds=5), _value(p))
 
+    def testTimeDelta8601Zero(self):
+        p = luigi.TimeDeltaParameter()
+        for value in ("PT0S", "PT0M", "PT0H", "P0D", "P0W", "P0DT0H0M0S"):
+            with self.subTest(value=value):
+                self.assertEqual(timedelta(0), p.parse(value))
+
+    @with_config({"foo": {"bar": "PT0S"}})
+    def testTimeDelta8601ZeroFromConfig(self):
+        p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))
+        self.assertEqual(timedelta(0), _value(p))
+
     @with_config({"foo": {"bar": "P5D"}})
     def testTimeDelta8601NoTimeComponent(self):
         p = luigi.TimeDeltaParameter(config_path=dict(section="foo", name="bar"))

@@ -1006,7 +1006,7 @@ class TimeDeltaParameter(Parameter[datetime.timedelta]):
         except ValueError:
             pass
         result = self._parseIso8601(x)
-        if not result:
+        if result is None:
             result = self._parseSimple(x)
         if result is not None:
             return result
