@@ -17,6 +17,7 @@
 
 import os
 import sys
+import types
 import json
 import unittest
 
@@ -294,6 +295,13 @@ class CreatePackagesArchive(unittest.TestCase):
 
     def tearDown(self):
         sys.path.remove(os.path.join('test', 'create_packages_archive_root'))
+
+    def test_egg_package_raises_clear_error(self):
+        egg = types.ModuleType("fake_egg_package")
+        egg.__path__ = ["/somewhere/fake_egg_package.egg"]
+        with mock.patch.dict(sys.modules, {"fake_egg_package": egg}), mock.patch("os.path.isfile", return_value=True):
+            with self.assertRaisesRegex(NotImplementedError, "egg files not supported"):
+                luigi.contrib.hadoop.create_packages_archive([egg], os.devnull)
 
     def _assert_module(self, add):
         add.assert_called_once_with('test/create_packages_archive_root/module.py',
