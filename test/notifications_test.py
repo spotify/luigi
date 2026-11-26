@@ -16,6 +16,7 @@
 #
 
 import os
+import pathlib
 import socket
 import sys
 import tempfile
@@ -265,6 +266,25 @@ class ExceptionFormatTest(unittest.TestCase):
             self.assertEqual(2, len(payload))
 
             filenames = [part.get_filename() for part in payload[1:]]
+            self.assertEqual([os.path.basename(image_path)], filenames)
+        finally:
+            os.unlink(image_path)
+
+    def test_generate_email_with_pathlib_image(self):
+        fd, image_path = tempfile.mkstemp(suffix=".png")
+        try:
+            with os.fdopen(fd, "wb") as image_file:
+                image_file.write(b"fake-png-path")
+
+            msg = generate_email(
+                sender="test@example.com",
+                subject="subject",
+                message="body",
+                recipients=["receiver@example.com"],
+                images_png=pathlib.Path(image_path),
+            )
+
+            filenames = [part.get_filename() for part in msg.get_payload()[1:]]
             self.assertEqual([os.path.basename(image_path)], filenames)
         finally:
             os.unlink(image_path)
