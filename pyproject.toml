@@ -46,7 +46,7 @@ luigi-deps-tree = "luigi.tools.deps_tree:main"
 
 [project.optional-dependencies]
 jsonschema = ["jsonschema"]
-prometheus = ["prometheus-client>=0.5,<0.25"]
+prometheus = ["prometheus-client>=0.5,<0.27"]
 toml = ["toml<2.0.0"]
 
 [dependency-groups]
@@ -73,7 +73,7 @@ common = [
   "moto>=1.3.10,<5.0",
   "mypy",
   "mysql-connector-python",
-  "prometheus-client>=0.5.0,<0.25",
+  "prometheus-client>=0.5.0,<0.27",
   "psutil<4.0",
   "pygments",
   "pyhive[presto]==0.6.1",
@@ -97,7 +97,7 @@ docs = [
   "azure-storage-blob<=12.28.0",
   "jinja2>=3.1,<4",
   "mypy",
-  "prometheus-client>=0.5.0,<0.25",
+  "prometheus-client>=0.5.0,<0.27",
   "Sphinx>=9.0,<10; python_version >= '3.12'",
   "sphinx-rtd-theme>=2.0; python_version >= '3.12'",
   "sqlalchemy",
