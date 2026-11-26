@@ -77,7 +77,10 @@ class SafeExtractor:
         try:
             return os.path.commonpath([abs_directory, abs_target]) == abs_directory
         except ValueError:
-            # e.g. paths on different drives on Windows
+            # commonpath() raises ValueError when the paths share no common root.
+            # Both paths are absolute here, so in practice that only happens on
+            # Windows (different drives, or a drive path and a UNC path). Such a
+            # target cannot be inside the directory.
             return False
 
     def safe_extract(self, tar_path, members=None, *, numeric_owner=False):
