@@ -1537,9 +1537,11 @@ class TupleParameter(ListParameter[ListT]):
             return tuple(result)  # if this causes an error, let that error be raised.
 
     def _convert_iterable_to_tuple(self, x):
-        if isinstance(x, str):
-            return x
-        return tuple(x)
+        # Only convert nested lists; scalars (numbers, booleans, None), strings and
+        # dicts are kept as they are.
+        if isinstance(x, list):
+            return tuple(x)
+        return x
 
 
 class OptionalTupleParameter(OptionalParameterMixin[ListT], TupleParameter):  # type: ignore[misc]
