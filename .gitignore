@@ -11,6 +11,8 @@ luigi.cfg
 hadoop_test.py
 minicluster.py
 mrrunner.py
+# part of the package: hatchling leaves ignored files out of the wheel and sdist
+!luigi/contrib/mrrunner.py
 pig_property_file
 
 packages.tar
