@@ -16,8 +16,11 @@
 #
 import os
 import shutil
+import signal
 import subprocess
+import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from io import BytesIO
 from multiprocessing import Value
@@ -30,7 +33,7 @@ from mock import call, patch
 
 import luigi
 import luigi.contrib.hdfs
-from luigi.contrib.external_program import ExternalProgramRunError, ExternalProgramTask, ExternalPythonProgramTask
+from luigi.contrib.external_program import ExternalProgramRunContext, ExternalProgramRunError, ExternalProgramTask, ExternalPythonProgramTask
 
 
 def poll_generator():
@@ -340,3 +343,86 @@ class ExternalPythonProgramTaskTest(unittest.TestCase):
         self.assertIn("PYTHONPATH", proc_env)
         self.assertTrue(proc_env["PYTHONPATH"].startswith("/extra/pythonpath"))
         self.assertTrue(proc_env["PYTHONPATH"].endswith("/base/pythonpath"))
+
+
+@pytest.mark.contrib
+@pytest.mark.parametrize("capture_output", [True, False])
+@pytest.mark.parametrize("return_code", [0, 7])
+def test_external_program_in_thread(tmp_path, capture_output, return_code):
+    output_path = tmp_path / "completed"
+
+    class ThreadedTask(ExternalProgramTask):
+        def program_args(self):
+            return [
+                sys.executable,
+                "-c",
+                "import pathlib, sys; pathlib.Path(sys.argv[1]).write_text('done'); sys.exit(int(sys.argv[2]))",
+                str(output_path),
+                str(return_code),
+            ]
+
+    task = ThreadedTask(capture_output=capture_output)
+    old_handler = signal.getsignal(signal.SIGTERM)
+    processes = []
+
+    def start_process(*args, **kwargs):
+        proc = Popen(*args, **kwargs)
+        processes.append(proc)
+        return proc
+
+    try:
+        with patch("luigi.contrib.external_program.subprocess.Popen", side_effect=start_process):
+            with patch("luigi.contrib.external_program.signal.signal", wraps=signal.signal) as install_handler:
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    result = executor.submit(task.run)
+                    if return_code:
+                        with pytest.raises(ExternalProgramRunError, match="return code=7"):
+                            result.result(timeout=10)
+                    else:
+                        result.result(timeout=10)
+                install_handler.assert_not_called()
+        assert output_path.read_text() == "done"
+        assert processes[0].returncode == return_code
+        assert signal.getsignal(signal.SIGTERM) == old_handler
+    finally:
+        for proc in processes:
+            if proc.poll() is None:
+                proc.kill()
+            proc.wait(timeout=10)
+
+
+@pytest.mark.contrib
+@pytest.mark.parametrize("in_thread", [False, True])
+@pytest.mark.parametrize("error", [None, KeyboardInterrupt, RuntimeError])
+def test_external_program_context_cleanup(in_thread, error):
+    proc = mock.Mock()
+    old_handler = signal.getsignal(signal.SIGTERM)
+
+    def run():
+        with ExternalProgramRunContext(proc) as context:
+            handler = signal.getsignal(signal.SIGTERM)
+            assert handler == (old_handler if in_thread else context.kill_job)
+            if error is not None:
+                raise error("test interruption")
+
+    with patch("luigi.contrib.external_program.signal.signal", wraps=signal.signal) as install_handler:
+        if in_thread:
+            with ThreadPoolExecutor(max_workers=1) as executor:
+                result = executor.submit(run)
+                if error is None:
+                    result.result(timeout=10)
+                else:
+                    with pytest.raises(error, match="test interruption"):
+                        result.result(timeout=10)
+            install_handler.assert_not_called()
+        elif error is None:
+            run()
+        else:
+            with pytest.raises(error, match="test interruption"):
+                run()
+
+    assert signal.getsignal(signal.SIGTERM) == old_handler
+    if error is KeyboardInterrupt:
+        proc.kill.assert_called_once_with()
+    else:
+        proc.kill.assert_not_called()
