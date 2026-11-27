@@ -120,6 +120,22 @@ class TestSafeExtract(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             extractor.safe_extract(tar_path)
 
+    def test_safe_extract_with_sibling_directory_sharing_prefix(self):
+        """A member that escapes into a sibling directory whose name starts with the target's name is rejected."""
+        out_dir = os.path.join(self.temp_dir, "out")
+        os.makedirs(out_dir)
+        tar_path = os.path.join(self.temp_dir, "sibling.tar")
+        payload = os.path.join(self.temp_dir, "payload.txt")
+        with open(payload, "w") as f:
+            f.write("x")
+        with tarfile.open(tar_path, "w") as tar:
+            tar.add(payload, arcname="../out-evil/payload.txt")
+
+        extractor = SafeExtractor(out_dir)
+        with self.assertRaises(RuntimeError):
+            extractor.safe_extract(tar_path)
+        self.assertFalse(os.path.exists(os.path.join(self.temp_dir, "out-evil")))
+
 
 if __name__ == "__main__":
     unittest.main()
