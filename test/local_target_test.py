@@ -275,6 +275,29 @@ class LocalTargetRelativeTest(LocalTargetTest):
 
 
 class TmpFileTest(unittest.TestCase):
+    def test_close_twice(self):
+        target = LocalTarget(is_tmp=True, format=luigi.format.Nop)
+        writer = target.open("w")
+        writer.write(b"complete output")
+        writer.close()
+        writer.close()
+
+        self.assertTrue(writer.closed)
+        self.assertFalse(os.path.exists(writer.tmp_path))
+        with target.open("r") as reader:
+            self.assertEqual(reader.read(), b"complete output")
+
+    def test_close_inside_context(self):
+        target = LocalTarget(is_tmp=True, format=luigi.format.Nop)
+        with target.open("w") as writer:
+            writer.write(b"complete output")
+            writer.close()
+
+        self.assertTrue(writer.closed)
+        self.assertFalse(os.path.exists(writer.tmp_path))
+        with target.open("r") as reader:
+            self.assertEqual(reader.read(), b"complete output")
+
     def test_tmp(self):
         t = LocalTarget(is_tmp=True)
         self.assertFalse(t.exists())

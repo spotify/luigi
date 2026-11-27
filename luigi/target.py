@@ -328,6 +328,8 @@ class AtomicLocalFile(io.BufferedWriter):
         super(AtomicLocalFile, self).__init__(io.FileIO(self.__tmp_path, "w"))
 
     def close(self) -> None:
+        if self.closed:
+            return
         super(AtomicLocalFile, self).close()
         self.move_to_final_destination()
 
