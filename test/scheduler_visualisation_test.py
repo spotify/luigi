@@ -476,6 +476,30 @@ class SchedulerVisualisationTest(unittest.TestCase):
         self.assertTrue("Runtime error" in error["error"])
         self.assertTrue("Traceback" in error["error"])
 
+    def test_fetch_error_rerun_args(self):
+        class ParamFailingTask(FailingTask):
+            flag = luigi.BoolParameter()
+            optional = luigi.OptionalParameter(default=None)
+            regular = luigi.Parameter(default="x")
+
+        task = ParamFailingTask(task_id=8, flag=True)
+        self._build([task])
+        remote = self._remote()
+        error = remote.fetch_error(task.task_id)
+        self.assertEqual(error["taskParams"], {"task_id": "8", "flag": "True", "optional": "", "regular": "x"})
+        self.assertEqual(error["rerunArgs"], ["--task-id 8", "--flag", "--regular x"])
+
+
+    def test_fetch_error_rerun_args_default_empty_list(self):
+        # tasks added by workers that predate rerun_args (or loaded from
+        # scheduler state saved before the upgrade) must serialize an empty
+        # list, not a dict: the js checks truthiness before joining
+        import luigi.scheduler
+        scheduler = luigi.scheduler.Scheduler()
+        scheduler.add_task(task_id="old_task", status="FAILED", runnable=False, worker="w")
+        error = scheduler.fetch_error("old_task")
+        self.assertEqual(error["rerunArgs"], [])
+
     def test_inverse_deps(self):
         class X(RunOnceTask):
             pass

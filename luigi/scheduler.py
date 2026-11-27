@@ -238,6 +238,7 @@ class Task:
         module=None,
         params=None,
         param_visibilities=None,
+        rerun_args=None,
         accepts_messages=False,
         tracking_url=None,
         status_message=None,
@@ -264,6 +265,7 @@ class Task:
         self.family = family
         self.module = module
         self.param_visibilities = _get_default(param_visibilities, {})
+        self.rerun_args = _get_default(rerun_args, [])
         self.params = {}
         self.public_params = {}
         self.hidden_params = {}
@@ -816,6 +818,7 @@ class Scheduler:
         module=None,
         params=None,
         param_visibilities=None,
+        rerun_args=None,
         accepts_messages=False,
         assistant=False,
         tracking_url=None,
@@ -855,6 +858,7 @@ class Scheduler:
                 module=module,
                 params=params,
                 param_visibilities=param_visibilities,
+                rerun_args=rerun_args,
             )
         else:
             _default_task = None
@@ -875,6 +879,8 @@ class Scheduler:
             task.module = module
         if not getattr(task, "param_visibilities", None):
             task.param_visibilities = _get_default(param_visibilities, {})
+        if not getattr(task, "rerun_args", None):
+            task.rerun_args = _get_default(rerun_args, [])
         if not task.params:
             task.set_params(params)
 
@@ -1580,6 +1586,7 @@ class Scheduler:
                 "error": task.expl,
                 "displayName": task.pretty_id,
                 "taskParams": task.params,
+                "rerunArgs": getattr(task, "rerun_args", []),
                 "taskModule": task.module,
                 "taskFamily": task.family,
             }
