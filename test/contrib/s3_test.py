@@ -15,6 +15,7 @@
 # the License.
 #
 
+import io
 import os
 import sys
 import tempfile
@@ -25,12 +26,14 @@ if sys.version_info[:2] <= (3, 11):
     from boto.s3 import key
 import pytest
 from botocore.exceptions import ClientError
+from botocore.response import StreamingBody
 from helpers import skipOnTravisAndGithubActions, unittest, with_config
-from mock import patch
+from mock import Mock, patch
 from moto import mock_s3, mock_sts
 from target_test import FileSystemTargetTestMixin
 
-from luigi.contrib.s3 import DeprecatedBotoClientException, FileNotFoundException, InvalidDeleteException, S3Client, S3Target
+from luigi.contrib.s3 import DeprecatedBotoClientException, FileNotFoundException, InvalidDeleteException, ReadableS3File, S3Client, S3Target
+from luigi.format import Nop
 from luigi.target import MissingParentDirectory
 
 if (3, 4, 0) <= sys.version_info[:3] < (3, 4, 3):
@@ -48,6 +51,62 @@ def create_bucket():
     # We need to create the bucket since this is all in Moto's 'virtual' AWS account
     conn.create_bucket(Bucket="mybucket")
     return conn
+
+
+@pytest.mark.aws
+@pytest.mark.parametrize(
+    "content",
+    [
+        b"",
+        b"first\nsecond\n",
+        b"first\r\nsecond\r\n",
+        b"\n\nlast",
+        b"first\rsecond\nlast",
+        b"a" * 3072 + b"\nlast",
+        b"a" * 1023 + b"\r\nlast\r\n",
+        b"a" * 1023 + "\u6587\u6863\nlast".encode("utf-8"),
+    ],
+    ids=["empty", "lf", "crlf", "blank-and-unterminated", "bare-cr", "long-line", "split-crlf", "split-utf8"],
+)
+def test_readable_s3_file_binary_lines(content):
+    raw = io.BytesIO(content)
+    key = Mock()
+    key.get.return_value = {"Body": StreamingBody(raw, len(content))}
+
+    with ReadableS3File(key) as stream:
+        assert list(stream) == io.BytesIO(content).readlines()
+        assert stream.closed
+        assert raw.closed
+
+
+@pytest.mark.aws
+def test_readable_s3_file_yields_before_eof():
+    content = b"first\n" + b"a" * 4096
+    raw = io.BytesIO(content)
+    key = Mock()
+    key.get.return_value = {"Body": StreamingBody(raw, len(content))}
+
+    with ReadableS3File(key) as stream:
+        lines = iter(stream)
+        assert next(lines) == b"first\n"
+        assert raw.tell() < len(content)
+        assert list(lines) == [b"a" * 4096]
+        assert stream.closed
+
+
+@pytest.mark.aws
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
+def test_s3_target_binary_lines(newline):
+    content = newline.join([b"first", b"a" * 3072, b"", b"last"])
+    with mock_s3():
+        connection = create_bucket()
+        connection.Object("mybucket", "binary-lines").put(Body=content)
+        client = S3Client(AWS_ACCESS_KEY, AWS_SECRET_KEY)
+        target = S3Target("s3://mybucket/binary-lines", client=client, format=Nop)
+
+        with target.open() as stream:
+            assert list(stream) == io.BytesIO(content).readlines()
+            assert stream.closed
 
 
 @pytest.mark.aws

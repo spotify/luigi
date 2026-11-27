@@ -593,7 +593,7 @@ class ReadableS3File:
 
                 # split on newlines, preserving the newline
                 for line in chunk.splitlines(True):
-                    if not line.endswith(os.linesep):
+                    if not line.endswith(b"\n"):
                         # no newline, so store in buffer
                         self._add_to_buffer(line)
                     else:
