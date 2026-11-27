@@ -30,6 +30,7 @@ import ftplib
 import io
 import logging
 import os
+import posixpath
 import random
 import tempfile
 
@@ -245,12 +246,12 @@ class RemoteFileSystem(luigi.target.FileSystem):
         self._close()
 
     def _sftp_put(self, local_path, path, atomic):
-        normpath = os.path.normpath(path)
-        directory = os.path.dirname(normpath)
+        normpath = posixpath.normpath(path)
+        directory = posixpath.dirname(normpath)
         self.conn.makedirs(directory)
 
         if atomic:
-            tmp_path = os.path.join(directory, "luigi-tmp-{:09d}".format(random.randrange(0, 10_000_000_000)))
+            tmp_path = posixpath.join(directory, "luigi-tmp-{:09d}".format(random.randrange(0, 10_000_000_000)))
         else:
             tmp_path = normpath
 
@@ -260,11 +261,11 @@ class RemoteFileSystem(luigi.target.FileSystem):
             self.conn.rename(tmp_path, normpath)
 
     def _ftp_put(self, local_path, path, atomic):
-        normpath = os.path.normpath(path)
-        folder = os.path.dirname(normpath)
+        normpath = posixpath.normpath(path)
+        folder = posixpath.dirname(normpath)
 
         # create paths if do not exists
-        for subfolder in folder.split(os.sep):
+        for subfolder in folder.split("/"):
             if subfolder and subfolder not in self.conn.nlst():
                 self.conn.mkd(subfolder)
 
@@ -275,7 +276,7 @@ class RemoteFileSystem(luigi.target.FileSystem):
 
         # random file name
         if atomic:
-            tmp_path = folder + os.sep + "luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
+            tmp_path = folder + "/" + "luigi-tmp-%09d" % random.randrange(0, 10_000_000_000)
         else:
             tmp_path = normpath
 
