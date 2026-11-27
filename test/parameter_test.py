@@ -1162,6 +1162,12 @@ class TestSerializeTimeDeltaParameters(LuigiTestCase):
         tdelta = timedelta(seconds=0)
         self.assertEqual(luigi.TimeDeltaParameter().serialize(tdelta), "0 w 0 d 0 h 0 m 0 s")
 
+    def testSerializeRoundTripNegativeAndSubSecond(self):
+        p = luigi.TimeDeltaParameter()
+        for tdelta in [timedelta(hours=-1), timedelta(milliseconds=200), timedelta(days=-3, seconds=5, microseconds=7)]:
+            self.assertEqual(p.parse(p.serialize(tdelta)), tdelta)
+        self.assertNotEqual(p.serialize(timedelta(milliseconds=200)), p.serialize(timedelta(milliseconds=700)))
+
 
 class TestTaskParameter(LuigiTestCase):
     def testUsage(self):
