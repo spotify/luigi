@@ -24,12 +24,14 @@ import boto3
 if sys.version_info[:2] <= (3, 11):
     from boto.s3 import key
 import pytest
+from botocore.config import Config
 from botocore.exceptions import ClientError
 from helpers import skipOnTravisAndGithubActions, unittest, with_config
 from mock import patch
 from moto import mock_s3, mock_sts
 from target_test import FileSystemTargetTestMixin
 
+from luigi.__version__ import VERSION
 from luigi.contrib.s3 import DeprecatedBotoClientException, FileNotFoundException, InvalidDeleteException, S3Client, S3Target
 from luigi.target import MissingParentDirectory
 
@@ -163,6 +165,17 @@ class TestS3Client(unittest.TestCase):
         self.addCleanup(self.mock_s3.stop)
         self.addCleanup(self.mock_sts.stop)
 
+    def assert_resource_called_with(self, mock, **credentials):
+        """boto3.resource should get exactly the given credential kwargs, plus a
+        botocore config carrying the luigi user agent suffix.
+        """
+        args, kwargs = mock.call_args
+        kwargs = dict(kwargs)
+        config = kwargs.pop("config")
+        self.assertEqual(args, ("s3",))
+        self.assertEqual(kwargs, credentials)
+        self.assertIn("luigi/{}".format(VERSION), config.user_agent_extra)
+
     @patch("boto3.resource")
     def test_init_without_init_or_config(self, mock):
         """If no config or arn provided, boto3 client
@@ -171,13 +184,20 @@ class TestS3Client(unittest.TestCase):
         to boto3 itself.
         """
         S3Client().s3
-        mock.assert_called_with("s3", aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None)
+        self.assert_resource_called_with(mock, aws_access_key_id=None, aws_secret_access_key=None, aws_session_token=None)
 
     @with_config({"s3": {"aws_access_key_id": "foo", "aws_secret_access_key": "bar"}})
     @patch("boto3.resource")
     def test_init_with_config(self, mock):
         S3Client().s3
-        mock.assert_called_with("s3", aws_access_key_id="foo", aws_secret_access_key="bar", aws_session_token=None)
+        self.assert_resource_called_with(mock, aws_access_key_id="foo", aws_secret_access_key="bar", aws_session_token=None)
+
+    @patch("boto3.resource")
+    def test_init_appends_user_agent_to_given_config(self, mock):
+        S3Client(config=Config(user_agent_extra="caller/1.0", read_timeout=42)).s3
+        config = mock.call_args[1]["config"]
+        self.assertEqual(config.user_agent_extra, "caller/1.0 luigi/{}".format(VERSION))
+        self.assertEqual(config.read_timeout, 42)
 
     @patch("boto3.resource")
     @patch("boto3.client")

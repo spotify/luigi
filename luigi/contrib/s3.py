@@ -32,6 +32,7 @@ from typing import Optional
 from urllib.parse import urlsplit
 
 from luigi import configuration
+from luigi.__version__ import VERSION
 from luigi.format import Format, get_default_format
 from luigi.parameter import OptionalParameter, Parameter
 from luigi.target import AtomicLocalFile, FileAlreadyExists, FileSystem, FileSystemException, FileSystemTarget, MissingParentDirectory
@@ -123,6 +124,18 @@ class S3Client(FileSystem):
 
         if not (aws_access_key_id and aws_secret_access_key):
             logger.debug("no credentials provided, delegating credentials resolution to boto3")
+
+        # Identify luigi in the S3 user agent, appended to any caller config.
+        from botocore.config import Config
+
+        user_agent_extra = "luigi/{}".format(VERSION)
+        config = options.get("config")
+        if isinstance(config, Config):
+            existing = config.user_agent_extra
+            merged = "{} {}".format(existing, user_agent_extra) if existing else user_agent_extra
+            options["config"] = config.merge(Config(user_agent_extra=merged))
+        else:
+            options["config"] = Config(user_agent_extra=user_agent_extra)
 
         try:
             self._s3 = boto3.resource(
