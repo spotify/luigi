@@ -363,6 +363,11 @@ class ParameterTest(LuigiTestCase):
         b_tuple = ((1, 2), (3, 4))
         self.assertEqual(b_tuple, a.parse(a.serialize(b_tuple)))
 
+    def test_tuple_serialize_parse_scalars_and_dicts(self):
+        a = luigi.TupleParameter()
+        for b_tuple in [(True, False), (1.5, None, True), ({"a": 1}, {"b": [1, 2]}), ("x", 1, (2, 3))]:
+            self.assertEqual(a.normalize(b_tuple), a.normalize(a.parse(a.serialize(b_tuple))))
+
     def test_parse_list_without_batch_method(self):
         param = luigi.Parameter()
         for xs in [], ["x"], ["x", "y"]:
