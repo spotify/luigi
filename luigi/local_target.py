@@ -78,7 +78,7 @@ class LocalFileSystem(FileSystem):
                 if err.errno != errno.EEXIST:
                     raise
         else:
-            if not os.path.exists(os.path.dirname(path)):
+            if not os.path.exists(os.path.dirname(path) or os.curdir):
                 raise MissingParentDirectory()
             os.mkdir(path)
 
