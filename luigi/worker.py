@@ -662,6 +662,7 @@ class Worker:
 
         if task and kwargs.get("params"):
             kwargs["param_visibilities"] = task._get_param_visibilities()
+            kwargs["rerun_args"] = task._get_rerun_args()
 
         self._scheduler.add_task(*args, **kwargs)
 

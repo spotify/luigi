@@ -74,6 +74,90 @@ class Test(unittest.TestCase):
 
         self.assertEqual(task._get_param_visibilities(), {"a": 0})
 
+    def test_rerun_args_regular_params(self):
+        class Task(luigi.Task):
+            regular = luigi.Parameter(default="a")
+            explicit_flag = luigi.BoolParameter(parsing=luigi.BoolParameter.EXPLICIT_PARSING)
+
+        task = Task(regular="hello world", explicit_flag=True)
+
+        self.assertEqual(task._get_rerun_args(), ["--regular 'hello world'", '--explicit-flag True'])
+
+    def test_rerun_args_implicit_bool_default_false(self):
+        class Task(luigi.Task):
+            flag = luigi.BoolParameter()
+
+        self.assertEqual(Task(flag=True)._get_rerun_args(), ["--flag"])
+        self.assertEqual(Task(flag=False)._get_rerun_args(), [])
+
+    def test_rerun_args_implicit_bool_default_true(self):
+        class Task(luigi.Task):
+            flag = luigi.BoolParameter(default=True)
+
+        # the default already reproduces True, so the flag is omitted
+        self.assertEqual(Task(flag=True)._get_rerun_args(), [])
+        # no implicit-bool command line can express False: keep the legacy
+        # (failing) output rather than silently re-running with True
+        self.assertEqual(Task(flag=False)._get_rerun_args(), ['--flag False'])
+
+    def test_rerun_args_custom_bool_subclass(self):
+        class MyBool(luigi.BoolParameter):
+            pass
+
+        class Task(luigi.Task):
+            flag = MyBool()
+
+        self.assertEqual(Task(flag=True)._get_rerun_args(), ["--flag"])
+
+    def test_rerun_args_optional_default_none(self):
+        class Task(luigi.Task):
+            optional = luigi.OptionalParameter(default=None)
+
+        self.assertEqual(Task(optional=None)._get_rerun_args(), [])
+        self.assertEqual(Task(optional="x")._get_rerun_args(), ['--optional x'])
+
+    def test_rerun_args_optional_default_not_none(self):
+        class Task(luigi.Task):
+            optional = luigi.OptionalParameter(default="x")
+
+        # parse("") is None, so the empty string still round-trips and must
+        # not be dropped: omitting it would re-run with the default
+        self.assertEqual(Task(optional=None)._get_rerun_args(), ["--optional ''"])
+
+    def test_rerun_args_optional_bool(self):
+        class Task(luigi.Task):
+            optional_flag = luigi.OptionalBoolParameter()
+
+        self.assertEqual(Task(optional_flag=True)._get_rerun_args(), ["--optional-flag"])
+        # False cannot be expressed for an implicit bool defaulting to None
+        self.assertEqual(Task(optional_flag=False)._get_rerun_args(), ["--optional-flag False"])
+
+    def test_rerun_args_non_ascii_not_escaped(self):
+        class Task(luigi.Task):
+            name = luigi.Parameter(default="x")
+
+        self.assertEqual(Task(name="café")._get_rerun_args(), ["--name 'café'"])
+
+    def test_rerun_args_config_default(self):
+        class ConfTask(luigi.Task):
+            flag = luigi.BoolParameter(default=True)
+
+        # without config, False cannot be expressed and keeps legacy output
+        self.assertEqual(ConfTask(flag=False)._get_rerun_args(), ["--flag False"])
+
+    def test_rerun_args_shell_special_chars(self):
+        class Task(luigi.Task):
+            name = luigi.Parameter(default="x")
+
+        args = Task(name="a`b$c")._get_rerun_args()
+        self.assertEqual(args, ["--name 'a`b$c'"])
+
+    def test_rerun_args_private_params_excluded(self):
+        class Task(luigi.Task):
+            flag = luigi.BoolParameter(visibility=ParameterVisibility.PRIVATE)
+
+        self.assertEqual(Task(flag=True)._get_rerun_args(), [])
+
     def test_task_id_exclude_hidden_and_private_params(self):
         task = TestTask1()
 

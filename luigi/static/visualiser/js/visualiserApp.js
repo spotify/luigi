@@ -326,7 +326,13 @@ function visualiserApp(luigi) {
     function showErrorTrace(data) {
         data.error = decodeError(data.error);
         if (data.taskParams) {
-          data.taskParams = Object.entries(data.taskParams).map(([k,v]) => `--${k.replace(/_/g, '-')} ${JSON.stringify(v)}`).join(" ");
+          if (data.rerunArgs && data.rerunArgs.length) {
+            // New workers ship the ready-made argument list; see
+            // Task._get_rerun_args for the rendering rules.
+            data.taskParams = data.rerunArgs.join(" ");
+          } else {
+            data.taskParams = Object.entries(data.taskParams).map(([k,v]) => `--${k.replace(/_/g, '-')} ${JSON.stringify(v)}`).join(" ");
+          }
         }
         $("#errorModal").empty().append(renderTemplate("errorTemplate", data));
         $("#errorModal").modal({});

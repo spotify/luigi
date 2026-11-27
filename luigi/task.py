@@ -28,6 +28,7 @@ import hashlib
 import json
 import logging
 import re
+import shlex
 import traceback
 import warnings
 from collections import OrderedDict, deque
@@ -41,7 +42,7 @@ from typing_extensions import dataclass_transform
 
 import luigi
 from luigi import configuration, parameter
-from luigi.parameter import ParameterVisibility, UnconsumedParameterWarning
+from luigi.parameter import ParameterVisibility, UnconsumedParameterWarning, _no_value
 from luigi.task_register import Register
 
 _T = TypeVar("_T")
@@ -547,6 +548,50 @@ class Task(metaclass=Register):
                 param_visibilities[param_name] = params[param_name].visibility.serialize()
 
         return param_visibilities
+
+    def _get_rerun_args(self):
+        """
+        Render this task's parameter values as command line arguments, the way
+        the visualiser's re-run command presents them.
+
+        Implicit-parsing bools take no value on the command line: they are
+        emitted as a bare flag when needed and omitted when the effective
+        default already reproduces the value. No command line can express
+        ``False`` for an implicit bool whose effective default is ``True``,
+        so that case keeps the legacy (failing) output rather than silently
+        re-running with the wrong value. Optional parameters serializing to
+        an empty string are omitted when the effective default is ``None``
+        and emitted as ``--param ""`` otherwise, since the empty string still
+        round-trips to ``None``.
+
+        The effective default is the config-aware one (``[Task] param=value``
+        sections included), not just the declared ``default``. Note that the
+        machine re-running the command can have a different config, so values
+        omitted on that basis are only as faithful as the config is shared.
+        """
+        args = []
+        params = dict(self.get_params())
+        task_family = self.get_task_family()
+        for param_name, value_str in self.to_str_params().items():
+            param = params[param_name]
+            flag = "--" + param_name.replace("_", "-")
+            implicit_bool = param._parser_kwargs(param_name).get("action") == "store_true"
+            effective_default = param._get_value(task_family, param_name)
+            if implicit_bool:
+                if effective_default is not _no_value and value_str == param.serialize(effective_default):
+                    # omitting the flag reproduces the value
+                    continue
+                if value_str == "True" and effective_default is not True:
+                    # the bare flag sets True regardless of the default
+                    args.append(flag)
+                    continue
+                # otherwise the value cannot be expressed (False with an
+                # effective default of True): keep the legacy output below
+            elif isinstance(param, parameter.OptionalParameterMixin) and value_str == "" and effective_default is None:
+                continue
+            args.append(flag + " " + shlex.quote(value_str))
+
+        return args
 
     def clone(self, cls=None, **kwargs):
         """
