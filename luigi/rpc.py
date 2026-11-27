@@ -63,6 +63,17 @@ def _urljoin(base, url):
     return urlparse(urljoin(parsed._replace(scheme="http").geturl(), parsed.path + (url if url[0] == "/" else "/" + url)))._replace(scheme=scheme).geturl()
 
 
+def _redact_url(url):
+    """
+    Mask the password in a URL like http://user:pass@host so it can be logged.
+    """
+    parsed = urlparse(url)
+    if parsed.password is None:
+        return url
+    host = parsed.netloc.rpartition("@")[2]
+    return parsed._replace(netloc="{}:***@{}".format(parsed.username, host)).geturl()
+
+
 class RPCError(Exception):
     def __init__(self, message, sub_exception=None):
         super(RPCError, self).__init__(message)
@@ -144,6 +155,7 @@ class RemoteScheduler:
         assert not url.startswith("http+unix://") or HAS_UNIX_SOCKET, "You need to install requests-unixsocket for Unix socket support."
 
         self._url = url.rstrip("/")
+        self._log_url = _redact_url(self._url)
         config = configuration.get_config()
 
         if connect_timeout is None:
@@ -165,7 +177,7 @@ class RemoteScheduler:
     def _get_retryer(self):
         def retry_logging(retry_state):
             if self._rpc_log_retries:
-                logger.warning("Failed connecting to remote scheduler %r", self._url, exc_info=True)
+                logger.warning("Failed connecting to remote scheduler %r", self._log_url, exc_info=True)
                 logger.info("Retrying attempt %r of %r (max)" % (retry_state.attempt_number + 1, self._rpc_retry_attempts))
                 logger.info("Wait for %d seconds" % self._rpc_retry_wait)
 
@@ -178,7 +190,7 @@ class RemoteScheduler:
         try:
             response = scheduler_retry(self._fetcher.fetch, full_url, body, self._connect_timeout)
         except self._fetcher.raises as e:
-            raise RPCError("Errors (%d attempts) when connecting to remote scheduler %r" % (self._rpc_retry_attempts, self._url), e)
+            raise RPCError("Errors (%d attempts) when connecting to remote scheduler %r" % (self._rpc_retry_attempts, self._log_url), e)
         return response
 
     def _request(self, url, data, attempts=3, allow_null=True):
@@ -189,7 +201,7 @@ class RemoteScheduler:
             response = json.loads(page)["response"]
             if allow_null or response is not None:
                 return response
-        raise RPCError("Received null response from remote scheduler %r" % self._url)
+        raise RPCError("Received null response from remote scheduler %r" % self._log_url)
 
 
 for method_name, method in RPC_METHODS.items():
